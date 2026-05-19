@@ -120,3 +120,13 @@ class SchemaManager:
             property_names=["id"],
             unique=True,
         )
+        schema.get_or_create_index(
+            type_name="HAS_MESSAGE",
+            property_names=["id"],
+            unique=True,
+        )
+        schema.get_or_create_index(
+            type_name="NEXT_MESSAGE",
+            property_names=["id"],
+            unique=True,
+        )
