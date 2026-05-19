@@ -9,7 +9,9 @@ from module import NarratorModule
 
 
 class GraphState(TypedDict):
-    messages: Annotated[list[AnyMessage], add_messages]
+    message_history: Annotated[list[AnyMessage], add_messages]
+    human_message: HumanMessage
+    ai_message: AIMessage
 
 class Graph:
     def __init__(self) -> None:
@@ -17,13 +19,13 @@ class Graph:
         self.narrator_module: NarratorModule = NarratorModule()
 
     async def narrator_node(self, state: GraphState) -> dict:
-        messages = state["messages"]
-        human_message = messages[-1]
-        response: AIMessage = self.narrator_module.aforward(
-            chat_history=messages,
-            message=human_message,
+        message_history = state["message_history"]
+        human_message = state["human_message"]
+        ai_message: AIMessage = self.narrator_module.aforward(
+            message_history=message_history,
+            human_message=human_message,
         )
-        return {"messages": [response]}
+        return {"message_history": [ai_message], "ai_message": ai_message}
 
     def build(self) -> StateGraph:
         self.workflow.add_node("narrator", self.narrator_node)
