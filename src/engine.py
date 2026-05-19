@@ -20,8 +20,7 @@ class Engine:
             if not text.strip():
                 continue
 
-            self.messages.append(HumanMessage(content=text))
-            result = await self.graph.ainvoke({"messages": self.messages})
+            result = await self.graph.ainvoke({"messages": [HumanMessage(content=text)]})
             self.messages = result["messages"]
 
             last = self.messages[-1]
