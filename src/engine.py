@@ -1,33 +1,41 @@
-import asyncio
+from langchain_core.messages.human import HumanMessage
 
-from langchain_core.messages import AIMessage, HumanMessage
+
+import asyncio
+from typing import Any
+
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
 from graph import Graph
 
 
 class Engine:
     def __init__(self) -> None:
         self.graph = Graph().build().compile()
-        self.messages: list = []
+        self.message_history: list[AnyMessage] = []
 
     async def run(self) -> None:
         while True:
-            text = await asyncio.to_thread(input, "You: ")
+            human_input: str = await asyncio.to_thread(input, f"You: ")
+            human_message: HumanMessage = HumanMessage(content={human_input}, name="You")
 
-            if text.lower() == "exit":
+            if human_input.lower() == "exit":
                 print("Exiting...")
                 break
+            
+            result: dict[str, Any] = await self.graph.ainvoke(
+                {
+                    "message_history": self.message_history,
+                    "human_message": human_message,
+                }
+            )
 
-            if not text.strip():
-                continue
+            self.message_history = result["message_history"]
+            ai_message: AIMessage = result["ai_message"]
+            print(f"{ai_message.name}: {ai_message.content}")
 
-            result = await self.graph.ainvoke({"messages": [HumanMessage(content=text)]})
-            self.messages = result["messages"]
-
-            last = self.messages[-1]
-            if isinstance(last, AIMessage):
-                print(f"AI: {last.content}")
+            print(f"{human_message}")
+            print(f"{ai_message}")
 
 
 if __name__ == "__main__":
-    engine = Engine()
-    asyncio.run(engine.run())
+    asyncio.run(main=Engine().run())

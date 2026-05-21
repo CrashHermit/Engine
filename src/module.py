@@ -1,3 +1,9 @@
+from typing import Any, Literal
+
+
+from dspy.predict.chain_of_thought import ChainOfThought
+
+
 from dspy.primitives.prediction import Prediction
 
 
@@ -13,28 +19,22 @@ dspy.configure(lm=lm)
 
 
 class NarratorSignature(dspy.Signature):
-    message_history: list[str] = dspy.InputField(default_factory=list, description="The chat history")
-    human_message: str = dspy.InputField(default="", description="The message to predict")
+    """
+    You are a narrator, you will take the input from the human and the chat history and you will return the narration of the message.
+    """
+    message_history: list[BaseMessage] = dspy.InputField(default_factory=list, description="The chat history")
+    human_message: HumanMessage = dspy.InputField(default=HumanMessage(content="", name=""), description="The message to predict")
     ai_message: str = dspy.OutputField(default="", description="The narration of the message")
 
 class NarratorModule(dspy.Module):
     def __init__(self) -> None:
         super().__init__()
-        self.narrator_prediction = dspy.ChainOfThought(signature=NarratorSignature)
+        self.narrator_prediction: ChainOfThought = dspy.ChainOfThought(signature=NarratorSignature)
         
     def aforward(self, message_history: list[BaseMessage], human_message: HumanMessage) -> AIMessage:
-        
-        string_history = []
-        for message in message_history:
-            prefix = "User" if isinstance(message, HumanMessage) else "Assistant"
-            string_history.append(f"{prefix}: {message.content}")
-            
-        string_message = human_message.content
-
         prediction: dspy.Prediction = self.narrator_prediction(
-            message_history=string_history, 
-            human_message=string_message
+            message_history=message_history,
+            human_message=human_message
         )
         
-        return AIMessage(content=prediction.ai_message)
-
+        return AIMessage(content=prediction.ai_message, name="Narrator")
