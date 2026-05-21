@@ -13,7 +13,7 @@ lm: dspy.LM = dspy.LM(
 dspy.configure(lm=lm)
 
 
-class NarratorSignature2(dspy.Signature):
+class NarratorSignature(dspy.Signature):
     """
     You are a narrator, you will take the input from the human and the chat history and you will return the narration of the message.
     """
@@ -28,11 +28,11 @@ class NarratorSignature2(dspy.Signature):
     )
 
 
-class NarratorModule2(StreamingDSPyNode):
+class NarratorModule(StreamingDSPyNode):
     def __init__(self) -> None:
         super().__init__(node_name="narrator", output_field="ai_message")
         self.narrator_prediction: dspy.ChainOfThought = dspy.ChainOfThought(
-            signature=NarratorSignature2
+            signature=NarratorSignature
         )
 
     async def aforward(

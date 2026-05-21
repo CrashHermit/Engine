@@ -1,3 +1,3 @@
-from module.narrator import NarratorModule2
+from module.narrator import NarratorModule
 
-__all__ = ["NarratorModule2"]
+__all__ = ["NarratorModule"]
