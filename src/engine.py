@@ -1,4 +1,5 @@
 import asyncio
+from typing import AsyncGenerator
 
 from langchain_core.messages import AnyMessage, HumanMessage
 
@@ -10,39 +11,44 @@ class Engine:
         self.graph = Graph().build().compile()
         self.message_history: list[AnyMessage] = []
 
+    async def stream_message(self, text: str) -> AsyncGenerator[dict, None]:
+        human_message: HumanMessage = HumanMessage(content=text, name="You")
+
+        async for part in self.graph.astream(
+            {
+                "message_history": self.message_history,
+                "human_message": human_message,
+            },
+            stream_mode=["custom", "updates"],
+            version="v2",
+        ):
+            if part["type"] == "custom":
+                yield part["data"]
+            elif part["type"] == "updates":
+                for node_name, update in part["data"].items():
+                    if new_messages := update.get("message_history"):
+                        self.message_history.extend(new_messages)
+                    yield {"event": "node_update", "node": node_name}
+
     async def run(self) -> None:
         while True:
             human_input: str = await asyncio.to_thread(input, "You: ")
-            human_message: HumanMessage = HumanMessage(content=human_input, name="You")
 
             if human_input.lower() == "exit":
                 print("Exiting...")
                 break
 
             print("Narrator: ", end="", flush=True)
-            saw_tokens = False
+            saw_tokens: bool = False
 
-            async for part in self.graph.astream(
-                {
-                    "message_history": self.message_history,
-                    "human_message": human_message,
-                },
-                stream_mode=["custom", "updates"],
-                version="v2",
-            ):
-                if part["type"] == "custom":
-                    data = part["data"]
-                    if data.get("event") == "narrator_token":
-                        saw_tokens = True
-                        print(data["delta"], end="", flush=True)
-                    elif data.get("event") == "narrator_done":
-                        if not saw_tokens:
-                            print(data["content"], end="", flush=True)
-                        print()
-                elif part["type"] == "updates" and "narrator" in part["data"]:
-                    update = part["data"]["narrator"]
-                    if new_messages := update.get("message_history"):
-                        self.message_history.extend(new_messages)
+            async for event in self.stream_message(human_input):
+                if event.get("event") == "token":
+                    saw_tokens = True
+                    print(event["delta"], end="", flush=True)
+                elif event.get("event") == "done":
+                    if not saw_tokens:
+                        print(event["content"], end="", flush=True)
+                    print()
 
 
 if __name__ == "__main__":
