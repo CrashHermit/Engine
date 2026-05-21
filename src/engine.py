@@ -1,10 +1,7 @@
-from langchain_core.messages.human import HumanMessage
-
-
 import asyncio
 from typing import Any
 
-from langchain_core.messages import AIMessage, AnyMessage, HumanMessage
+from langchain_core.messages import AnyMessage, HumanMessage
 from graph import Graph
 
 
@@ -15,13 +12,13 @@ class Engine:
 
     async def run(self) -> None:
         while True:
-            human_input: str = await asyncio.to_thread(input, f"You: ")
-            human_message: HumanMessage = HumanMessage(content={human_input}, name="You")
+            human_input: str = await asyncio.to_thread(input, "You: ")
+            human_message: HumanMessage = HumanMessage(content=human_input, name="You")
 
             if human_input.lower() == "exit":
                 print("Exiting...")
                 break
-            
+
             result: dict[str, Any] = await self.graph.ainvoke(
                 {
                     "message_history": self.message_history,
@@ -30,12 +27,6 @@ class Engine:
             )
 
             self.message_history = result["message_history"]
-            ai_message: AIMessage = result["ai_message"]
-            print(f"{ai_message.name}: {ai_message.content}")
-
-            print(f"{human_message}")
-            print(f"{ai_message}")
-
 
 if __name__ == "__main__":
-    asyncio.run(main=Engine().run())
+    asyncio.run(Engine().run())

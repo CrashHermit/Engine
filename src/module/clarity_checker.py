@@ -33,6 +33,37 @@ class ClarityCheckerModule(dspy.Module):
         )
         return prediction.is_cleared
 
+    async def stream(
+            self, 
+            message_history: list[BaseMessage], 
+            clarity_history: list[BaseMessage], 
+            human_message: HumanMessage
+        ) -> AsyncGenerator[bool | str, None]:
+        streaming_engine: dspy.Streamify = dspy.streamify(
+            program=self.module,
+            stream_listeners=[dspy.streaming.StreamListener(signature_field_name="is_cleared")],
+            is_async_program=True,
+        )
+
+        raw_stream: AsyncGenerator[bool | str, None] = streaming_engine(
+            message_history=message_history,
+            clarity_history=clarity_history,
+            human_message=human_message
+        )
+
+        async for chunk in raw_stream:
+            yield chunk
+        
+        final_is_cleared: bool | None = None
+        async for chunk in raw_stream:
+            if isinstance(chunk, bool):
+                final_is_cleared: bool = chunk
+            else:
+                yield chunk
+        
+        if final_is_cleared is not None:
+            yield final_is_cleared
+
 class ClarityChecker:
     def __init__(self) -> None:
         self.module: ClarityCheckerModule = ClarityCheckerModule()
