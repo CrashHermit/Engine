@@ -1,8 +1,8 @@
 import dspy
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
-from langchain_core.messages.utils import get_buffer_string
 
+from core.model.message import Message
 from module.base import StreamingDSPyNode
+from module.utils import format_messages
 from state import GraphState
 
 lm: dspy.LM = dspy.LM(
@@ -19,13 +19,8 @@ class NarratorSignature(dspy.Signature):
     """
 
     message_history: str = dspy.InputField(default="", description="The chat history")
-    human_message: str = dspy.InputField(
-        default=HumanMessage(content="", name=""),
-        description="The message to predict",
-    )
-    ai_message: str = dspy.OutputField(
-        default="", description="The narration of the message"
-    )
+    human_message: str = dspy.InputField(default="", description="The message to predict")
+    ai_message: str = dspy.OutputField(default="", description="The narration of the message")
 
 
 class NarratorModule(StreamingDSPyNode):
@@ -36,20 +31,22 @@ class NarratorModule(StreamingDSPyNode):
         )
 
     async def aforward(
-        self, message_history: list[BaseMessage], human_message: HumanMessage
+        self, message_history: list[Message], human_message: Message
     ) -> dspy.Prediction:
         return await self.narrator_prediction.acall(
-            message_history=get_buffer_string(messages=message_history),
-            human_message=get_buffer_string(messages=[human_message]),
+            message_history=format_messages(message_history),
+            human_message=format_messages([human_message]),
         )
 
     async def narrator_node(self, state: GraphState) -> dict:
         prediction: dspy.Prediction = await self.stream_to_writer(
-            message_history=state["message_history"],
-            human_message=state["human_message"],
+            message_history=state.message_history,
+            human_message=state.human_message,
         )
-        ai_message: AIMessage = AIMessage(
-            content=prediction.ai_message.strip(), name="Narrator"
+        ai_message: Message = Message(
+            role="ai",
+            content=prediction.ai_message.strip(),
+            name="Narrator",
         )
         return {
             "message_history": [ai_message],
