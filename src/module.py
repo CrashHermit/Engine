@@ -1,55 +1,46 @@
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
-from langchain_core.messages.utils import get_buffer_string
 from typing import AsyncGenerator
+
 import dspy
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
+from langchain_core.messages.utils import get_buffer_string
+from langgraph.config import get_stream_writer
+
+from state import GraphState
 
 lm: dspy.LM = dspy.LM(
-        model='openrouter/google/gemma-4-26b-a4b-it', 
-        api_key="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",
-        temperature=0.7
-    )
+    model="openrouter/google/gemma-4-26b-a4b-it",
+    api_key="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",
+    temperature=0.7,
+)
 dspy.configure(lm=lm)
-
-
-class NarratorSignature(dspy.Signature):
-    """
-    You are a narrator, you will take the input from the human and the chat history and you will return the narration of the message.
-    """
-    message_history: list[BaseMessage] = dspy.InputField(default_factory=list, description="The chat history")
-    human_message: HumanMessage = dspy.InputField(default=HumanMessage(content="", name=""), description="The message to predict")
-    ai_message: str = dspy.OutputField(default="", description="The narration of the message")
-
-class NarratorModule(dspy.Module):
-    def __init__(self) -> None:
-        super().__init__()
-        self.narrator_prediction: dspy.ChainOfThought = dspy.ChainOfThought(signature=NarratorSignature)
-        
-    def aforward(self, message_history: list[BaseMessage], human_message: HumanMessage) -> AIMessage:
-        prediction: dspy.Prediction = self.narrator_prediction(
-            message_history=message_history,
-            human_message=human_message
-        )
-        
-        return AIMessage(content=prediction.ai_message, name="Narrator")
-
-
 
 
 class NarratorSignature2(dspy.Signature):
     """
     You are a narrator, you will take the input from the human and the chat history and you will return the narration of the message.
     """
+
     message_history: str = dspy.InputField(default="", description="The chat history")
-    human_message: str = dspy.InputField(default=HumanMessage(content="", name=""), description="The message to predict")
-    ai_message: str = dspy.OutputField(default="", description="The narration of the message")
+    human_message: str = dspy.InputField(
+        default=HumanMessage(content="", name=""),
+        description="The message to predict",
+    )
+    ai_message: str = dspy.OutputField(
+        default="", description="The narration of the message"
+    )
+
 
 class NarratorModule2(dspy.Module):
     def __init__(self) -> None:
         super().__init__()
-        self.narrator_prediction: dspy.ChainOfThought = dspy.ChainOfThought(signature=NarratorSignature2)
+        self.narrator_prediction: dspy.ChainOfThought = dspy.ChainOfThought(
+            signature=NarratorSignature2
+        )
         self._streaming_engine = dspy.streamify(
             program=self,
-            stream_listeners=[dspy.streaming.StreamListener(signature_field_name="ai_message")],
+            stream_listeners=[
+                dspy.streaming.StreamListener(signature_field_name="ai_message")
+            ],
             is_async_program=True,
         )
 
@@ -74,3 +65,28 @@ class NarratorModule2(dspy.Module):
         )
         async for chunk in stream:
             yield chunk
+
+    async def narrator_node(self, state: GraphState) -> dict:
+        writer = get_stream_writer()
+        message_history: list[BaseMessage] = state["message_history"]
+        human_message: HumanMessage = state["human_message"]
+        ai_message: AIMessage | None = None
+
+        async for chunk in self.stream(
+            message_history=message_history,
+            human_message=human_message,
+        ):
+            if isinstance(chunk, dspy.streaming.StreamResponse):
+                writer({"event": "narrator_token", "delta": chunk.chunk})
+            elif isinstance(chunk, dspy.Prediction):
+                content = chunk.ai_message.strip()
+                ai_message = AIMessage(content=content, name="Narrator")
+                writer({"event": "narrator_done", "content": content})
+
+        if ai_message is None:
+            raise RuntimeError("Narrator stream ended without a prediction")
+
+        return {
+            "message_history": [ai_message],
+            "ai_message": ai_message,
+        }
