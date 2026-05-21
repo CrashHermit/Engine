@@ -1,18 +1,17 @@
 import asyncio
 from typing import AsyncGenerator
 
-from langchain_core.messages import AnyMessage, HumanMessage
-
+from core.model.message import Message
 from graph import Graph
 
 
 class Engine:
     def __init__(self) -> None:
         self.graph = Graph().build().compile()
-        self.message_history: list[AnyMessage] = []
+        self.message_history: list[Message] = []
 
     async def stream_message(self, text: str) -> AsyncGenerator[dict, None]:
-        human_message: HumanMessage = HumanMessage(content=text, name="You")
+        human_message: Message = Message(role="human", content=text, name="You")
 
         async for part in self.graph.astream(
             {
