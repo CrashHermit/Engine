@@ -1,13 +1,13 @@
 from langgraph.graph import END, START, StateGraph
 
-from module import NarratorModule2
+from module import NarratorModule
 from state import GraphState
 
 
 class Graph:
     def __init__(self) -> None:
         self.workflow: StateGraph = StateGraph(GraphState)
-        self.narrator_module: NarratorModule2 = NarratorModule2()
+        self.narrator_module: NarratorModule = NarratorModule()
 
     def build(self) -> StateGraph:
         self.workflow.add_node("narrator", self.narrator_module.narrator_node)
