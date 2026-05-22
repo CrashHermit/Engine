@@ -2,7 +2,10 @@ from enum import Enum
 
 
 class VertexType(Enum):
-    SESSION = "SESSION"
+    USER = "USER"
+    CHARACTER = "CHARACTER"
+    LOCATION = "LOCATION"
+    PART = "PART"
     MESSAGE = "MESSAGE"
     OPENING = "OPENING"
     SOURCE = "SOURCE"
@@ -15,10 +18,11 @@ class VertexType(Enum):
 class EdgeType(Enum):
     HAS_MESSAGE = "HAS_MESSAGE"
     NEXT_MESSAGE = "NEXT_MESSAGE"
-    PRODUCES = "PRODUCES"
-    CONSUMES = "CONSUMES"
+    LOCATED_AT = "LOCATED_AT"
     CONNECTS = "CONNECTS"
     ATTACHED_TO = "ATTACHED_TO"
+    PRODUCES = "PRODUCES"
+    CONSUMES = "CONSUMES"
     REQUIRES = "REQUIRES"
     CONTROLS = "CONTROLS"
     CONTAINS = "CONTAINS"
