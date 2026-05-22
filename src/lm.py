@@ -1,9 +1,7 @@
 import os
-from dspy import (
-    LM, 
-    configure,
-)
+from dspy import LM, configure
 from dotenv import load_dotenv
+
 load_dotenv()
 
 lm: LM = LM(
