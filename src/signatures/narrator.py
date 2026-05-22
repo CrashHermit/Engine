@@ -18,10 +18,8 @@ configure(lm=lm)
 
 class NarratorSignature(Signature):
     """
-    You are a narrator, you will take the input from the human and the chat history
-    and you will return the narration of the message.
+    You are a narrator. Take the human's input and return a narration response.
     """
 
-    message_history: str = InputField(default="", description="The chat history")
     human_message: str = InputField(description="The message to narrate")
     ai_message: str = OutputField(description="The narration of the message")

@@ -2,8 +2,6 @@ from enum import Enum
 
 
 class VertexType(Enum):
-    SESSION = "SESSION"
-    MESSAGE = "MESSAGE"
     OPENING = "OPENING"
     SOURCE = "SOURCE"
     SINK = "SINK"
@@ -13,8 +11,6 @@ class VertexType(Enum):
 
 
 class EdgeType(Enum):
-    HAS_MESSAGE = "HAS_MESSAGE"
-    NEXT_MESSAGE = "NEXT_MESSAGE"
     PRODUCES = "PRODUCES"
     CONSUMES = "CONSUMES"
     CONNECTS = "CONNECTS"
