@@ -13,6 +13,10 @@ class DatabaseConnection:
 
     def create(self) -> arcadedb.Database:
         self.path.mkdir(parents=True, exist_ok=True)
+        if any(self.path.iterdir()):
+            self._database = arcadedb.open_database(path=str(self.path))
+        else:
+            self._database = arcadedb.create_database(path=str(self.path))
         self._database = arcadedb.create_database(path=str(self.path))
         return self._database
 
