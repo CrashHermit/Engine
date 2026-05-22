@@ -36,6 +36,6 @@ async def narrator_node(state: GraphState) -> dict:
         name="Narrator",
     )
     return {
-        "message_history": [ai_message],
+        "message_history": [state.human_message, ai_message],
         "ai_message": ai_message,
     }
