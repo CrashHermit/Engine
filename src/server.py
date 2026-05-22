@@ -92,8 +92,13 @@ async def chat(request: ChatRequest) -> StreamingResponse:
                     token_count += 1
                     yield f"data: {json.dumps(event)}\n\n"
                 elif event.get("event") == "message":
-                    logger.info("message event received | content_len=%d", len(event.get("content", "")))
-                    ai_message = Message(role="ai", content=event["content"], name="Narrator")
+                    content = event.get("content", "")
+                    logger.info("message event received | content_len=%d | tokens_so_far=%d", len(content), token_count)
+                    ai_message = Message(role="ai", content=content, name="Narrator")
+                    if token_count == 0 and content:
+                        # DSPy skipped streaming (cache hit or single-chunk response); send full content as one token
+                        logger.warning("No streaming tokens received — falling back to single-chunk delivery")
+                        yield f"data: {json.dumps({'event': 'token', 'delta': content})}\n\n"
         except Exception:
             logger.exception("Error in event_stream for session %s", request.session_id)
         finally:
