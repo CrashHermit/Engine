@@ -6,7 +6,7 @@ dist/
 wheels/
 *.egg-info
 .env
-# Virtual environments
+arcadedb.log
 .venv
 
 # Embedded ArcadeDB data
