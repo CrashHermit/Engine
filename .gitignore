@@ -11,3 +11,6 @@ wheels/
 
 # Embedded ArcadeDB data
 data/
+
+# Node
+client/node_modules/
