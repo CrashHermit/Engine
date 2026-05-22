@@ -1,4 +1,12 @@
 
-2026-05-22 16:23:55.053 WARNI [LocalDatabase] Database 'world' was not closed properly last time
-2026-05-22 16:23:55.053 WARNI [TransactionManager] Started recovery of database 'world'
-2026-05-22 16:23:55.087 WARNI [TransactionManager] Recovery of database 'world' completed
+2026-05-22 17:36:49.092 WARNI [LocalDatabase] Database 'world' was not closed properly last time
+2026-05-22 17:36:49.093 WARNI [TransactionManager] Started recovery of database 'world'
+2026-05-22 17:36:49.118 WARNI [TransactionManager] Recovery of database 'world' completed
+2026-05-22 17:36:49.774 INFO  [LSMTreeIndex] Building index 'USER_0_628358828841400' on USER[id]...
+2026-05-22 17:36:49.777 INFO  [LSMTreeIndex] Completed building index 'USER_0_628358828841400': processed 0 records in 3ms
+2026-05-22 17:36:49.858 INFO  [LSMTreeIndex] Building index 'CHARACTER_0_628358913172600' on CHARACTER[id]...
+2026-05-22 17:36:49.858 INFO  [LSMTreeIndex] Completed building index 'CHARACTER_0_628358913172600': processed 0 records in 0ms
+2026-05-22 17:36:49.862 INFO  [LSMTreeIndex] Building index 'LOCATION_0_628358917914700' on LOCATION[id]...
+2026-05-22 17:36:49.862 INFO  [LSMTreeIndex] Completed building index 'LOCATION_0_628358917914700': processed 0 records in 0ms
+2026-05-22 17:36:49.865 INFO  [LSMTreeIndex] Building index 'PART_0_628358920977800' on PART[id]...
+2026-05-22 17:36:49.865 INFO  [LSMTreeIndex] Completed building index 'PART_0_628358920977800': processed 0 records in 0ms
