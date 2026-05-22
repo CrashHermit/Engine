@@ -11,8 +11,6 @@ from pydantic import BaseModel
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import lm  # noqa: F401 — configures dspy global LM on import
-
 from core.model.message import Message
 from database.repository.message import MessageRepository
 from database.repository.session import SessionRepository

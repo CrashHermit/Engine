@@ -7,6 +7,7 @@ from core.model.message import Message
 from signatures.narrator import NarratorSignature
 from state import GraphState
 
+from lm import lm
 
 def _format_history(messages: list[Message]) -> str:
     lines = []
