@@ -9,7 +9,7 @@ from state import GraphState
 _module = NarratorModule()
 _streaming_engine = dspy.streamify(
     program=_module,
-    stream_listeners=[dspy.streaming.StreamListener(signature_field_name="ai_message")],
+    stream_listeners=[dspy.streaming.StreamListener(signature_field_name="ai_message", allow_reuse=True)],
     is_async_program=True,
 )
 
