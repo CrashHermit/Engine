@@ -1,3 +1,4 @@
-from nodes.narrator import narrator_node
+from nodes.base import BaseCondenseNode, BaseDispatcherNode, BaseNode
+from nodes.narrator import NarratorNode
 
-__all__ = ["narrator_node"]
+__all__ = ["BaseCondenseNode", "BaseDispatcherNode", "BaseNode", "NarratorNode"]
