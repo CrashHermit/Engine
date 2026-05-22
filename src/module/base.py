@@ -1,28 +1,32 @@
 from typing import (
-    Any, 
+    Any,
     AsyncGenerator
 )
 from dspy import (
+    LM,
     streamify,
-    Predict, 
-    Signature, 
-    Module, 
+    Predict,
+    Signature,
+    Module,
     Prediction,
 )
 from dspy.streaming import (
-    StreamListener, 
+    StreamListener,
     StreamResponse,
 )
 
 class BaseModule(Module):
     def __init__(
         self,
-        signature: Signature, 
-        stream_fields: list[str], 
-        predictor: Predict = Predict
+        signature: Signature,
+        stream_fields: list[str],
+        predictor: Predict = Predict,
+        lm: LM | None = None,
     ) -> None:
         super().__init__()
         self.predict: Predict = predictor(signature=signature)
+        if lm is not None:
+            self.predict.lm = lm
         self._stream_fields: list[str] = stream_fields
         self._streaming_engine: streamify | None = None
 
