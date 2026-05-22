@@ -1,32 +1,31 @@
 import asyncio
 from typing import AsyncGenerator
 
+import lm  # noqa: F401 — configures dspy global LM on import
+from langgraph.checkpoint.memory import MemorySaver
+
 from core.model.message import Message
 from graph import Graph
 
 
 class Engine:
     def __init__(self) -> None:
-        self.graph = Graph().build().compile()
-        self.message_history: list[Message] = []
+        self.graph = Graph().build().compile(checkpointer=MemorySaver())
+        self._thread_config = {"configurable": {"thread_id": "main"}}
 
     async def stream_message(self, text: str) -> AsyncGenerator[dict, None]:
-        human_message: Message = Message(role="human", content=text, name="You")
+        human_message = Message(role="human", content=text, name="You")
 
         async for part in self.graph.astream(
-            {
-                "message_history": self.message_history,
-                "human_message": human_message,
-            },
+            {"human_message": human_message},
+            config=self._thread_config,
             stream_mode=["custom", "updates"],
             version="v2",
         ):
             if part["type"] == "custom":
                 yield part["data"]
             elif part["type"] == "updates":
-                for node_name, update in part["data"].items():
-                    if new_messages := update.get("message_history"):
-                        self.message_history.extend(new_messages)
+                for node_name in part["data"]:
                     yield {"event": "node_update", "node": node_name}
 
     async def run(self) -> None:
