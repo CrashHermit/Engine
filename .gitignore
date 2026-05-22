@@ -5,8 +5,8 @@ build/
 dist/
 wheels/
 *.egg-info
-
-# Virtual environments
+.env
+arcadedb.log
 .venv
 
 # Embedded ArcadeDB data
@@ -14,3 +14,5 @@ data/
 
 # Environment variables
 .env
+# Node
+client/node_modules/
