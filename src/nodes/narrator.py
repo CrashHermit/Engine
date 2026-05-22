@@ -19,8 +19,10 @@ def _format_history(messages: list[Message]) -> str:
 
 class NarratorNode:
     def __init__(self) -> None:
+        program = ChainOfThought(signature=NarratorSignature)
+        program.predict.lm = lm
         self._stream = dspy.streamify(
-            program=ChainOfThought(signature=NarratorSignature, lm=lm),
+            program=program,
             stream_listeners=[StreamListener(signature_field_name="ai_message")],
             is_async_program=True,
         )
