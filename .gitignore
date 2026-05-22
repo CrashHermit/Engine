@@ -11,3 +11,6 @@ wheels/
 
 # Embedded ArcadeDB data
 data/
+
+# Environment variables
+.env
