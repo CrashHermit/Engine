@@ -20,7 +20,7 @@ async def narrator_node(state: GraphState) -> dict:
 
     async for chunk in _streaming_engine(
         message_history=format_messages(state.message_history),
-        human_message=format_messages([state.human_message]),
+        human_message=state.human_message.content,
     ):
         if isinstance(chunk, dspy.streaming.StreamResponse):
             writer({"event": "token", "node": "narrator", "delta": chunk.chunk})
@@ -29,6 +29,8 @@ async def narrator_node(state: GraphState) -> dict:
 
     if prediction is None:
         raise RuntimeError("narrator stream ended without a prediction")
+
+    writer({"event": "done", "node": "narrator", "content": prediction.ai_message.strip()})
 
     ai_message = Message(
         role="ai",
