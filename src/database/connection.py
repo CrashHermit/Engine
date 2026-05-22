@@ -6,22 +6,41 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class DatabaseConnection:
-    def __init__(self, path: Path = Path("data/world")) -> None:
-        self.path: Path = path
+    def __init__(
+        self,
+        db_name: str = "world",
+        root_path: str = "data",
+        root_password: str | None = None,
+        http_port: int = 2480,
+    ) -> None:
+        self.db_name = db_name
+        self.root_path = root_path
+        self.root_password = root_password or os.getenv("ARCADEDB_ROOT_PASSWORD")
+        self.http_port = http_port
+        self._server: arcadedb.ArcadeDBServer | None = None
         self._database: arcadedb.Database | None = None
 
     def open(self) -> arcadedb.Database:
-        self.path.mkdir(parents=True, exist_ok=True)
-        if any(self.path.iterdir()):
-            self._database = arcadedb.open_database(path=str(self.path))
+        Path(self.root_path).mkdir(parents=True, exist_ok=True)
+        self._server = arcadedb.create_server(
+            root_path=self.root_path,
+            root_password=self.root_password,
+            config={"http_port": self.http_port, "host": "localhost"},
+        )
+        self._server.start()
+        db_dir = Path(self.root_path) / self.db_name
+        if db_dir.exists():
+            self._database = self._server.get_database(self.db_name)
         else:
-            self._database = arcadedb.create_database(path=str(self.path))
+            self._database = self._server.create_database(self.db_name)
         return self._database
 
     def close(self) -> None:
-        if self._database is not None:
-            self._database.close()
+        if self._server is not None:
+            self._server.stop()
+            self._server = None
             self._database = None
 
     @property
@@ -29,6 +48,12 @@ class DatabaseConnection:
         if self._database is None:
             raise RuntimeError("Database is not open")
         return self._database
+
+    @property
+    def studio_url(self) -> str:
+        if self._server is None:
+            raise RuntimeError("Server is not started")
+        return self._server.get_studio_url()
 
     def __enter__(self) -> "DatabaseConnection":
         self.open()

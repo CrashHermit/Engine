@@ -1,13 +1,11 @@
-from pathlib import Path
-
 import arcadedb_embedded as arcadedb
 
 from .connection import DatabaseConnection
 from .schema import SchemaManager
 
 class WorldStore:
-    def __init__(self, path: Path = Path("data/world")) -> None:
-        self._connection: DatabaseConnection = DatabaseConnection(path)
+    def __init__(self, db_name: str = "world", root_path: str = "data") -> None:
+        self._connection: DatabaseConnection = DatabaseConnection(db_name=db_name, root_path=root_path)
         self._schema: SchemaManager | None = None
 
     def open(self) -> None:
@@ -24,6 +22,10 @@ class WorldStore:
     @property
     def database(self) -> arcadedb.Database:
         return self._connection.database
+
+    @property
+    def studio_url(self) -> str:
+        return self._connection.studio_url
 
     def __enter__(self) -> "WorldStore":
         self.open()
