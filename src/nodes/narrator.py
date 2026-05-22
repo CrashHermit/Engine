@@ -36,6 +36,7 @@ class NarratorNode:
                 writer({"event": "token", "delta": chunk.chunk})
             elif isinstance(chunk, Prediction):
                 prediction = chunk
+                writer({"event": "message", "content": chunk.ai_message.strip()})
 
         if prediction is None:
             raise RuntimeError("NarratorNode stream ended without a prediction")
