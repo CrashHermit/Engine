@@ -20,7 +20,7 @@ def _format_history(messages: list[Message]) -> str:
 class NarratorNode:
     def __init__(self) -> None:
         self._stream = dspy.streamify(
-            program=ChainOfThought(NarratorSignature),
+            program=ChainOfThought(signature=NarratorSignature, lm=lm),
             stream_listeners=[StreamListener(signature_field_name="ai_message")],
             is_async_program=True,
         )
