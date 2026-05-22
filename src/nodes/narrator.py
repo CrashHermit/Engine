@@ -6,19 +6,13 @@ from module.narrator import NarratorModule
 from module.utils import format_messages
 from state import GraphState
 
-_module = NarratorModule()
-_streaming_engine = dspy.streamify(
-    program=_module,
-    stream_listeners=[dspy.streaming.StreamListener(signature_field_name="ai_message")],
-    is_async_program=True,
-)
-
 
 async def narrator_node(state: GraphState) -> dict:
+    narrator = NarratorModule()
     writer = get_stream_writer()
     prediction: dspy.Prediction | None = None
 
-    async for chunk in _streaming_engine(
+    async for chunk in narrator.stream(
         message_history=format_messages(state.message_history),
         human_message=state.human_message.content,
     ):

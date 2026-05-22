@@ -1,5 +1,7 @@
 import dspy
 
+from module.base import BaseModule
+
 
 class QuestionGeneratorSignature(dspy.Signature):
     """Generate a single clarifying DM-style question for ambiguous player input."""
@@ -10,19 +12,9 @@ class QuestionGeneratorSignature(dspy.Signature):
     question: str = dspy.OutputField(description="A single focused clarifying question.")
 
 
-class QuestionGeneratorModule(dspy.Module):
+class QuestionGeneratorModule(BaseModule):
     def __init__(self) -> None:
-        super().__init__()
-        self.predict: dspy.ChainOfThought = dspy.ChainOfThought(signature=QuestionGeneratorSignature)
-
-    async def aforward(
-        self,
-        message_history: str,
-        clarity_history: str,
-        human_message: str,
-    ) -> dspy.Prediction:
-        return await self.predict.acall(
-            message_history=message_history,
-            clarity_history=clarity_history,
-            human_message=human_message,
+        super().__init__(
+            signature=QuestionGeneratorSignature,
+            stream_fields=["question"],
         )
