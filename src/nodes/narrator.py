@@ -21,6 +21,13 @@ class _NarratorModule(dspy.Module):
     def __init__(self) -> None:
         super().__init__()
         self.predict = dspy.ChainOfThought(signature=_NarratorSignature)
+        self._stream = dspy.streamify(
+            program=self,
+            stream_listeners=[
+                dspy.streaming.StreamListener(signature_field_name="ai_message", allow_reuse=True)
+            ],
+            is_async_program=True,
+        )
 
     async def aforward(self, message_history: str, human_message: str) -> dspy.Prediction:
         return await self.predict.acall(
@@ -28,19 +35,18 @@ class _NarratorModule(dspy.Module):
             human_message=human_message,
         )
 
+    def stream(self, message_history: str, human_message: str):
+        return self._stream(message_history=message_history, human_message=human_message)
 
-_streaming_narrator = dspy.streamify(
-    program=_NarratorModule(),
-    stream_listeners=[dspy.streaming.StreamListener(signature_field_name="ai_message", allow_reuse=True)],
-    is_async_program=True,
-)
+
+_narrator = _NarratorModule()
 
 
 async def narrator_node(state: GraphState) -> dict:
     writer = get_stream_writer()
     prediction: dspy.Prediction | None = None
 
-    async for chunk in _streaming_narrator(
+    async for chunk in _narrator.stream(
         message_history=format_messages(state.message_history),
         human_message=state.human_message.content,
     ):
