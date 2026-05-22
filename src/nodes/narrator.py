@@ -1,27 +1,46 @@
-from dspy import Prediction
+import dspy
+from dspy import ChainOfThought, Prediction
+from dspy.streaming import StreamListener, StreamResponse
+from langgraph.config import get_stream_writer
 
 from core.model.message import Message
-from module.narrator import NarratorModule
-from nodes.base import BaseNode
+from signatures.narrator import NarratorSignature
 from state import GraphState
 
 
-class NarratorNode(BaseNode[GraphState]):
+def _format_history(messages: list[Message]) -> str:
+    lines = []
+    for msg in messages:
+        label = msg.name if msg.name else msg.role.capitalize()
+        lines.append(f"{label}: {msg.content}")
+    return "\n".join(lines)
+
+
+class NarratorNode:
     def __init__(self) -> None:
-        super().__init__(
-            module_class=NarratorModule,
-            node_name="narrator",
-            output_field="ai_message",
+        self._stream = dspy.streamify(
+            program=ChainOfThought(NarratorSignature),
+            stream_listeners=[StreamListener(signature_field_name="ai_message")],
+            is_async_program=True,
         )
 
-    def get_inputs(self, state: GraphState) -> dict:
-        return {
-            "message_history": state.message_history,
-            "human_message": state.human_message.content,
-        }
+    async def __call__(self, state: GraphState) -> dict:
+        writer = get_stream_writer()
+        prediction: Prediction | None = None
 
-    def build_update(self, state: GraphState, prediction: Prediction) -> dict:
-        ai_message: Message = Message(
+        async for chunk in self._stream(
+            message_history=_format_history(state.message_history),
+            human_message=state.human_message.content,
+        ):
+            if isinstance(chunk, StreamResponse):
+                writer({"event": "token", "delta": chunk.chunk})
+            elif isinstance(chunk, Prediction):
+                prediction = chunk
+
+        if prediction is None:
+            raise RuntimeError("NarratorNode stream ended without a prediction")
+
+        ai_message = Message(
             role="ai",
             content=prediction.ai_message.strip(),
             name="Narrator",
