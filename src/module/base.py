@@ -9,18 +9,23 @@ class StreamingDSPyNode(dspy.Module):
         super().__init__()
         self._node_name: str = node_name
         self._output_field: str = output_field
-        self._streaming_engine = dspy.streamify(
-            program=self,
-            stream_listeners=[
-                dspy.streaming.StreamListener(signature_field_name=output_field)
-            ],
-            is_async_program=True,
-        )
+        self._streaming_engine = None
+
+    def _get_streaming_engine(self):
+        if self._streaming_engine is None:
+            self._streaming_engine = dspy.streamify(
+                program=self,
+                stream_listeners=[
+                    dspy.streaming.StreamListener(signature_field_name=self._output_field)
+                ],
+                is_async_program=True,
+            )
+        return self._streaming_engine
 
     async def stream(
         self, **kwargs
     ) -> AsyncGenerator[dspy.streaming.StreamResponse | dspy.Prediction, None]:
-        async for chunk in self._streaming_engine(**kwargs):
+        async for chunk in self._get_streaming_engine()(**kwargs):
             yield chunk
 
     async def stream_to_writer(self, **kwargs) -> dspy.Prediction:
