@@ -30,7 +30,7 @@ class DatabaseConnection:
             config={"http_port": self.http_port, "host": "localhost"},
         )
         self._server.start()
-        db_dir = Path(self.root_path) / self.db_name
+        db_dir = Path(self.root_path) / "databases" / self.db_name
         if db_dir.exists():
             self._database = self._server.get_database(self.db_name)
         else:
