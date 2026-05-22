@@ -12,7 +12,7 @@ export default function App() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [streaming, setStreaming] = useState(false);
+  const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -23,47 +23,28 @@ export default function App() {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, loading]);
 
   async function sendMessage() {
-    if (!input.trim() || !sessionId || streaming) return;
+    if (!input.trim() || !sessionId || loading) return;
 
     const text = input.trim();
     setInput("");
     setMessages((prev) => [...prev, { role: "human", content: text }]);
-    setStreaming(true);
-    setMessages((prev) => [...prev, { role: "ai", content: "" }]);
+    setLoading(true);
 
-    const response = await fetch(`${API}/chat`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id: sessionId, text }),
-    });
+    try {
+      const response = await fetch(`${API}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sessionId, text }),
+      });
 
-    const reader = response.body!.getReader();
-    const decoder = new TextDecoder();
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      for (const line of decoder.decode(value).split("\n")) {
-        if (!line.startsWith("data: ")) continue;
-        const event = JSON.parse(line.slice(6));
-        if (event.event === "token") {
-          setMessages((prev) => {
-            const next = [...prev];
-            next[next.length - 1] = {
-              role: "ai",
-              content: next[next.length - 1].content + event.delta,
-            };
-            return next;
-          });
-        }
-      }
+      const data = await response.json();
+      setMessages((prev) => [...prev, { role: "ai", content: data.content }]);
+    } finally {
+      setLoading(false);
     }
-
-    setStreaming(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -82,6 +63,14 @@ export default function App() {
             <p>{msg.content}</p>
           </div>
         ))}
+        {loading && (
+          <div className="message ai">
+            <span className="label">Narrator</span>
+            <p className="loading-dots">
+              <span /><span /><span />
+            </p>
+          </div>
+        )}
         <div ref={bottomRef} />
       </div>
       <div className="input-row">
@@ -90,10 +79,10 @@ export default function App() {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={sessionId ? "Type a message..." : "Connecting..."}
-          disabled={!sessionId || streaming}
+          disabled={!sessionId || loading}
           rows={2}
         />
-        <button onClick={sendMessage} disabled={!sessionId || streaming || !input.trim()}>
+        <button onClick={sendMessage} disabled={!sessionId || loading || !input.trim()}>
           Send
         </button>
       </div>
