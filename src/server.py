@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -39,7 +40,7 @@ app.add_middleware(
 @app.post("/session")
 async def create_session() -> dict:
     repo = SessionRepository(app.state.store.database)
-    session_id = repo.create()
+    session_id = await run_in_threadpool(repo.create)
     return {"session_id": session_id}
 
 
@@ -52,12 +53,15 @@ class ChatRequest(BaseModel):
 async def chat(request: ChatRequest) -> StreamingResponse:
     db = app.state.store.database
     session_repo = SessionRepository(db)
-    if session_repo.get(request.session_id) is None:
+    msg_repo = MessageRepository(db)
+
+    if await run_in_threadpool(session_repo.get, request.session_id) is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    msg_repo = MessageRepository(db)
-    message_history = msg_repo.get_history(request.session_id)
+    message_history = await run_in_threadpool(msg_repo.get_history, request.session_id)
     human_message = Message(role="human", content=request.text, name="You")
+
+    await run_in_threadpool(msg_repo.append, request.session_id, [human_message])
 
     async def event_stream():
         async for event in app.state.graph.astream(
@@ -68,6 +72,6 @@ async def chat(request: ChatRequest) -> StreamingResponse:
                 yield f"data: {json.dumps(event)}\n\n"
             elif event.get("event") == "message":
                 ai_message = Message(role="ai", content=event["content"], name="Narrator")
-                msg_repo.append(request.session_id, [human_message, ai_message])
+                await run_in_threadpool(msg_repo.append, request.session_id, [ai_message])
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
