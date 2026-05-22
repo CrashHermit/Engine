@@ -12,5 +12,7 @@ arcadedb.log
 # Embedded ArcadeDB data
 data/
 
+# Environment variables
+.env
 # Node
 client/node_modules/
