@@ -11,17 +11,12 @@ class DatabaseConnection:
         self.path: Path = path
         self._database: arcadedb.Database | None = None
 
-    def create(self) -> arcadedb.Database:
+    def open(self) -> arcadedb.Database:
         self.path.mkdir(parents=True, exist_ok=True)
         if any(self.path.iterdir()):
             self._database = arcadedb.open_database(path=str(self.path))
         else:
             self._database = arcadedb.create_database(path=str(self.path))
-        self._database = arcadedb.create_database(path=str(self.path))
-        return self._database
-
-    def open(self) -> arcadedb.Database:
-        self._database = arcadedb.open_database(path=str(self.path))
         return self._database
 
     def close(self) -> None:
@@ -36,7 +31,7 @@ class DatabaseConnection:
         return self._database
 
     def __enter__(self) -> "DatabaseConnection":
-        self.create()
+        self.open()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback) -> None:

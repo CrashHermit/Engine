@@ -1,4 +1,4 @@
 
-2026-05-22 17:42:27.090 WARNI [LocalDatabase] Database 'world' was not closed properly last time
-2026-05-22 17:42:27.090 WARNI [TransactionManager] Started recovery of database 'world'
-2026-05-22 17:42:27.114 WARNI [TransactionManager] Recovery of database 'world' completed
+2026-05-22 18:07:02.068 WARNI [LocalDatabase] Database 'world' was not closed properly last time
+2026-05-22 18:07:02.068 WARNI [TransactionManager] Started recovery of database 'world'
+2026-05-22 18:07:02.084 WARNI [TransactionManager] Recovery of database 'world' completed

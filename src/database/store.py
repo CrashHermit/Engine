@@ -12,7 +12,7 @@ class WorldStore:
 
     def open(self) -> None:
         """Open DB and ensure schema. Call once at app startup."""
-        self._connection.create()
+        self._connection.open()
         self._schema = SchemaManager(self._connection.database)
         self._schema.ensure()
 
