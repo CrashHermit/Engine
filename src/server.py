@@ -1,4 +1,5 @@
 import json
+import logging
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -8,6 +9,14 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logging.getLogger("nodes.narrator").setLevel(logging.DEBUG)
+logging.getLogger(__name__).setLevel(logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -65,16 +74,36 @@ async def chat(request: ChatRequest) -> StreamingResponse:
 
     async def event_stream():
         ai_message: Message | None = None
+        event_count = 0
+        token_count = 0
+        logger.info(
+            "event_stream start | session=%s | history_len=%d",
+            request.session_id,
+            len(message_history),
+        )
         try:
             async for event in app.state.graph.astream(
                 {"message_history": message_history, "human_message": human_message},
                 stream_mode="custom",
             ):
+                event_count += 1
+                logger.debug("LangGraph event #%d: %r", event_count, event)
                 if event.get("event") == "token":
+                    token_count += 1
                     yield f"data: {json.dumps(event)}\n\n"
                 elif event.get("event") == "message":
+                    logger.info("message event received | content_len=%d", len(event.get("content", "")))
                     ai_message = Message(role="ai", content=event["content"], name="Narrator")
+        except Exception:
+            logger.exception("Error in event_stream for session %s", request.session_id)
         finally:
+            logger.info(
+                "event_stream end | session=%s | total_events=%d | tokens_yielded=%d | ai_message_saved=%s",
+                request.session_id,
+                event_count,
+                token_count,
+                ai_message is not None,
+            )
             if ai_message is not None:
                 await run_in_threadpool(msg_repo.append, request.session_id, [ai_message])
 
