@@ -1,5 +1,3 @@
-import asyncio
-
 from dspy import Predict
 
 from core.model.message import Message
@@ -26,8 +24,7 @@ class NarratorNode:
         self._program.predict.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        prediction = await asyncio.to_thread(
-            self._program,
+        prediction = await self._program.aforward(
             message_history=_format_history(state.message_history),
             human_message=state.human_message.content,
         )
