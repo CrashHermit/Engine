@@ -1,36 +1,41 @@
-import arcadedb_embedded as arcadedb
 from arcadedb_embedded.schema import Schema
+from arcadedb_embedded.schema import PropertyType
+from arcadedb_embedded.core import Database
+import arcadedb_embedded as arcadedb
+from core.model.database import VertexType
+from core.model.database import EdgeType
+
+VERTEX_SCHEMA: dict[VertexType, list[str]] = {
+    VertexType.USER: ["id", "created_at"],
+    VertexType.CHARACTER: ["id", "name", "created_at"],
+    VertexType.LOCATION: ["id", "name", "description", "created_at"],
+    VertexType.PART: ["id", "name", "tags", "created_at"],
+    VertexType.MESSAGE: ["id", "role", "content", "created_at"],
+    VertexType.OPENING: ["id"],
+    VertexType.SOURCE: ["id"],
+    VertexType.SINK: ["id"],
+    VertexType.CHANNEL: ["id"],
+    VertexType.MANIPULATOR: ["id"],
+    VertexType.MOVEMENT: ["id"],
+}
 
 
 class SchemaManager:
     def __init__(self, database: arcadedb.Database) -> None:
-        self.database = database
+        self.database: Database = database
 
     def ensure(self) -> None:
-        schema = self.database.schema
-        self._vertex(schema, "USER", ["id", "created_at"])
-        self._vertex(schema, "CHARACTER", ["id", "name", "created_at"])
-        self._vertex(schema, "LOCATION", ["id", "name", "description", "created_at"])
-        self._vertex(schema, "PART", ["id", "name", "tags", "created_at"])
-        self._vertex(schema, "MESSAGE", ["id", "role", "content", "created_at"])
-        self._vertex(schema, "OPENING", ["id"])
-        self._vertex(schema, "SOURCE", ["id"])
-        self._vertex(schema, "SINK", ["id"])
-        self._vertex(schema, "CHANNEL", ["id"])
-        self._vertex(schema, "MANIPULATOR", ["id"])
-        self._vertex(schema, "MOVEMENT", ["id"])
-        for edge in [
-            "HAS_MESSAGE", "NEXT_MESSAGE", "LOCATED_AT",
-            "CONNECTS", "ATTACHED_TO", "PRODUCES", "CONSUMES",
-            "REQUIRES", "CONTROLS", "CONTAINS", "HAS_OPENING",
-            "AFFORDS", "ENABLES",
-        ]:
-            self._edge(schema, edge)
+        schema: Schema = self.database.schema
+        for vertex_type, properties in VERTEX_SCHEMA.items():
+            self._vertex(schema=schema, name=vertex_type, properties=properties)
+        for edge_type in EdgeType:
+            self._edge(schema=schema, name=edge_type)
         self._indexes(schema)
 
-    def _vertex(self, schema: Schema, name: str, properties: list[str]) -> None:
-        schema.get_or_create_vertex_type(name=name)
-        type_map = {
+    def _vertex(self, schema: Schema, name: VertexType, properties: list[str]) -> None:
+        type_name = name.value
+        schema.get_or_create_vertex_type(name=type_name)
+        type_map: dict[str, PropertyType] = {
             "id": arcadedb.PropertyType.STRING,
             "name": arcadedb.PropertyType.STRING,
             "description": arcadedb.PropertyType.STRING,
@@ -41,24 +46,29 @@ class SchemaManager:
         }
         for prop in properties:
             schema.get_or_create_property(
-                type_name=name,
+                type_name=type_name,
                 property_name=prop,
                 property_type=type_map[prop],
             )
 
-    def _edge(self, schema: Schema, name: str) -> None:
-        schema.get_or_create_edge_type(name=name)
+    def _edge(self, schema: Schema, name: EdgeType) -> None:
+        type_name = name.value
+        schema.get_or_create_edge_type(name=type_name)
         schema.get_or_create_property(
-            type_name=name,
+            type_name=type_name,
             property_name="id",
             property_type=arcadedb.PropertyType.STRING,
         )
         schema.get_or_create_property(
-            type_name=name,
+            type_name=type_name,
             property_name="created_at",
             property_type=arcadedb.PropertyType.DATETIME,
         )
 
     def _indexes(self, schema: Schema) -> None:
-        for type_name in ["USER", "CHARACTER", "LOCATION", "PART", "MESSAGE"]:
-            schema.get_or_create_index(type_name=type_name, property_names=["id"], unique=True)
+        for vertex_type in VertexType:
+            schema.get_or_create_index(
+                type_name=vertex_type.value,
+                property_names=["id"],
+                unique=True,
+            )

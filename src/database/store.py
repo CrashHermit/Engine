@@ -3,6 +3,7 @@ import arcadedb_embedded as arcadedb
 from .connection import DatabaseConnection
 from .schema import SchemaManager
 
+
 class WorldStore:
     def __init__(self, db_name: str = "world", root_path: str = "data") -> None:
         self._connection: DatabaseConnection = DatabaseConnection(db_name=db_name, root_path=root_path)
@@ -31,9 +32,10 @@ class WorldStore:
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+    def __exit__(self, exc_type, exc_value, exc_tb) -> bool:
         self.close()
         return False
+
 
 if __name__ == "__main__":
     with WorldStore() as store:

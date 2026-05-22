@@ -1,24 +1,15 @@
-from arcadedb_embedded.graph import Edge
-from datetime import (
-    datetime,
-    timezone,
-)
+from datetime import datetime, timezone
 from typing import Any
+
 import arcadedb_embedded as arcadedb
-from arcadedb_embedded.graph import (
-    Edge,
-    Vertex,
-)
-from core.model.database import (
-    EdgeType,
-    VertexType,
-)
+from arcadedb_embedded.graph import Edge, Vertex
+
+from core.model.database import EdgeType, VertexType
+
 
 class BaseRepository:
     def __init__(self, database: arcadedb.Database) -> None:
         self._database: arcadedb.Database = database
-
-
 
     ############################################################################
     # Vertex operations
@@ -33,10 +24,12 @@ class BaseRepository:
         return vertex
 
     def get_vertex(self, type_name: VertexType, id: str) -> Vertex | None:
-        return self._database.lookup_by_key(type_name=type_name.value, keys=["id"], values=[id])
+        return self._database.lookup_by_key(
+            type_name=type_name.value, keys=["id"], values=[id]
+        )
 
     def update_vertex(self, vertex: Vertex, **properties: Any) -> None:
-        mutable = vertex.modify()
+        mutable: Vertex = vertex.modify()
         for name, value in properties.items():
             mutable.set(name=name, value=value)
         mutable.save()
@@ -50,7 +43,6 @@ class BaseRepository:
             value=datetime.now(tz=timezone.utc),
         ).save()
 
-
     ############################################################################
     # Edge operations
     ############################################################################
@@ -63,7 +55,7 @@ class BaseRepository:
         **properties: Any,
     ) -> Edge:
         with self._database.transaction():
-            edge = source.new_edge(type_name.value, target, **properties)
+            edge = source.new_edge(label=type_name.value, target=target, **properties)
             edge.save()
         return edge
 

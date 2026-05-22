@@ -15,10 +15,10 @@ class DatabaseConnection:
         root_password: str | None = None,
         http_port: int = 2480,
     ) -> None:
-        self.db_name = db_name
-        self.root_path = root_path
-        self.root_password = root_password or os.getenv("ARCADEDB_ROOT_PASSWORD")
-        self.http_port = http_port
+        self.db_name: str = db_name
+        self.root_path: str = root_path
+        self.root_password: str | None = root_password or os.getenv("ARCADEDB_ROOT_PASSWORD")
+        self.http_port: int = http_port
         self._server: arcadedb.ArcadeDBServer | None = None
         self._database: arcadedb.Database | None = None
 
@@ -30,11 +30,11 @@ class DatabaseConnection:
             config={"http_port": self.http_port, "host": "localhost"},
         )
         self._server.start()
-        db_dir = Path(self.root_path) / "databases" / self.db_name
+        db_dir: Path = Path(self.root_path) / "databases" / self.db_name
         if db_dir.exists():
-            self._database = self._server.get_database(self.db_name)
+            self._database = self._server.get_database(name=self.db_name)
         else:
-            self._database = self._server.create_database(self.db_name)
+            self._database = self._server.create_database(name=self.db_name)
         return self._database
 
     def close(self) -> None:
@@ -59,6 +59,6 @@ class DatabaseConnection:
         self.open()
         return self
 
-    def __exit__(self, exc_type, exc_value, traceback) -> None:
+    def __exit__(self, exc_type, exc_value, exc_tb) -> bool:
         self.close()
         return False
