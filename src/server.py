@@ -11,6 +11,7 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from core.model.message import Message
+from database.repository.message import MessageRepository
 from database.repository.session import SessionRepository
 from database.store import WorldStore
 from graph import Graph
@@ -49,13 +50,13 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 async def chat(request: ChatRequest) -> StreamingResponse:
-    repo = SessionRepository(app.state.store.database)
-    if repo.get(request.session_id) is None:
+    db = app.state.store.database
+    session_repo = SessionRepository(db)
+    if session_repo.get(request.session_id) is None:
         raise HTTPException(status_code=404, detail="Session not found")
 
-    # TODO: load message history from ArcadeDB via MessageRepository
-    message_history: list[Message] = []
-
+    msg_repo = MessageRepository(db)
+    message_history = msg_repo.get_history(request.session_id)
     human_message = Message(role="human", content=request.text, name="You")
 
     async def event_stream():
@@ -66,7 +67,7 @@ async def chat(request: ChatRequest) -> StreamingResponse:
             if event.get("event") == "token":
                 yield f"data: {json.dumps(event)}\n\n"
             elif event.get("event") == "message":
-                # TODO: save human_message + ai_message to ArcadeDB via MessageRepository
-                pass
+                ai_message = Message(role="ai", content=event["content"], name="Narrator")
+                msg_repo.append(request.session_id, [human_message, ai_message])
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
