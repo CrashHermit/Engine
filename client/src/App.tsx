@@ -9,24 +9,17 @@ interface Message {
 }
 
 export default function App() {
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetch(`${API}/session`, { method: "POST" })
-      .then((r) => r.json())
-      .then((data) => setSessionId(data.session_id));
-  }, []);
-
-  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
   async function sendMessage() {
-    if (!input.trim() || !sessionId || loading) return;
+    if (!input.trim() || loading) return;
 
     const text = input.trim();
     setInput("");
@@ -37,7 +30,7 @@ export default function App() {
       const response = await fetch(`${API}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: sessionId, text }),
+        body: JSON.stringify({ text }),
       });
 
       const data = await response.json();
@@ -78,11 +71,11 @@ export default function App() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={sessionId ? "Type a message..." : "Connecting..."}
-          disabled={!sessionId || loading}
+          placeholder="Type a message..."
+          disabled={loading}
           rows={2}
         />
-        <button onClick={sendMessage} disabled={!sessionId || loading || !input.trim()}>
+        <button onClick={sendMessage} disabled={loading || !input.trim()}>
           Send
         </button>
       </div>
