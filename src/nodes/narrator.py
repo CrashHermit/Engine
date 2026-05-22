@@ -1,8 +1,7 @@
-import dspy
+from dspy import Prediction
 
 from core.model.message import Message
 from module.narrator import NarratorModule
-from module.utils import format_messages
 from nodes.base import BaseNode
 from state import GraphState
 
@@ -17,12 +16,12 @@ class NarratorNode(BaseNode[GraphState]):
 
     def get_inputs(self, state: GraphState) -> dict:
         return {
-            "message_history": format_messages(state.message_history),
+            "message_history": state.message_history,
             "human_message": state.human_message.content,
         }
 
-    def build_update(self, state: GraphState, prediction: dspy.Prediction) -> dict:
-        ai_message = Message(
+    def build_update(self, state: GraphState, prediction: Prediction) -> dict:
+        ai_message: Message = Message(
             role="ai",
             content=prediction.ai_message.strip(),
             name="Narrator",
