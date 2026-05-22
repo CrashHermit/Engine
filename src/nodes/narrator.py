@@ -1,6 +1,12 @@
-import dspy
-from dspy import ChainOfThought, Prediction
-from dspy.streaming import StreamListener, StreamResponse
+from dspy import (
+    Prediction, 
+    Predict, 
+    streamify,
+)
+from dspy.streaming import (
+    StreamListener, 
+    StreamResponse,
+)
 from langgraph.config import get_stream_writer
 
 from core.model.message import Message
@@ -10,18 +16,18 @@ from state import GraphState
 from lm import lm
 
 def _format_history(messages: list[Message]) -> str:
-    lines = []
+    lines: list[str] = []
     for msg in messages:
-        label = msg.name if msg.name else msg.role.capitalize()
+        label: str = msg.name if msg.name else msg.role.capitalize()
         lines.append(f"{label}: {msg.content}")
     return "\n".join(lines)
 
 
 class NarratorNode:
     def __init__(self) -> None:
-        program = ChainOfThought(signature=NarratorSignature)
+        program: Predict = Predict(signature=NarratorSignature)
         program.predict.lm = lm
-        self._stream = dspy.streamify(
+        self._stream: streamify | None = streamify(
             program=program,
             stream_listeners=[StreamListener(signature_field_name="ai_message")],
             is_async_program=True,
