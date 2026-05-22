@@ -64,14 +64,18 @@ async def chat(request: ChatRequest) -> StreamingResponse:
     await run_in_threadpool(msg_repo.append, request.session_id, [human_message])
 
     async def event_stream():
-        async for event in app.state.graph.astream(
-            {"message_history": message_history, "human_message": human_message},
-            stream_mode="custom",
-        ):
-            if event.get("event") == "token":
-                yield f"data: {json.dumps(event)}\n\n"
-            elif event.get("event") == "message":
-                ai_message = Message(role="ai", content=event["content"], name="Narrator")
+        ai_message: Message | None = None
+        try:
+            async for event in app.state.graph.astream(
+                {"message_history": message_history, "human_message": human_message},
+                stream_mode="custom",
+            ):
+                if event.get("event") == "token":
+                    yield f"data: {json.dumps(event)}\n\n"
+                elif event.get("event") == "message":
+                    ai_message = Message(role="ai", content=event["content"], name="Narrator")
+        finally:
+            if ai_message is not None:
                 await run_in_threadpool(msg_repo.append, request.session_id, [ai_message])
 
     return StreamingResponse(event_stream(), media_type="text/event-stream")
