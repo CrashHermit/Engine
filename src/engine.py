@@ -47,6 +47,9 @@ class Engine:
                     if not saw_tokens:
                         print(event["content"], end="", flush=True)
                     print()
+                    break
+            else:
+                print()
 
 
 if __name__ == "__main__":
