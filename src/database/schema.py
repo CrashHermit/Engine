@@ -5,6 +5,18 @@ import arcadedb_embedded as arcadedb
 from core.model.database import VertexType
 from core.model.database import EdgeType
 
+PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
+    "id": arcadedb.PropertyType.STRING,
+    "name": arcadedb.PropertyType.STRING,
+    "description": arcadedb.PropertyType.STRING,
+    "role": arcadedb.PropertyType.STRING,
+    "content": arcadedb.PropertyType.STRING,
+    "tags": arcadedb.PropertyType.STRING,
+    "created_at": arcadedb.PropertyType.DATETIME,
+    "updated_at": arcadedb.PropertyType.DATETIME,
+    "invalidated_at": arcadedb.PropertyType.DATETIME,
+}
+
 VERTEX_SCHEMA: dict[VertexType, list[str]] = {
     VertexType.USER: ["id", "created_at"],
     VertexType.CHARACTER: ["id", "name", "created_at"],
@@ -35,20 +47,11 @@ class SchemaManager:
     def _vertex(self, schema: Schema, name: VertexType, properties: list[str]) -> None:
         type_name = name.value
         schema.get_or_create_vertex_type(name=type_name)
-        type_map: dict[str, PropertyType] = {
-            "id": arcadedb.PropertyType.STRING,
-            "name": arcadedb.PropertyType.STRING,
-            "description": arcadedb.PropertyType.STRING,
-            "role": arcadedb.PropertyType.STRING,
-            "content": arcadedb.PropertyType.STRING,
-            "tags": arcadedb.PropertyType.STRING,
-            "created_at": arcadedb.PropertyType.DATETIME,
-        }
         for prop in properties:
             schema.get_or_create_property(
                 type_name=type_name,
                 property_name=prop,
-                property_type=type_map[prop],
+                property_type=PROPERTY_TYPES[prop],
             )
 
     def _edge(self, schema: Schema, name: EdgeType) -> None:
