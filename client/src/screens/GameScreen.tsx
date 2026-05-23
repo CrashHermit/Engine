@@ -1,11 +1,13 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import ChatPanel from '../components/ChatPanel'
 import { sendMessage, sendOocMessage, makeMessage } from '../api/chat'
 import type { Message } from '../api/chat'
 
 export default function GameScreen() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const worldId = (location.state as { worldId?: string })?.worldId
   const [icMessages, setIcMessages] = useState<Message[]>([])
   const [oocMessages, setOocMessages] = useState<Message[]>([])
   const [icLoading, setIcLoading] = useState(false)
@@ -45,8 +47,8 @@ export default function GameScreen() {
     <div className="screen game-screen">
       <header className="game-header">
         <span className="game-header__title">Dark Adventures</span>
-        <button className="btn btn--ghost game-header__menu" onClick={() => navigate('/')}>
-          ← Main Menu
+        <button className="btn btn--ghost game-header__menu" onClick={() => navigate(worldId ? `/worlds/${worldId}` : '/worlds')}>
+          ← World
         </button>
       </header>
 
