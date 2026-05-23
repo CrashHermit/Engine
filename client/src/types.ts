@@ -1,5 +1,6 @@
 export interface Character {
   id: string
+  world_id: string
   name: string
   description: string
   corpus_score: number
@@ -23,4 +24,16 @@ export interface CreateCharacterPayload {
   agreeableness_score: number
   neuroticism_score: number
   conscientiousness_score: number
+}
+
+export interface World {
+  id: string
+  name: string
+  description: string
+  created_at: string
+}
+
+export interface CreateWorldPayload {
+  name: string
+  description: string
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import PipSelector from '../components/PipSelector'
 import { createCharacter } from '../api/characters'
 
@@ -8,6 +8,7 @@ const MAX_PER_ATTR = 4
 
 export default function CreateCharacterScreen() {
   const navigate = useNavigate()
+  const { worldId } = useParams<{ worldId: string }>()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [corpus, setCorpus] = useState(0)
@@ -44,7 +45,7 @@ export default function CreateCharacterScreen() {
     setError('')
     setSubmitting(true)
     try {
-      await createCharacter({
+      await createCharacter(worldId!, {
         name: name.trim(),
         description: description.trim(),
         corpus_score: corpus,
@@ -56,7 +57,7 @@ export default function CreateCharacterScreen() {
         neuroticism_score: neuroticism,
         conscientiousness_score: conscientiousness,
       })
-      navigate('/characters/load')
+      navigate(`/worlds/${worldId}`)
     } catch {
       setError('Something went wrong. Try again.')
       setSubmitting(false)
@@ -119,8 +120,8 @@ export default function CreateCharacterScreen() {
         {error && <p className="form-error">{error}</p>}
 
         <div className="form-actions">
-          <button type="button" className="btn btn--ghost" onClick={() => navigate('/characters')}>
-            Back
+          <button type="button" className="btn btn--ghost" onClick={() => navigate(`/worlds/${worldId}`)}>
+            ← Back
           </button>
           <button type="submit" className="btn btn--primary" disabled={submitting}>
             {submitting ? 'Creating…' : 'Create'}
