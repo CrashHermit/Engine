@@ -24,5 +24,5 @@ export async function sendOocMessage(text: string): Promise<string> {
 }
 
 export function makeMessage(role: Message['role'], content: string): Message {
-  return { role, content, id: `${Date.now()}-${Math.random().toString(36).slice(2)}` }
+  return { role, content, id: crypto.randomUUID() }
 }

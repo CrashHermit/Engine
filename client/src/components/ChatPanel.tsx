@@ -14,12 +14,16 @@ export default function ChatPanel({ title, messages, loading, onSend, aiLabel = 
   const [input, setInput] = useState('')
   const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const wasNearBottomRef = useRef(true)
 
-  useEffect(() => {
+  function handleScroll() {
     const el = containerRef.current
     if (!el) return
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
-    if (isNearBottom) {
+    wasNearBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+  }
+
+  useEffect(() => {
+    if (wasNearBottomRef.current) {
       bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages, loading])
@@ -43,7 +47,7 @@ export default function ChatPanel({ title, messages, loading, onSend, aiLabel = 
       <div className="chat-panel__header">
         <span className="chat-panel__title">{title}</span>
       </div>
-      <div className="chat-panel__messages" ref={containerRef}>
+      <div className="chat-panel__messages" ref={containerRef} onScroll={handleScroll}>
         {messages.map(msg => (
           <div key={msg.id} className={`chat-msg chat-msg--${msg.role}`}>
             <span className="chat-msg__label">{msg.role === 'human' ? 'You' : aiLabel}</span>

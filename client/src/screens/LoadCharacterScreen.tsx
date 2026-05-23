@@ -26,8 +26,14 @@ export default function LoadCharacterScreen() {
   async function handlePlay() {
     if (!selected) return
     setStarting(true)
-    await startSession(selected.id)
-    navigate('/game')
+    try {
+      await startSession(selected.id)
+      navigate('/game')
+    } catch (error) {
+      console.error('Failed to start session:', error)
+    } finally {
+      setStarting(false)
+    }
   }
 
   async function handleDelete() {
