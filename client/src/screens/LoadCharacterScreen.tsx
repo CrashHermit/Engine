@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PipSelector from '../components/PipSelector'
-import { getCharacters, startSession } from '../api/characters'
+import { getCharacters, startSession, deleteCharacter } from '../api/characters'
 import type { Character } from '../types'
 
 export default function LoadCharacterScreen() {
@@ -10,6 +10,8 @@ export default function LoadCharacterScreen() {
   const [selected, setSelected] = useState<Character | null>(null)
   const [loading, setLoading] = useState(true)
   const [starting, setStarting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     getCharacters().then(chars => {
@@ -26,6 +28,17 @@ export default function LoadCharacterScreen() {
     navigate('/game')
   }
 
+  async function handleDelete() {
+    if (!selected) return
+    setDeleting(true)
+    await deleteCharacter(selected.id)
+    const remaining = characters.filter(c => c.id !== selected.id)
+    setCharacters(remaining)
+    setSelected(remaining.length > 0 ? remaining[0] : null)
+    setConfirmDelete(false)
+    setDeleting(false)
+  }
+
   return (
     <div className="screen load-screen">
       <div className="load-layout">
@@ -39,7 +52,7 @@ export default function LoadCharacterScreen() {
             <button
               key={c.id}
               className={`char-list__item ${selected?.id === c.id ? 'char-list__item--active' : ''}`}
-              onClick={() => setSelected(c)}
+              onClick={() => { setSelected(c); setConfirmDelete(false) }}
             >
               {c.name}
             </button>
@@ -51,17 +64,37 @@ export default function LoadCharacterScreen() {
 
         <div className="char-detail">
           {selected ? (
-            <>
-              <div className="char-detail__body">
-                <h2 className="char-detail__name">{selected.name}</h2>
-                <p className="char-detail__desc">{selected.description || <em>No description.</em>}</p>
-                <div className="char-detail__attrs">
-                  <PipSelector label="Corpus" value={selected.corpus_score} readonly />
-                  <PipSelector label="Mens" value={selected.mens_score} readonly />
-                  <PipSelector label="Anima" value={selected.anima_score} readonly />
-                </div>
+            <div className="char-detail__body">
+              <h2 className="char-detail__name">{selected.name}</h2>
+              <p className="char-detail__desc">{selected.description || <em>No description.</em>}</p>
+              <div className="char-detail__attrs">
+                <PipSelector label="Corpus" value={selected.corpus_score} readonly />
+                <PipSelector label="Mens" value={selected.mens_score} readonly />
+                <PipSelector label="Anima" value={selected.anima_score} readonly />
               </div>
-            </>
+
+              <div className="char-detail__delete-zone">
+                {confirmDelete ? (
+                  <div className="delete-confirm">
+                    <p className="delete-confirm__text">
+                      Permanently delete <strong>{selected.name}</strong>? This cannot be undone.
+                    </p>
+                    <div className="delete-confirm__actions">
+                      <button className="btn btn--ghost" onClick={() => setConfirmDelete(false)} disabled={deleting}>
+                        Cancel
+                      </button>
+                      <button className="btn btn--danger" onClick={handleDelete} disabled={deleting}>
+                        {deleting ? 'Deleting…' : 'Delete'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="btn btn--ghost btn--delete" onClick={() => setConfirmDelete(true)}>
+                    Delete Character
+                  </button>
+                )}
+              </div>
+            </div>
           ) : (
             <div className="char-detail__empty">
               <p>Select a character to begin.</p>
