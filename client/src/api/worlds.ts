@@ -13,6 +13,13 @@ export async function getWorlds(): Promise<World[]> {
   return Promise.resolve([...MOCK_WORLDS])
 }
 
+export async function getWorld(worldId: string): Promise<World | null> {
+  // TODO: replace with real API call
+  // const res = await fetch(`/worlds/${worldId}`)
+  // return res.json()
+  return Promise.resolve(MOCK_WORLDS.find(w => w.id === worldId) ?? null)
+}
+
 export async function createWorld(payload: CreateWorldPayload): Promise<World> {
   const world: World = {
     id: String(Date.now()),

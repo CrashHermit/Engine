@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import PipSelector from '../components/PipSelector'
 import { getCharacters, startSession, deleteCharacter } from '../api/characters'
-import { getWorlds } from '../api/worlds'
+import { getWorld } from '../api/worlds'
 import type { Character, World } from '../types'
 
 export default function WorldDetailScreen() {
@@ -20,12 +20,14 @@ export default function WorldDetailScreen() {
 
   useEffect(() => {
     if (!worldId) return
-    Promise.all([getWorlds(), getCharacters(worldId)]).then(([worlds, chars]) => {
-      setWorld(worlds.find(w => w.id === worldId) ?? null)
-      setCharacters(chars)
-      if (chars.length > 0) setSelected(chars[0])
-      setLoading(false)
-    })
+    Promise.all([getWorld(worldId), getCharacters(worldId)])
+      .then(([w, chars]) => {
+        setWorld(w)
+        setCharacters(chars)
+        if (chars.length > 0) setSelected(chars[0])
+      })
+      .catch(err => console.error('Failed to load world details:', err))
+      .finally(() => setLoading(false))
   }, [worldId])
 
   async function handlePlay() {

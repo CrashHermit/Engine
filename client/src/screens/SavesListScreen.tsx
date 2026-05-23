@@ -17,13 +17,15 @@ export default function SavesListScreen() {
   const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
-    Promise.all([getWorlds(), getAllCharacters()]).then(([ws, chars]) => {
-      setWorlds(ws)
-      const counts: Record<string, number> = {}
-      chars.forEach(c => { counts[c.world_id] = (counts[c.world_id] || 0) + 1 })
-      setCharacterCounts(counts)
-      setLoading(false)
-    })
+    Promise.all([getWorlds(), getAllCharacters()])
+      .then(([ws, chars]) => {
+        setWorlds(ws)
+        const counts: Record<string, number> = {}
+        chars.forEach(c => { counts[c.world_id] = (counts[c.world_id] || 0) + 1 })
+        setCharacterCounts(counts)
+      })
+      .catch(err => console.error('Failed to load worlds:', err))
+      .finally(() => setLoading(false))
   }, [])
 
   async function handleDelete(worldId: string) {
