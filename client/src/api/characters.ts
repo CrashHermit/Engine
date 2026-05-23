@@ -36,6 +36,13 @@ export async function createCharacter(payload: CreateCharacterPayload): Promise<
   return Promise.resolve(newChar)
 }
 
+export async function deleteCharacter(characterId: string): Promise<void> {
+  // TODO: replace with real API call
+  // await fetch(`/characters/${characterId}`, { method: 'DELETE' })
+  const idx = MOCK_CHARACTERS.findIndex(c => c.id === characterId)
+  if (idx !== -1) MOCK_CHARACTERS.splice(idx, 1)
+}
+
 export async function startSession(characterId: string): Promise<void> {
   // TODO: replace with real API call
   // await fetch('/session', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ character_id: characterId }) })
