@@ -23,85 +23,33 @@ class CharacterService:
         agreeableness: int,
         conscientiousness: int,
     ) -> Vertex:
+        now = datetime.now(tz=timezone.utc)
         character = self.repo.create_character(name=name, description=description)
-        self._build_character_graph(
-            character=character,
-            corpus_score=corpus_score,
-            mens_score=mens_score,
-            anima_score=anima_score,
-            extraversion=extraversion,
-            openness=openness,
-            neuroticism=neuroticism,
-            agreeableness=agreeableness,
-            conscientiousness=conscientiousness,
-        )
-        return character
 
-    def _build_character_graph(
-        self,
-        character: Vertex,
-        corpus_score: int,
-        mens_score: int,
-        anima_score: int,
-        extraversion: int,
-        openness: int,
-        neuroticism: int,
-        agreeableness: int,
-        conscientiousness: int,
-    ) -> None:
-        self._scored_node(character, EdgeType.HAS_CORPUS, VertexType.CORPUS, corpus_score)
-        mens = self._scored_node(character, EdgeType.HAS_MENS, VertexType.MENS, mens_score)
-        self._scored_node(character, EdgeType.HAS_ANIMA, VertexType.ANIMA, anima_score)
+        corpus = self.repo.create_vertex(type_name=VertexType.CORPUS, id=str(uuid.uuid4()), created_at=now, updated_at=now)
+        self.repo.create_edge(type_name=EdgeType.HAS_CORPUS, source=character, target=corpus, created_at=now, updated_at=now)
+        self.repo.create_edge(type_name=EdgeType.HAS_ATTRIBUTE, source=corpus, target=self.repo.create_vertex(type_name=VertexType.ATTRIBUTE, id=str(uuid.uuid4()), value=corpus_score, created_at=now, updated_at=now), created_at=now, updated_at=now)
 
-        personality = self._container_node(mens, EdgeType.HAS_PERSONALITY, VertexType.PERSONALITY)
+        mens = self.repo.create_vertex(type_name=VertexType.MENS, id=str(uuid.uuid4()), created_at=now, updated_at=now)
+        self.repo.create_edge(type_name=EdgeType.HAS_MENS, source=character, target=mens, created_at=now, updated_at=now)
+        self.repo.create_edge(type_name=EdgeType.HAS_ATTRIBUTE, source=mens, target=self.repo.create_vertex(type_name=VertexType.ATTRIBUTE, id=str(uuid.uuid4()), value=mens_score, created_at=now, updated_at=now), created_at=now, updated_at=now)
 
-        ocean = [
+        anima = self.repo.create_vertex(type_name=VertexType.ANIMA, id=str(uuid.uuid4()), created_at=now, updated_at=now)
+        self.repo.create_edge(type_name=EdgeType.HAS_ANIMA, source=character, target=anima, created_at=now, updated_at=now)
+        self.repo.create_edge(type_name=EdgeType.HAS_ATTRIBUTE, source=anima, target=self.repo.create_vertex(type_name=VertexType.ATTRIBUTE, id=str(uuid.uuid4()), value=anima_score, created_at=now, updated_at=now), created_at=now, updated_at=now)
+
+        personality = self.repo.create_vertex(type_name=VertexType.PERSONALITY, id=str(uuid.uuid4()), created_at=now, updated_at=now)
+        self.repo.create_edge(type_name=EdgeType.HAS_PERSONALITY, source=mens, target=personality, created_at=now, updated_at=now)
+
+        for edge_type, vertex_type, value in [
             (EdgeType.HAS_EXTRAVERSION, VertexType.EXTRAVERSION, extraversion),
             (EdgeType.HAS_OPENNESS, VertexType.OPENNESS, openness),
             (EdgeType.HAS_NEUROTICISM, VertexType.NEUROTICISM, neuroticism),
             (EdgeType.HAS_AGREEABLENESS, VertexType.AGREEABLENESS, agreeableness),
             (EdgeType.HAS_CONSCIENTIOUSNESS, VertexType.CONSCIENTIOUSNESS, conscientiousness),
-        ]
-        for edge_type, vertex_type, value in ocean:
-            self._scored_node(personality, edge_type, vertex_type, value)
+        ]:
+            trait = self.repo.create_vertex(type_name=vertex_type, id=str(uuid.uuid4()), created_at=now, updated_at=now)
+            self.repo.create_edge(type_name=edge_type, source=personality, target=trait, created_at=now, updated_at=now)
+            self.repo.create_edge(type_name=EdgeType.HAS_ATTRIBUTE, source=trait, target=self.repo.create_vertex(type_name=VertexType.ATTRIBUTE, id=str(uuid.uuid4()), value=value, created_at=now, updated_at=now), created_at=now, updated_at=now)
 
-    def _scored_node(
-        self,
-        parent: Vertex,
-        edge_type: EdgeType,
-        vertex_type: VertexType,
-        value: int,
-    ) -> Vertex:
-        now = datetime.now(tz=timezone.utc)
-        node = self.repo.create_vertex(
-            type_name=vertex_type,
-            id=str(uuid.uuid4()),
-            created_at=now,
-            updated_at=now,
-        )
-        self.repo.create_edge(type_name=edge_type, source=parent, target=node, created_at=now, updated_at=now)
-        attribute = self.repo.create_vertex(
-            type_name=VertexType.ATTRIBUTE,
-            id=str(uuid.uuid4()),
-            value=value,
-            created_at=now,
-            updated_at=now,
-        )
-        self.repo.create_edge(type_name=EdgeType.HAS_ATTRIBUTE, source=node, target=attribute, created_at=now, updated_at=now)
-        return node
-
-    def _container_node(
-        self,
-        parent: Vertex,
-        edge_type: EdgeType,
-        vertex_type: VertexType,
-    ) -> Vertex:
-        now = datetime.now(tz=timezone.utc)
-        node = self.repo.create_vertex(
-            type_name=vertex_type,
-            id=str(uuid.uuid4()),
-            created_at=now,
-            updated_at=now,
-        )
-        self.repo.create_edge(type_name=edge_type, source=parent, target=node, created_at=now, updated_at=now)
-        return node
+        return character
