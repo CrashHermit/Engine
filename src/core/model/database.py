@@ -13,6 +13,10 @@ class VertexType(Enum):
     CHANNEL = "CHANNEL"
     MANIPULATOR = "MANIPULATOR"
     MOVEMENT = "MOVEMENT"
+    ATTRIBUTES = "ATTRIBUTES"
+    CORPUS = "CORPUS"
+    MENS = "MENS"
+    ANIMA = "ANIMA"
 
 
 class EdgeType(Enum):
@@ -30,3 +34,7 @@ class EdgeType(Enum):
     HAS_OPENING = "HAS_OPENING"
     AFFORDS = "AFFORDS"
     ENABLES = "ENABLES"
+    HAS_ATTRIBUTES = "HAS_ATTRIBUTES"
+    HAS_CORPUS = "HAS_CORPUS"
+    HAS_MENS = "HAS_MENS"
+    HAS_ANIMA = "HAS_ANIMA"

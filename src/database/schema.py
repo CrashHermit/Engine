@@ -20,13 +20,22 @@ BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated
 
 VERTEX_SCHEMA: dict[VertexType, list[str]] = {
     VertexType.USER: ["name"],
-    VertexType.CHARACTER: ["name"],
     VertexType.LOCATION: ["name", "description"],
     VertexType.PART: ["name", "tags"],
     VertexType.MESSAGE: ["role", "content"],
+    VertexType.CHARACTER: ["name", "description"],
+    VertexType.ATTRIBUTES: [],
+    VertexType.CORPUS: [],
+    VertexType.MENS: [],
+    VertexType.ANIMA: [],
 }
 
-EDGE_SCHEMA: dict[EdgeType, list[str]] = {}
+EDGE_SCHEMA: dict[EdgeType, list[str]] = {
+    EdgeType.HAS_ATTRIBUTES: [],
+    EdgeType.HAS_CORPUS: [],
+    EdgeType.HAS_MENS: [],
+    EdgeType.HAS_ANIMA: [],
+}
 
 
 class SchemaManager:
