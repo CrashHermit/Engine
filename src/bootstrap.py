@@ -1,4 +1,5 @@
 import uuid
+from database.repository.location import LocationRepository
 from database.repository.user import UserRepository
 from database.store import WorldStore
 from database.repository.character import CharacterRepository
@@ -8,6 +9,7 @@ class Bootstrap:
         self.store: WorldStore = store
         self.user_repo: UserRepository = UserRepository(self.store.database)
         self.character_repo: CharacterRepository = CharacterRepository(self.store.database)
+        self.location_repo: LocationRepository = LocationRepository(self.store.database)
 
     def bootstrap(self) -> None:
         self.user_repo.get_or_create_user()

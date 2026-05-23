@@ -35,11 +35,7 @@ class CharacterRepository(BaseRepository):
         )
         return character
 
-    def get_or_create_attributes(self, character: Vertex) -> Vertex:
-        attributes: Vertex | None = self.get_vertex(type_name=VertexType.ATTRIBUTES, id=character.get(name="id"))
-        if attributes is not None:
-            return attributes
-
+    def create_attributes(self, character: Vertex) -> Vertex:
         attributes: Vertex = self.create_vertex(
             type_name=VertexType.ATTRIBUTES,
                 name=character.get(name="name"),
@@ -105,3 +101,16 @@ class CharacterRepository(BaseRepository):
         )
 
         return attributes
+
+
+    def get_corpus(self, attributes: Vertex) -> Vertex:
+        edges: list[Edge] = self.get_vertex_out_edges(vertex=attributes, type_name=EdgeType.HAS_CORPUS)
+        return edges[0].get_target()
+
+    def get_mens(self, attributes: Vertex) -> Vertex:
+        edges: list[Edge] = self.get_vertex_out_edges(vertex=attributes, type_name=EdgeType.HAS_MENS)
+        return edges[0].get_target()
+
+    def get_anima(self, attributes: Vertex) -> Vertex:
+        edges: list[Edge] = self.get_vertex_out_edges(vertex=attributes, type_name=EdgeType.HAS_ANIMA)
+        return edges[0].get_target()
