@@ -9,6 +9,11 @@ const MOCK_CHARACTERS: Character[] = [
     corpus_score: 2,
     mens_score: 2,
     anima_score: 1,
+    extraversion_score: 2,
+    openness_score: 3,
+    agreeableness_score: 4,
+    neuroticism_score: 2,
+    conscientiousness_score: 3,
   },
   {
     id: '2',
@@ -17,6 +22,11 @@ const MOCK_CHARACTERS: Character[] = [
     corpus_score: 1,
     mens_score: 4,
     anima_score: 0,
+    extraversion_score: 1,
+    openness_score: 5,
+    agreeableness_score: 3,
+    neuroticism_score: 4,
+    conscientiousness_score: 5,
   },
 ]
 
