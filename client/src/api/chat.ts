@@ -1,6 +1,7 @@
 export interface Message {
   role: 'human' | 'ai'
   content: string
+  id: string
 }
 
 export async function sendMessage(text: string): Promise<string> {
@@ -11,7 +12,8 @@ export async function sendMessage(text: string): Promise<string> {
   })
   if (!res.ok) throw new Error('Chat request failed')
   const data = await res.json()
-  return data.content as string
+  if (typeof data.content !== 'string') throw new Error('Invalid response format')
+  return data.content
 }
 
 export async function sendOocMessage(text: string): Promise<string> {
@@ -19,4 +21,8 @@ export async function sendOocMessage(text: string): Promise<string> {
   // const res = await fetch('/ooc', { method: 'POST', ... })
   console.log('OOC message sent:', text)
   return Promise.resolve('(The GM hears you…)')
+}
+
+export function makeMessage(role: Message['role'], content: string): Message {
+  return { role, content, id: crypto.randomUUID() }
 }
