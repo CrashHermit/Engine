@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     app.state.store = WorldStore()
     app.state.store.open()
     logger.info("ArcadeDB Studio: %s", app.state.store.studio_url)
-    await run_in_threadpool(UserRepository(app.state.store.database).get_or_create)
+    await run_in_threadpool(UserRepository(app.state.store.database).get_or_create_user)
     yield
     app.state.store.close()
 
