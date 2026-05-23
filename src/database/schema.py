@@ -11,6 +11,7 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "role": arcadedb.PropertyType.STRING,
     "content": arcadedb.PropertyType.STRING,
     "tags": arcadedb.PropertyType.STRING,
+    "value": arcadedb.PropertyType.INTEGER,
     "created_at": arcadedb.PropertyType.DATETIME,
     "updated_at": arcadedb.PropertyType.DATETIME,
     "invalidated_at": arcadedb.PropertyType.DATETIME,
@@ -24,17 +25,29 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
     VertexType.PART: ["name", "tags"],
     VertexType.MESSAGE: ["role", "content"],
     VertexType.CHARACTER: ["name", "description"],
-    VertexType.ATTRIBUTES: [],
-    VertexType.CORPUS: ["corpus_score"],
-    VertexType.MENS: ["mens_score"],
-    VertexType.ANIMA: ["anima_score"],
+    VertexType.CORPUS: [],
+    VertexType.MENS: [],
+    VertexType.ANIMA: [],
+    VertexType.PERSONALITY: [],
+    VertexType.EXTRAVERSION: [],
+    VertexType.OPENNESS: [],
+    VertexType.NEUROTICISM: [],
+    VertexType.AGREEABLENESS: [],
+    VertexType.CONSCIENTIOUSNESS: [],
+    VertexType.ATTRIBUTE: ["value"],
 }
 
 EDGE_SCHEMA: dict[EdgeType, list[str]] = {
-    EdgeType.HAS_ATTRIBUTES: [],
     EdgeType.HAS_CORPUS: [],
     EdgeType.HAS_MENS: [],
     EdgeType.HAS_ANIMA: [],
+    EdgeType.HAS_PERSONALITY: [],
+    EdgeType.HAS_EXTRAVERSION: [],
+    EdgeType.HAS_OPENNESS: [],
+    EdgeType.HAS_NEUROTICISM: [],
+    EdgeType.HAS_AGREEABLENESS: [],
+    EdgeType.HAS_CONSCIENTIOUSNESS: [],
+    EdgeType.HAS_ATTRIBUTE: [],
 }
 
 
