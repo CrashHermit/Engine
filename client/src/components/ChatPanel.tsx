@@ -12,10 +12,16 @@ interface ChatPanelProps {
 
 export default function ChatPanel({ title, messages, loading, onSend, aiLabel = 'Narrator', placeholder = 'Speak…' }: ChatPanelProps) {
   const [input, setInput] = useState('')
+  const containerRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    const el = containerRef.current
+    if (!el) return
+    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    if (isNearBottom) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages, loading])
 
   function handleSend() {
@@ -37,9 +43,9 @@ export default function ChatPanel({ title, messages, loading, onSend, aiLabel = 
       <div className="chat-panel__header">
         <span className="chat-panel__title">{title}</span>
       </div>
-      <div className="chat-panel__messages">
-        {messages.map((msg, i) => (
-          <div key={i} className={`chat-msg chat-msg--${msg.role}`}>
+      <div className="chat-panel__messages" ref={containerRef}>
+        {messages.map(msg => (
+          <div key={msg.id} className={`chat-msg chat-msg--${msg.role}`}>
             <span className="chat-msg__label">{msg.role === 'human' ? 'You' : aiLabel}</span>
             <p className="chat-msg__text">{msg.content}</p>
           </div>
@@ -63,6 +69,7 @@ export default function ChatPanel({ title, messages, loading, onSend, aiLabel = 
           onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
+          aria-label={title}
           rows={2}
         />
         <button className="btn btn--primary chat-panel__send" onClick={handleSend} disabled={loading || !input.trim()}>

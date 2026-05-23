@@ -13,6 +13,8 @@ export default function LoadCharacterScreen() {
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
+  const busy = deleting || starting
+
   useEffect(() => {
     getCharacters().then(chars => {
       setCharacters(chars)
@@ -30,13 +32,19 @@ export default function LoadCharacterScreen() {
 
   async function handleDelete() {
     if (!selected) return
+    const idToDelete = selected.id
     setDeleting(true)
-    await deleteCharacter(selected.id)
-    const remaining = characters.filter(c => c.id !== selected.id)
-    setCharacters(remaining)
-    setSelected(remaining.length > 0 ? remaining[0] : null)
-    setConfirmDelete(false)
-    setDeleting(false)
+    try {
+      await deleteCharacter(idToDelete)
+      const remaining = characters.filter(c => c.id !== idToDelete)
+      setCharacters(remaining)
+      setSelected(remaining.length > 0 ? remaining[0] : null)
+      setConfirmDelete(false)
+    } catch (error) {
+      console.error('Failed to delete character:', error)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   return (
@@ -53,6 +61,7 @@ export default function LoadCharacterScreen() {
               key={c.id}
               className={`char-list__item ${selected?.id === c.id ? 'char-list__item--active' : ''}`}
               onClick={() => { setSelected(c); setConfirmDelete(false) }}
+              disabled={busy}
             >
               {c.name}
             </button>
@@ -109,7 +118,7 @@ export default function LoadCharacterScreen() {
         </button>
         <button
           className="btn btn--primary btn--large"
-          disabled={!selected || starting}
+          disabled={!selected || busy}
           onClick={handlePlay}
         >
           {starting ? 'Entering…' : 'Play'}
