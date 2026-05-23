@@ -43,6 +43,9 @@ class BaseRepository:
             value=datetime.now(tz=timezone.utc),
         ).save()
 
+    def get_vertex_out_edges(self, vertex: Vertex, type_name: EdgeType) -> list[Edge]:
+        return vertex.get_out_edges(labels=type_name.value)
+
     ############################################################################
     # Edge operations
     ############################################################################

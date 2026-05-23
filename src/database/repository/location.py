@@ -7,8 +7,8 @@ from core.model.database import VertexType
 
 class LocationRepository(BaseRepository):
 
-    def get_location(self, name: str) -> Vertex | None:
-        return self.get_vertex(type_name=VertexType.LOCATION, name=name)
+    def get_location(self, id: str) -> Vertex | None:
+        return self.get_vertex(type_name=VertexType.LOCATION, id=id)
 
     def create_location(self, name: str, description: str) -> Vertex:
         location: Vertex = self.create_vertex(
@@ -20,10 +20,3 @@ class LocationRepository(BaseRepository):
             updated_at=datetime.now(tz=timezone.utc),
         )
         return location
-
-    def get_or_create_location(self, name: str, description: str) -> Vertex:
-        location: Vertex | None = self.get_location(name=name)
-        if location is not None:
-            return location
-
-        return self.create_location(name=name, description=description)

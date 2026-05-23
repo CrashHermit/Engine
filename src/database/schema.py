@@ -19,15 +19,15 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
 BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated_at"]
 
 VERTEX_SCHEMA: dict[VertexType, list[str]] = {
-    VertexType.USER: ["name"],
+    VertexType.USER: [],
     VertexType.LOCATION: ["name", "description"],
     VertexType.PART: ["name", "tags"],
     VertexType.MESSAGE: ["role", "content"],
     VertexType.CHARACTER: ["name", "description"],
     VertexType.ATTRIBUTES: [],
-    VertexType.CORPUS: [],
-    VertexType.MENS: [],
-    VertexType.ANIMA: [],
+    VertexType.CORPUS: ["corpus_score"],
+    VertexType.MENS: ["mens_score"],
+    VertexType.ANIMA: ["anima_score"],
 }
 
 EDGE_SCHEMA: dict[EdgeType, list[str]] = {

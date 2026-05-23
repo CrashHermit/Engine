@@ -4,38 +4,45 @@ import uuid
 from arcadedb_embedded.graph import Edge
 from arcadedb_embedded.graph import Vertex
 from core.model.database import VertexType, EdgeType
+from database.repository import user
 from database.repository.base import BaseRepository
 
 
 class CharacterRepository(BaseRepository):
 
-    def get_character(self, id: str) -> Vertex | None:
-        return self.get_vertex(type_name=VertexType.CHARACTER, id=id)
+    def get_user_characters(self) -> list[Vertex]:
+        user: Vertex | None = self.get_user()
+
+        edges: list[Edge] | None = self.get_vertex_out_edges(vertex=user, type_name=EdgeType.HAS_CHARACTER)
+
+        return [edge.get_target() for edge in edges]
 
     def create_character(self, name: str, description: str) -> Vertex:
+        user: Vertex | None = self.get_user()
         character: Vertex = self.create_vertex(
             type_name=VertexType.CHARACTER,
             name=name,
-            id=str(uuid.uuid4()),
             description=description,
+            created_at=datetime.now(tz=timezone.utc),
+            updated_at=datetime.now(tz=timezone.utc),
+        )
+        self.create_edge(
+            type_name=EdgeType.HAS_CHARACTER,
+            source=user,
+            target=character,
+            created_at=datetime.now(tz=timezone.utc),
+            updated_at=datetime.now(tz=timezone.utc),
         )
         return character
 
-    def get_or_create_character(self, id: str, name: str, description: str) -> Vertex:
-        character: Vertex | None = self.get_character(id=id)
-        if character is not None:
-            return character
-
-        return self.create_character(id=id, name=name, description=description)
-
     def get_or_create_attributes(self, character: Vertex) -> Vertex:
-        attributes: Vertex | None = self.get_vertex(type_name=VertexType.ATTRIBUTES, name=character.get(name="name"))
+        attributes: Vertex | None = self.get_vertex(type_name=VertexType.ATTRIBUTES, id=character.get(name="id"))
         if attributes is not None:
             return attributes
 
         attributes: Vertex = self.create_vertex(
             type_name=VertexType.ATTRIBUTES,
-            name=character.get(name="name"),
+                name=character.get(name="name"),
             id=str(uuid.uuid4()),
             created_at=datetime.now(tz=timezone.utc),
             updated_at=datetime.now(tz=timezone.utc),
@@ -52,6 +59,7 @@ class CharacterRepository(BaseRepository):
         corpus: Vertex = self.create_vertex(
             type_name=VertexType.CORPUS,
             id=str(uuid.uuid4()),
+            mens_score=0,
             created_at=datetime.now(tz=timezone.utc),
             updated_at=datetime.now(tz=timezone.utc),
         )
@@ -67,6 +75,7 @@ class CharacterRepository(BaseRepository):
         mens: Vertex = self.create_vertex(
             type_name=VertexType.MENS,
             id=str(uuid.uuid4()),
+            mens_score=0,
             created_at=datetime.now(tz=timezone.utc),
             updated_at=datetime.now(tz=timezone.utc),
         )
@@ -82,6 +91,7 @@ class CharacterRepository(BaseRepository):
         anima: Vertex = self.create_vertex(
             type_name=VertexType.ANIMA,
             id=str(uuid.uuid4()),
+            anima_score=0,
             created_at=datetime.now(tz=timezone.utc),
             updated_at=datetime.now(tz=timezone.utc),
         )
