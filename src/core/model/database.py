@@ -17,6 +17,7 @@ class VertexType(Enum):
 
 class EdgeType(Enum):
     HAS_MESSAGE = "HAS_MESSAGE"
+    LAST_MESSAGE = "LAST_MESSAGE"
     NEXT_MESSAGE = "NEXT_MESSAGE"
     LOCATED_AT = "LOCATED_AT"
     CONNECTS = "CONNECTS"
