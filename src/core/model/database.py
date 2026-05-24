@@ -1,7 +1,7 @@
-from enum import Enum
+from enum import StrEnum
 
 
-class VertexType(Enum):
+class VertexType(StrEnum):
     USER = "USER"
     CHARACTER = "CHARACTER"
     LOCATION = "LOCATION"
@@ -25,7 +25,7 @@ class VertexType(Enum):
     ATTRIBUTE = "ATTRIBUTE"
 
 
-class EdgeType(Enum):
+class EdgeType(StrEnum):
     HAS_CHARACTER = "HAS_CHARACTER"
     HAS_MESSAGE = "HAS_MESSAGE"
     LAST_MESSAGE = "LAST_MESSAGE"

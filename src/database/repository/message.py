@@ -15,7 +15,7 @@ class MessageRepository(BaseRepository):
         if user is None:
             return []
 
-        edges = list(user.get_out_edges("HAS_MESSAGE"))
+        edges = list(user.get_out_edges(EdgeType.HAS_MESSAGE))
         if not edges:
             return []
 
@@ -23,7 +23,7 @@ class MessageRepository(BaseRepository):
         current: Vertex = edges[0].get_in()
         while True:
             messages.append(Message(role=current.get("role"), content=current.get("content")))
-            next_edges = list(current.get_out_edges("NEXT_MESSAGE"))
+            next_edges = list(current.get_out_edges(EdgeType.NEXT_MESSAGE))
             if not next_edges:
                 break
             current = next_edges[0].get_in()
@@ -41,13 +41,13 @@ class MessageRepository(BaseRepository):
             raise ValueError("User not found")
 
         with self.transaction():
-            existing_edges = list(user.get_out_edges("HAS_MESSAGE"))
+            existing_edges = list(user.get_out_edges(EdgeType.HAS_MESSAGE))
             tail: Vertex | None = None
 
             if existing_edges:
                 tail = existing_edges[0].get_in()
                 while True:
-                    next_edges = list(tail.get_out_edges("NEXT_MESSAGE"))
+                    next_edges = list(tail.get_out_edges(EdgeType.NEXT_MESSAGE))
                     if not next_edges:
                         break
                     tail = next_edges[0].get_in()

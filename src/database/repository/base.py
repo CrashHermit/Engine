@@ -37,17 +37,18 @@ class BaseRepository:
         properties.setdefault("created_at", now)
         properties.setdefault("updated_at", now)
 
-        def _do(db: arcadedb.Database) -> Vertex:
-            vertex: Vertex = db.new_vertex(type_name=type_name.value)
+        if self._database.is_transaction_active():
+            vertex: Vertex = self._database.new_vertex(type_name=type_name)
             for name, value in properties.items():
                 vertex.set(name=name, value=value)
             vertex.save()
             return vertex
-
-        if self._database.is_transaction_active():
-            return _do(self._database)
         with self._database.transaction():
-            return _do(self._database)
+            vertex = self._database.new_vertex(type_name=type_name)
+            for name, value in properties.items():
+                vertex.set(name=name, value=value)
+            vertex.save()
+        return vertex
 
     def create_vertices(self, type_name: VertexType, items: list[dict[str, Any]]) -> list[Vertex]:
         with self.transaction():
@@ -55,7 +56,7 @@ class BaseRepository:
 
     def get_vertex(self, type_name: VertexType, id: str) -> Vertex | None:
         return self._database.lookup_by_key(
-            type_name=type_name.value, keys=["id"], values=[id]
+            type_name=type_name, keys=["id"], values=[id]
         )
 
     def update_vertex(self, vertex: Vertex, **properties: Any) -> None:
@@ -74,9 +75,6 @@ class BaseRepository:
             value=self._current_time(),
         ).save()
 
-    def get_vertex_out_edges(self, vertex: Vertex, type_name: EdgeType) -> list[Edge]:
-        return vertex.get_out_edges(labels=type_name.value)
-
     ############################################################################
     # Edge operations
     ############################################################################
@@ -92,15 +90,10 @@ class BaseRepository:
         properties.setdefault("created_at", now)
         properties.setdefault("updated_at", now)
 
-        def _do() -> Edge:
-            edge = source.new_edge(label=type_name.value, target=target, **properties)
-            edge.save()
-            return edge
-
         if self._database.is_transaction_active():
-            return _do()
+            return source.new_edge(label=type_name, target=target, **properties)
         with self._database.transaction():
-            return _do()
+            return source.new_edge(label=type_name, target=target, **properties)
 
     def create_edges(self, type_name: EdgeType, items: list[dict[str, Any]]) -> list[Edge]:
         with self.transaction():
@@ -108,7 +101,7 @@ class BaseRepository:
 
     def get_edge(self, type_name: EdgeType, id: str) -> Edge | None:
         record = self._database.lookup_by_key(
-            type_name=type_name.value,
+            type_name=type_name,
             keys=["id"],
             values=[id],
         )
