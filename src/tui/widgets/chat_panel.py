@@ -1,3 +1,4 @@
+from rich.markup import escape
 from textual.message import Message
 from textual.reactive import reactive
 from textual.widget import Widget
@@ -32,17 +33,19 @@ class ChatPanel(Widget):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-ic":
             self.channel = "ic"
-            self._update_toggle()
         elif event.button.id == "btn-ooc":
             self.channel = "ooc"
-            self._update_toggle()
         elif event.button.id == "btn-send":
             self._send_message()
         event.stop()
 
-    def _update_toggle(self) -> None:
-        self.query_one("#btn-ic", Button).variant = "primary" if self.channel == "ic" else "default"
-        self.query_one("#btn-ooc", Button).variant = "primary" if self.channel == "ooc" else "default"
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self._send_message()
+        event.stop()
+
+    def watch_channel(self, channel: str) -> None:
+        self.query_one("#btn-ic", Button).variant = "primary" if channel == "ic" else "default"
+        self.query_one("#btn-ooc", Button).variant = "primary" if channel == "ooc" else "default"
 
     def _send_message(self) -> None:
         input_widget = self.query_one("#msg-input", Input)
@@ -51,7 +54,7 @@ class ChatPanel(Widget):
             return
         log = self.query_one("#chat-log", RichLog)
         tag = "[bold #c9a84c]IC[/bold #c9a84c]" if self.channel == "ic" else "[bold #7ec8e3]OOC[/bold #7ec8e3]"
-        log.write(f"{tag} [bold]You:[/bold] {text}")
+        log.write(f"{tag} [bold]You:[/bold] {escape(text)}")
         input_widget.value = ""
         self.post_message(self.MessageSent(self, text, self.channel))
         # TODO: invoke narrator / GM pipeline and write response
