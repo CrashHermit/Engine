@@ -22,6 +22,16 @@ Footer {
     color: $da-muted;
 }
 
+Button.-primary {
+    background: $da-gold;
+    color: $da-bg;
+}
+
+Button.-error {
+    background: $da-danger;
+    color: white;
+}
+
 Input {
     border: tall $da-muted;
     background: $da-panel;
@@ -192,6 +202,12 @@ ChatPanel {
     padding: 0 1;
     border-bottom: solid $da-muted;
     align: left middle;
+}
+
+#channel-toggle Button {
+    width: auto;
+    min-width: 6;
+    margin-right: 1;
 }
 
 #channel-label {
