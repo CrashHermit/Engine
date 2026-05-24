@@ -33,6 +33,7 @@ class PartService:
     def add_part(
         self,
         character: Vertex,
+        parent_part: Vertex,
         name: str,
         length: SizeScale,
         width: SizeScale,
@@ -44,6 +45,7 @@ class PartService:
         with self.part_repo.transaction():
             return self.part_repo.add_part(
                 character=character,
+                parent_part=parent_part,
                 name=name,
                 length=length,
                 width=width,

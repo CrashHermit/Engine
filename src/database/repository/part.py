@@ -51,6 +51,7 @@ class PartRepository(CharacterRepository):
     def add_part(
         self,
         character: Vertex,
+        parent_part: Vertex,
         name: str,
         length: SizeScale,
         width: SizeScale,
@@ -73,6 +74,11 @@ class PartRepository(CharacterRepository):
         self.create_edge(
             type_name=EdgeType.HAS_PART,
             source=character,
+            target=part,
+        )
+        self.create_edge(
+            type_name=EdgeType.ATTACHED_TO,
+            source=parent_part,
             target=part,
         )
         return part
