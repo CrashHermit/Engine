@@ -1,8 +1,10 @@
+from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
 from textual.widgets import RichLog, Static
 from textual.containers import Horizontal, Vertical
+from textual.worker import get_current_worker
 
 from ..widgets.chat_panel import ChatPanel
 
@@ -36,6 +38,14 @@ class GameScreen(Screen):
 
     def on_mount(self) -> None:
         self.query_one("#scene-panel", RichLog).write(_PLACEHOLDER_SCENE)
+
+    def on_chat_panel_message_sent(self, event: ChatPanel.MessageSent) -> None:
+        self.process_chat_message(event.text, event.channel)
+
+    @work(exclusive=True, thread=True)
+    def process_chat_message(self, text: str, channel: str) -> None:
+        if get_current_worker().is_cancelled:
+            return
 
     def action_character_sheet(self) -> None:
         from ..modals.character_sheet import CharacterSheetModal

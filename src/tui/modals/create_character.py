@@ -11,7 +11,7 @@ _TRAIT_MAX = 5
 _ATTR_IDS = ("pip-corpus", "pip-mens", "pip-anima")
 
 
-class CreateCharacterModal(ModalScreen):
+class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
     """Form for creating a new character with attribute pool and personality ratings."""
 
     BINDINGS = [Binding("escape", "dismiss_cancel", "Cancel")]

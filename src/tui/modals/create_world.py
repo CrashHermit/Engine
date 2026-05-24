@@ -5,7 +5,7 @@ from textual.widgets import Button, Input, Label, TextArea
 from textual.containers import Horizontal, Vertical
 
 
-class CreateWorldModal(ModalScreen):
+class CreateWorldModal(ModalScreen[dict[str, str] | None]):
     """Form for creating a new world (new ArcadeDB database)."""
 
     BINDINGS = [Binding("escape", "dismiss_cancel", "Cancel")]

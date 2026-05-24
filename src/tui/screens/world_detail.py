@@ -13,15 +13,17 @@ class WorldDetailScreen(Screen):
     # TODO: replace with CharacterRepository.get_user_characters()
     _PLACEHOLDER_CHARACTERS = ["Aldric the Bold", "Sister Mara", "Thane Vexx"]
 
+    def __init__(self, *, world_name: str) -> None:
+        super().__init__()
+        self.world_name = world_name
+        self._characters: list[str] = []
+
     def compose(self) -> ComposeResult:
         yield Header()
         with Horizontal(id="detail-panels"):
             with Vertical(id="char-list-panel"):
                 yield Label("Characters", id="char-list-title")
-                yield ListView(
-                    *[ListItem(Label(name)) for name in self._PLACEHOLDER_CHARACTERS],
-                    id="char-list",
-                )
+                yield ListView(id="char-list")
             with Vertical(id="char-detail-panel"):
                 yield Label("Aldric the Bold", id="char-name")
                 yield Static(
@@ -38,6 +40,33 @@ class WorldDetailScreen(Screen):
             yield Button("Play", id="btn-play", variant="success")
         yield Footer()
 
+    def on_mount(self) -> None:
+        self._characters = self.app.world_characters.setdefault(self.world_name, [])
+        self._refresh_character_list()
+
+    def _selected_character_name(self) -> str | None:
+        item = self.query_one("#char-list", ListView).highlighted_child
+        if item is None:
+            return None
+        return str(item.query_one(Label).content)
+
+    def _clear_character_detail(self) -> None:
+        self.query_one("#char-name", Label).update("—")
+        self.query_one("#char-description", Static).update("No characters yet. Create one to begin.")
+
+    def _refresh_character_list(self) -> None:
+        list_view = self.query_one("#char-list", ListView)
+        list_view.clear()
+        for name in self._characters:
+            list_view.append(ListItem(Label(name)))
+        if not self._characters:
+            self._clear_character_detail()
+
+    def _on_create_character_dismissed(self, result: dict[str, int | str] | None) -> None:
+        if result:
+            self._characters.append(str(result["name"]))
+            self._refresh_character_list()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         from .game import GameScreen
         from ..modals.create_character import CreateCharacterModal
@@ -45,12 +74,22 @@ class WorldDetailScreen(Screen):
         if event.button.id == "btn-back":
             self.app.pop_screen()
         elif event.button.id == "btn-new-char":
-            self.app.push_screen(CreateCharacterModal())
+            self.app.push_screen(
+                CreateCharacterModal(), callback=self._on_create_character_dismissed
+            )
         elif event.button.id == "btn-play":
             self.app.push_screen(GameScreen())
         elif event.button.id == "btn-delete":
-            pass  # TODO: confirmation dialog then CharacterRepository.delete()
+            name = self._selected_character_name()
+            if name is None:
+                return
+            self._characters.remove(name)
+            self._refresh_character_list()
+            # TODO: confirmation dialog then CharacterRepository.delete()
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         # TODO: load real character data from CharacterRepository
-        pass
+        if event.item is None:
+            return
+        name = str(event.item.query_one(Label).content)
+        self.query_one("#char-name", Label).update(name)

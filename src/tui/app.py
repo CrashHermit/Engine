@@ -13,10 +13,12 @@ class EngineApp(App):
     ]
 
     def on_mount(self) -> None:
+        self.world_characters: dict[str, list[str]] = {}
         self.push_screen(StartScreen())
 
     def action_help(self) -> None:
-        pass  # TODO: push HelpModal
+        self.action_show_help_panel()
+        # TODO: push HelpModal
 
 
 def main() -> None:

@@ -7,7 +7,7 @@ from textual.containers import Horizontal, Vertical
 from ..widgets.pip_selector import PipSelector
 
 
-class CharacterSheetModal(ModalScreen):
+class CharacterSheetModal(ModalScreen[None]):
     """Full-screen character sheet: stats, equipment, inventory, personality."""
 
     BINDINGS = [
