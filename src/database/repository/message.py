@@ -1,9 +1,9 @@
 import uuid
-from datetime import datetime, timezone
 
 from arcadedb_embedded import Vertex
 
 from core.model.message import Message
+from core.model.database import EdgeType, VertexType
 from database.repository.base import BaseRepository
 
 
@@ -40,9 +40,7 @@ class MessageRepository(BaseRepository):
         if user is None:
             raise ValueError("User not found")
 
-        now = datetime.now(tz=timezone.utc)
-
-        with self._database.transaction():
+        with self.transaction():
             existing_edges = list(user.get_out_edges("HAS_MESSAGE"))
             tail: Vertex | None = None
 
@@ -55,22 +53,20 @@ class MessageRepository(BaseRepository):
                     tail = next_edges[0].get_in()
 
             for msg in messages:
-                vertex: Vertex = self._database.new_vertex(type_name="MESSAGE")
-                vertex.set(name="id", value=str(uuid.uuid4()))
-                vertex.set(name="role", value=msg.role)
-                vertex.set(name="content", value=msg.content)
-                vertex.set(name="created_at", value=now)
-                vertex.save()
+                vertex: Vertex = self.create_vertex(
+                    type_name=VertexType.MESSAGE,
+                    id=str(uuid.uuid4()),
+                    role=msg.role,
+                    content=msg.content,
+                )
 
-                if tail is None:
-                    edge = user.new_edge("HAS_MESSAGE", vertex)
-                    edge.set(name="id", value=str(uuid.uuid4()))
-                    edge.set(name="created_at", value=now)
-                    edge.save()
-                else:
-                    edge = tail.new_edge("NEXT_MESSAGE", vertex)
-                    edge.set(name="id", value=str(uuid.uuid4()))
-                    edge.set(name="created_at", value=now)
-                    edge.save()
+                edge_type = EdgeType.HAS_MESSAGE if tail is None else EdgeType.NEXT_MESSAGE
+                source = user if tail is None else tail
+                self.create_edge(
+                    type_name=edge_type,
+                    source=source,
+                    target=vertex,
+                    id=str(uuid.uuid4()),
+                )
 
                 tail = vertex

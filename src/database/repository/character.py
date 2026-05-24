@@ -1,5 +1,3 @@
-from datetime import datetime
-from datetime import timezone
 import uuid
 from arcadedb_embedded.graph import Edge
 from arcadedb_embedded.graph import Vertex
@@ -20,15 +18,11 @@ class CharacterRepository(UserRepository):
             type_name=VertexType.CHARACTER,
             name=name,
             description=description,
-            created_at=datetime.now(tz=timezone.utc),
-            updated_at=datetime.now(tz=timezone.utc),
         )
         self.create_edge(
             type_name=EdgeType.HAS_CHARACTER,
             source=user,
             target=character,
-            created_at=datetime.now(tz=timezone.utc),
-            updated_at=datetime.now(tz=timezone.utc),
         )
         return character
 
@@ -51,4 +45,4 @@ class CharacterRepository(UserRepository):
 
     def set_attribute_value(self, node: Vertex, value: int) -> None:
         attribute = self.get_vertex_out_edges(vertex=node, type_name=EdgeType.HAS_ATTRIBUTE)[0].get_target()
-        self.update_vertex(attribute, value=value, updated_at=datetime.now(tz=timezone.utc))
+        self.update_vertex(attribute, value=value)
