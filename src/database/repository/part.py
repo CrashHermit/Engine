@@ -1,4 +1,3 @@
-import uuid
 from arcadedb_embedded.graph import Vertex
 from core.model.database import VertexType, EdgeType
 from core.model.part import Shape, Status, SizeScale, PartFunction
@@ -32,7 +31,6 @@ class PartRepository(CharacterRepository):
     ) -> Vertex:
         part: Vertex = self.create_vertex(
             type_name=VertexType.PART,
-            id=str(uuid.uuid4()),
             name=name,
             length=length,
             width=width,
@@ -59,7 +57,6 @@ class PartRepository(CharacterRepository):
         vertex_type, edge_type = _FUNCTION_MAP[function]
         node: Vertex = self.create_vertex(
             type_name=vertex_type,
-            id=str(uuid.uuid4()),
         )
         self.create_edge(
             type_name=edge_type,

@@ -1,3 +1,4 @@
+import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Generator
@@ -34,6 +35,7 @@ class BaseRepository:
 
     def create_vertex(self, type_name: VertexType, **properties: Any) -> Vertex:
         now = self._current_time()
+        properties.setdefault("id", str(uuid.uuid4()))
         properties.setdefault("created_at", now)
         properties.setdefault("updated_at", now)
         with self.transaction():

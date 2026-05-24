@@ -1,4 +1,3 @@
-import uuid
 from arcadedb_embedded.graph import Vertex
 from core.model.database import VertexType, EdgeType
 from database.repository.character import CharacterRepository
@@ -64,7 +63,6 @@ class CharacterService:
     def create_trait(self, character: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
         trait: Vertex = self.character_repo.create_vertex(
             type_name=vertex_type,
-            id=str(uuid.uuid4()),
         )
         self.character_repo.create_edge(
             type_name=edge_type,
@@ -81,7 +79,6 @@ class CharacterService:
     ) -> Vertex:
         personality: Vertex = self.character_repo.create_vertex(
             type_name=vertex_type,
-            id=str(uuid.uuid4()),
         )
         self.character_repo.create_edge(
             type_name=edge_type,
@@ -93,7 +90,6 @@ class CharacterService:
     def create_attribute(self, source: Vertex, value: int) -> Vertex:
         attribute: Vertex = self.character_repo.create_vertex(
             type_name=VertexType.ATTRIBUTE,
-            id=str(uuid.uuid4()),
             value=value,
         )
         self.character_repo.create_edge(

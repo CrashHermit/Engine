@@ -1,4 +1,3 @@
-import uuid
 from database.repository.base import BaseRepository
 from arcadedb_embedded.graph import Vertex
 from core.model.database import VertexType
@@ -13,6 +12,5 @@ class LocationRepository(BaseRepository):
         return self.create_vertex(
             type_name=VertexType.LOCATION,
             name=name,
-            id=str(uuid.uuid4()),
             description=description,
         )
