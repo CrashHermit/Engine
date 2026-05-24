@@ -1,0 +1,364 @@
+/* Dark Adventures — Textual Theme */
+
+$da-bg: #0d0b0e;
+$da-panel: #150f1a;
+$da-gold: #c9a84c;
+$da-text: #c4b8d4;
+$da-danger: #c0392b;
+$da-muted: #6b5c7e;
+
+Screen {
+    background: $da-bg;
+    color: $da-text;
+}
+
+Header {
+    background: $da-panel;
+    color: $da-gold;
+}
+
+Footer {
+    background: $da-panel;
+    color: $da-muted;
+}
+
+Input {
+    border: tall $da-muted;
+    background: $da-panel;
+    color: $da-text;
+}
+
+Input:focus {
+    border: tall $da-gold;
+}
+
+TextArea {
+    border: tall $da-muted;
+    background: $da-panel;
+    color: $da-text;
+    height: 5;
+    margin-bottom: 1;
+}
+
+TextArea:focus {
+    border: tall $da-gold;
+}
+
+ListView {
+    border: tall $da-muted;
+    background: $da-panel;
+    height: 1fr;
+}
+
+ListView > ListItem.--highlight {
+    background: $da-panel;
+    color: $da-gold;
+}
+
+/* ── Start Screen ─────────────────────────────────── */
+
+#start-container {
+    align: center middle;
+    layout: vertical;
+    width: 100%;
+    height: 100%;
+}
+
+#start-title {
+    color: $da-gold;
+    text-style: bold;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 3;
+}
+
+#start-container Button {
+    width: 30;
+    margin: 1 0;
+}
+
+/* ── World List Screen ────────────────────────────── */
+
+#world-list-container {
+    padding: 1 2;
+    height: 1fr;
+    layout: vertical;
+}
+
+#worlds-title {
+    color: $da-gold;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#world-list-footer {
+    height: 3;
+    align: left middle;
+    padding-top: 1;
+}
+
+#world-list-footer Button {
+    margin-right: 1;
+}
+
+/* ── World Detail Screen ──────────────────────────── */
+
+#detail-panels {
+    height: 1fr;
+}
+
+#char-list-panel {
+    width: 35%;
+    border-right: solid $da-gold;
+    padding: 1;
+    layout: vertical;
+}
+
+#char-list-title {
+    color: $da-gold;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#char-detail-panel {
+    width: 65%;
+    padding: 1 2;
+    layout: vertical;
+}
+
+#char-name {
+    color: $da-gold;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#char-description {
+    margin-bottom: 2;
+}
+
+#detail-actions {
+    height: 3;
+    padding: 0 1;
+    align: left middle;
+    border-top: solid $da-muted;
+}
+
+#detail-actions Button {
+    margin-right: 1;
+}
+
+/* ── Game Screen ──────────────────────────────────── */
+
+#game-layout {
+    height: 100%;
+    layout: vertical;
+}
+
+#game-panels {
+    height: 1fr;
+}
+
+#scene-panel {
+    width: 40%;
+    border-right: solid $da-gold;
+    padding: 1;
+}
+
+#chat-panel {
+    width: 60%;
+}
+
+#status-bar {
+    height: 1;
+    background: $da-panel;
+    color: $da-gold;
+    padding: 0 1;
+}
+
+/* ── Chat Panel Widget ────────────────────────────── */
+
+ChatPanel {
+    height: 100%;
+    layout: vertical;
+}
+
+#chat-layout {
+    height: 100%;
+    layout: vertical;
+}
+
+#channel-toggle {
+    height: 3;
+    padding: 0 1;
+    border-bottom: solid $da-muted;
+    align: left middle;
+}
+
+#channel-label {
+    margin-right: 1;
+    color: $da-muted;
+}
+
+#chat-log {
+    height: 1fr;
+    padding: 1;
+    background: $da-bg;
+}
+
+#input-bar {
+    height: 3;
+    padding: 0 1;
+    border-top: solid $da-muted;
+    align: left middle;
+}
+
+#msg-input {
+    width: 1fr;
+    margin-right: 1;
+}
+
+/* ── Pip Selector Widget ──────────────────────────── */
+
+PipSelector {
+    height: 1;
+    padding: 0 1;
+    margin-bottom: 1;
+    background: $da-bg;
+}
+
+PipSelector:focus {
+    background: $da-panel;
+}
+
+/* ── Modals ───────────────────────────────────────── */
+
+CreateWorldModal {
+    align: center middle;
+}
+
+CreateWorldModal > Vertical {
+    background: $da-panel;
+    border: solid $da-gold;
+    padding: 2 3;
+    width: 60%;
+    height: auto;
+    max-height: 85%;
+}
+
+CreateCharacterModal {
+    align: center middle;
+}
+
+CreateCharacterModal > Vertical {
+    background: $da-panel;
+    border: solid $da-gold;
+    padding: 2 3;
+    width: 65%;
+    height: auto;
+    max-height: 90%;
+    overflow-y: auto;
+}
+
+CharacterSheetModal {
+    align: center middle;
+}
+
+CharacterSheetModal > Vertical {
+    background: $da-bg;
+    border: solid $da-gold;
+    padding: 1 2;
+    width: 95%;
+    height: 95%;
+    overflow-y: auto;
+}
+
+#modal-title,
+#sheet-title {
+    color: $da-gold;
+    text-style: bold;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 2;
+}
+
+#modal-actions {
+    margin-top: 2;
+    align: right middle;
+}
+
+#modal-actions Button {
+    margin-left: 1;
+}
+
+/* ── Character Sheet ──────────────────────────────── */
+
+#character-sheet {
+    layout: vertical;
+    overflow-y: auto;
+}
+
+#sheet-identity {
+    margin-bottom: 2;
+    height: auto;
+}
+
+#sheet-left {
+    width: 55%;
+    padding-right: 2;
+    layout: vertical;
+}
+
+#sheet-right {
+    width: 45%;
+    layout: vertical;
+}
+
+#sheet-name {
+    color: $da-gold;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#sheet-description {
+    margin-bottom: 1;
+}
+
+#sheet-condition,
+#sheet-equipment,
+#sheet-inventory {
+    margin-bottom: 2;
+    border-left: solid $da-muted;
+    padding-left: 1;
+}
+
+#condition-title,
+#equipment-title,
+#inventory-title,
+#personality-title,
+#attrs-title {
+    color: $da-gold;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#personality-traits {
+    margin-bottom: 2;
+    height: auto;
+}
+
+#personality-traits PipSelector {
+    width: 1fr;
+}
+
+#attr-label,
+#trait-label {
+    color: $da-gold;
+    text-style: bold;
+    margin-top: 1;
+    margin-bottom: 1;
+}
+
+#pool-display {
+    color: $da-muted;
+    margin-bottom: 1;
+}
