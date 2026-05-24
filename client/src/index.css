@@ -77,6 +77,131 @@ body { margin: 0; }
   letter-spacing: 0.06em;
 }
 
+/* ── Saves List Screen ── */
+.saves-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.saves-header {
+  padding: 32px 48px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.saves-header__title {
+  font-family: var(--font-title);
+  font-size: 20px;
+  color: var(--text-head);
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.saves-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.saves-empty {
+  font-style: italic;
+  color: var(--text-dim);
+  text-align: center;
+  margin-top: 48px;
+}
+
+.saves-entry {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-right: 16px;
+  transition: border-color 0.2s;
+}
+
+.saves-entry:hover {
+  border-color: var(--gold-dim);
+}
+
+.saves-entry__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.saves-entry__name {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  color: var(--text-head);
+}
+
+.saves-entry__meta {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+.saves-entry__confirm {
+  flex: 1;
+  padding: 16px 20px;
+}
+
+.saves-footer {
+  padding: 20px 48px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── World Header ── */
+.world-header {
+  padding: 20px 40px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.world-header__name {
+  font-family: var(--font-title);
+  font-size: 20px;
+  color: var(--gold);
+  letter-spacing: 0.06em;
+  margin: 0 0 4px;
+}
+
+.world-header__desc {
+  font-size: 14px;
+  color: var(--text-dim);
+  font-style: italic;
+  margin: 0;
+}
+
+/* ── Empty CTA ── */
+.char-detail__empty-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
 /* ── Hub Screen ── */
 .hub-screen {
   align-items: center;

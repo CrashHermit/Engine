@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import PipSelector from '../components/PipSelector'
 import { getCharacters, startSession, deleteCharacter } from '../api/characters'
-import type { Character } from '../types'
+import { getWorld } from '../api/worlds'
+import type { Character, World } from '../types'
 
-export default function LoadCharacterScreen() {
+export default function WorldDetailScreen() {
   const navigate = useNavigate()
+  const { worldId } = useParams<{ worldId: string }>()
+  const [world, setWorld] = useState<World | null>(null)
   const [characters, setCharacters] = useState<Character[]>([])
   const [selected, setSelected] = useState<Character | null>(null)
   const [loading, setLoading] = useState(true)
@@ -16,19 +19,23 @@ export default function LoadCharacterScreen() {
   const busy = deleting || starting
 
   useEffect(() => {
-    getCharacters().then(chars => {
-      setCharacters(chars)
-      if (chars.length > 0) setSelected(chars[0])
-      setLoading(false)
-    })
-  }, [])
+    if (!worldId) return
+    Promise.all([getWorld(worldId), getCharacters(worldId)])
+      .then(([w, chars]) => {
+        setWorld(w)
+        setCharacters(chars)
+        if (chars.length > 0) setSelected(chars[0])
+      })
+      .catch(err => console.error('Failed to load world details:', err))
+      .finally(() => setLoading(false))
+  }, [worldId])
 
   async function handlePlay() {
-    if (!selected) return
+    if (!selected || !worldId) return
     setStarting(true)
     try {
-      await startSession(selected.id)
-      navigate('/game')
+      await startSession(worldId, selected.id)
+      navigate('/game', { state: { worldId } })
     } catch (error) {
       console.error('Failed to start session:', error)
     } finally {
@@ -55,6 +62,13 @@ export default function LoadCharacterScreen() {
 
   return (
     <div className="screen load-screen">
+      {world && (
+        <div className="world-header">
+          <h1 className="world-header__name">{world.name}</h1>
+          {world.description && <p className="world-header__desc">{world.description}</p>}
+        </div>
+      )}
+
       <div className="load-layout">
         <aside className="char-list">
           <h2 className="char-list__title">Characters</h2>
@@ -72,7 +86,10 @@ export default function LoadCharacterScreen() {
               {c.name}
             </button>
           ))}
-          <button className="btn btn--ghost char-list__new" onClick={() => navigate('/characters/create')}>
+          <button
+            className="btn btn--ghost char-list__new"
+            onClick={() => navigate(`/worlds/${worldId}/characters/create`)}
+          >
             + New Character
           </button>
         </aside>
@@ -112,15 +129,27 @@ export default function LoadCharacterScreen() {
             </div>
           ) : (
             <div className="char-detail__empty">
-              <p>Select a character to begin.</p>
+              {!loading && characters.length === 0 ? (
+                <div className="char-detail__empty-cta">
+                  <p>No characters have entered this world yet.</p>
+                  <button
+                    className="btn btn--primary"
+                    onClick={() => navigate(`/worlds/${worldId}/characters/create`)}
+                  >
+                    Create First Character
+                  </button>
+                </div>
+              ) : (
+                <p>Select a character to begin.</p>
+              )}
             </div>
           )}
         </div>
       </div>
 
       <div className="load-footer">
-        <button className="btn btn--ghost" onClick={() => navigate('/characters')}>
-          Back
+        <button className="btn btn--ghost" onClick={() => navigate('/worlds')}>
+          ← Back
         </button>
         <button
           className="btn btn--primary btn--large"
