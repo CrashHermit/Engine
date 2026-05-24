@@ -398,7 +398,7 @@ body { margin: 0; }
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--text-dim);
-  width: 120px;
+  width: 140px;
   flex-shrink: 0;
 }
 
