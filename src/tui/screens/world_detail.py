@@ -25,14 +25,11 @@ class WorldDetailScreen(Screen):
                 yield Label("Characters", id="char-list-title")
                 yield ListView(id="char-list")
             with Vertical(id="char-detail-panel"):
-                yield Label("Aldric the Bold", id="char-name")
-                yield Static(
-                    "A seasoned warrior from the northern provinces.",
-                    id="char-description",
-                )
-                yield PipSelector("Corpus", max_val=4, value=2, readonly=True, id="pip-corpus")
+                yield Label("—", id="char-name")
+                yield Static("", id="char-description")
+                yield PipSelector("Corpus", max_val=4, value=1, readonly=True, id="pip-corpus")
                 yield PipSelector("Mens", max_val=4, value=1, readonly=True, id="pip-mens")
-                yield PipSelector("Anima", max_val=4, value=2, readonly=True, id="pip-anima")
+                yield PipSelector("Anima", max_val=4, value=1, readonly=True, id="pip-anima")
         with Horizontal(id="detail-actions"):
             yield Button("Back", id="btn-back", variant="default")
             yield Button("New Character", id="btn-new-char", variant="default")
@@ -64,7 +61,9 @@ class WorldDetailScreen(Screen):
 
     def _on_create_character_dismissed(self, result: dict[str, int | str] | None) -> None:
         if result:
-            self._characters.append(str(result["name"]))
+            name = str(result["name"])
+            self._characters.append(name)
+            self.app.world_character_data.setdefault(self.world_name, {})[name] = result
             self._refresh_character_list()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -88,8 +87,18 @@ class WorldDetailScreen(Screen):
             # TODO: confirmation dialog then CharacterRepository.delete()
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
-        # TODO: load real character data from CharacterRepository
         if event.item is None:
             return
         name = str(event.item.query_one(Label).content)
         self.query_one("#char-name", Label).update(name)
+        char = self.app.world_character_data.get(self.world_name, {}).get(name)
+        if char:
+            self.query_one("#char-description", Static).update(char.get("description", ""))
+            self.query_one("#pip-corpus", PipSelector).value = char.get("corpus", 1)
+            self.query_one("#pip-mens", PipSelector).value = char.get("mens", 1)
+            self.query_one("#pip-anima", PipSelector).value = char.get("anima", 1)
+        else:
+            self.query_one("#char-description", Static).update("")
+            self.query_one("#pip-corpus", PipSelector).value = 1
+            self.query_one("#pip-mens", PipSelector).value = 1
+            self.query_one("#pip-anima", PipSelector).value = 1

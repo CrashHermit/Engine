@@ -84,7 +84,7 @@ ListView > ListItem.--highlight {
 
 #start-container Button {
     width: 30;
-    margin: 1 0;
+    margin: 1 auto;
 }
 
 /* ── World List Screen ────────────────────────────── */
@@ -147,8 +147,8 @@ ListView > ListItem.--highlight {
 }
 
 #detail-actions {
-    height: 3;
-    padding: 0 1;
+    height: auto;
+    padding: 1;
     align: left middle;
     border-top: solid $da-muted;
 }
@@ -298,8 +298,9 @@ CharacterSheetModal > Vertical {
 }
 
 #modal-actions {
-    margin-top: 2;
-    align: right middle;
+    margin-top: 1;
+    align: center middle;
+    height: auto;
 }
 
 #modal-actions Button {

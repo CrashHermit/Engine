@@ -14,6 +14,7 @@ class EngineApp(App):
 
     def on_mount(self) -> None:
         self.world_characters: dict[str, list[str]] = {}
+        self.world_character_data: dict[str, dict[str, dict]] = {}
         self.push_screen(StartScreen())
 
     def action_help(self) -> None:
