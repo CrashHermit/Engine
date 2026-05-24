@@ -11,21 +11,18 @@ from core.model.database import EdgeType, VertexType
 class BaseRepository:
     def __init__(self, database: arcadedb.Database) -> None:
         self._database: arcadedb.Database = database
-        self._in_transaction: bool = False
         self._now: datetime | None = None
 
     @contextmanager
     def transaction(self) -> Generator[None, None, None]:
-        if self._in_transaction:
+        if self._database.is_transaction_active():
             yield
             return
-        self._in_transaction = True
         self._now = datetime.now(tz=timezone.utc)
         try:
             with self._database.transaction():
                 yield
         finally:
-            self._in_transaction = False
             self._now = None
 
     def _current_time(self) -> datetime:
@@ -47,7 +44,7 @@ class BaseRepository:
             vertex.save()
             return vertex
 
-        if self._in_transaction:
+        if self._database.is_transaction_active():
             return _do(self._database)
         with self._database.transaction():
             return _do(self._database)
@@ -100,7 +97,7 @@ class BaseRepository:
             edge.save()
             return edge
 
-        if self._in_transaction:
+        if self._database.is_transaction_active():
             return _do()
         with self._database.transaction():
             return _do()
