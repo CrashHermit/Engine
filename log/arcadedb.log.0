@@ -1,16 +1,16 @@
 
-2026-05-23 19:07:28.504 INFO  [ArcadeDBServer] <ArcadeDB_0> ArcadeDB Server v26.5.1 (build b6d08fee549dd5930303b362223869901aab0fac/1778533954349/main) is starting up...
-2026-05-23 19:07:28.505 INFO  [ArcadeDBServer] <ArcadeDB_0> Running on Windows 11 10.0 - OpenJDK 64-Bit Server VM 25.0.3 (Corretto-25.0.3.9.1)
-2026-05-23 19:07:28.510 INFO  [PluginManager] <ArcadeDB_0> Discovered plugin on main class loader: AutoBackupSchedulerPlugin
-2026-05-23 19:07:28.511 INFO  [PluginManager] <ArcadeDB_0> Plugins directory not found: C:\Users\Joshua\cursor_projects\PersonalProjects\Engine\data\lib\plugins
-2026-05-23 19:07:28.511 INFO  [ArcadeDBServer] <ArcadeDB_0> Starting ArcadeDB Server in development mode with plugins [AutoBackupSchedulerPlugin] ...
-2026-05-23 19:07:28.576 WARNI [GraalPolyglotEngine] <ArcadeDB_0> GraalVM Polyglot Engine: no languages found
-2026-05-23 19:07:28.581 INFO  [ArcadeDBServer] <ArcadeDB_0> Metrics Collection Started
-2026-05-23 19:07:28.623 INFO  [ArcadeDBServer] <ArcadeDB_0> Paths - server root: C:\Users\Joshua\cursor_projects\PersonalProjects\Engine\data - databases: C:\Users\Joshua\cursor_projects\PersonalProjects\Engine\data/databases - backups: C:\Users\Joshua\cursor_projects\PersonalProjects\Engine\data/backups
-2026-05-23 19:07:28.945 INFO  [HttpServer] <ArcadeDB_0> - Starting HTTP Server (host=localhost port=[2480, 2480] httpsPort=[2490, 2499])...
-2026-05-23 19:07:29.160 INFO  [HttpServer] <ArcadeDB_0> - HTTP Server started (host=localhost port=2480 httpsPort=2490)
-2026-05-23 19:07:29.161 INFO  [AutoBackupSchedulerPlugin] <ArcadeDB_0> Auto-backup scheduler disabled: config/backup.json not found
-2026-05-23 19:07:29.161 INFO  [PluginManager] <ArcadeDB_0> - AutoBackupSchedulerPlugin plugin configured but not active
-2026-05-23 19:07:29.162 INFO  [ArcadeDBServer] <ArcadeDB_0> Available query languages: [sqlscript, java, opencypher, graphql, redis, sql, opencypher]
-2026-05-23 19:07:29.162 INFO  [ArcadeDBServer] <ArcadeDB_0> ArcadeDB Server started in 'development' mode (CPUs=24 MAXRAM=4.00GB)
-2026-05-23 19:07:29.164 INFO  [ArcadeDBServer] <ArcadeDB_0> Studio web tool available at http://localhost:2480 
+2026-05-23 19:45:10.930 INFO  [ArcadeDBServer] <ArcadeDB_0> ArcadeDB Server v26.5.1 (build b6d08fee549dd5930303b362223869901aab0fac/1778533954349/main) is starting up...
+2026-05-23 19:45:10.932 INFO  [ArcadeDBServer] <ArcadeDB_0> Running on Windows 11 10.0 - OpenJDK 64-Bit Server VM 25.0.3 (Corretto-25.0.3.9.1)
+2026-05-23 19:45:10.938 INFO  [PluginManager] <ArcadeDB_0> Discovered plugin on main class loader: AutoBackupSchedulerPlugin
+2026-05-23 19:45:10.938 INFO  [PluginManager] <ArcadeDB_0> Plugins directory not found: C:\Users\Joshua\cursor_projects\PersonalProjects\Engine\data\lib\plugins
+2026-05-23 19:45:10.939 INFO  [ArcadeDBServer] <ArcadeDB_0> Starting ArcadeDB Server in development mode with plugins [AutoBackupSchedulerPlugin] ...
+2026-05-23 19:45:11.007 WARNI [GraalPolyglotEngine] <ArcadeDB_0> GraalVM Polyglot Engine: no languages found
+2026-05-23 19:45:11.012 INFO  [ArcadeDBServer] <ArcadeDB_0> Metrics Collection Started
+2026-05-23 19:45:11.036 INFO  [ArcadeDBServer] <ArcadeDB_0> Paths - server root: C:\Users\Joshua\cursor_projects\PersonalProjects\Engine\data - databases: C:\Users\Joshua\cursor_projects\PersonalProjects\Engine\data/databases - backups: C:\Users\Joshua\cursor_projects\PersonalProjects\Engine\data/backups
+2026-05-23 19:45:11.138 INFO  [HttpServer] <ArcadeDB_0> - Starting HTTP Server (host=localhost port=[2480, 2480] httpsPort=[2490, 2499])...
+2026-05-23 19:45:11.338 INFO  [HttpServer] <ArcadeDB_0> - HTTP Server started (host=localhost port=2480 httpsPort=2490)
+2026-05-23 19:45:11.338 INFO  [AutoBackupSchedulerPlugin] <ArcadeDB_0> Auto-backup scheduler disabled: config/backup.json not found
+2026-05-23 19:45:11.338 INFO  [PluginManager] <ArcadeDB_0> - AutoBackupSchedulerPlugin plugin configured but not active
+2026-05-23 19:45:11.339 INFO  [ArcadeDBServer] <ArcadeDB_0> Available query languages: [sqlscript, java, opencypher, graphql, redis, sql, opencypher]
+2026-05-23 19:45:11.339 INFO  [ArcadeDBServer] <ArcadeDB_0> ArcadeDB Server started in 'development' mode (CPUs=24 MAXRAM=4.00GB)
+2026-05-23 19:45:11.340 INFO  [ArcadeDBServer] <ArcadeDB_0> Studio web tool available at http://localhost:2480 
