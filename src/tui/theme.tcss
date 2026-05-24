@@ -168,14 +168,19 @@ ListView > ListItem.--highlight {
     height: 1fr;
 }
 
-#scene-panel {
+#scene-collapsible {
     width: 40%;
+    height: 100%;
     border-right: solid $da-gold;
+}
+
+#scene-log {
+    height: 1fr;
     padding: 1;
 }
 
 #chat-panel {
-    width: 60%;
+    width: 1fr;
 }
 
 #status-bar {

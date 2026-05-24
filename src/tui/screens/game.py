@@ -2,7 +2,7 @@ from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
-from textual.widgets import RichLog, Static
+from textual.widgets import Collapsible, RichLog, Static
 from textual.containers import Horizontal, Vertical
 from textual.worker import get_current_worker
 
@@ -29,7 +29,8 @@ class GameScreen(Screen):
     def compose(self) -> ComposeResult:
         with Vertical(id="game-layout"):
             with Horizontal(id="game-panels"):
-                yield RichLog(id="scene-panel", highlight=True, markup=True, wrap=True)
+                with Collapsible(title="Scene", id="scene-collapsible"):
+                    yield RichLog(id="scene-log", highlight=True, markup=True, wrap=True)
                 yield ChatPanel(id="chat-panel")
             yield Static(
                 "HP: — / —  |  Status: Normal  |  Location: —",
@@ -37,7 +38,11 @@ class GameScreen(Screen):
             )
 
     def on_mount(self) -> None:
-        self.query_one("#scene-panel", RichLog).write(_PLACEHOLDER_SCENE)
+        self.query_one("#scene-log", RichLog).write(_PLACEHOLDER_SCENE)
+
+    def on_collapsible_toggled(self, event: Collapsible.Toggled) -> None:
+        col = self.query_one("#scene-collapsible")
+        col.styles.width = "auto" if event.collapsible.collapsed else "40%"
 
     def on_chat_panel_message_sent(self, event: ChatPanel.MessageSent) -> None:
         self.process_chat_message(event.text, event.channel)
