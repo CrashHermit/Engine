@@ -64,21 +64,19 @@ class SchemaManager:
         self._indexes(schema)
 
     def _vertex(self, schema: Schema, name: VertexType, properties: list[str]) -> None:
-        type_name = name.value
-        schema.get_or_create_vertex_type(name=type_name)
+        schema.get_or_create_vertex_type(name=name)
         for prop in BASELINE_PROPERTIES + properties:
             schema.get_or_create_property(
-                type_name=type_name,
+                type_name=name,
                 property_name=prop,
                 property_type=PROPERTY_TYPES[prop],
             )
 
     def _edge(self, schema: Schema, name: EdgeType, properties: list[str]) -> None:
-        type_name = name.value
-        schema.get_or_create_edge_type(name=type_name)
+        schema.get_or_create_edge_type(name=name)
         for prop in BASELINE_PROPERTIES + properties:
             schema.get_or_create_property(
-                type_name=type_name,
+                type_name=name,
                 property_name=prop,
                 property_type=PROPERTY_TYPES[prop],
             )
@@ -86,13 +84,13 @@ class SchemaManager:
     def _indexes(self, schema: Schema) -> None:
         for vertex_type in VertexType:
             schema.get_or_create_index(
-                type_name=vertex_type.value,
+                type_name=vertex_type,
                 property_names=["id"],
                 unique=True,
             )
         for edge_type in EdgeType:
             schema.get_or_create_index(
-                type_name=edge_type.value,
+                type_name=edge_type,
                 property_names=["id"],
                 unique=True,
             )
