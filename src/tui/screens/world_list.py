@@ -35,14 +35,24 @@ class WorldListScreen(Screen):
         self._sync_world_characters()
         self._refresh_world_list()
 
+    _PLACEHOLDER_CHARACTER_DATA: dict[str, dict] = {
+        "Aldric the Bold": {"description": "A seasoned warrior from the northern provinces.", "corpus": 3, "mens": 1, "anima": 1},
+        "Sister Mara": {"description": "A devoted healer with a troubled past.", "corpus": 1, "mens": 2, "anima": 3},
+        "Thane Vexx": {"description": "A cunning rogue who trusts no one, including himself.", "corpus": 2, "mens": 3, "anima": 1},
+    }
+
     def _sync_world_characters(self) -> None:
         for name in self._worlds:
-            if name in self.app.world_characters:
-                continue
-            if name in self._PLACEHOLDER_WORLDS:
-                self.app.world_characters[name] = list(WorldDetailScreen._PLACEHOLDER_CHARACTERS)
-            else:
-                self.app.world_characters[name] = []
+            if name not in self.app.world_characters:
+                if name in self._PLACEHOLDER_WORLDS:
+                    self.app.world_characters[name] = list(WorldDetailScreen._PLACEHOLDER_CHARACTERS)
+                else:
+                    self.app.world_characters[name] = []
+            if name not in self.app.world_character_data:
+                if name in self._PLACEHOLDER_WORLDS:
+                    self.app.world_character_data[name] = dict(self._PLACEHOLDER_CHARACTER_DATA)
+                else:
+                    self.app.world_character_data[name] = {}
 
     def _selected_world_name(self) -> str | None:
         item = self.query_one("#world-list", ListView).highlighted_child
@@ -75,4 +85,11 @@ class WorldListScreen(Screen):
             if world_name:
                 self.app.push_screen(WorldDetailScreen(world_name=world_name))
         elif event.button.id == "btn-delete":
-            pass  # TODO: confirmation dialog then WorldStore.delete(db_name)
+            world_name = self._selected_world_name()
+            if world_name is None:
+                return
+            self._worlds.remove(world_name)
+            self.app.world_characters.pop(world_name, None)
+            self.app.world_character_data.pop(world_name, None)
+            self._refresh_world_list()
+            # TODO: confirmation dialog then WorldStore.delete(db_name)
