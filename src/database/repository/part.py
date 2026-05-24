@@ -19,7 +19,7 @@ _FUNCTION_MAP: dict[PartFunction, tuple[VertexType, EdgeType]] = {
 
 class PartRepository(CharacterRepository):
 
-    def add_core_part(
+    def add_part(
         self,
         character: Vertex,
         name: str,
@@ -48,40 +48,12 @@ class PartRepository(CharacterRepository):
         )
         return part
 
-    def add_part(
-        self,
-        character: Vertex,
-        parent_part: Vertex,
-        name: str,
-        length: SizeScale,
-        width: SizeScale,
-        height: SizeScale,
-        shape: Shape,
-        status: Status = Status.NORMAL,
-        description: str = "",
-    ) -> Vertex:
-        part: Vertex = self.create_vertex(
-            type_name=VertexType.PART,
-            id=str(uuid.uuid4()),
-            name=name,
-            length=length,
-            width=width,
-            height=height,
-            shape=shape,
-            status=status,
-            description=description,
-        )
-        self.create_edge(
-            type_name=EdgeType.HAS_PART,
-            source=character,
-            target=part,
-        )
+    def attach(self, source: Vertex, target: Vertex) -> None:
         self.create_edge(
             type_name=EdgeType.ATTACHED_TO,
-            source=parent_part,
-            target=part,
+            source=source,
+            target=target,
         )
-        return part
 
     def add_function(self, part: Vertex, function: PartFunction) -> Vertex:
         vertex_type, edge_type = _FUNCTION_MAP[function]

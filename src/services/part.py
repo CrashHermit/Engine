@@ -7,33 +7,9 @@ class PartService:
     def __init__(self, part_repo: PartRepository) -> None:
         self.part_repo: PartRepository = part_repo
 
-    def add_core_part(
-        self,
-        character: Vertex,
-        name: str,
-        length: SizeScale,
-        width: SizeScale,
-        height: SizeScale,
-        shape: Shape,
-        status: Status = Status.NORMAL,
-        description: str = "",
-    ) -> Vertex:
-        with self.part_repo.transaction():
-            return self.part_repo.add_core_part(
-                character=character,
-                name=name,
-                length=length,
-                width=width,
-                height=height,
-                shape=shape,
-                status=status,
-                description=description,
-            )
-
     def add_part(
         self,
         character: Vertex,
-        parent_part: Vertex,
         name: str,
         length: SizeScale,
         width: SizeScale,
@@ -45,7 +21,6 @@ class PartService:
         with self.part_repo.transaction():
             return self.part_repo.add_part(
                 character=character,
-                parent_part=parent_part,
                 name=name,
                 length=length,
                 width=width,
@@ -54,6 +29,10 @@ class PartService:
                 status=status,
                 description=description,
             )
+
+    def attach(self, source: Vertex, target: Vertex) -> None:
+        with self.part_repo.transaction():
+            self.part_repo.attach(source=source, target=target)
 
     def add_function(self, part: Vertex, function: PartFunction) -> Vertex:
         with self.part_repo.transaction():
