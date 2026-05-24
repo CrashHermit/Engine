@@ -36,15 +36,8 @@ class BaseRepository:
         now = self._current_time()
         properties.setdefault("created_at", now)
         properties.setdefault("updated_at", now)
-
-        if self._database.is_transaction_active():
+        with self.transaction():
             vertex: Vertex = self._database.new_vertex(type_name=type_name)
-            for name, value in properties.items():
-                vertex.set(name=name, value=value)
-            vertex.save()
-            return vertex
-        with self._database.transaction():
-            vertex = self._database.new_vertex(type_name=type_name)
             for name, value in properties.items():
                 vertex.set(name=name, value=value)
             vertex.save()
@@ -90,9 +83,7 @@ class BaseRepository:
         properties.setdefault("created_at", now)
         properties.setdefault("updated_at", now)
 
-        if self._database.is_transaction_active():
-            return source.new_edge(label=type_name, target=target, **properties)
-        with self._database.transaction():
+        with self.transaction():
             return source.new_edge(label=type_name, target=target, **properties)
 
     def create_edges(self, type_name: EdgeType, items: list[dict[str, Any]]) -> list[Edge]:
