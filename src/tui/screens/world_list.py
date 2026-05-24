@@ -26,14 +26,14 @@ class WorldListScreen(Screen):
                 yield Button("Enter", id="btn-enter", variant="success")
         yield Footer()
 
-    async def on_button_pressed(self, event: Button.Pressed) -> None:
+    def on_button_pressed(self, event: Button.Pressed) -> None:
         from .world_detail import WorldDetailScreen
         from ..modals.create_world import CreateWorldModal
 
         if event.button.id == "btn-back":
             self.app.pop_screen()
         elif event.button.id == "btn-new":
-            await self.app.push_screen_wait(CreateWorldModal())
+            self.app.push_screen(CreateWorldModal())
         elif event.button.id == "btn-enter":
             self.app.push_screen(WorldDetailScreen())
         elif event.button.id == "btn-delete":

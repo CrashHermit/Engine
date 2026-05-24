@@ -27,7 +27,7 @@ class GameScreen(Screen):
     def compose(self) -> ComposeResult:
         with Vertical(id="game-layout"):
             with Horizontal(id="game-panels"):
-                yield RichLog(id="scene-panel", highlight=True, markup=True)
+                yield RichLog(id="scene-panel", highlight=True, markup=True, wrap=True)
                 yield ChatPanel(id="chat-panel")
             yield Static(
                 "HP: — / —  |  Status: Normal  |  Location: —",

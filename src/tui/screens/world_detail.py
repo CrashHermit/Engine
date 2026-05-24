@@ -38,14 +38,14 @@ class WorldDetailScreen(Screen):
             yield Button("Play", id="btn-play", variant="success")
         yield Footer()
 
-    async def on_button_pressed(self, event: Button.Pressed) -> None:
+    def on_button_pressed(self, event: Button.Pressed) -> None:
         from .game import GameScreen
         from ..modals.create_character import CreateCharacterModal
 
         if event.button.id == "btn-back":
             self.app.pop_screen()
         elif event.button.id == "btn-new-char":
-            await self.app.push_screen_wait(CreateCharacterModal())
+            self.app.push_screen(CreateCharacterModal())
         elif event.button.id == "btn-play":
             self.app.push_screen(GameScreen())
         elif event.button.id == "btn-delete":
