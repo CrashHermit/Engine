@@ -26,8 +26,6 @@ class LocationRepository:
         )
 
     def get_neighbors(self, location: Vertex) -> list[Vertex]:
-        all_edges = (
-            location.get_out_edges(EdgeType.CONNECTS)
-            + location.get_in_edges(EdgeType.CONNECTS)
-        )
-        return list(set([edge.get_target() for edge in all_edges]))
+        out_neighbors = [edge.get_target() for edge in location.get_out_edges(EdgeType.CONNECTS)]
+        in_neighbors = [edge.get_source() for edge in location.get_in_edges(EdgeType.CONNECTS)]
+        return list(set(out_neighbors + in_neighbors))

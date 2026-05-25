@@ -23,9 +23,6 @@ class WorldService:
         detail_count: int,
         detail_radius_pct: int,
     ) -> None:
-        db = self._connection.create_database(name)
-        SchemaManager(db).ensure()
-
         world_data = WorldData(
             name=name,
             description=description,
@@ -37,8 +34,11 @@ class WorldService:
             detail_radius_pct=detail_radius_pct,
         )
 
-        pipeline = WorldgenPipeline(stages=[GridStage(size=size)])
+        pipeline = WorldgenPipeline(stages=[GridStage()])
         world_data = pipeline.run(world_data)
+
+        db = self._connection.create_database(name)
+        SchemaManager(db).ensure()
 
         base = BaseRepository(db)
         world_repo = WorldRepository(base)

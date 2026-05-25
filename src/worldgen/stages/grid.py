@@ -6,11 +6,8 @@ _OUTGOING_DIRECTIONS = [(1, 0), (0, 1), (1, 1)]
 
 
 class GridStage:
-    def __init__(self, size: int) -> None:
-        self._size = size
-
     def run(self, data: WorldData) -> WorldData:
-        size = self._size
+        size = data.size
         tiles: dict[tuple[int, int], TileData] = {}
 
         for q in range(size):
