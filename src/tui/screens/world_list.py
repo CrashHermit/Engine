@@ -28,7 +28,7 @@ class WorldListScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self._worlds = self.app.server.list_databases()
+        self._worlds = self.app.connection.list_databases()
         if self._created_world and self._created_world["name"] not in self._worlds:
             self._worlds.append(self._created_world["name"])
         self._refresh_world_list()

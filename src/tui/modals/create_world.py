@@ -53,7 +53,7 @@ class CreateWorldModal(ModalScreen[dict[str, str] | None]):
             detail_count: int = int(self.query_one("#world-detail-count", Input).value.strip())
             detail_radius_pct: int = int(self.query_one("#world-detail-radius", Input).value.strip())
 
-            WorldService(self.app.server).create_world(
+            WorldService(self.app.connection).create_world(
                 name=name,
                 description=description,
                 seed=seed,

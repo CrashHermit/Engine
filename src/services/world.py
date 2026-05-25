@@ -1,15 +1,15 @@
+from database.connection import DatabaseConnection
 from database.schema import SchemaManager
 from database.repository.world import WorldRepository
 from database.repository.tile import TileRepository
-from database.server import Server
 from worldgen.data import WorldData
 from worldgen.pipeline import WorldgenPipeline
 from worldgen.stages.grid import GridStage
 
 
 class WorldService:
-    def __init__(self, server: Server) -> None:
-        self._server = server
+    def __init__(self, connection: DatabaseConnection) -> None:
+        self._connection = connection
 
     def create_world(
         self,
@@ -22,7 +22,7 @@ class WorldService:
         detail_count: int,
         detail_radius_pct: int,
     ) -> None:
-        db = self._server.create_database(name)
+        db = self._connection.create_database(name)
         SchemaManager(db).ensure()
 
         world_data = WorldData(
