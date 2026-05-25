@@ -26,6 +26,7 @@ class VertexType(StrEnum):
     CONSCIENTIOUSNESS = "CONSCIENTIOUSNESS"
     ATTRIBUTE = "ATTRIBUTE"
     TILE = "TILE"
+    WORLD = "WORLD"
 
 
 class EdgeType(StrEnum):

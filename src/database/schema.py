@@ -21,6 +21,13 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "invalidated_at": arcadedb.PropertyType.DATETIME,
     "q": arcadedb.PropertyType.INTEGER,
     "r": arcadedb.PropertyType.INTEGER,
+    "height": arcadedb.PropertyType.INTEGER,
+    "seed": arcadedb.PropertyType.INTEGER,
+    "size": arcadedb.PropertyType.INTEGER,
+    "major_count": arcadedb.PropertyType.INTEGER,
+    "major_radius_pct": arcadedb.PropertyType.INTEGER,
+    "detail_count": arcadedb.PropertyType.INTEGER,
+    "detail_radius_pct": arcadedb.PropertyType.INTEGER,
 }
 
 BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated_at"]
@@ -49,7 +56,8 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
     VertexType.AGREEABLENESS: [],
     VertexType.CONSCIENTIOUSNESS: [],
     VertexType.ATTRIBUTE: ["value"],
-    VertexType.TILE: ["q", "r"],
+    VertexType.TILE: ["q", "r", "height"],
+    VertexType.WORLD: ["name", "description", "seed", "size", "major_count", "major_radius_pct", "detail_count", "detail_radius_pct"],
 }
 
 EDGE_SCHEMA: dict[EdgeType, list[str]] = {

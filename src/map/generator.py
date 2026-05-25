@@ -3,19 +3,18 @@ from arcadedb_embedded.graph import Vertex
 
 from core.model.database import EdgeType, VertexType
 from database.repository.base import BaseRepository
-from map.config import MapConfig
 
 # Axial hex directions: each tuple is (dq, dr)
 _HEX_DIRECTIONS = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1)]
 
 
 class MapGenerator:
-    def __init__(self, config: MapConfig, database: arcadedb.Database) -> None:
-        self._config = config
+    def __init__(self, size: int, database: arcadedb.Database) -> None:
+        self._size = size
         self._repo = BaseRepository(database)
 
     def generate(self) -> dict[tuple[int, int], Vertex]:
-        size = self._config.size
+        size = self._size
         tiles: dict[tuple[int, int], Vertex] = {}
 
         with self._repo.transaction():
