@@ -21,3 +21,11 @@ class HeightmapConfig:
     sea_level: int = 45
     # Seed for reproducibility; 0 = random-ish default
     seed: int = 0
+
+
+@dataclass
+class RiverConfig:
+    # Tiles whose upstream area (number of land tiles draining through them)
+    # is below this threshold are too small to count as rivers.
+    # Scale this up with grid size — a good rule of thumb is ~0.1% of total tiles.
+    min_flux: int = 10

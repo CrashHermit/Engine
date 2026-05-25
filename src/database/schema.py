@@ -25,6 +25,7 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "elevation": arcadedb.PropertyType.INTEGER,
     "biome": arcadedb.PropertyType.STRING,
     "direction": arcadedb.PropertyType.STRING,
+    "flux": arcadedb.PropertyType.INTEGER,
 }
 
 BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated_at"]
@@ -53,7 +54,7 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
     VertexType.AGREEABLENESS: [],
     VertexType.CONSCIENTIOUSNESS: [],
     VertexType.ATTRIBUTE: ["value"],
-    VertexType.TILE: ["row", "col", "elevation", "biome"],
+    VertexType.TILE: ["row", "col", "elevation", "biome", "flux"],
 }
 
 EDGE_SCHEMA: dict[EdgeType, list[str]] = {
@@ -77,6 +78,7 @@ EDGE_SCHEMA: dict[EdgeType, list[str]] = {
     EdgeType.IS_CHANNEL: [],
     EdgeType.IS_CONTROLLABLE: [],
     EdgeType.ADJACENT: ["direction"],
+    EdgeType.FLOWS_TO: [],
 }
 
 
