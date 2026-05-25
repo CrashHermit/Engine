@@ -19,6 +19,12 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "created_at": arcadedb.PropertyType.DATETIME,
     "updated_at": arcadedb.PropertyType.DATETIME,
     "invalidated_at": arcadedb.PropertyType.DATETIME,
+    # map / terrain
+    "row": arcadedb.PropertyType.INTEGER,
+    "col": arcadedb.PropertyType.INTEGER,
+    "elevation": arcadedb.PropertyType.INTEGER,
+    "biome": arcadedb.PropertyType.STRING,
+    "direction": arcadedb.PropertyType.STRING,
 }
 
 BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated_at"]
@@ -47,6 +53,7 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
     VertexType.AGREEABLENESS: [],
     VertexType.CONSCIENTIOUSNESS: [],
     VertexType.ATTRIBUTE: ["value"],
+    VertexType.TILE: ["row", "col", "elevation", "biome"],
 }
 
 EDGE_SCHEMA: dict[EdgeType, list[str]] = {
@@ -69,6 +76,7 @@ EDGE_SCHEMA: dict[EdgeType, list[str]] = {
     EdgeType.IS_OPENING: [],
     EdgeType.IS_CHANNEL: [],
     EdgeType.IS_CONTROLLABLE: [],
+    EdgeType.ADJACENT: ["direction"],
 }
 
 
