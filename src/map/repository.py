@@ -1,32 +1,42 @@
-import arcadedb_embedded as arcadedb
 from arcadedb_embedded.graph import Vertex
 
 from core.model.database import EdgeType, VertexType
 from database.repository.base import BaseRepository
-from map.grid import TileData, generate_grid, hex_neighbors
+from map.config import GridConfig, HeightmapConfig
+from map.grid import generate_grid, hex_neighbors
+from map.heightmap import generate_heightmap
 
 
 class MapRepository(BaseRepository):
-    def generate(self, rows: int, cols: int) -> None:
+    def generate(
+        self,
+        grid: GridConfig | None = None,
+        heightmap: HeightmapConfig | None = None,
+    ) -> None:
         """Create all tile vertices and their 6 adjacency edges in the database."""
-        tiles = generate_grid(rows, cols)
-        vertex_map: dict[tuple[int, int], Vertex] = {}
+        grid = grid or GridConfig()
+        heightmap = heightmap or HeightmapConfig()
 
+        tiles = generate_grid(grid.rows, grid.cols)
+        elevations = generate_heightmap(tiles, grid.rows, grid.cols, heightmap)
+
+        vertex_map: dict[tuple[int, int], Vertex] = {}
         with self.transaction():
             for tile in tiles:
+                elevation = elevations[(tile.row, tile.col)]
                 v = self.create_vertex(
                     VertexType.TILE,
                     row=tile.row,
                     col=tile.col,
-                    elevation=0,
-                    biome="",
+                    elevation=elevation,
+                    biome="ocean" if elevation < heightmap.sea_level else "",
                 )
                 vertex_map[(tile.row, tile.col)] = v
 
         with self.transaction():
             for tile in tiles:
                 source = vertex_map[(tile.row, tile.col)]
-                for direction, (nr, nc) in hex_neighbors(tile.row, tile.col, rows, cols).items():
+                for direction, (nr, nc) in hex_neighbors(tile.row, tile.col, grid.rows, grid.cols).items():
                     target = vertex_map[(nr, nc)]
                     self.create_edge(EdgeType.ADJACENT, source=source, target=target, direction=direction)
 

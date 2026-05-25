@@ -10,6 +10,7 @@ dependencies = [
     "fastapi>=0.115.0",
     "langchain-core>=1.4.0",
     "langgraph>=1.2.0",
+    "opensimplex>=0.4.5.1",
     "python-dotenv>=1.0.0",
     "textual>=0.80.0",
     "uvicorn[standard]>=0.30.0",
