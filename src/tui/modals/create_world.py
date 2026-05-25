@@ -6,9 +6,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, TextArea
 from textual.containers import Horizontal, Vertical
 
-from database.connection import DatabaseConnection
-from database.schema import SchemaManager
-from services.map import MapService
+from services.world import WorldService
 
 
 class CreateWorldModal(ModalScreen[dict[str, str] | None]):
@@ -55,10 +53,7 @@ class CreateWorldModal(ModalScreen[dict[str, str] | None]):
             detail_count: int = int(self.query_one("#world-detail-count", Input).value.strip())
             detail_radius_pct: int = int(self.query_one("#world-detail-radius", Input).value.strip())
 
-            conn = DatabaseConnection()
-            conn.create_database(name)
-            SchemaManager(conn.database).ensure()
-            MapService(conn.database).create(
+            WorldService(self.app.connection).create_world(
                 name=name,
                 description=description,
                 seed=seed,

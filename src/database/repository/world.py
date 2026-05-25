@@ -4,7 +4,9 @@ from core.model.database import VertexType
 from database.repository.base import BaseRepository
 
 
-class WorldRepository(BaseRepository):
+class WorldRepository:
+    def __init__(self, base: BaseRepository) -> None:
+        self._base = base
 
     def create_world(
         self,
@@ -17,7 +19,7 @@ class WorldRepository(BaseRepository):
         detail_count: int,
         detail_radius_pct: int,
     ) -> Vertex:
-        return self.create_vertex(
+        return self._base.create_vertex(
             type_name=VertexType.WORLD,
             name=name,
             description=description,
