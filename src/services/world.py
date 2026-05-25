@@ -1,5 +1,6 @@
 from database.connection import DatabaseConnection
 from database.schema import SchemaManager
+from database.repository.base import BaseRepository
 from database.repository.world import WorldRepository
 from database.repository.tile import TileRepository
 from worldgen.data import WorldData
@@ -39,10 +40,11 @@ class WorldService:
         pipeline = WorldgenPipeline(stages=[GridStage(size=size)])
         world_data = pipeline.run(world_data)
 
-        world_repo = WorldRepository(db)
-        tile_repo = TileRepository(db)
+        base = BaseRepository(db)
+        world_repo = WorldRepository(base)
+        tile_repo = TileRepository(base)
 
-        with world_repo.transaction():
+        with base.transaction():
             world_repo.create_world(
                 name=name,
                 description=description,

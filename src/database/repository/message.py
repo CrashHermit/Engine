@@ -1,6 +1,5 @@
 import uuid
 
-import arcadedb_embedded as arcadedb
 from arcadedb_embedded.graph import Vertex
 
 from core.model.database import EdgeType, VertexType
@@ -9,11 +8,8 @@ from database.repository.base import BaseRepository
 
 
 class MessageRepository:
-    def __init__(self, database: arcadedb.Database) -> None:
-        self._base = BaseRepository(database)
-
-    def transaction(self):
-        return self._base.transaction()
+    def __init__(self, base: BaseRepository) -> None:
+        self._base = base
 
     def get_history(self) -> list[Message]:
         user = self._base.get_vertex(type_name=VertexType.USER, id="user")
@@ -62,7 +58,6 @@ class MessageRepository:
                     role=msg.role,
                     content=msg.content,
                 )
-
                 edge_type = EdgeType.HAS_MESSAGE if tail is None else EdgeType.NEXT_MESSAGE
                 source = user if tail is None else tail
                 self._base.create_edge(
@@ -71,5 +66,4 @@ class MessageRepository:
                     target=vertex,
                     id=str(uuid.uuid4()),
                 )
-
                 tail = vertex

@@ -1,4 +1,3 @@
-import arcadedb_embedded as arcadedb
 from arcadedb_embedded.graph import Edge, Vertex
 
 from core.model.database import EdgeType, VertexType
@@ -6,11 +5,8 @@ from database.repository.base import BaseRepository
 
 
 class LocationRepository:
-    def __init__(self, database: arcadedb.Database) -> None:
-        self._base = BaseRepository(database)
-
-    def transaction(self):
-        return self._base.transaction()
+    def __init__(self, base: BaseRepository) -> None:
+        self._base = base
 
     def get_location(self, id: str) -> Vertex | None:
         return self._base.get_vertex(type_name=VertexType.LOCATION, id=id)

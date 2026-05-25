@@ -1,4 +1,3 @@
-import arcadedb_embedded as arcadedb
 from arcadedb_embedded.graph import Vertex
 
 from core.model.database import EdgeType, VertexType
@@ -7,11 +6,8 @@ from database.repository.base import BaseRepository
 
 
 class PartRepository:
-    def __init__(self, database: arcadedb.Database) -> None:
-        self._base = BaseRepository(database)
-
-    def transaction(self):
-        return self._base.transaction()
+    def __init__(self, base: BaseRepository) -> None:
+        self._base = base
 
     def add_part(
         self,
@@ -34,11 +30,7 @@ class PartRepository:
             status=status,
             description=description,
         )
-        self._base.create_edge(
-            type_name=EdgeType.HAS_PART,
-            source=character,
-            target=part,
-        )
+        self._base.create_edge(type_name=EdgeType.HAS_PART, source=character, target=part)
         return part
 
     def attach(self, source: Vertex, target: Vertex) -> None:
