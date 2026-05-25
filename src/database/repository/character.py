@@ -12,12 +12,6 @@ class CharacterRepository:
     def transaction(self):
         return self._base.transaction()
 
-    def create_vertex(self, **kwargs) -> Vertex:
-        return self._base.create_vertex(**kwargs)
-
-    def create_edge(self, **kwargs) -> Edge:
-        return self._base.create_edge(**kwargs)
-
     def get_user_characters(self, user: Vertex) -> list[Vertex]:
         edges: list[Edge] = user.get_out_edges(EdgeType.HAS_CHARACTER)
         return [edge.get_target() for edge in edges]
@@ -34,6 +28,21 @@ class CharacterRepository:
             target=character,
         )
         return character
+
+    def create_trait(self, character: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
+        trait: Vertex = self._base.create_vertex(type_name=vertex_type)
+        self._base.create_edge(type_name=edge_type, source=character, target=trait)
+        return trait
+
+    def create_personality(self, character: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
+        personality: Vertex = self._base.create_vertex(type_name=vertex_type)
+        self._base.create_edge(type_name=edge_type, source=character, target=personality)
+        return personality
+
+    def create_attribute(self, source: Vertex, value: int) -> Vertex:
+        attribute: Vertex = self._base.create_vertex(type_name=VertexType.ATTRIBUTE, value=value)
+        self._base.create_edge(type_name=EdgeType.HAS_ATTRIBUTE, source=source, target=attribute)
+        return attribute
 
     def get_corpus(self, character: Vertex) -> Vertex:
         return character.get_out_edges(EdgeType.HAS_CORPUS)[0].get_target()

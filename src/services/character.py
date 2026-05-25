@@ -43,15 +43,12 @@ class CharacterService:
                 (VertexType.MENS, EdgeType.HAS_MENS, mens_score),
                 (VertexType.ANIMA, EdgeType.HAS_ANIMA, anima_score),
             ]:
-                self.create_trait(
+                trait = self.character_repo.create_trait(
                     character=character,
                     vertex_type=vertex_type,
                     edge_type=edge_type,
                 )
-                self.create_attribute(
-                    source=vertex_type,
-                    value=value,
-                )
+                self.character_repo.create_attribute(source=trait, value=value)
 
             for vertex_type, edge_type, value in [
                 (VertexType.EXTRAVERSION, EdgeType.HAS_EXTRAVERSION, extraversion),
@@ -60,41 +57,11 @@ class CharacterService:
                 (VertexType.AGREEABLENESS, EdgeType.HAS_AGREEABLENESS, agreeableness),
                 (VertexType.CONSCIENTIOUSNESS, EdgeType.HAS_CONSCIENTIOUSNESS, conscientiousness),
             ]:
-                self.create_trait(
+                trait = self.character_repo.create_trait(
                     character=character,
                     vertex_type=vertex_type,
                     edge_type=edge_type,
                 )
-                self.create_attribute(
-                    source=vertex_type,
-                    value=value,
-                )
+                self.character_repo.create_attribute(source=trait, value=value)
 
         return character
-
-    def create_trait(self, character: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
-        trait: Vertex = self.character_repo.create_vertex(type_name=vertex_type)
-        self.character_repo.create_edge(type_name=edge_type, source=character, target=trait)
-        return trait
-
-    def create_personality(
-        self,
-        character: Vertex,
-        vertex_type: VertexType,
-        edge_type: EdgeType,
-    ) -> Vertex:
-        personality: Vertex = self.character_repo.create_vertex(type_name=vertex_type)
-        self.character_repo.create_edge(type_name=edge_type, source=character, target=personality)
-        return personality
-
-    def create_attribute(self, source: Vertex, value: int) -> Vertex:
-        attribute: Vertex = self.character_repo.create_vertex(
-            type_name=VertexType.ATTRIBUTE,
-            value=value,
-        )
-        self.character_repo.create_edge(
-            type_name=EdgeType.HAS_ATTRIBUTE,
-            source=source,
-            target=attribute,
-        )
-        return attribute
