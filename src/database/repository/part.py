@@ -1,6 +1,6 @@
 from arcadedb_embedded.graph import Vertex
 from core.model.database import VertexType, EdgeType
-from core.model.part import Shape, Status, SizeScale, PartFunction
+from core.model.part import Shape, Status, SizeScale
 from database.repository.character import CharacterRepository
 
 class PartRepository(CharacterRepository):

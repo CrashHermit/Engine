@@ -1,5 +1,5 @@
 import uuid
-from arcadedb_embedded.graph import Edge
+from arcadedb_embedded.graph import Edge, Vertex
 from arcadedb_embedded.graph import Vertex
 from core.model.database import VertexType, EdgeType
 from database.repository.user import UserRepository
@@ -36,13 +36,13 @@ class CharacterRepository(UserRepository):
         return character.get_out_edges(EdgeType.HAS_ANIMA)[0].get_target()
 
     def get_personality(self, character: Vertex) -> Vertex:
-        mens = self.get_mens(character)
+        mens: Vertex = self.get_mens(character)
         return mens.get_out_edges(EdgeType.HAS_PERSONALITY)[0].get_target()
 
     def get_attribute_value(self, node: Vertex) -> int:
-        attribute = node.get_out_edges(EdgeType.HAS_ATTRIBUTE)[0].get_target()
+        attribute: Vertex = node.get_out_edges(EdgeType.HAS_ATTRIBUTE)[0].get_target()
         return attribute.get(name="value")
 
     def set_attribute_value(self, node: Vertex, value: int) -> None:
-        attribute = node.get_out_edges(EdgeType.HAS_ATTRIBUTE)[0].get_target()
-        self.update_vertex(attribute, value=value)
+        attribute: Vertex = node.get_out_edges(EdgeType.HAS_ATTRIBUTE)[0].get_target()
+        self.update_vertex(vertex=attribute, value=value)

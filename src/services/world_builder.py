@@ -10,14 +10,14 @@ _ODD_ROW_OFFSETS  = [(1, 0), (-1, 0), (1, 1), (0, 1),  (1, -1), (0, -1)]
 
 class WorldBuilderService:
     def __init__(self, location_repo: LocationRepository) -> None:
-        self.location_repo = location_repo
+        self.location_repo: LocationRepository = location_repo
 
     def build_world(self, width: int, height: int) -> None:
         with self.location_repo.transaction():
             grid: dict[tuple[int, int], Vertex] = {}
             for row in range(1, height + 1):
                 for col in range(1, width + 1):
-                    coord = f"{col},{row}"
+                    coord: str = f"{col},{row}"
                     grid[(col, row)] = self.location_repo.create_location(
                         name=coord, description=coord
                     )

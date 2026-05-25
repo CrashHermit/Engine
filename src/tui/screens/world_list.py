@@ -10,7 +10,7 @@ from .world_detail import WorldDetailScreen
 class WorldListScreen(Screen):
     BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
 
-    # TODO: replace with WorldStore.list_worlds()
+    # TODO: replace with DatabaseConnection.list_databases()
     _PLACEHOLDER_WORLDS = ["The Forgotten Realm", "Ironhold", "Verdant Coast"]
 
     def __init__(self, *, created_world: dict[str, str] | None = None) -> None:
@@ -92,4 +92,4 @@ class WorldListScreen(Screen):
             self.app.world_characters.pop(world_name, None)
             self.app.world_character_data.pop(world_name, None)
             self._refresh_world_list()
-            # TODO: confirmation dialog then WorldStore.delete(db_name)
+            # TODO: confirmation dialog then delete database via DatabaseConnection

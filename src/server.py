@@ -11,9 +11,10 @@ from pydantic import BaseModel
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from core.model.message import Message
+from database.connection import DatabaseConnection
 from database.repository.message import MessageRepository
 from database.repository.user import UserRepository
-from database.store import WorldStore
+from database.schema import SchemaManager
 from graph import Graph
 
 
@@ -23,12 +24,13 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.graph = Graph().build().compile()
-    app.state.store = WorldStore()
-    app.state.store.open()
-    logger.info("ArcadeDB Studio: %s", app.state.store.studio_url)
-    await run_in_threadpool(UserRepository(app.state.store.database).get_or_create_user)
+    app.state.conn = DatabaseConnection()
+    app.state.conn.open()
+    SchemaManager(app.state.conn.database).ensure()
+    logger.info("ArcadeDB Studio: %s", app.state.conn.studio_url)
+    await run_in_threadpool(UserRepository(app.state.conn.database).get_or_create_user)
     yield
-    app.state.store.close()
+    app.state.conn.shutdown_server()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -47,7 +49,7 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 async def chat(request: ChatRequest) -> dict:
-    db = app.state.store.database
+    db = app.state.conn.database
     msg_repo = MessageRepository(db)
 
     message_history = await run_in_threadpool(msg_repo.get_history)

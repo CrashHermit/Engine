@@ -4,6 +4,9 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, TextArea
 from textual.containers import Horizontal, Vertical
 
+from database.connection import DatabaseConnection
+from database.schema import SchemaManager
+
 
 class CreateWorldModal(ModalScreen[dict[str, str] | None]):
     """Form for creating a new world (new ArcadeDB database)."""
@@ -25,12 +28,18 @@ class CreateWorldModal(ModalScreen[dict[str, str] | None]):
         if event.button.id == "btn-cancel":
             self.dismiss(None)
         elif event.button.id == "btn-create":
-            name = self.query_one("#world-name", Input).value.strip()
+            name: str = self.query_one("#world-name", Input).value.strip()
             if not name:
                 return
-            description = self.query_one("#world-description", TextArea).text.strip()
-            self.dismiss({"name": name, "description": description})
-            # TODO: WorldStore(db_name=name).open() and Bootstrap().bootstrap()
+            description: str = self.query_one("#world-description", TextArea).text.strip()
+            result: dict[str, str] = {
+                "name": name,
+                "description": description,
+            }
+            self.dismiss(result)
+            conn = DatabaseConnection()
+            conn.create_database(name)
+            SchemaManager(conn.database).ensure()
 
     def action_dismiss_cancel(self) -> None:
         self.dismiss(None)
