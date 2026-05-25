@@ -1,6 +1,7 @@
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 
+from database.server import Server
 from .screens.start import StartScreen
 
 
@@ -13,9 +14,14 @@ class EngineApp(App):
     ]
 
     def on_mount(self) -> None:
+        self.server = Server()
+        self.server.start()
         self.world_characters: dict[str, list[str]] = {}
         self.world_character_data: dict[str, dict[str, dict]] = {}
         self.push_screen(StartScreen())
+
+    def on_unmount(self) -> None:
+        self.server.stop()
 
     def action_help(self) -> None:
         self.action_show_help_panel()

@@ -1,10 +1,16 @@
+import arcadedb_embedded as arcadedb
 from arcadedb_embedded.graph import Vertex
 
 from core.model.database import VertexType
 from database.repository.base import BaseRepository
 
 
-class WorldRepository(BaseRepository):
+class WorldRepository:
+    def __init__(self, database: arcadedb.Database) -> None:
+        self._base = BaseRepository(database)
+
+    def transaction(self):
+        return self._base.transaction()
 
     def create_world(
         self,
@@ -17,7 +23,7 @@ class WorldRepository(BaseRepository):
         detail_count: int,
         detail_radius_pct: int,
     ) -> Vertex:
-        return self.create_vertex(
+        return self._base.create_vertex(
             type_name=VertexType.WORLD,
             name=name,
             description=description,

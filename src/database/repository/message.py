@@ -1,17 +1,22 @@
 import uuid
 
-from arcadedb_embedded import Vertex
+import arcadedb_embedded as arcadedb
+from arcadedb_embedded.graph import Vertex
 
-from core.model.message import Message
 from core.model.database import EdgeType, VertexType
+from core.model.message import Message
 from database.repository.base import BaseRepository
 
 
-class MessageRepository(BaseRepository):
+class MessageRepository:
+    def __init__(self, database: arcadedb.Database) -> None:
+        self._base = BaseRepository(database)
+
+    def transaction(self):
+        return self._base.transaction()
+
     def get_history(self) -> list[Message]:
-        user: Vertex | None = self._database.lookup_by_key(
-            type_name="USER", keys=["id"], values=["user"]
-        )
+        user = self._base.get_vertex(type_name=VertexType.USER, id="user")
         if user is None:
             return []
 
@@ -34,13 +39,11 @@ class MessageRepository(BaseRepository):
         if not messages:
             return
 
-        user: Vertex | None = self._database.lookup_by_key(
-            type_name="USER", keys=["id"], values=["user"]
-        )
+        user = self._base.get_vertex(type_name=VertexType.USER, id="user")
         if user is None:
             raise ValueError("User not found")
 
-        with self.transaction():
+        with self._base.transaction():
             existing_edges = list(user.get_out_edges(EdgeType.HAS_MESSAGE))
             tail: Vertex | None = None
 
@@ -53,7 +56,7 @@ class MessageRepository(BaseRepository):
                     tail = next_edges[0].get_in()
 
             for msg in messages:
-                vertex: Vertex = self.create_vertex(
+                vertex: Vertex = self._base.create_vertex(
                     type_name=VertexType.MESSAGE,
                     id=str(uuid.uuid4()),
                     role=msg.role,
@@ -62,7 +65,7 @@ class MessageRepository(BaseRepository):
 
                 edge_type = EdgeType.HAS_MESSAGE if tail is None else EdgeType.NEXT_MESSAGE
                 source = user if tail is None else tail
-                self.create_edge(
+                self._base.create_edge(
                     type_name=edge_type,
                     source=source,
                     target=vertex,
