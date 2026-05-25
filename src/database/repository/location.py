@@ -1,6 +1,6 @@
 from database.repository.base import BaseRepository
-from arcadedb_embedded.graph import Vertex
-from core.model.database import VertexType
+from arcadedb_embedded.graph import Edge, Vertex
+from core.model.database import EdgeType, VertexType
 
 
 class LocationRepository(BaseRepository):
@@ -13,4 +13,11 @@ class LocationRepository(BaseRepository):
             type_name=VertexType.LOCATION,
             name=name,
             description=description,
+        )
+
+    def connect_location(self, from_location: Vertex, to_location: Vertex) -> Edge:
+        return self.create_edge(
+            type_name=EdgeType.CONNECTS,
+            source=from_location,
+            target=to_location,
         )
