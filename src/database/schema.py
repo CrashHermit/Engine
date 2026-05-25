@@ -21,7 +21,7 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "invalidated_at": arcadedb.PropertyType.DATETIME,
     "q": arcadedb.PropertyType.INTEGER,
     "r": arcadedb.PropertyType.INTEGER,
-    "height": arcadedb.PropertyType.INTEGER,
+    "elevation": arcadedb.PropertyType.INTEGER,
     "seed": arcadedb.PropertyType.INTEGER,
     "size": arcadedb.PropertyType.INTEGER,
     "major_count": arcadedb.PropertyType.INTEGER,
