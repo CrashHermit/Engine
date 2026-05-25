@@ -1,0 +1,33 @@
+import arcadedb_embedded as arcadedb
+from arcadedb_embedded.graph import Vertex
+
+from core.model.database import EdgeType, VertexType
+from database.repository.base import BaseRepository
+from map.config import MapConfig
+
+# Axial hex directions: each tuple is (dq, dr)
+_HEX_DIRECTIONS = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1)]
+
+
+class MapGenerator:
+    def __init__(self, config: MapConfig, database: arcadedb.Database) -> None:
+        self._config = config
+        self._repo = BaseRepository(database)
+
+    def generate(self) -> dict[tuple[int, int], Vertex]:
+        size = self._config.size
+        tiles: dict[tuple[int, int], Vertex] = {}
+
+        with self._repo.transaction():
+            for q in range(size):
+                for r in range(size):
+                    tile = self._repo.create_vertex(VertexType.TILE, q=q, r=r)
+                    tiles[(q, r)] = tile
+
+            for (q, r), tile in tiles.items():
+                for dq, dr in _HEX_DIRECTIONS:
+                    nq = (q + dq) % size
+                    nr = (r + dr) % size
+                    self._repo.create_edge(EdgeType.ADJACENT, tile, tiles[(nq, nr)])
+
+        return tiles
