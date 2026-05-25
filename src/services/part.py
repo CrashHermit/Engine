@@ -1,5 +1,5 @@
 from arcadedb_embedded.graph import Vertex
-from core.model.part import Shape, Status, SizeScale, PartFunction
+from core.model.part import Shape, Status, SizeScale
 from database.repository.part import PartRepository
 
 
@@ -33,7 +33,3 @@ class PartService:
     def attach(self, source: Vertex, target: Vertex) -> None:
         with self.part_repo.transaction():
             self.part_repo.attach(source=source, target=target)
-
-    def add_function(self, part: Vertex, function: PartFunction) -> Vertex:
-        with self.part_repo.transaction():
-            return self.part_repo.add_function(part=part, function=function)

@@ -1,11 +1,13 @@
 from arcadedb_embedded.graph import Vertex
 from core.model.database import VertexType, EdgeType
 from database.repository.character import CharacterRepository
+from database.repository.location import LocationRepository
 
 
 class CharacterService:
-    def __init__(self, character_repo: CharacterRepository) -> None:
+    def __init__(self, character_repo: CharacterRepository, location_repo: LocationRepository) -> None:
         self.character_repo: CharacterRepository = character_repo
+        self.location_repo: LocationRepository = location_repo
 
     def create_character(
         self,
@@ -98,3 +100,10 @@ class CharacterService:
             target=attribute,
         )
         return attribute
+
+    def get_location(self) -> Vertex:
+        self.character_repo.get
+        return self.location_repo.get_location()
+
+    def set_location(self, location: Vertex) -> None:
+        self.character_repo.set_location(location)
