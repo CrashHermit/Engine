@@ -4,8 +4,9 @@ from arcadedb_embedded.graph import Vertex
 from core.model.database import EdgeType, VertexType
 from database.repository.base import BaseRepository
 
-# Axial hex directions: each tuple is (dq, dr)
-_HEX_DIRECTIONS = [(1, 0), (-1, 0), (0, 1), (0, -1), (1, -1), (-1, 1)]
+# Outgoing directions per tile: east, north, northeast
+# Each tile receives the 3 complementary incoming edges from west, south, southwest
+_OUTGOING_DIRECTIONS = [(1, 0), (0, 1), (1, 1)]
 
 
 class MapGenerator:
@@ -24,7 +25,7 @@ class MapGenerator:
                     tiles[(q, r)] = tile
 
             for (q, r), tile in tiles.items():
-                for dq, dr in _HEX_DIRECTIONS:
+                for dq, dr in _OUTGOING_DIRECTIONS:
                     nq = (q + dq) % size
                     nr = (r + dr) % size
                     self._repo.create_edge(EdgeType.ADJACENT, tile, tiles[(nq, nr)])
