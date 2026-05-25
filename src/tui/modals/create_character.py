@@ -78,5 +78,7 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
             })
             # TODO: CharacterService.create_character(**result)
 
+            
+
     def action_dismiss_cancel(self) -> None:
         self.dismiss(None)

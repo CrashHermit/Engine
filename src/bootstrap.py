@@ -8,8 +8,6 @@ class Bootstrap:
     def __init__(self, store: WorldStore) -> None:
         self.store: WorldStore = store
         self.user_repo: UserRepository = UserRepository(self.store.database)
-        self.character_repo: CharacterRepository = CharacterRepository(self.store.database)
-        self.location_repo: LocationRepository = LocationRepository(self.store.database)
-
+        
     def bootstrap(self) -> None:
         self.user_repo.get_or_create_user()

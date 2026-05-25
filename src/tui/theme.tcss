@@ -84,7 +84,7 @@ ListView > ListItem.--highlight {
 
 #start-container Button {
     width: 30;
-    margin: 1 auto;
+    margin: 1 0;
 }
 
 /* ── World List Screen ────────────────────────────── */
