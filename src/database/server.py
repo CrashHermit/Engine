@@ -51,6 +51,8 @@ class Server:
         if not java_server.existsDatabase(name):
             raise FileNotFoundError(f"Database {name!r} does not exist")
         try:
-            self.arcadedb_server.get_database(name).drop()
+            java_db = self.arcadedb_server.get_database(name)._java_db
+            java_db.getEmbedded().drop()
+            java_server.removeDatabase(name)
         except Exception as e:
             raise ArcadeDBError(f"Failed to remove database {name!r}: {e}") from e
