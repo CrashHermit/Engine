@@ -1,30 +1,44 @@
-import uuid
 from arcadedb_embedded.graph import Edge, Vertex
-from arcadedb_embedded.graph import Vertex
-from core.model.database import VertexType, EdgeType
-from database.repository.user import UserRepository
+
+from core.model.database import EdgeType, VertexType
+from database.repository.base import BaseRepository
 
 
-class CharacterRepository(UserRepository):
+class CharacterRepository:
+    def __init__(self, base: BaseRepository) -> None:
+        self._base = base
 
-    def get_user_characters(self) -> list[Vertex]:
-        user: Vertex | None = self.get_user()
+    def get_user_characters(self, user: Vertex) -> list[Vertex]:
         edges: list[Edge] = user.get_out_edges(EdgeType.HAS_CHARACTER)
         return [edge.get_target() for edge in edges]
 
-    def create_character(self, name: str, description: str) -> Vertex:
-        user: Vertex | None = self.get_user()
-        character: Vertex = self.create_vertex(
+    def create_character(self, user: Vertex, name: str, description: str) -> Vertex:
+        character: Vertex = self._base.create_vertex(
             type_name=VertexType.CHARACTER,
             name=name,
             description=description,
         )
-        self.create_edge(
+        self._base.create_edge(
             type_name=EdgeType.HAS_CHARACTER,
             source=user,
             target=character,
         )
         return character
+
+    def create_trait(self, character: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
+        trait: Vertex = self._base.create_vertex(type_name=vertex_type)
+        self._base.create_edge(type_name=edge_type, source=character, target=trait)
+        return trait
+
+    def create_personality(self, character: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
+        personality: Vertex = self._base.create_vertex(type_name=vertex_type)
+        self._base.create_edge(type_name=edge_type, source=character, target=personality)
+        return personality
+
+    def create_attribute(self, source: Vertex, value: int) -> Vertex:
+        attribute: Vertex = self._base.create_vertex(type_name=VertexType.ATTRIBUTE, value=value)
+        self._base.create_edge(type_name=EdgeType.HAS_ATTRIBUTE, source=source, target=attribute)
+        return attribute
 
     def get_corpus(self, character: Vertex) -> Vertex:
         return character.get_out_edges(EdgeType.HAS_CORPUS)[0].get_target()
@@ -45,4 +59,4 @@ class CharacterRepository(UserRepository):
 
     def set_attribute_value(self, node: Vertex, value: int) -> None:
         attribute: Vertex = node.get_out_edges(EdgeType.HAS_ATTRIBUTE)[0].get_target()
-        self.update_vertex(vertex=attribute, value=value)
+        self._base.update_vertex(vertex=attribute, value=value)

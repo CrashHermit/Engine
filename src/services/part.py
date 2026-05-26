@@ -1,11 +1,14 @@
 from arcadedb_embedded.graph import Vertex
+
 from core.model.part import Shape, Status, SizeScale
+from database.repository.base import BaseRepository
 from database.repository.part import PartRepository
 
 
 class PartService:
-    def __init__(self, part_repo: PartRepository) -> None:
-        self.part_repo: PartRepository = part_repo
+    def __init__(self, base: BaseRepository) -> None:
+        self._base = base
+        self._part_repo = PartRepository(base)
 
     def add_part(
         self,
@@ -18,8 +21,8 @@ class PartService:
         status: Status = Status.NORMAL,
         description: str = "",
     ) -> Vertex:
-        with self.part_repo.transaction():
-            return self.part_repo.add_part(
+        with self._base.transaction():
+            return self._part_repo.add_part(
                 character=character,
                 name=name,
                 length=length,
@@ -31,5 +34,5 @@ class PartService:
             )
 
     def attach(self, source: Vertex, target: Vertex) -> None:
-        with self.part_repo.transaction():
-            self.part_repo.attach(source=source, target=target)
+        with self._base.transaction():
+            self._part_repo.attach(source=source, target=target)
