@@ -7,6 +7,9 @@ from src.tui.screens.start import StartScreen
 
 
 class EngineApp(App):
+    # Prevent click-drag from painting Textual selection regions over widgets.
+    ALLOW_SELECT = False
+
     CSS_PATH = "theme.tcss"
     TITLE = "Dark Adventures"
     BINDINGS = [

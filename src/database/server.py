@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 
 import arcadedb_embedded as arcadedb
+from arcadedb_embedded.exceptions import ArcadeDBError
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -44,3 +45,13 @@ class Server:
         if self._server is None:
             raise RuntimeError("Server is not started")
         return self._server
+
+    def remove_database(self, name: str) -> None:
+        """Drop a server-managed database (files + server registration)."""
+        java_server = self.arcadedb_server._java_server
+        if not java_server.existsDatabase(name):
+            raise FileNotFoundError(f"Database {name!r} does not exist")
+        try:
+            java_server.removeDatabase(name)
+        except Exception as e:
+            raise ArcadeDBError(f"Failed to remove database {name!r}: {e}") from e

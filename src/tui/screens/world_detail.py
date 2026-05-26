@@ -4,6 +4,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, ListItem, ListView, Static
 from textual.containers import Horizontal, Vertical
 
+from ..modals.confirm_modal import ConfirmModal
 from ..widgets.pip_selector import PipSelector
 
 
@@ -82,9 +83,23 @@ class WorldDetailScreen(Screen):
             name = self._selected_character_name()
             if name is None:
                 return
+            self.app.push_screen(
+                ConfirmModal(
+                    title="Delete Character?",
+                    message=f'Are you sure you want to delete "{name}"?',
+                ),
+                callback=lambda confirmed: self._on_delete_character_confirmed(name, confirmed),
+            )
+
+    def _on_delete_character_confirmed(self, name: str, confirmed: bool | None) -> None:
+        if not confirmed:
+            return
+        # TODO: CharacterRepository.delete() when characters are persisted
+        if name in self._characters:
             self._characters.remove(name)
-            self._refresh_character_list()
-            # TODO: confirmation dialog then CharacterRepository.delete()
+        self.app.world_character_data.get(self.world_name, {}).pop(name, None)
+        self._refresh_character_list()
+        self.app.notify(message=f'Deleted character "{name}"')
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         if event.item is None:

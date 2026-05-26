@@ -329,6 +329,23 @@ CreateCharacterModal > VerticalScroll {
     max-height: 90%;
 }
 
+ConfirmModal {
+    align: center middle;
+}
+
+ConfirmModal > Vertical {
+    background: $da-panel;
+    border: solid $da-gold;
+    padding: 2 3;
+    width: 50%;
+    height: auto;
+}
+
+#confirm-message {
+    width: 100%;
+    margin-bottom: 1;
+}
+
 CharacterSheetModal {
     align: center middle;
 }
