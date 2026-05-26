@@ -251,33 +251,82 @@ PipSelector:focus {
     background: $da-panel;
 }
 
+/* ── Value Stepper Widget ─────────────────────────── */
+
+ValueStepper {
+    height: 1;
+    layout: horizontal;
+    align: left middle;
+    margin-bottom: 1;
+}
+
+ValueStepper .stepper-label {
+    width: 18;
+}
+
+ValueStepper .stepper-controls {
+    width: 1fr;
+    align: center middle;
+}
+
+ValueStepper .stepper-button {
+    width: 3;
+    min-width: 3;
+    height: 1;
+    padding: 0;
+    content-align: center middle;
+    margin: 0 1;
+    background: $da-panel;
+    color: $da-text;
+}
+
+ValueStepper .stepper-button:hover {
+    background: $da-muted;
+    color: $da-gold;
+}
+
+ValueStepper .stepper-value {
+    width: 3;
+    content-align: center middle;
+    color: $da-text;
+}
+
+ValueStepper .stepper-button.-disabled {
+    color: $da-muted;
+    background: $da-bg;
+}
+
+ValueStepper .stepper-button.-disabled:hover {
+    color: $da-muted;
+    background: $da-bg;
+}
+
 /* ── Modals ───────────────────────────────────────── */
 
 CreateWorldModal {
     align: center middle;
 }
 
-CreateWorldModal > Vertical {
-    background: $da-panel;
-    border: solid $da-gold;
-    padding: 2 3;
-    width: 60%;
-    height: auto;
-    max-height: 85%;
-}
-
-CreateCharacterModal {
-    align: center middle;
-}
-
-CreateCharacterModal > Vertical {
+CreateWorldModal > VerticalScroll {
     background: $da-panel;
     border: solid $da-gold;
     padding: 2 3;
     width: 65%;
     height: auto;
     max-height: 90%;
-    overflow-y: auto;
+}
+
+CreateCharacterModal {
+    align: center middle;
+}
+
+CreateCharacterModal > VerticalScroll {
+    background: $da-panel;
+    border: solid $da-gold;
+    padding: 2 3;
+    width: 65%;
+    height: auto;
+    max-height: 90%;
 }
 
 CharacterSheetModal {
@@ -370,6 +419,23 @@ CharacterSheetModal > Vertical {
 
 #personality-traits PipSelector {
     width: 1fr;
+}
+
+#char-attributes-section,
+#char-personality-section {
+    border: solid $da-muted;
+    padding: 1 2;
+    margin: 1 0 2 0;
+    height: auto;
+    background: $da-bg;
+}
+
+#char-attributes-section #attr-label,
+#char-personality-section #trait-label {
+    color: $da-gold;
+    text-style: bold;
+    margin-top: 0;
+    margin-bottom: 1;
 }
 
 #attr-label,

@@ -15,7 +15,7 @@ class WorldDetailScreen(Screen):
 
     def __init__(self, *, world_name: str) -> None:
         super().__init__()
-        self.world_name = world_name
+        self.world_name: str = world_name
         self._characters: list[str] = []
 
     def compose(self) -> ComposeResult:

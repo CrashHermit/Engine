@@ -1,9 +1,9 @@
-from textual.app import App, ComposeResult
+from textual.app import App
 from textual.binding import Binding
 
-from database.connection import DatabaseConnection
-from database.server import Server
-from .screens.start import StartScreen
+from src.database.connection import DatabaseConnection
+from src.database.server import Server
+from src.tui.screens.start import StartScreen
 
 
 class EngineApp(App):

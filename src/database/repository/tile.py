@@ -1,11 +1,12 @@
-from core.model.database import EdgeType, VertexType
-from database.repository.base import BaseRepository
-from worldgen.data import TileData
+from src.database.repository.base import BaseRepository
+from src.core.model.database import EdgeType, VertexType
+from src.database.repository.base import BaseRepository
+from src.worldgen.data import TileData
 
 
 class TileRepository:
     def __init__(self, base: BaseRepository) -> None:
-        self._base = base
+        self._base: BaseRepository = base
 
     def create_tiles(self, tiles: dict[tuple[int, int], TileData]) -> None:
         vertices = {}

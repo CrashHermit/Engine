@@ -1,12 +1,12 @@
 from arcadedb_embedded.graph import Vertex
 
-from core.model.database import VertexType
-from database.repository.base import BaseRepository
+from src.core.model.database import VertexType
+from src.database.repository.base import BaseRepository
 
 
 class WorldRepository:
     def __init__(self, base: BaseRepository) -> None:
-        self._base = base
+        self._base: BaseRepository = base
 
     def create_world(
         self,

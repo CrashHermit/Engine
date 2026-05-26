@@ -1,9 +1,9 @@
-from worldgen.data import WorldData
+from src.worldgen.data import WorldData
 
 
 class WorldgenPipeline:
     def __init__(self, stages: list) -> None:
-        self._stages = stages
+        self._stages: list = stages
 
     def run(self, data: WorldData) -> WorldData:
         for stage in self._stages:

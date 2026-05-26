@@ -14,9 +14,9 @@ class Server:
         root_password: str | None = None,
         http_port: int = 2480,
     ) -> None:
-        self._root_path = root_path
-        self._root_password = root_password or os.getenv("ARCADEDB_ROOT_PASSWORD")
-        self._http_port = http_port
+        self._root_path: str = root_path
+        self._root_password: str | None = root_password or os.getenv("ARCADEDB_ROOT_PASSWORD")
+        self._http_port: int = http_port
         self._server: arcadedb.ArcadeDBServer | None = None
 
     def start(self) -> None:

@@ -6,7 +6,7 @@ from typing import Any, Generator
 import arcadedb_embedded as arcadedb
 from arcadedb_embedded.graph import Edge, Vertex
 
-from core.model.database import EdgeType, VertexType
+from src.core.model.database import EdgeType, VertexType
 
 
 class BaseRepository:

@@ -1,8 +1,8 @@
 from arcadedb_embedded.schema import Schema
 from arcadedb_embedded.core import Database
 import arcadedb_embedded as arcadedb
-from core.model.database import VertexType
-from core.model.database import EdgeType
+from src.core.model.database import VertexType
+from src.core.model.database import EdgeType
 
 PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "id": arcadedb.PropertyType.STRING,

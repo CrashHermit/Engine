@@ -1,16 +1,16 @@
-from database.connection import DatabaseConnection
-from database.schema import SchemaManager
-from database.repository.base import BaseRepository
-from database.repository.world import WorldRepository
-from database.repository.tile import TileRepository
-from worldgen.data import WorldData
-from worldgen.pipeline import WorldgenPipeline
-from worldgen.stages.grid import GridStage
+from src.database.connection import DatabaseConnection
+from src.database.schema import SchemaManager
+from src.database.repository.base import BaseRepository
+from src.database.repository.world import WorldRepository
+from src.database.repository.tile import TileRepository
+from src.worldgen.data import WorldData
+from src.worldgen.pipeline import WorldgenPipeline
+from src.worldgen.stages.grid import GridStage
 
 
 class WorldService:
     def __init__(self, connection: DatabaseConnection) -> None:
-        self._connection = connection
+        self._connection: DatabaseConnection = connection
 
     def create_world(
         self,

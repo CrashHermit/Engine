@@ -1,12 +1,15 @@
+from database.repository.base import BaseRepository
+
+
 from arcadedb_embedded.graph import Edge, Vertex
 
-from core.model.database import EdgeType, VertexType
-from database.repository.base import BaseRepository
+from src.core.model.database import EdgeType, VertexType
+from src.database.repository.base import BaseRepository
 
 
 class CharacterRepository:
     def __init__(self, base: BaseRepository) -> None:
-        self._base = base
+        self._base: BaseRepository = base
 
     def get_user_characters(self, user: Vertex) -> list[Vertex]:
         edges: list[Edge] = user.get_out_edges(EdgeType.HAS_CHARACTER)

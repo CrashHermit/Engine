@@ -1,13 +1,11 @@
-from worldgen.data import TileData, WorldData
+from src.worldgen.data import TileData, WorldData
 
 # Hex torus: 3 outgoing directions per tile (east, north, northeast).
 # Each tile also receives 3 complementary incoming edges from its neighbours.
-_OUTGOING_DIRECTIONS = [(1, 0), (0, 1), (1, 1)]
-
 
 class GridStage:
     def run(self, data: WorldData) -> WorldData:
-        size = data.size
+        size: int = data.size
         tiles: dict[tuple[int, int], TileData] = {}
 
         for q in range(size):
@@ -15,9 +13,9 @@ class GridStage:
                 tiles[(q, r)] = TileData(q=q, r=r)
 
         for (q, r), tile in tiles.items():
-            for dq, dr in _OUTGOING_DIRECTIONS:
-                nq = (q + dq) % size
-                nr = (r + dr) % size
+            for dq, dr in [(1, 0), (0, 1), (1, 1)]:
+                nq: int = (q + dq) % size
+                nr: int = (r + dr) % size
                 tile.neighbors.append((nq, nr))
 
         data.tiles = tiles
