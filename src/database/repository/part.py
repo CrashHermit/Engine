@@ -1,8 +1,8 @@
 from arcadedb_embedded.graph import Vertex
 
-from core.model.database import EdgeType, VertexType
-from core.model.part import Shape, Status, SizeScale
-from database.repository.base import BaseRepository
+from src.core.model.database import EdgeType, VertexType
+from src.core.model.part import Shape, Status, SizeScale
+from src.database.repository.base import BaseRepository
 
 
 class PartRepository:

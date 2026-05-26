@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import arcadedb_embedded as arcadedb
+from arcadedb_embedded.exceptions import ArcadeDBError
 
 from src.database.server import Server
 
@@ -23,12 +24,18 @@ class DatabaseConnection:
         return self._server.arcadedb_server.get_database(name=name)
 
     def list_databases(self) -> list[str]:
-        databases_dir = Path(self._server.root_path) / "databases"
+        databases_dir: Path = Path(self._server.root_path) / "databases"
         if not databases_dir.exists():
             return []
         return sorted(entry.name for entry in databases_dir.iterdir() if entry.is_dir())
 
     def delete_database(self, name: str) -> None:
-        if not self._db_dir(name).exists():
+        java_server = self._server.arcadedb_server._java_server
+        if not java_server.existsDatabase(name):
             raise FileNotFoundError(f"Database {name!r} does not exist")
-        self._server.remove_database(name)
+        try:
+            java_db = self._server.arcadedb_server.get_database(name=name)._java_db
+            java_db.getEmbedded().drop()
+            java_server.removeDatabase(name)
+        except Exception as e:
+            raise ArcadeDBError(f"Failed to remove database {name!r}: {e}") from e

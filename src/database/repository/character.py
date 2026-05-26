@@ -63,3 +63,17 @@ class CharacterRepository:
     def set_attribute_value(self, node: Vertex, value: int) -> None:
         attribute: Vertex = node.get_out_edges(EdgeType.HAS_ATTRIBUTE)[0].get_target()
         self._base.update_vertex(vertex=attribute, value=value)
+
+    def move_character(self, character: Vertex, from_location: Vertex, to_location: Vertex) -> None:
+        self._get
+        self._base.create_edge(
+            type_name=EdgeType.IS_AT,
+            source=character,
+            target=to_location,
+        )
+        from_location_edge = self._base.get_edge(
+            type_name=EdgeType.IS_AT,
+            source=character,
+            target=from_location,
+        )
+        self._base.delete_edge(edge=from_location_edge)

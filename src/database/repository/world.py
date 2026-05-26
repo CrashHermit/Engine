@@ -1,5 +1,4 @@
 from arcadedb_embedded.graph import Vertex
-
 from src.core.model.database import VertexType
 from src.database.repository.base import BaseRepository
 
@@ -14,10 +13,10 @@ class WorldRepository:
         description: str,
         seed: int,
         size: int,
-        major_count: int,
-        major_radius_pct: int,
-        detail_count: int,
-        detail_radius_pct: int,
+        biome: str,
+        temperature: float,
+        precipitation: float,
+        elevation: float,
     ) -> Vertex:
         return self._base.create_vertex(
             type_name=VertexType.WORLD,
@@ -25,8 +24,8 @@ class WorldRepository:
             description=description,
             seed=seed,
             size=size,
-            major_count=major_count,
-            major_radius_pct=major_radius_pct,
-            detail_count=detail_count,
-            detail_radius_pct=detail_radius_pct,
+            biome=biome,
+            temperature=temperature,
+            precipitation=precipitation,
+            elevation=elevation,
         )
