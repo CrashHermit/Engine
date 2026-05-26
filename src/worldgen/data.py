@@ -3,8 +3,8 @@ from dataclasses import dataclass, field
 
 @dataclass
 class TileData:
-    q: int
-    r: int
+    row: int
+    col: int
     neighbors: list[tuple[int, int]] = field(default_factory=list)
 
 

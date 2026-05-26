@@ -1,3 +1,9 @@
+from database.repository.tile import TileRepository
+from database.repository.world import WorldRepository
+from database.repository.base import BaseRepository
+from arcadedb_embedded.core import Database
+from worldgen.data import WorldData
+from worldgen.pipeline import WorldgenPipeline
 from src.database.connection import DatabaseConnection
 from src.database.schema import SchemaManager
 from src.database.repository.base import BaseRepository
@@ -5,7 +11,6 @@ from src.database.repository.world import WorldRepository
 from src.database.repository.tile import TileRepository
 from src.worldgen.data import WorldData
 from src.worldgen.pipeline import WorldgenPipeline
-from src.worldgen.stages.grid import GridStage
 
 
 class WorldService:
@@ -23,7 +28,7 @@ class WorldService:
         detail_count: int,
         detail_radius_pct: int,
     ) -> None:
-        world_data = WorldData(
+        world_data: WorldData = WorldData(
             name=name,
             description=description,
             seed=seed,
@@ -34,15 +39,15 @@ class WorldService:
             detail_radius_pct=detail_radius_pct,
         )
 
-        pipeline = WorldgenPipeline(stages=[GridStage()])
-        world_data = pipeline.run(world_data)
+        pipeline: WorldgenPipeline = WorldgenPipeline()
+        world_data: WorldData = pipeline.run(data=world_data)
 
-        db = self._connection.create_database(name)
-        SchemaManager(db).ensure()
+        db: Database = self._connection.create_database(name)
+        SchemaManager(database=db).ensure()
 
-        base = BaseRepository(db)
-        world_repo = WorldRepository(base)
-        tile_repo = TileRepository(base)
+        base: BaseRepository = BaseRepository(database=db)
+        world_repo: WorldRepository = WorldRepository(base=base)
+        tile_repo: TileRepository = TileRepository(base=base)
 
         with base.transaction():
             world_repo.create_world(

@@ -1,11 +1,12 @@
 from src.worldgen.data import WorldData
+from worldgen.stages.grid import GridStage
 
 
 class WorldgenPipeline:
-    def __init__(self, stages: list) -> None:
-        self._stages: list = stages
+    def __init__(self) -> None:
+        self._grid_stage: GridStage = GridStage()
 
     def run(self, data: WorldData) -> WorldData:
-        for stage in self._stages:
-            data = stage.run(data)
+        data: WorldData = self._grid_stage.run(data=data)
+        
         return data

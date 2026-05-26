@@ -7,8 +7,8 @@ from database.repository.part import PartRepository
 
 class PartService:
     def __init__(self, base: BaseRepository) -> None:
-        self._base = base
-        self._part_repo = PartRepository(base)
+        self._base: BaseRepository = base
+        self._part_repo: PartRepository = PartRepository(base=base)
 
     def add_part(
         self,

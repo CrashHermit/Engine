@@ -8,15 +8,15 @@ class GridStage:
         size: int = data.size
         tiles: dict[tuple[int, int], TileData] = {}
 
-        for q in range(size):
-            for r in range(size):
-                tiles[(q, r)] = TileData(q=q, r=r)
+        for row in range(size):
+            for col in range(size):
+                tiles[(row, col)] = TileData(row=row, col=col)
 
-        for (q, r), tile in tiles.items():
-            for dq, dr in [(1, 0), (0, 1), (1, 1)]:
-                nq: int = (q + dq) % size
-                nr: int = (r + dr) % size
-                tile.neighbors.append((nq, nr))
+        for (row, col), tile in tiles.items():
+            for drow, dcol in [(1, 0), (0, 1), (1, 1)]:
+                nrow: int = (row + drow) % size
+                ncol: int = (col + dcol) % size
+                tile.neighbors.append((nrow, ncol))
 
         data.tiles = tiles
         return data
