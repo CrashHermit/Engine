@@ -83,7 +83,7 @@ EDGE_SCHEMA: dict[EdgeType, list[str]] = {
     EdgeType.IS_CHANNEL: [],
     EdgeType.IS_CONTROLLABLE: [],
     EdgeType.ADJACENT: [],
-    EdgeType.CONNECTS: ["direction"],
+    EdgeType.CONNECTS: [],
     EdgeType.LOCATED_AT: [],
     EdgeType.HAS_CHARACTER: [],
 }

@@ -3,109 +3,6 @@ from arcadedb_embedded.graph import Edge, Vertex
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
 
-# Maps movement keys to compass directions.
-KEY_DIRECTIONS: dict[str, str] = {
-    "q": "NW", "w": "N", "e": "NE",
-    "a": "SW", "s": "S", "d": "SE",
-}
-
-# Maps compass directions to their display key label.
-DIRECTION_KEYS: dict[str, str] = {
-    "NW": "Q", "N": "W", "NE": "E",
-    "SW": "A", "S": "S", "SE": "D",
-}
-
-_COMPASS_ORDER = ["NW", "N", "NE", "SE", "S", "SW"]
-
-# Reverse of each compass direction.
-_OPPOSITE: dict[str, str] = {
-    "NW": "SE", "N": "S", "NE": "SW",
-    "SE": "NW", "S": "N", "SW": "NE",
-}
-
-# PROTOTYPE START
-_HEX_NODES = [
-    {
-        "name": "The Crossroads Chamber",
-        "description": (
-            "A broad chamber where six passages meet. The ceiling is lost in shadow above. "
-            "A rusted iron lantern hangs from a hook at the center of the room, its flame "
-            "long dead. The air is cold and still."
-        ),
-        "is_center": True,
-        "direction_from_center": None,
-    },
-    {
-        "name": "The Collapsed Alcove",
-        "description": (
-            "A low-ceilinged alcove half-choked by fallen masonry. A crack runs the length "
-            "of the far wall, black and deep. Water drips somewhere in the dark beyond."
-        ),
-        "is_center": False,
-        "direction_from_center": "NW",
-    },
-    {
-        "name": "The Long Corridor",
-        "description": (
-            "A narrow passage stretching into the dark. Torch brackets line the walls at "
-            "even intervals, all empty. Boot marks in the dust suggest someone passed here, "
-            "though not recently."
-        ),
-        "is_center": False,
-        "direction_from_center": "N",
-    },
-    {
-        "name": "The Bone Room",
-        "description": (
-            "Shelves of carved stone line the walls, still holding the remnants of old burial "
-            "urns. Most have shattered. The floor is gritty underfoot. A low archway leads "
-            "onward to the east."
-        ),
-        "is_center": False,
-        "direction_from_center": "NE",
-    },
-    {
-        "name": "The Flooded Antechamber",
-        "description": (
-            "The floor here is slick with a thin film of black water, fed by a seam in the "
-            "wall. The smell is mineral and cold. An iron door, warped in its frame, stands "
-            "sealed to the south."
-        ),
-        "is_center": False,
-        "direction_from_center": "SE",
-    },
-    {
-        "name": "The Guard Post",
-        "description": (
-            "A square room with a rotted wooden table and the remains of two stools. A rusted "
-            "sword leans against one wall. Whatever was being guarded here, it was a long watch."
-        ),
-        "is_center": False,
-        "direction_from_center": "S",
-    },
-    {
-        "name": "The Pit Room",
-        "description": (
-            "The center of the floor has given way, leaving a dark hole roughly two paces "
-            "across. Rope marks score the edge. There is no rope. There is no sound from below."
-        ),
-        "is_center": False,
-        "direction_from_center": "SW",
-    },
-]
-
-# Ring adjacencies between outer nodes (clockwise order: NW N NE SE S SW).
-# Each tuple is (from_direction, to_direction, edge_direction).
-_RING_EDGES: list[tuple[str, str, str]] = [
-    ("NW", "N",  "NE"),
-    ("N",  "NE", "SE"),
-    ("NE", "SE", "S"),
-    ("SE", "S",  "SW"),
-    ("S",  "SW", "NW"),
-    ("SW", "NW", "N"),
-]
-# PROTOTYPE END
-
 
 class LocationRepository:
     def __init__(self, base: BaseRepository) -> None:
@@ -122,57 +19,102 @@ class LocationRepository:
             is_center=is_center,
         )
 
-    def connect_location(self, from_location: Vertex, to_location: Vertex, direction: str) -> Edge:
+    def connect_locations(self, a: Vertex, b: Vertex) -> Edge:
         return self._base.create_edge(
             type_name=EdgeType.CONNECTS,
-            source=from_location,
-            target=to_location,
-            direction=direction,
+            source=a,
+            target=b,
         )
 
-    def _perspective(self, location: Vertex, edge: Edge) -> tuple[Vertex, str]:
-        """Return (neighbor, direction) from location's point of view on this edge."""
-        if edge.get_out().get_rid() == location.get_rid():
-            return edge.get_in(), edge.get(name="direction")
-        return edge.get_out(), _OPPOSITE[edge.get(name="direction")]
-
-    def get_neighbor_in_direction(self, location: Vertex, direction: str) -> Vertex | None:
+    def get_neighbors(self, location: Vertex) -> list[Vertex]:
+        neighbors = []
         for edge in location.get_both_edges(EdgeType.CONNECTS):
-            neighbor, edge_dir = self._perspective(location, edge)
-            if edge_dir == direction:
-                return neighbor
-        return None
+            if edge.get_out().get_rid() == location.get_rid():
+                neighbors.append(edge.get_in())
+            else:
+                neighbors.append(edge.get_out())
+        return neighbors
 
-    def get_exits(self, location: Vertex) -> list[str]:
-        return [
-            self._perspective(location, edge)[1]
-            for edge in location.get_both_edges(EdgeType.CONNECTS)
-        ]
 
-    # PROTOTYPE START
-    def create_hex_graph(self) -> Vertex:
-        """Create the 7-node dungeon hex graph. Returns the center vertex."""
-        nodes: dict[str | None, Vertex] = {}
+# PROTOTYPE START
+_HEX_NODES = [
+    {
+        "name": "The Crossroads Chamber",
+        "description": (
+            "A broad chamber where six passages meet. The ceiling is lost in shadow above. "
+            "A rusted iron lantern hangs from a hook at the center of the room, its flame "
+            "long dead. The air is cold and still."
+        ),
+        "is_center": True,
+    },
+    {
+        "name": "The Collapsed Alcove",
+        "description": (
+            "A low-ceilinged alcove half-choked by fallen masonry. A crack runs the length "
+            "of the far wall, black and deep. Water drips somewhere in the dark beyond."
+        ),
+        "is_center": False,
+    },
+    {
+        "name": "The Long Corridor",
+        "description": (
+            "A narrow passage stretching into the dark. Torch brackets line the walls at "
+            "even intervals, all empty. Boot marks in the dust suggest someone passed here, "
+            "though not recently."
+        ),
+        "is_center": False,
+    },
+    {
+        "name": "The Bone Room",
+        "description": (
+            "Shelves of carved stone line the walls, still holding the remnants of old burial "
+            "urns. Most have shattered. The floor is gritty underfoot. A low archway leads "
+            "onward to the east."
+        ),
+        "is_center": False,
+    },
+    {
+        "name": "The Flooded Antechamber",
+        "description": (
+            "The floor here is slick with a thin film of black water, fed by a seam in the "
+            "wall. The smell is mineral and cold. An iron door, warped in its frame, stands "
+            "sealed to the south."
+        ),
+        "is_center": False,
+    },
+    {
+        "name": "The Guard Post",
+        "description": (
+            "A square room with a rotted wooden table and the remains of two stools. A rusted "
+            "sword leans against one wall. Whatever was being guarded here, it was a long watch."
+        ),
+        "is_center": False,
+    },
+    {
+        "name": "The Pit Room",
+        "description": (
+            "The center of the floor has given way, leaving a dark hole roughly two paces "
+            "across. Rope marks score the edge. There is no rope. There is no sound from below."
+        ),
+        "is_center": False,
+    },
+]
 
-        for data in _HEX_NODES:
-            vertex = self.create_location(
-                name=data["name"],
-                description=data["description"],
-                is_center=data["is_center"],
-            )
-            nodes[data["direction_from_center"]] = vertex
+# Ring adjacency pairs by index into _HEX_NODES (nodes 1-6 form the outer ring).
+_RING_PAIRS = [(1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 1)]
 
-        center = nodes[None]
 
-        # One spoke edge per outer node, stored as center→outer with the outward direction.
-        for direction, outer in nodes.items():
-            if direction is None:
-                continue
-            self.connect_location(center, outer, direction)
-
-        # One ring edge per adjacent outer pair, stored in clockwise direction.
-        for from_dir, to_dir, edge_dir in _RING_EDGES:
-            self.connect_location(nodes[from_dir], nodes[to_dir], edge_dir)
-
-        return center
-    # PROTOTYPE END
+def create_start_location(base: BaseRepository) -> Vertex:
+    """Create the 7-node dungeon hex graph. Returns the center vertex."""
+    repo = LocationRepository(base)
+    nodes = [
+        repo.create_location(name=n["name"], description=n["description"], is_center=n["is_center"])
+        for n in _HEX_NODES
+    ]
+    center = nodes[0]
+    for outer in nodes[1:]:
+        repo.connect_locations(center, outer)
+    for a, b in _RING_PAIRS:
+        repo.connect_locations(nodes[a], nodes[b])
+    return center
+# PROTOTYPE END
