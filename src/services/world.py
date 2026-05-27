@@ -1,4 +1,4 @@
-from database.repository.location import LocationRepository
+from src.database.repository.location import LocationRepository
 from src.database.repository.tile import TileRepository
 from src.database.repository.world import WorldRepository
 from src.database.repository.base import BaseRepository
