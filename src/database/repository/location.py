@@ -17,6 +17,7 @@ DIRECTION_KEYS: dict[str, str] = {
 
 _COMPASS_ORDER = ["NW", "N", "NE", "SE", "S", "SW"]
 
+# PROTOTYPE START
 _HEX_NODES = [
     {
         "name": "The Crossroads Chamber",
@@ -141,6 +142,7 @@ class LocationRepository:
             if edge.get(name="direction")
         ]
 
+    # PROTOTYPE START
     def create_hex_graph(self) -> Vertex:
         """Create the 7-node dungeon hex graph. Returns the center vertex."""
         nodes: dict[str | None, Vertex] = {}
@@ -168,3 +170,4 @@ class LocationRepository:
             self.connect_location(nodes[to_dir], nodes[from_dir], _OPPOSITE[edge_dir])
 
         return center
+    # PROTOTYPE END

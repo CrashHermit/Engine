@@ -13,13 +13,13 @@ class StartScreen(Screen):
     def compose(self) -> ComposeResult:
         with Vertical(id="start-container"):
             yield Label(content="DARK ADVENTURES", id="start-title")
-            yield Button(label="Quick Start", id="btn-quick", variant="success")
+            yield Button(label="Quick Start", id="btn-quick", variant="success")  # PROTOTYPE
             yield Button(label="Load World", id="btn-load", variant="primary")
             yield Button(label="New World", id="btn-new", variant="default")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "btn-quick":
-            self._quick_start()
+        if event.button.id == "btn-quick":  # PROTOTYPE
+            self._quick_start()  # PROTOTYPE
         elif event.button.id == "btn-load":
             self.app.push_screen(WorldListScreen())
         elif event.button.id == "btn-new":
@@ -28,6 +28,7 @@ class StartScreen(Screen):
                     self.app.push_screen(WorldListScreen(created_world=result))
             self.app.push_screen(CreateWorldModal(), callback=_on_dismiss)
 
+    # PROTOTYPE START
     def _quick_start(self) -> None:
         import arcadedb_embedded as arcadedb
         from src.database.schema import SchemaManager
@@ -58,3 +59,4 @@ class StartScreen(Screen):
         character_repo.place_character(character, center)
 
         self.app.push_screen(GameScreen(character=character, database=db))
+    # PROTOTYPE END
