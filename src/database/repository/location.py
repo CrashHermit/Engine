@@ -104,17 +104,17 @@ _HEX_NODES = [
 _RING_PAIRS = [(1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (6, 1)]
 
 
-def create_start_location(base: BaseRepository) -> Vertex:
-    """Create the 7-node dungeon hex graph. Returns the center vertex."""
-    repo = LocationRepository(base)
-    nodes = [
-        repo.create_location(name=n["name"], description=n["description"], is_center=n["is_center"])
-        for n in _HEX_NODES
-    ]
-    center = nodes[0]
-    for outer in nodes[1:]:
-        repo.connect_locations(center, outer)
-    for a, b in _RING_PAIRS:
-        repo.connect_locations(nodes[a], nodes[b])
-    return center
-# PROTOTYPE END
+    # PROTOTYPE START
+    def create_start_location(self) -> Vertex:
+        """Create the 7-node dungeon hex graph. Returns the center vertex."""
+        nodes = [
+            self.create_location(name=n["name"], description=n["description"], is_center=n["is_center"])
+            for n in _HEX_NODES
+        ]
+        center = nodes[0]
+        for outer in nodes[1:]:
+            self.connect_locations(center, outer)
+        for a, b in _RING_PAIRS:
+            self.connect_locations(nodes[a], nodes[b])
+        return center
+    # PROTOTYPE END

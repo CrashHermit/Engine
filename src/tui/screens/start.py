@@ -33,7 +33,7 @@ class StartScreen(Screen):
         import arcadedb_embedded as arcadedb
         from src.database.schema import SchemaManager
         from src.database.repository.base import BaseRepository
-        from src.database.repository.location import create_start_location
+        from src.database.repository.location import LocationRepository
         from src.database.repository.character import CharacterRepository
         from src.core.model.database import VertexType
         from src.tui.screens.game import GameScreen
@@ -47,9 +47,10 @@ class StartScreen(Screen):
         SchemaManager(db).ensure()
 
         base = BaseRepository(db)
+        location_repo = LocationRepository(base)
         character_repo = CharacterRepository(base)
 
-        center = create_start_location(base)
+        center = location_repo.create_start_location()
         character = base.create_vertex(
             type_name=VertexType.CHARACTER,
             name="Adventurer",
