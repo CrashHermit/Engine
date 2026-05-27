@@ -336,6 +336,7 @@ dependencies = [
     { name = "langgraph" },
     { name = "python-dotenv" },
     { name = "textual" },
+    { name = "textual-canvas" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -348,6 +349,7 @@ requires-dist = [
     { name = "langgraph", specifier = ">=1.2.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "textual", specifier = ">=0.80.0" },
+    { name = "textual-canvas", specifier = ">=1.1.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
 
@@ -1697,6 +1699,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/9b/7a/c519db0aba5024f86e71e9631810bfdd6866ed2c8695bd7fa34b90e7ef59/textual-8.2.7.tar.gz", hash = "sha256:658f568ff81e30ed43890c3e07520390e5cf1b4763822006e060656b0a88f105", size = 1859249, upload-time = "2026-05-19T10:52:49.531Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/a8/f5/c1e18bc0707300a0e90204343abbf7d7acd6fb7ebe03a6d4893b99a234b8/textual-8.2.7-py3-none-any.whl", hash = "sha256:4caaa13a90bc4cf9c6c862c067ccd34fe84e9c161710a2a907a8026313b6bd73", size = 731129, upload-time = "2026-05-19T10:52:51.773Z" },
+]
+
+[[package]]
+name = "textual-canvas"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "textual" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/37/7e/f2c65b73f8a795a2ed9fbc65667a80db46b1e85799001e63de9869b7a53d/textual_canvas-1.1.0.tar.gz", hash = "sha256:cad9ad99901db25a94e91f7a1b9e14d7db0638c0cb38979a13db13eef1af0ab4", size = 7329, upload-time = "2025-10-02T15:09:21.603Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/51/ec/adf15c678f3c373dc781555f112f9f8d5b8b5f8b6b7f28b89b4ef89d440f/textual_canvas-1.1.0-py3-none-any.whl", hash = "sha256:fc7a938011c165f1a189fbae4f2e688d68c1fc3276a9111691a8b96514ffede0", size = 8393, upload-time = "2025-10-02T15:09:20.016Z" },
 ]
 
 [[package]]
