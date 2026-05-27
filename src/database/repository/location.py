@@ -130,27 +130,24 @@ class LocationRepository:
             direction=direction,
         )
 
+    def _perspective(self, location: Vertex, edge: Edge) -> tuple[Vertex, str]:
+        """Return (neighbor, direction) from location's point of view on this edge."""
+        if edge.get_out().get_rid() == location.get_rid():
+            return edge.get_in(), edge.get(name="direction")
+        return edge.get_out(), _OPPOSITE[edge.get(name="direction")]
+
     def get_neighbor_in_direction(self, location: Vertex, direction: str) -> Vertex | None:
-        for edge in location.get_out_edges(EdgeType.CONNECTS):
-            if edge.get(name="direction") == direction:
-                return edge.get_in()
-        for edge in location.get_in_edges(EdgeType.CONNECTS):
-            if _OPPOSITE.get(edge.get(name="direction")) == direction:
-                return edge.get_out()
+        for edge in location.get_both_edges(EdgeType.CONNECTS):
+            neighbor, edge_dir = self._perspective(location, edge)
+            if edge_dir == direction:
+                return neighbor
         return None
 
     def get_exits(self, location: Vertex) -> list[str]:
-        exits = [
-            edge.get(name="direction")
-            for edge in location.get_out_edges(EdgeType.CONNECTS)
-            if edge.get(name="direction")
+        return [
+            self._perspective(location, edge)[1]
+            for edge in location.get_both_edges(EdgeType.CONNECTS)
         ]
-        exits += [
-            _OPPOSITE[d]
-            for edge in location.get_in_edges(EdgeType.CONNECTS)
-            if (d := edge.get(name="direction")) and d in _OPPOSITE
-        ]
-        return exits
 
     # PROTOTYPE START
     def create_hex_graph(self) -> Vertex:
