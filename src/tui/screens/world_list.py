@@ -1,3 +1,9 @@
+from textual.widgets._list_view import ListView
+
+
+from textual.widgets._list_item import ListItem
+
+
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.screen import Screen
@@ -36,16 +42,16 @@ class WorldListScreen(Screen):
         self._refresh_world_list()
 
     def _selected_world_name(self) -> str | None:
-        item = self.query_one("#world-list", ListView).highlighted_child
+        item: ListItem | None = self.query_one("#world-list", ListView).highlighted_child
         if item is None:
             return None
         return str(item.query_one(Label).content)
 
     def _refresh_world_list(self) -> None:
-        list_view = self.query_one("#world-list", ListView)
+        list_view: ListView = self.query_one("#world-list", ListView)
         list_view.clear()
         for name in self._worlds:
-            list_view.append(ListItem(Label(name)))
+            list_view.append(item=ListItem(Label(content=name)))
 
     def _on_create_world_dismissed(self, result: dict[str, str] | None) -> None:
         if result:

@@ -12,8 +12,8 @@ from textual.worker import get_current_worker
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
 from src.database.repository.location import LocationRepository
-from ..widgets.chat_panel import ChatPanel
-
+from src.tui.widgets.chat_panel import ChatPanel
+from src.tui.modals.character_sheet import CharacterSheetModal
 
 class GameScreen(Screen):
     BINDINGS = [
@@ -86,11 +86,12 @@ class GameScreen(Screen):
     def on_chat_panel_message_sent(self, event: ChatPanel.MessageSent) -> None:
         self.process_chat_message(event.text, event.channel)
 
+    def action_character_sheet(self) -> None:
+        self.app.push_screen(CharacterSheetModal())
+
     @work(exclusive=True, thread=True)
     def process_chat_message(self, text: str, channel: str) -> None:
         if get_current_worker().is_cancelled:
         	return
 
-    def action_character_sheet(self) -> None:
-        from ..modals.character_sheet import CharacterSheetModal
-        self.app.push_screen(CharacterSheetModal())
+

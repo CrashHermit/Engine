@@ -67,11 +67,10 @@ ListView > ListItem.--highlight {
 
 /* ── Start Screen ─────────────────────────────────── */
 
-#start-container {
-    align: center middle;
+#start-menu {
     layout: vertical;
-    width: 100%;
-    height: 100%;
+    width: auto;
+    height: auto;
 }
 
 #start-title {
@@ -82,7 +81,7 @@ ListView > ListItem.--highlight {
     margin-bottom: 3;
 }
 
-#start-container Button {
+#start-menu Button {
     width: 30;
     margin: 1 0;
 }

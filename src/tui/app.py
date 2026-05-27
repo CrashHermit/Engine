@@ -1,3 +1,9 @@
+from src.database.connection import DatabaseConnection
+
+
+from src.database.server import Server
+
+
 from textual.app import App
 from textual.binding import Binding
 
@@ -17,16 +23,21 @@ class EngineApp(App):
         Binding("f1", "help", "Help"),
     ]
 
+    def __init__(self) -> None:
+        super().__init__()
+        self.server: Server | None = None
+
     def on_mount(self) -> None:
-        self.server = Server()
+        self.server: Server = Server()
         self.server.start()
-        self.connection = DatabaseConnection(self.server)
+        self.connection: DatabaseConnection = DatabaseConnection(self.server)
         self.world_characters: dict[str, list[str]] = {}
         self.world_character_data: dict[str, dict[str, dict]] = {}
         self.push_screen(StartScreen())
 
     def on_unmount(self) -> None:
-        self.server.stop()
+        if self.server:
+            self.server.stop()
 
     def action_help(self) -> None:
         self.action_show_help_panel()
