@@ -17,6 +17,12 @@ DIRECTION_KEYS: dict[str, str] = {
 
 _COMPASS_ORDER = ["NW", "N", "NE", "SE", "S", "SW"]
 
+# Reverse of each compass direction.
+_OPPOSITE: dict[str, str] = {
+    "NW": "SE", "N": "S", "NE": "SW",
+    "SE": "NW", "S": "N", "SW": "NE",
+}
+
 # PROTOTYPE START
 _HEX_NODES = [
     {
@@ -88,12 +94,6 @@ _HEX_NODES = [
     },
 ]
 
-# Reverse of each compass direction.
-_OPPOSITE: dict[str, str] = {
-    "NW": "SE", "N": "S", "NE": "SW",
-    "SE": "NW", "S": "N", "SW": "NE",
-}
-
 # Ring adjacencies between outer nodes (clockwise order: NW N NE SE S SW).
 # Each tuple is (from_direction, to_direction, edge_direction).
 _RING_EDGES: list[tuple[str, str, str]] = [
@@ -104,6 +104,7 @@ _RING_EDGES: list[tuple[str, str, str]] = [
     ("S",  "SW", "NW"),
     ("SW", "NW", "N"),
 ]
+# PROTOTYPE END
 
 
 class LocationRepository:
@@ -133,14 +134,23 @@ class LocationRepository:
         for edge in location.get_out_edges(EdgeType.CONNECTS):
             if edge.get(name="direction") == direction:
                 return edge.get_in()
+        for edge in location.get_in_edges(EdgeType.CONNECTS):
+            if _OPPOSITE.get(edge.get(name="direction")) == direction:
+                return edge.get_out()
         return None
 
     def get_exits(self, location: Vertex) -> list[str]:
-        return [
+        exits = [
             edge.get(name="direction")
             for edge in location.get_out_edges(EdgeType.CONNECTS)
             if edge.get(name="direction")
         ]
+        exits += [
+            _OPPOSITE[d]
+            for edge in location.get_in_edges(EdgeType.CONNECTS)
+            if (d := edge.get(name="direction")) and d in _OPPOSITE
+        ]
+        return exits
 
     # PROTOTYPE START
     def create_hex_graph(self) -> Vertex:
@@ -157,17 +167,15 @@ class LocationRepository:
 
         center = nodes[None]
 
-        # Spoke edges: center ↔ each outer node
+        # One spoke edge per outer node, stored as center→outer with the outward direction.
         for direction, outer in nodes.items():
             if direction is None:
                 continue
             self.connect_location(center, outer, direction)
-            self.connect_location(outer, center, _OPPOSITE[direction])
 
-        # Ring edges: outer nodes ↔ their clockwise neighbors
+        # One ring edge per adjacent outer pair, stored in clockwise direction.
         for from_dir, to_dir, edge_dir in _RING_EDGES:
             self.connect_location(nodes[from_dir], nodes[to_dir], edge_dir)
-            self.connect_location(nodes[to_dir], nodes[from_dir], _OPPOSITE[edge_dir])
 
         return center
     # PROTOTYPE END
