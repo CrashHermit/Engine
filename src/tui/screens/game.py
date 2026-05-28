@@ -15,7 +15,7 @@ from src.core.model.message import Message
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
 from src.database.repository.location import LocationRepository
-from src.graph import Graph
+from src.graph.main_graph import MainGraphBuilder
 from src.state import GraphState
 from src.tui.widgets.chat_panel import ChatPanel
 from src.tui.widgets.left_panel import LeftPanel
@@ -50,7 +50,7 @@ class GameScreen(Screen):
         base = BaseRepository(self._db)
         self._location_repo = LocationRepository(base)
         self._character_repo = CharacterRepository(base)
-        self._graph = Graph().build().compile()
+        self._graph = MainGraphBuilder().build()
 
         location = self._character_repo.get_current_location(self._character)
         if location is None:
@@ -117,7 +117,7 @@ class GameScreen(Screen):
             human_message=human_msg,
             ai_message=None,
             question=None,
-            is_clarity_achieved=None,
+            is_intent_alignment_achieved=None,
             character_description=self._character.get(name="description") or "",
             location_description=loc.get(name="description") or "" if loc else "",
             entities_at_location=self._entities_at_location,

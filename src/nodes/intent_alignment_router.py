@@ -25,5 +25,5 @@ class IntentAlignmentRouterNode:
             intent_alignment_history=intent_alignment_history,
         )
         return {
-            "is_clarity_achieved": prediction.is_clarity_achieved,
+            "is_intent_alignment_achieved": prediction.is_intent_alignment_achieved,
         }

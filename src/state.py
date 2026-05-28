@@ -12,7 +12,7 @@ class GraphState(BaseModel):
     human_message: Message | None = None
     ai_message: Message | None = None
     question: str | None = None
-    is_clarity_achieved: bool | None = None
+    is_intent_alignment_achieved: bool | None = None
     action_list: list[str] = Field(default_factory=list)
     location_name: str = ""
     location_description: str = ""

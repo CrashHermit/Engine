@@ -5,7 +5,7 @@ class IntentAlignmentRouterSignature(Signature):
     """
     You are an intent alignment router. Determine whether the player's message
     expresses clear, actionable intent given the current context and any prior
-    clarification exchanges. Return true only when you have enough information
+    intent alignment exchanges. Return true only when you have enough information
     to act. Return false if the intent is ambiguous, physically impossible for
     this character, contradicts the current context, or references an entity
     that does not exist in the current location.
@@ -18,4 +18,4 @@ class IntentAlignmentRouterSignature(Signature):
     human_message: str = InputField(description="The player's current message or action")
     intent_alignment_history: str = InputField(default="", description="The prior clarification Q&A for this action")
 
-    is_clarity_achieved: bool = OutputField(description="Whether the player's intent is clear enough to act on")
+    is_intent_alignment_achieved: bool = OutputField(description="Whether the player's intent is clear enough to act on")
