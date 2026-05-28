@@ -15,6 +15,7 @@ from src.core.model.message import Message
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
 from src.database.repository.location import LocationRepository
+from src.database.repository.world import WorldRepository
 from src.graph.main_graph import MainGraphBuilder
 from src.state import GraphState
 from src.tui.widgets.chat_panel import ChatPanel
@@ -50,11 +51,17 @@ class GameScreen(Screen):
         base = BaseRepository(self._db)
         self._location_repo = LocationRepository(base)
         self._character_repo = CharacterRepository(base)
+        self._world_repo = WorldRepository(base)
         self._graph = MainGraphBuilder().build()
 
         location = self._character_repo.get_current_location(self._character)
         if location is None:
-            self.query_one("#scene", RichLog).write("[red]No starting location.[/red]")
+            location = self._world_repo.get_start_location()
+            if location is not None:
+                self._character_repo.place_character(self._character, location)
+        if location is None:
+            self.app.notify("This world has no starting location.", severity="error")
+            self.app.pop_screen()
             return
         self._show_location(location)
 
