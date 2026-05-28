@@ -1,9 +1,3 @@
-from src.database.connection import DatabaseConnection
-
-
-from src.database.server import Server
-
-
 from textual.app import App
 from textual.binding import Binding
 
@@ -12,7 +6,7 @@ from src.database.server import Server
 from src.tui.screens.start import StartScreen
 
 
-class App(App):
+class GameApp(App):
     ALLOW_SELECT = False
 
     CSS_PATH = "theme.tcss"
@@ -42,7 +36,7 @@ class App(App):
 
 
 def main() -> None:
-    App().run()
+    GameApp().run()
 
 
 if __name__ == "__main__":
