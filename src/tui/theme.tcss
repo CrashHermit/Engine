@@ -173,6 +173,12 @@ ListView > ListItem.--highlight {
     border-right: solid $da-gold;
 }
 
+#scene-collapsible.scene-collapsed {
+    width: auto;
+    min-width: 20;
+    border-right: none;
+}
+
 #scene-log {
     height: 1fr;
     padding: 1;

@@ -50,8 +50,7 @@ class GameScreen(Screen):
         self._show_location(location)
 
     def on_collapsible_toggled(self, event: Collapsible.Toggled) -> None:
-        col = self.query_one("#scene-collapsible")
-        col.styles.width = "auto" if event.collapsible.collapsed else "40%"
+        self.query_one("#scene-collapsible").set_class(event.collapsible.collapsed, "scene-collapsed")
 
     def on_key(self, event: Key) -> None:
         chat_input = self.query_one("#msg-input", Input)
