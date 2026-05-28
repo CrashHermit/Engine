@@ -36,6 +36,7 @@ class GameScreen(Screen):
         self._neighbors: list[Vertex] = []
         self._current_location: Vertex | None = None
         self._message_history: list[Message] = []
+        self._clarity_history: list[Message] = []
         self._graph = None
 
     def compose(self) -> ComposeResult:
@@ -102,11 +103,12 @@ class GameScreen(Screen):
         loc = self._current_location
         state = GraphState(
             message_history=self._message_history,
+            clarity_history=self._clarity_history,
             human_message=human_msg,
             ai_message=None,
-            character_name=self._character.get(name="name") or "",
+            question=None,
+            is_clarity_achieved=None,
             character_description=self._character.get(name="description") or "",
-            location_name=loc.get(name="name") or "" if loc else "",
             location_description=loc.get(name="description") or "" if loc else "",
         )
 
@@ -115,11 +117,16 @@ class GameScreen(Screen):
         if get_current_worker().is_cancelled:
             return
 
+        log = self.query_one("#chat-log", RichLog)
+
+
         self._message_history = result.get("message_history", self._message_history)
+        self._clarity_history = result.get("clarity_history", self._clarity_history)
         ai_msg = result.get("ai_message")
+        question = result.get("question")
         if ai_msg is None:
             return
 
         content = ai_msg.content if hasattr(ai_msg, "content") else ai_msg.get("content", "")
-        log = self.query_one("#chat-log", RichLog)
         log.write(f"[bold #c9a84c]Narrator:[/bold #c9a84c] {escape(content)}")
+        log.write(f"[bold #c9a84c]Clarifier:[/bold #c9a84c] {escape(result.get('question', ''))}")
