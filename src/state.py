@@ -16,5 +16,6 @@ class GraphState(BaseModel):
     action_list: list[str] = Field(default_factory=list)
     location_name: str = ""
     location_description: str = ""
+    entities_at_location: list[str] = Field(default_factory=list)
     character_name: str = ""
     character_description: str = ""

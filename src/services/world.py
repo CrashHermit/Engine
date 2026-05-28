@@ -1,7 +1,9 @@
+from src.database.repository.location import LocationRepository
 from src.database.repository.tile import TileRepository
 from src.database.repository.world import WorldRepository
 from src.database.repository.base import BaseRepository
 from arcadedb_embedded.core import Database
+from src.core.model.database import EdgeType
 from src.worldgen.data import WorldData
 from src.worldgen.pipeline import WorldgenPipeline
 from src.database.connection import DatabaseConnection
@@ -57,16 +59,29 @@ class WorldService:
             )
             tile_repo.create_tiles(world_data.tiles)
 
+    # PROTOTYPE START
     def create_test_world(self) -> None:
-        self.create_world(
-            name="Test World",
-            description="This is a test world",
-            seed=1234567890,
-            size=100,
-            biome="Forest",
-            temperature=20,
-            precipitation=100,
-            elevation=100,
-        )
+        name = "Test World"
+        db: Database = self._connection.create_database(name)
+        SchemaManager(database=db).ensure()
+
+        base: BaseRepository = BaseRepository(database=db)
+        world_repo: WorldRepository = WorldRepository(base=base)
+        location_repo: LocationRepository = LocationRepository(base=base)
+
+        with base.transaction():
+            world = world_repo.create_world(
+                name=name,
+                description="A small test dungeon for development.",
+                seed=1234567890,
+                size=7,
+                biome="dungeon",
+                temperature=0.0,
+                precipitation=0.0,
+                elevation=0.0,
+            )
+            center = location_repo.create_start_location()
+            base.create_edge(type_name=EdgeType.HAS_START, source=world, target=center)
+    # PROTOTYPE END
 
         

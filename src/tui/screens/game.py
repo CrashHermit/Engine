@@ -35,6 +35,7 @@ class GameScreen(Screen):
         self._db = database
         self._neighbors: list[Vertex] = []
         self._current_location: Vertex | None = None
+        self._entities_at_location: list[str] = []
         self._message_history: list[Message] = []
         self._intent_alignment_history: list[Message] = []
         self._graph = None
@@ -74,15 +75,24 @@ class GameScreen(Screen):
     def _show_location(self, location: Vertex) -> None:
         self._current_location = location
         self._neighbors = self._location_repo.get_neighbors(location)
+        entities = self._location_repo.get_entities(location)
+        self._entities_at_location = [
+            f"{e.get(name='name')}: {e.get(name='description')}. Location: {e.get(name='scene_position')}"
+            for e in entities
+        ]
         name = location.get(name="name") or "Unknown"
         description = location.get(name="description") or ""
         exits = " · ".join(
             f"[{i + 1}] {n.get(name='name')}"
             for i, n in enumerate(self._neighbors)
         ) or "No exits."
+        display_entities = [
+            f"{e.get(name='name')} — {e.get(name='scene_position')}"
+            for e in entities
+        ]
 
         panel = self.query_one(LeftPanel)
-        panel.write_scene(name, description, exits)
+        panel.write_scene(name, description, exits, display_entities)
         panel.update_info(
             character_name=self._character.get(name="name") or "—",
             location_name=name,
@@ -110,6 +120,7 @@ class GameScreen(Screen):
             is_clarity_achieved=None,
             character_description=self._character.get(name="description") or "",
             location_description=loc.get(name="description") or "" if loc else "",
+            entities_at_location=self._entities_at_location,
         )
 
         result = await self._graph.ainvoke(state)

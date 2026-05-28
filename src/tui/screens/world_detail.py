@@ -12,6 +12,7 @@ from src.tui.modals.confirm_modal import ConfirmModal
 from src.tui.widgets.pip_selector import PipSelector
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
+from src.database.repository.world import WorldRepository
 from src.database.schema import SchemaManager
 
 
@@ -23,6 +24,7 @@ class WorldDetailScreen(Screen):
         self.world_name: str = world_name
         self._db: arcadedb.Database | None = None
         self._character_repo: CharacterRepository | None = None
+        self._world_repo: WorldRepository | None = None
         self._characters: list[Vertex] = []
 
     def compose(self) -> ComposeResult:
@@ -50,6 +52,7 @@ class WorldDetailScreen(Screen):
             SchemaManager(self._db).ensure()
             base = BaseRepository(self._db)
             self._character_repo = CharacterRepository(base)
+            self._world_repo = WorldRepository(base)
             self._characters = self._character_repo.list_characters()
         except Exception as e:
             self.app.notify(f"Failed to open world: {e}", severity="error")
@@ -95,10 +98,10 @@ class WorldDetailScreen(Screen):
         self.query_one("#pip-anima", PipSelector).value = anima
 
     def _on_create_character_dismissed(self, result: dict[str, int | str] | None) -> None:
-        if result is None or self._character_repo is None:
+        if result is None or self._character_repo is None or self._world_repo is None:
             return
         try:
-            self._character_repo.create_full_character(
+            character = self._character_repo.create_full_character(
                 name=str(result["name"]),
                 description=str(result.get("description", "")),
                 corpus=int(result.get("corpus", 0)),
@@ -110,6 +113,9 @@ class WorldDetailScreen(Screen):
                 neuroticism=int(result.get("neuroticism", 1)),
                 conscientiousness=int(result.get("conscientiousness", 1)),
             )
+            start_location = self._world_repo.get_start_location()
+            if start_location is not None:
+                self._character_repo.place_character(character, start_location)
             self._characters = self._character_repo.list_characters()
             self._refresh_character_list()
         except Exception as e:

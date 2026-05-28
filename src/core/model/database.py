@@ -27,6 +27,7 @@ class VertexType(StrEnum):
     ATTRIBUTE = "ATTRIBUTE"
     TILE = "TILE"
     WORLD = "WORLD"
+    ENTITY = "ENTITY"  # PROTOTYPE
 
 
 class EdgeType(StrEnum):
@@ -65,3 +66,4 @@ class EdgeType(StrEnum):
     IS_CHANNEL = "IS_CHANNEL"
     IS_CONTROLLABLE = "IS_CONTROLLABLE"
     ADJACENT = "ADJACENT"
+    HAS_START = "HAS_START"  # PROTOTYPE: WORLD → LOCATION
