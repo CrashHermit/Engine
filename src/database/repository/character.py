@@ -80,3 +80,4 @@ class CharacterRepository:
             source=character,
             target=to_location,
         )
+

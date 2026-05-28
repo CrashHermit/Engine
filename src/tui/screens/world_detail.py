@@ -3,21 +3,20 @@ from textual.binding import Binding
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, ListItem, ListView, Static
 from textual.containers import Horizontal, Vertical
-
-from ..modals.confirm_modal import ConfirmModal
-from ..widgets.pip_selector import PipSelector
-
+from src.tui.screens.game import GameScreen
+from src.tui.modals.create_character import CreateCharacterModal
+from src.tui.modals.confirm_modal import ConfirmModal
+from src.tui.widgets.pip_selector import PipSelector
+from src.database.repository.character import CharacterRepository
+from arcadedb_embedded import Vertex
 
 class WorldDetailScreen(Screen):
     BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
 
-    # TODO: replace with CharacterRepository.get_user_characters()
-    _PLACEHOLDER_CHARACTERS = ["Aldric the Bold", "Sister Mara", "Thane Vexx"]
-
     def __init__(self, *, world_name: str) -> None:
         super().__init__()
         self.world_name: str = world_name
-        self._characters: list[str] = []
+        self._characters: list[Vertex] = []
 
     def compose(self) -> ComposeResult:
         yield Header()
@@ -39,7 +38,7 @@ class WorldDetailScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self._characters = self.app.world_characters.setdefault(self.world_name, [])
+        self._characters: list[Vertex] = self._character_repository.get_user_characters()
         self._refresh_character_list()
 
     def _selected_character_name(self) -> str | None:
@@ -68,8 +67,7 @@ class WorldDetailScreen(Screen):
             self._refresh_character_list()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        from .game import GameScreen
-        from ..modals.create_character import CreateCharacterModal
+        character = self._selected_character_name()
 
         if event.button.id == "btn-back":
             self.app.pop_screen()
@@ -78,17 +76,14 @@ class WorldDetailScreen(Screen):
                 CreateCharacterModal(), callback=self._on_create_character_dismissed
             )
         elif event.button.id == "btn-play":
-            self.app.push_screen(GameScreen())
+            self.app.push_screen(GameScreen(character=character))
         elif event.button.id == "btn-delete":
-            name = self._selected_character_name()
-            if name is None:
-                return
             self.app.push_screen(
                 ConfirmModal(
                     title="Delete Character?",
-                    message=f'Are you sure you want to delete "{name}"?',
+                    message=f'Are you sure you want to delete "{character}"?',
                 ),
-                callback=lambda confirmed: self._on_delete_character_confirmed(name, confirmed),
+                callback=lambda confirmed: self._on_delete_character_confirmed(character, confirmed),
             )
 
     def _on_delete_character_confirmed(self, name: str, confirmed: bool | None) -> None:

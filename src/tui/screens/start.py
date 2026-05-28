@@ -24,10 +24,11 @@ class StartScreen(Screen):
         elif event.button.id == "btn-load":
             self.app.push_screen(WorldListScreen())
         elif event.button.id == "btn-new":
-            def _on_dismiss(result: dict[str, str] | None) -> None:
-                if result:
-                    self.app.push_screen(WorldListScreen(created_world=result))
-            self.app.push_screen(CreateWorldModal(), callback=_on_dismiss)
+            self.app.push_screen(CreateWorldModal(), callback=lambda result: self._on_dismiss(result))
+    
+    def _on_dismiss(self, result: dict[str, str] | None) -> None:
+        if result:
+            self.app.push_screen(WorldListScreen(created_world=result))
 
     # PROTOTYPE START
     def _quick_start(self) -> None:

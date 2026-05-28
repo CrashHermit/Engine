@@ -12,8 +12,7 @@ from src.database.server import Server
 from src.tui.screens.start import StartScreen
 
 
-class EngineApp(App):
-    # Prevent click-drag from painting Textual selection regions over widgets.
+class App(App):
     ALLOW_SELECT = False
 
     CSS_PATH = "theme.tcss"
@@ -31,8 +30,6 @@ class EngineApp(App):
         self.server: Server = Server()
         self.server.start()
         self.connection: DatabaseConnection = DatabaseConnection(self.server)
-        self.world_characters: dict[str, list[str]] = {}
-        self.world_character_data: dict[str, dict[str, dict]] = {}
         self.push_screen(StartScreen())
 
     def on_unmount(self) -> None:
@@ -45,7 +42,7 @@ class EngineApp(App):
 
 
 def main() -> None:
-    EngineApp().run()
+    App().run()
 
 
 if __name__ == "__main__":

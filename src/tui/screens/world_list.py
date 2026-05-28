@@ -1,15 +1,10 @@
 from textual.widgets._list_view import ListView
-
-
 from textual.widgets._list_item import ListItem
-
-
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, ListItem, ListView
 from textual.containers import Horizontal, Vertical
-
 from src.tui.screens.world_detail import WorldDetailScreen
 from src.tui.modals.create_world import CreateWorldModal
 from src.tui.modals.confirm_delete_world import ConfirmDeleteWorldModal
@@ -79,7 +74,6 @@ class WorldListScreen(Screen):
                 ConfirmDeleteWorldModal(world_name=world_name), 
                 callback=lambda confirmed: self._on_delete_world_confirmed(world_name=world_name, confirmed=confirmed)
             )
-
 
     def _on_delete_world_confirmed(self, world_name: str, confirmed: bool | None) -> None:
         if not confirmed:
