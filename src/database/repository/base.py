@@ -115,3 +115,11 @@ class BaseRepository:
             name="invalidated_at",
             value=self._current_time(),
         ).save()
+
+    ############################################################################
+    # Query operations
+    ############################################################################
+
+    def list_vertices(self, type_name: VertexType) -> list[Vertex]:
+        results = self._database.query("cypher", f"MATCH (n:{type_name}) RETURN n")
+        return [v for r in results if (v := r.get_vertex()) is not None]

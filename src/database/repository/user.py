@@ -1,7 +1,7 @@
 from arcadedb_embedded.graph import Vertex
 
-from core.model.database import VertexType
-from database.repository.base import BaseRepository
+from src.core.model.database import VertexType
+from src.database.repository.base import BaseRepository
 
 
 class UserRepository:

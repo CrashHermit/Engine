@@ -1,78 +1,78 @@
-from arcadedb_embedded.graph import Edge, Vertex
+from arcadedb_embedded.graph import Vertex
 
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
+
+# Edges from a character into the sub-structure it exclusively owns. Deleting a
+# character cascades along these (but never along LOCATED_AT, which points at a
+# shared location the character does not own).
+_OWNED_EDGES = [
+    EdgeType.HAS_CORPUS,
+    EdgeType.HAS_MENS,
+    EdgeType.HAS_ANIMA,
+    EdgeType.HAS_PERSONALITY,
+    EdgeType.HAS_EXTRAVERSION,
+    EdgeType.HAS_OPENNESS,
+    EdgeType.HAS_NEUROTICISM,
+    EdgeType.HAS_AGREEABLENESS,
+    EdgeType.HAS_CONSCIENTIOUSNESS,
+    EdgeType.HAS_ATTRIBUTE,
+]
 
 
 class CharacterRepository:
     def __init__(self, base: BaseRepository) -> None:
         self._base: BaseRepository = base
 
-    def list_characters(self) -> list[Vertex]:
-        results = self._base._database.query("sql", f"SELECT FROM {VertexType.CHARACTER}")
-        return [v for r in results if (v := r.get_vertex()) is not None]
+    ############################################################################
+    # Write verbs
+    ############################################################################
 
-    def create_full_character(
-        self,
-        name: str,
-        description: str,
-        corpus: int,
-        mens: int,
-        anima: int,
-        extraversion: int,
-        openness: int,
-        agreeableness: int,
-        neuroticism: int,
-        conscientiousness: int,
-    ) -> Vertex:
-        with self._base.transaction():
-            character = self._base.create_vertex(VertexType.CHARACTER, name=name, description=description)
+    def create_character(self, name: str, description: str) -> Vertex:
+        return self._base.create_vertex(
+            type_name=VertexType.CHARACTER,
+            name=name,
+            description=description,
+        )
 
-            for vtype, etype, val in [
-                (VertexType.CORPUS, EdgeType.HAS_CORPUS, corpus),
-                (VertexType.MENS, EdgeType.HAS_MENS, mens),
-                (VertexType.ANIMA, EdgeType.HAS_ANIMA, anima),
-            ]:
-                trait = self._base.create_vertex(vtype)
-                self._base.create_edge(etype, character, trait)
-                attr = self._base.create_vertex(VertexType.ATTRIBUTE, value=val)
-                self._base.create_edge(EdgeType.HAS_ATTRIBUTE, trait, attr)
+    def add_node(self, source: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
+        """Create a typed node and link it from `source`. Used for attribute
+        categories (corpus/mens/anima), personality, and big-five traits."""
+        node: Vertex = self._base.create_vertex(type_name=vertex_type)
+        self._base.create_edge(type_name=edge_type, source=source, target=node)
+        return node
 
-            mens_v = character.get_out_edges(EdgeType.HAS_MENS)[0].get_in()
-            personality = self._base.create_vertex(VertexType.PERSONALITY)
-            self._base.create_edge(EdgeType.HAS_PERSONALITY, mens_v, personality)
-
-            for vtype, etype, val in [
-                (VertexType.EXTRAVERSION, EdgeType.HAS_EXTRAVERSION, extraversion),
-                (VertexType.OPENNESS, EdgeType.HAS_OPENNESS, openness),
-                (VertexType.AGREEABLENESS, EdgeType.HAS_AGREEABLENESS, agreeableness),
-                (VertexType.NEUROTICISM, EdgeType.HAS_NEUROTICISM, neuroticism),
-                (VertexType.CONSCIENTIOUSNESS, EdgeType.HAS_CONSCIENTIOUSNESS, conscientiousness),
-            ]:
-                trait = self._base.create_vertex(vtype)
-                self._base.create_edge(etype, personality, trait)
-                attr = self._base.create_vertex(VertexType.ATTRIBUTE, value=val)
-                self._base.create_edge(EdgeType.HAS_ATTRIBUTE, trait, attr)
-
-            return character
-
-    def delete_character(self, character: Vertex) -> None:
-        self._base.delete_vertex(character)
-
-    def create_trait(self, character: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
-        trait: Vertex = self._base.create_vertex(type_name=vertex_type)
-        self._base.create_edge(type_name=edge_type, source=character, target=trait)
-        return trait
-
-    def create_personality(self, character: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
-        personality: Vertex = self._base.create_vertex(type_name=vertex_type)
-        self._base.create_edge(type_name=edge_type, source=character, target=personality)
-        return personality
-
-    def create_attribute(self, source: Vertex, value: int) -> Vertex:
+    def add_attribute(self, source: Vertex, value: int) -> Vertex:
         attribute: Vertex = self._base.create_vertex(type_name=VertexType.ATTRIBUTE, value=value)
         self._base.create_edge(type_name=EdgeType.HAS_ATTRIBUTE, source=source, target=attribute)
         return attribute
+
+    def delete_character(self, character: Vertex) -> None:
+        """Delete the character and every node it owns (attributes, personality,
+        traits), leaving shared vertices such as its location untouched."""
+        self._delete_owned(character)
+
+    def _delete_owned(self, vertex: Vertex) -> None:
+        # Materialize owned children before deleting, then recurse depth-first so
+        # leaves are removed before their parents.
+        children: list[Vertex] = [
+            edge.get_in()
+            for edge_type in _OWNED_EDGES
+            for edge in vertex.get_out_edges(edge_type)
+        ]
+        for child in children:
+            self._delete_owned(child)
+        self._base.delete_vertex(vertex)
+
+    ############################################################################
+    # Read verbs
+    ############################################################################
+
+    def list_characters(self) -> list[Vertex]:
+        return self._base.list_vertices(VertexType.CHARACTER)
+
+    def get_character(self, id: str) -> Vertex | None:
+        return self._base.get_vertex(type_name=VertexType.CHARACTER, id=id)
 
     def get_corpus(self, character: Vertex) -> Vertex:
         return character.get_out_edges(EdgeType.HAS_CORPUS)[0].get_in()
@@ -99,6 +99,10 @@ class CharacterRepository:
         trait = personality.get_out_edges(edge_type)[0].get_in()
         return self.get_attribute_value(trait)
 
+    ############################################################################
+    # Position verbs
+    ############################################################################
+
     def get_current_location(self, character: Vertex) -> Vertex | None:
         edges = character.get_out_edges(EdgeType.LOCATED_AT)
         return edges[0].get_in() if edges else None
@@ -118,4 +122,3 @@ class CharacterRepository:
             source=character,
             target=to_location,
         )
-

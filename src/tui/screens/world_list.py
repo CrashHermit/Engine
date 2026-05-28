@@ -58,7 +58,12 @@ class WorldListScreen(Screen):
         elif event.button.id == "btn-enter":
             world_name: str | None = self._selected_world_name()
             if world_name:
-                self.app.push_screen(WorldDetailScreen(world_name=world_name))
+                try:
+                    services = self.app.factory.open(world_name)
+                except Exception as e:
+                    self.app.notify(message=f"Failed to open world: {e}", severity="error")
+                    return
+                self.app.push_screen(WorldDetailScreen(world_name=world_name, services=services))
         elif event.button.id == "btn-delete":
             world_name: str | None = self._selected_world_name()
             if world_name is None:
