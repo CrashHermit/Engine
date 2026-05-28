@@ -80,7 +80,6 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
                 "neuroticism": self.query_one("#step-neuro", ValueStepper).value,
                 "conscientiousness": self.query_one("#step-consc", ValueStepper).value,
             })
-            # TODO: CharacterService.create_character(**result)
 
             
 

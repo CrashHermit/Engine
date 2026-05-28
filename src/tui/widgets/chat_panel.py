@@ -56,4 +56,3 @@ class ChatPanel(Widget):
         log.write(f"{tag} [bold]You:[/bold] {escape(text)}")
         input_widget.value = ""
         self.post_message(self.MessageSent(text, self.channel))
-        # TODO: invoke narrator / GM pipeline and write response
