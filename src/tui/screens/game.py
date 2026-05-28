@@ -6,7 +6,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.events import Key
 from textual.screen import Screen
-from textual.widgets import Collapsible, Input, RichLog
+from textual.widgets import Input
 from textual.containers import Horizontal, Vertical
 from textual.worker import get_current_worker
 
@@ -17,6 +17,7 @@ from src.database.repository.location import LocationRepository
 from src.graph import Graph
 from src.state import GraphState
 from src.tui.widgets.chat_panel import ChatPanel
+from src.tui.widgets.left_panel import LeftPanel
 from src.tui.modals.character_sheet import CharacterSheetModal
 
 
@@ -37,8 +38,7 @@ class GameScreen(Screen):
     def compose(self) -> ComposeResult:
         with Vertical(id="game-layout"):
             with Horizontal(id="game-panels"):
-                with Collapsible(title="Scene", id="scene-collapsible"):
-                    yield RichLog(id="scene-log", highlight=True, markup=True, wrap=True)
+                yield LeftPanel(id="left-panel")
                 yield ChatPanel(id="chat-panel")
 
     def on_mount(self) -> None:
@@ -52,9 +52,6 @@ class GameScreen(Screen):
             self.query_one("#scene-log", RichLog).write("[red]No starting location.[/red]")
             return
         self._show_location(location)
-
-    def on_collapsible_toggled(self, event: Collapsible.Toggled) -> None:
-        self.query_one("#scene-collapsible").set_class(event.collapsible.collapsed, "scene-collapsed")
 
     def on_key(self, event: Key) -> None:
         chat_input = self.query_one("#msg-input", Input)
@@ -72,18 +69,18 @@ class GameScreen(Screen):
 
     def _show_location(self, location: Vertex) -> None:
         self._neighbors = self._location_repo.get_neighbors(location)
-        name = location.get(name="name")
-        description = location.get(name="description")
+        name = location.get(name="name") or "Unknown"
+        description = location.get(name="description") or ""
         exits = " · ".join(
             f"[{i + 1}] {n.get(name='name')}"
             for i, n in enumerate(self._neighbors)
         ) or "No exits."
 
-        log = self.query_one("#scene-log", RichLog)
-        log.write(
-            f"\n[bold #c9a84c]{name}[/bold #c9a84c]\n\n"
-            f"{description}\n\n"
-            f"[dim]{exits}[/dim]"
+        panel = self.query_one(LeftPanel)
+        panel.write_scene(name, description, exits)
+        panel.update_info(
+            character_name=self._character.get(name="name") or "—",
+            location_name=name,
         )
 
     def on_chat_panel_message_sent(self, event: ChatPanel.MessageSent) -> None:
