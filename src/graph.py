@@ -1,7 +1,7 @@
 from langgraph.graph import END, START, StateGraph
 
-from nodes.narrator import NarratorNode
-from state import GraphState
+from src.nodes.narrator import NarratorNode
+from src.state import GraphState
 
 
 class Graph:

@@ -1,11 +1,10 @@
 from dspy.primitives.prediction import Prediction
-
-
 from dspy import Predict
-from core.model.message import Message
-from signatures.narrator import NarratorSignature
-from state import GraphState
-from lm import lm
+
+from src.core.model.message import Message
+from src.signatures.narrator import NarratorSignature
+from src.state import GraphState
+from src.lm import lm
 
 
 class NarratorNode:

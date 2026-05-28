@@ -1,5 +1,6 @@
 import arcadedb_embedded as arcadedb
 from arcadedb_embedded.graph import Vertex
+from rich.markup import escape
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
@@ -9,11 +10,15 @@ from textual.widgets import Collapsible, Input, RichLog, Static
 from textual.containers import Horizontal, Vertical
 from textual.worker import get_current_worker
 
+from src.core.model.message import Message
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
 from src.database.repository.location import LocationRepository
+from src.graph import Graph
+from src.state import GraphState
 from src.tui.widgets.chat_panel import ChatPanel
 from src.tui.modals.character_sheet import CharacterSheetModal
+
 
 class GameScreen(Screen):
     BINDINGS = [
@@ -26,6 +31,8 @@ class GameScreen(Screen):
         self._character = character
         self._db = database
         self._neighbors: list[Vertex] = []
+        self._message_history: list[Message] = []
+        self._graph = None
 
     def compose(self) -> ComposeResult:
         with Vertical(id="game-layout"):
@@ -42,6 +49,7 @@ class GameScreen(Screen):
         base = BaseRepository(self._db)
         self._location_repo = LocationRepository(base)
         self._character_repo = CharacterRepository(base)
+        self._graph = Graph().build().compile()
 
         location = self._character_repo.get_current_location(self._character)
         if location is None:
@@ -88,9 +96,30 @@ class GameScreen(Screen):
     def action_character_sheet(self) -> None:
         self.app.push_screen(CharacterSheetModal(self._character, self._character_repo))
 
-    @work(exclusive=True, thread=True)
-    def process_chat_message(self, text: str, channel: str) -> None:
+    @work(exclusive=True)
+    async def process_chat_message(self, text: str, channel: str) -> None:
+        if get_current_worker().is_cancelled or self._graph is None:
+            return
+        if channel != "ic":
+            return
+
+        human_msg = Message(role="human", content=text, name="")
+        state = GraphState(
+            message_history=self._message_history,
+            human_message=human_msg,
+            ai_message=None,
+        )
+
+        result = await self._graph.ainvoke(state)
+
         if get_current_worker().is_cancelled:
             return
 
+        self._message_history = result.get("message_history", self._message_history)
+        ai_msg = result.get("ai_message")
+        if ai_msg is None:
+            return
 
+        content = ai_msg.content if hasattr(ai_msg, "content") else ai_msg.get("content", "")
+        log = self.query_one("#chat-log", RichLog)
+        log.write(f"[bold #c9a84c]Narrator:[/bold #c9a84c] {escape(content)}")
