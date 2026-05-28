@@ -4,7 +4,7 @@ from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static, TextArea
 from textual.containers import Horizontal, Vertical, VerticalScroll
 
-from src.tui.widgets.value_stepper import ValueStepper, ValueStepperEvent
+from src.tui.widgets.value_stepper import ValueStepper
 
 _POOL_TOTAL: int = 5
 _TRAIT_MAX: int = 5
@@ -48,7 +48,7 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
                 yield Button(label="Cancel", id="btn-cancel", variant="default")
                 yield Button(label="Create", id="btn-create", variant="primary")
 
-    def on_value_stepper_event(self, event: ValueStepperEvent) -> None:
+    def on_value_stepper_changed(self, event: ValueStepper.Changed) -> None:
         if self._updating or event.stepper.id not in _ATTR_IDS:
             return
         total: int = sum(self.query_one(f"#{pid}", ValueStepper).value for pid in _ATTR_IDS)
@@ -80,7 +80,6 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
                 "neuroticism": self.query_one("#step-neuro", ValueStepper).value,
                 "conscientiousness": self.query_one("#step-consc", ValueStepper).value,
             })
-            # TODO: CharacterService.create_character(**result)
 
             
 

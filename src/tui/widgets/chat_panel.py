@@ -13,9 +13,8 @@ class ChatPanel(Widget):
     channel: reactive[str] = reactive("ic")
 
     class MessageSent(Message):
-        def __init__(self, panel: "ChatPanel", text: str, channel: str) -> None:
+        def __init__(self, text: str, channel: str) -> None:
             super().__init__()
-            self.panel = panel
             self.text = text
             self.channel = channel
 
@@ -56,5 +55,4 @@ class ChatPanel(Widget):
         tag = "[bold #c9a84c]IC[/bold #c9a84c]" if self.channel == "ic" else "[bold #7ec8e3]OOC[/bold #7ec8e3]"
         log.write(f"{tag} [bold]You:[/bold] {escape(text)}")
         input_widget.value = ""
-        self.post_message(self.MessageSent(self, text, self.channel))
-        # TODO: invoke narrator / GM pipeline and write response
+        self.post_message(self.MessageSent(text, self.channel))

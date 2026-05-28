@@ -1,11 +1,10 @@
 from dspy.primitives.prediction import Prediction
-
-
 from dspy import Predict
-from core.model.message import Message
-from signatures.narrator import NarratorSignature
-from state import GraphState
-from lm import lm
+
+from src.core.model.message import Message
+from src.signatures.narrator import NarratorSignature
+from src.state import GraphState
+from src.lm import lm
 
 
 class NarratorNode:
@@ -14,8 +13,13 @@ class NarratorNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
+        history = "\n".join(m.format() for m in state.message_history)
         prediction: Prediction = await self._program.aforward(
-            message_history=state.message_history,
+            character_name=state.character_name,
+            character_description=state.character_description,
+            location_name=state.location_name,
+            location_description=state.location_description,
+            message_history=history,
             human_message=state.human_message.content,
         )
 

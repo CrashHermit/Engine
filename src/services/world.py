@@ -1,4 +1,3 @@
-from src.database.repository.location import LocationRepository
 from src.database.repository.tile import TileRepository
 from src.database.repository.world import WorldRepository
 from src.database.repository.base import BaseRepository
@@ -12,7 +11,6 @@ from src.database.schema import SchemaManager
 class WorldService:
     def __init__(self, connection: DatabaseConnection) -> None:
         self._connection: DatabaseConnection = connection
-        self._location_repo: LocationRepository = LocationRepository(base=BaseRepository(database=self._connection.database))
 
     def create_world(
         self,

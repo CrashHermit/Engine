@@ -1,9 +1,3 @@
-from src.database.connection import DatabaseConnection
-
-
-from src.database.server import Server
-
-
 from textual.app import App
 from textual.binding import Binding
 
@@ -12,7 +6,7 @@ from src.database.server import Server
 from src.tui.screens.start import StartScreen
 
 
-class App(App):
+class GameApp(App):
     ALLOW_SELECT = False
 
     CSS_PATH = "theme.tcss"
@@ -37,12 +31,11 @@ class App(App):
             self.server.stop()
 
     def action_help(self) -> None:
-        self.action_show_help_panel()
-        # TODO: push HelpModal
+        pass  # TODO: push HelpModal
 
 
 def main() -> None:
-    App().run()
+    GameApp().run()
 
 
 if __name__ == "__main__":

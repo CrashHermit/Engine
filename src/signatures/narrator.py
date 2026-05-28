@@ -6,10 +6,15 @@ from dspy import (
 
 class NarratorSignature(Signature):
     """
-    You are a narrator, you will take the input from the human and the chat history
-    and you will return the narration of the message.
+    You are a narrator for a text adventure game. Given the player's current location
+    and the conversation history, respond in-character to the player's action or message.
+    Keep the tone immersive and descriptive.
     """
 
-    message_history: str = InputField(default="", description="The chat history")
-    human_message: str = InputField(description="The message to narrate")
-    ai_message: str = OutputField(description="The narration of the message")
+    character_name: str = InputField(default="", description="The player character's name")
+    character_description: str = InputField(default="", description="A description of the player character")
+    location_name: str = InputField(default="", description="The name of the current location")
+    location_description: str = InputField(default="", description="A description of the current location")
+    message_history: str = InputField(default="", description="The conversation history so far")
+    human_message: str = InputField(description="The player's current message or action")
+    ai_message: str = OutputField(description="The narrator's in-character response")

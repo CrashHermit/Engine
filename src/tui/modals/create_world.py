@@ -61,6 +61,7 @@ class CreateWorldModal(ModalScreen[dict[str, str] | None]):
             detail_radius_pct: int = int(self.query_one("#world-detail-radius", Input).value.strip())
         except ValueError:
             self.notify(message="Numeric fields must contain valid integers", severity="error")
+            return
 
         try:
             WorldService(self.app.connection).create_world(

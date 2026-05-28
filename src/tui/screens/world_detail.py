@@ -1,14 +1,19 @@
+import arcadedb_embedded as arcadedb
+from arcadedb_embedded.graph import Vertex
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, ListItem, ListView, Static
 from textual.containers import Horizontal, Vertical
+
 from src.tui.screens.game import GameScreen
 from src.tui.modals.create_character import CreateCharacterModal
 from src.tui.modals.confirm_modal import ConfirmModal
 from src.tui.widgets.pip_selector import PipSelector
+from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
-from arcadedb_embedded import Vertex
+from src.database.schema import SchemaManager
+
 
 class WorldDetailScreen(Screen):
     BINDINGS = [Binding("escape", "app.pop_screen", "Back")]
@@ -16,6 +21,8 @@ class WorldDetailScreen(Screen):
     def __init__(self, *, world_name: str) -> None:
         super().__init__()
         self.world_name: str = world_name
+        self._db: arcadedb.Database | None = None
+        self._character_repo: CharacterRepository | None = None
         self._characters: list[Vertex] = []
 
     def compose(self) -> ComposeResult:
@@ -27,9 +34,9 @@ class WorldDetailScreen(Screen):
             with Vertical(id="char-detail-panel"):
                 yield Label("—", id="char-name")
                 yield Static("", id="char-description")
-                yield PipSelector("Corpus", max_val=4, value=1, readonly=True, id="pip-corpus")
-                yield PipSelector("Mens", max_val=4, value=1, readonly=True, id="pip-mens")
-                yield PipSelector("Anima", max_val=4, value=1, readonly=True, id="pip-anima")
+                yield PipSelector("Corpus", max_val=4, value=0, readonly=True, id="pip-corpus")
+                yield PipSelector("Mens", max_val=4, value=0, readonly=True, id="pip-mens")
+                yield PipSelector("Anima", max_val=4, value=0, readonly=True, id="pip-anima")
         with Horizontal(id="detail-actions"):
             yield Button("Back", id="btn-back", variant="default")
             yield Button("New Character", id="btn-new-char", variant="default")
@@ -38,37 +45,77 @@ class WorldDetailScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self._characters: list[Vertex] = self._character_repository.get_user_characters()
+        try:
+            self._db = self.app.connection.open_database(self.world_name)
+            SchemaManager(self._db).ensure()
+            base = BaseRepository(self._db)
+            self._character_repo = CharacterRepository(base)
+            self._characters = self._character_repo.list_characters()
+        except Exception as e:
+            self.app.notify(f"Failed to open world: {e}", severity="error")
+            self.app.pop_screen()
+            return
         self._refresh_character_list()
 
-    def _selected_character_name(self) -> str | None:
-        item = self.query_one("#char-list", ListView).highlighted_child
-        if item is None:
+    def _selected_character(self) -> Vertex | None:
+        lv = self.query_one("#char-list", ListView)
+        idx = lv.index
+        if idx is None or not (0 <= idx < len(self._characters)):
             return None
-        return str(item.query_one(Label).content)
+        return self._characters[idx]
 
     def _clear_character_detail(self) -> None:
         self.query_one("#char-name", Label).update("—")
         self.query_one("#char-description", Static).update("No characters yet. Create one to begin.")
+        self.query_one("#pip-corpus", PipSelector).value = 0
+        self.query_one("#pip-mens", PipSelector).value = 0
+        self.query_one("#pip-anima", PipSelector).value = 0
 
     def _refresh_character_list(self) -> None:
         list_view = self.query_one("#char-list", ListView)
         list_view.clear()
-        for name in self._characters:
+        for character in self._characters:
+            name = character.get(name="name") or "Unnamed"
             list_view.append(ListItem(Label(name)))
         if not self._characters:
             self._clear_character_detail()
 
+    def _display_character(self, character: Vertex) -> None:
+        self.query_one("#char-name", Label).update(character.get(name="name") or "—")
+        self.query_one("#char-description", Static).update(character.get(name="description") or "")
+        try:
+            repo = self._character_repo
+            corpus = repo.get_attribute_value(repo.get_corpus(character))
+            mens = repo.get_attribute_value(repo.get_mens(character))
+            anima = repo.get_attribute_value(repo.get_anima(character))
+        except Exception:
+            corpus = mens = anima = 0
+        self.query_one("#pip-corpus", PipSelector).value = corpus
+        self.query_one("#pip-mens", PipSelector).value = mens
+        self.query_one("#pip-anima", PipSelector).value = anima
+
     def _on_create_character_dismissed(self, result: dict[str, int | str] | None) -> None:
-        if result:
-            name = str(result["name"])
-            self._characters.append(name)
-            self.app.world_character_data.setdefault(self.world_name, {})[name] = result
+        if result is None or self._character_repo is None:
+            return
+        try:
+            self._character_repo.create_full_character(
+                name=str(result["name"]),
+                description=str(result.get("description", "")),
+                corpus=int(result.get("corpus", 0)),
+                mens=int(result.get("mens", 0)),
+                anima=int(result.get("anima", 0)),
+                extraversion=int(result.get("extraversion", 1)),
+                openness=int(result.get("openness", 1)),
+                agreeableness=int(result.get("agreeableness", 1)),
+                neuroticism=int(result.get("neuroticism", 1)),
+                conscientiousness=int(result.get("conscientiousness", 1)),
+            )
+            self._characters = self._character_repo.list_characters()
             self._refresh_character_list()
+        except Exception as e:
+            self.app.notify(f"Failed to create character: {e}", severity="error")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        character = self._selected_character_name()
-
         if event.button.id == "btn-back":
             self.app.pop_screen()
         elif event.button.id == "btn-new-char":
@@ -76,39 +123,39 @@ class WorldDetailScreen(Screen):
                 CreateCharacterModal(), callback=self._on_create_character_dismissed
             )
         elif event.button.id == "btn-play":
-            self.app.push_screen(GameScreen(character=character))
+            character = self._selected_character()
+            if character is not None and self._db is not None:
+                self.app.push_screen(GameScreen(character=character, database=self._db))
         elif event.button.id == "btn-delete":
+            character = self._selected_character()
+            if character is None:
+                return
+            name = character.get(name="name") or "this character"
             self.app.push_screen(
                 ConfirmModal(
                     title="Delete Character?",
-                    message=f'Are you sure you want to delete "{character}"?',
+                    message=f'Are you sure you want to delete "{name}"?',
                 ),
                 callback=lambda confirmed: self._on_delete_character_confirmed(character, confirmed),
             )
 
-    def _on_delete_character_confirmed(self, name: str, confirmed: bool | None) -> None:
-        if not confirmed:
+    def _on_delete_character_confirmed(self, character: Vertex, confirmed: bool | None) -> None:
+        if not confirmed or self._character_repo is None:
             return
-        # TODO: CharacterRepository.delete() when characters are persisted
-        if name in self._characters:
-            self._characters.remove(name)
-        self.app.world_character_data.get(self.world_name, {}).pop(name, None)
-        self._refresh_character_list()
-        self.app.notify(message=f'Deleted character "{name}"')
+        try:
+            name = character.get(name="name") or "character"
+            self._character_repo.delete_character(character)
+            self._characters = self._character_repo.list_characters()
+            self._refresh_character_list()
+            self.app.notify(f'Deleted "{name}"')
+        except Exception as e:
+            self.app.notify(f"Failed to delete character: {e}", severity="error")
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         if event.item is None:
+            self._clear_character_detail()
             return
-        name = str(event.item.query_one(Label).content)
-        self.query_one("#char-name", Label).update(name)
-        char = self.app.world_character_data.get(self.world_name, {}).get(name)
-        if char:
-            self.query_one("#char-description", Static).update(char.get("description", ""))
-            self.query_one("#pip-corpus", PipSelector).value = char.get("corpus", 1)
-            self.query_one("#pip-mens", PipSelector).value = char.get("mens", 1)
-            self.query_one("#pip-anima", PipSelector).value = char.get("anima", 1)
-        else:
-            self.query_one("#char-description", Static).update("")
-            self.query_one("#pip-corpus", PipSelector).value = 1
-            self.query_one("#pip-mens", PipSelector).value = 1
-            self.query_one("#pip-anima", PipSelector).value = 1
+        lv = self.query_one("#char-list", ListView)
+        idx = lv.index
+        if idx is not None and 0 <= idx < len(self._characters):
+            self._display_character(self._characters[idx])
