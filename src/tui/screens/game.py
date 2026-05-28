@@ -6,7 +6,7 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.events import Key
 from textual.screen import Screen
-from textual.widgets import Collapsible, Input, RichLog, Static
+from textual.widgets import Collapsible, Input, RichLog
 from textual.containers import Horizontal, Vertical
 from textual.worker import get_current_worker
 
@@ -40,10 +40,6 @@ class GameScreen(Screen):
                 with Collapsible(title="Scene", id="scene-collapsible"):
                     yield RichLog(id="scene-log", highlight=True, markup=True, wrap=True)
                 yield ChatPanel(id="chat-panel")
-            yield Static(
-                "HP: — / —  |  Status: Normal  |  Location: —",
-                id="status-bar",
-            )
 
     def on_mount(self) -> None:
         base = BaseRepository(self._db)

@@ -188,12 +188,6 @@ ListView > ListItem.--highlight {
     width: 1fr;
 }
 
-#status-bar {
-    height: 1;
-    background: $da-panel;
-    color: $da-gold;
-    padding: 0 1;
-}
 
 /* ── Chat Panel Widget ────────────────────────────── */
 
