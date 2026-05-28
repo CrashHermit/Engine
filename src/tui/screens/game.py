@@ -116,35 +116,50 @@ class GameScreen(Screen):
         if get_current_worker().is_cancelled or self._graph is None:
             return
 
-        human_msg = Message(role="human", content=text, name="")
-        loc = self._current_location
-        state = GraphState(
-            message_history=self._message_history,
-            intent_alignment_history=self._intent_alignment_history,
-            human_message=human_msg,
-            ai_message=None,
-            question=None,
-            is_intent_alignment_achieved=None,
-            character_description=self._character.get(name="description") or "",
-            location_description=loc.get(name="description") or "" if loc else "",
-            entities_at_location=self._entities_at_location,
-        )
-
-        result = await self._graph.ainvoke(state)
-
-        if get_current_worker().is_cancelled:
-            return
-
+        chat_panel = self.query_one(ChatPanel)
         log = self.query_one("#chat-log", RichLog)
+        chat_panel.set_processing(True)
 
-        ai_msg = result.get("ai_message")
-        question = result.get("question")
+        try:
+            human_msg = Message(role="human", content=text, name="")
+            loc = self._current_location
+            state = GraphState(
+                message_history=self._message_history,
+                intent_alignment_history=self._intent_alignment_history,
+                human_message=human_msg,
+                ai_message=None,
+                question=None,
+                is_intent_alignment_achieved=None,
+                character_description=self._character.get(name="description") or "",
+                location_description=loc.get(name="description") or "" if loc else "",
+                entities_at_location=self._entities_at_location,
+            )
 
-        if ai_msg is not None:
-            self._message_history = result.get("message_history", self._message_history)
-            self._intent_alignment_history = []
-            content = ai_msg.content if hasattr(ai_msg, "content") else ai_msg.get("content", "")
-            log.write(f"[bold #c9a84c]Narrator:[/bold #c9a84c] {escape(content)}")
-        elif question:
-            self._intent_alignment_history = result.get("intent_alignment_history", self._intent_alignment_history)
-            log.write(f"[bold #7ec8e3]Intent Alignment:[/bold #7ec8e3] {escape(question)}")
+            result = await self._graph.ainvoke(state)
+
+            if get_current_worker().is_cancelled:
+                return
+
+            aligned = result.get("is_intent_alignment_achieved")
+            if aligned is True:
+                log.write("[dim]→ intent clear[/dim]")
+            elif aligned is False:
+                log.write("[dim]→ clarifying intent[/dim]")
+
+            ai_msg = result.get("ai_message")
+            question = result.get("question")
+
+            if ai_msg is not None:
+                self._message_history = result.get("message_history", self._message_history)
+                self._intent_alignment_history = []
+                content = ai_msg.content if hasattr(ai_msg, "content") else ai_msg.get("content", "")
+                log.write(f"[bold #c9a84c]Narrator:[/bold #c9a84c] {escape(content)}")
+            elif question:
+                self._intent_alignment_history = result.get("intent_alignment_history", self._intent_alignment_history)
+                log.write(f"[bold #7ec8e3]Intent Alignment:[/bold #7ec8e3] {escape(question)}")
+            else:
+                log.write("[dim red]No response from graph.[/dim red]")
+        except Exception as e:
+            log.write(f"[bold red]Error:[/bold red] {escape(str(e))}")
+        finally:
+            chat_panel.set_processing(False)
