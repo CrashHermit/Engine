@@ -92,6 +92,6 @@ class GameScreen(Screen):
     @work(exclusive=True, thread=True)
     def process_chat_message(self, text: str, channel: str) -> None:
         if get_current_worker().is_cancelled:
-        	return
+            return
 
 
