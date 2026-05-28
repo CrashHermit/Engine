@@ -1,0 +1,66 @@
+/* Dark Adventures — Base Variables & Global Elements */
+
+$da-bg: #0d0b0e;
+$da-panel: #150f1a;
+$da-gold: #c9a84c;
+$da-text: #c4b8d4;
+$da-danger: #c0392b;
+$da-muted: #6b5c7e;
+
+Screen {
+    background: $da-bg;
+    color: $da-text;
+}
+
+Header {
+    background: $da-panel;
+    color: $da-gold;
+}
+
+Footer {
+    background: $da-panel;
+    color: $da-muted;
+}
+
+Button.-primary {
+    background: $da-gold;
+    color: $da-bg;
+}
+
+Button.-error {
+    background: $da-danger;
+    color: white;
+}
+
+Input {
+    border: tall $da-muted;
+    background: $da-panel;
+    color: $da-text;
+}
+
+Input:focus {
+    border: tall $da-gold;
+}
+
+TextArea {
+    border: tall $da-muted;
+    background: $da-panel;
+    color: $da-text;
+    height: 5;
+    margin-bottom: 1;
+}
+
+TextArea:focus {
+    border: tall $da-gold;
+}
+
+ListView {
+    border: tall $da-muted;
+    background: $da-panel;
+    height: 1fr;
+}
+
+ListView > ListItem.--highlight {
+    background: $da-panel;
+    color: $da-gold;
+}

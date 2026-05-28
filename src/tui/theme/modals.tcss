@@ -1,0 +1,168 @@
+/* Dark Adventures — Modals & Character Sheet */
+
+/* ── Modals ───────────────────────────────────────── */
+
+CreateWorldModal {
+    align: center middle;
+}
+
+CreateWorldModal > VerticalScroll {
+    background: $da-panel;
+    border: solid $da-gold;
+    padding: 2 3;
+    width: 65%;
+    height: auto;
+    max-height: 90%;
+}
+
+CreateCharacterModal {
+    align: center middle;
+}
+
+CreateCharacterModal > VerticalScroll {
+    background: $da-panel;
+    border: solid $da-gold;
+    padding: 2 3;
+    width: 65%;
+    height: auto;
+    max-height: 90%;
+}
+
+ConfirmModal {
+    align: center middle;
+}
+
+ConfirmModal > Vertical {
+    background: $da-panel;
+    border: solid $da-gold;
+    padding: 2 3;
+    width: 50%;
+    height: auto;
+}
+
+#confirm-message {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+CharacterSheetModal {
+    align: center middle;
+}
+
+CharacterSheetModal > Vertical {
+    background: $da-bg;
+    border: solid $da-gold;
+    padding: 1 2;
+    width: 95%;
+    height: 95%;
+    overflow-y: auto;
+}
+
+#modal-title,
+#sheet-title {
+    color: $da-gold;
+    text-style: bold;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 2;
+}
+
+#modal-actions {
+    margin-top: 1;
+    align: center middle;
+    height: auto;
+}
+
+#modal-actions Button {
+    margin-left: 1;
+}
+
+/* ── Character Sheet ──────────────────────────────── */
+
+#character-sheet {
+    layout: vertical;
+    overflow-y: auto;
+}
+
+#sheet-identity {
+    margin-bottom: 2;
+    height: auto;
+}
+
+#sheet-left {
+    width: 55%;
+    padding-right: 2;
+    layout: vertical;
+}
+
+#sheet-right {
+    width: 45%;
+    layout: vertical;
+}
+
+#sheet-name {
+    color: $da-gold;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#sheet-description {
+    margin-bottom: 1;
+}
+
+#sheet-condition,
+#sheet-equipment,
+#sheet-inventory {
+    margin-bottom: 2;
+    border-left: solid $da-muted;
+    padding-left: 1;
+}
+
+#condition-title,
+#equipment-title,
+#inventory-title,
+#personality-title,
+#attrs-title {
+    color: $da-gold;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#personality-traits {
+    margin-bottom: 2;
+    height: auto;
+}
+
+#personality-traits PipSelector {
+    width: 1fr;
+}
+
+#char-attributes-section,
+#char-personality-section {
+    border: solid $da-muted;
+    padding: 1 2;
+    margin: 1 0 2 0;
+    height: auto;
+    background: $da-bg;
+}
+
+#char-attributes-section #attr-label,
+#char-personality-section #trait-label {
+    color: $da-gold;
+    text-style: bold;
+    margin-top: 0;
+    margin-bottom: 1;
+}
+
+#attr-label,
+#trait-label {
+    color: $da-gold;
+    text-style: bold;
+    margin-top: 1;
+    margin-bottom: 1;
+}
+
+#pool-display {
+    color: $da-muted;
+    margin-bottom: 1;
+}
