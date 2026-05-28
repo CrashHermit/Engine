@@ -4,7 +4,6 @@ from src.core.model.character import CharacterData
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
-from src.database.repository.location import LocationRepository
 from src.database.repository.world import WorldRepository
 
 # (VertexType, EdgeType) for the three top-level attribute categories.
@@ -30,12 +29,10 @@ class CharacterService:
         base: BaseRepository,
         characters: CharacterRepository,
         worlds: WorldRepository,
-        locations: LocationRepository,
     ) -> None:
         self._base = base
         self._characters = characters
         self._worlds = worlds
-        self._locations = locations
 
     ############################################################################
     # Reads
@@ -47,11 +44,6 @@ class CharacterService:
     def get_character(self, character_id: str) -> CharacterData | None:
         vertex = self._characters.get_character(character_id)
         return self._to_data(vertex) if vertex is not None else None
-
-    def get_current_location_id(self, character_id: str) -> str | None:
-        character = self._require(character_id)
-        location = self._characters.get_current_location(character)
-        return location.get(name="id") if location is not None else None
 
     ############################################################################
     # Writes
@@ -109,14 +101,6 @@ class CharacterService:
         character = self._require(character_id)
         with self._base.transaction():
             self._characters.delete_character(character)
-
-    def move_character(self, character_id: str, location_id: str) -> None:
-        character = self._require(character_id)
-        location = self._locations.get_location(location_id)
-        if location is None:
-            raise ValueError(f"Location not found: {location_id}")
-        with self._base.transaction():
-            self._characters.move_character(character, location)
 
     ############################################################################
     # Internals

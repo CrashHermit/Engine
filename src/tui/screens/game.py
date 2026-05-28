@@ -44,8 +44,7 @@ class GameScreen(Screen):
     def on_mount(self) -> None:
         self._graph = MainGraphBuilder().build()
 
-        location_id = self._services.character.get_current_location_id(self._character.id)
-        state = self._services.location.get_state(location_id) if location_id else None
+        state = self._services.location.get_state_for_character(self._character.id)
         if state is None:
             self.app.notify("This world has no starting location.", severity="error")
             self.app.pop_screen()
@@ -64,8 +63,7 @@ class GameScreen(Screen):
                 self._move(neighbors[index].id)
 
     def _move(self, destination_id: str) -> None:
-        self._services.character.move_character(self._character.id, destination_id)
-        state = self._services.location.get_state(destination_id)
+        state = self._services.location.move_character(self._character.id, destination_id)
         if state is not None:
             self._show_location(state)
 

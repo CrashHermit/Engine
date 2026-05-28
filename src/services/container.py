@@ -27,6 +27,6 @@ class ServiceContainer:
         locations = LocationRepository(base)
         messages = MessageRepository(base)
 
-        self.character = CharacterService(base, characters, worlds, locations)
-        self.location = LocationService(locations)
-        self.message = MessageService(messages)
+        self.character = CharacterService(base, characters, worlds)
+        self.location = LocationService(base, locations, characters)
+        self.message = MessageService(base, messages)

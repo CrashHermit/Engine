@@ -65,11 +65,11 @@ class WorldService:
             )
             tile_repo.create_tiles(world_data.tiles)
 
-            start = self._persist_dungeon(location_repo, world_data.dungeon)
+            start = self._seed_dungeon(location_repo, world_data.dungeon)
             if start is not None:
                 base.create_edge(type_name=EdgeType.HAS_START, source=world, target=start)
 
-    def _persist_dungeon(
+    def _seed_dungeon(
         self, location_repo: LocationRepository, dungeon: DungeonData | None
     ) -> Vertex | None:
         """Write the generated dungeon and return its center (the start location)."""
