@@ -2,9 +2,9 @@ import uuid
 
 from arcadedb_embedded.graph import Vertex
 
-from core.model.database import EdgeType, VertexType
-from core.model.message import Message
-from database.repository.base import BaseRepository
+from src.core.model.database import EdgeType, VertexType
+from src.core.model.message import Message
+from src.database.repository.base import BaseRepository
 
 
 class MessageRepository:

@@ -9,8 +9,7 @@ class WorldRepository:
 
     # PROTOTYPE START
     def get_start_location(self) -> Vertex | None:
-        results = self._base._database.query("sql", f"SELECT FROM {VertexType.WORLD}")
-        worlds = [r.get_vertex() for r in results if r.get_vertex() is not None]
+        worlds = self._base.list_vertices(VertexType.WORLD)
         if not worlds:
             return None
         edges = worlds[0].get_out_edges(EdgeType.HAS_START)

@@ -3,6 +3,7 @@ from textual.binding import Binding
 
 from src.database.connection import DatabaseConnection
 from src.database.server import Server
+from src.services.factory import WorldSessionFactory
 from src.tui.screens.start import StartScreen
 
 
@@ -24,6 +25,7 @@ class GameApp(App):
         self.server: Server = Server()
         self.server.start()
         self.connection: DatabaseConnection = DatabaseConnection(self.server)
+        self.factory: WorldSessionFactory = WorldSessionFactory(self.connection)
         self.push_screen(StartScreen())
 
     def on_unmount(self) -> None:

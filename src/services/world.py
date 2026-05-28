@@ -1,16 +1,23 @@
+from arcadedb_embedded.core import Database
+from arcadedb_embedded.graph import Vertex
+
+from src.core.model.database import EdgeType
+from src.database.connection import DatabaseConnection
+from src.database.repository.base import BaseRepository
 from src.database.repository.location import LocationRepository
 from src.database.repository.tile import TileRepository
 from src.database.repository.world import WorldRepository
-from src.database.repository.base import BaseRepository
-from arcadedb_embedded.core import Database
-from src.core.model.database import EdgeType
-from src.worldgen.data import WorldData
-from src.worldgen.pipeline import WorldgenPipeline
-from src.database.connection import DatabaseConnection
 from src.database.schema import SchemaManager
+from src.worldgen.data import DungeonData, WorldData
+from src.worldgen.pipeline import WorldgenPipeline
 
 
 class WorldService:
+    """Bootstrap service: creates a brand-new world database, runs worldgen, and
+    persists the generated world. Unlike in-session services it owns database and
+    schema creation, so it is constructed from the DatabaseConnection directly
+    rather than from a ServiceContainer."""
+
     def __init__(self, connection: DatabaseConnection) -> None:
         self._connection: DatabaseConnection = connection
 
@@ -35,9 +42,7 @@ class WorldService:
             precipitation=precipitation,
             elevation=elevation,
         )
-
-        pipeline: WorldgenPipeline = WorldgenPipeline()
-        world_data: WorldData = pipeline.run(data=world_data)
+        world_data = WorldgenPipeline().run(data=world_data)
 
         db: Database = self._connection.create_database(name)
         SchemaManager(database=db).ensure()
@@ -45,9 +50,10 @@ class WorldService:
         base: BaseRepository = BaseRepository(database=db)
         world_repo: WorldRepository = WorldRepository(base=base)
         tile_repo: TileRepository = TileRepository(base=base)
+        location_repo: LocationRepository = LocationRepository(base=base)
 
         with base.transaction():
-            world_repo.create_world(
+            world = world_repo.create_world(
                 name=name,
                 description=description,
                 seed=seed,
@@ -59,29 +65,39 @@ class WorldService:
             )
             tile_repo.create_tiles(world_data.tiles)
 
-    # PROTOTYPE START
-    def create_test_world(self) -> None:
-        name = "Test World"
-        db: Database = self._connection.create_database(name)
-        SchemaManager(database=db).ensure()
+            start = self._persist_dungeon(location_repo, world_data.dungeon)
+            if start is not None:
+                base.create_edge(type_name=EdgeType.HAS_START, source=world, target=start)
 
-        base: BaseRepository = BaseRepository(database=db)
-        world_repo: WorldRepository = WorldRepository(base=base)
-        location_repo: LocationRepository = LocationRepository(base=base)
+    def _persist_dungeon(
+        self, location_repo: LocationRepository, dungeon: DungeonData | None
+    ) -> Vertex | None:
+        """Write the generated dungeon and return its center (the start location)."""
+        if dungeon is None or not dungeon.locations:
+            return None
 
-        with base.transaction():
-            world = world_repo.create_world(
-                name=name,
-                description="A small test dungeon for development.",
-                seed=1234567890,
-                size=7,
-                biome="dungeon",
-                temperature=0.0,
-                precipitation=0.0,
-                elevation=0.0,
+        nodes = [
+            location_repo.create_location(
+                name=loc.name,
+                description=loc.description,
+                is_center=loc.is_center,
             )
-            center = location_repo.create_start_location()
-            base.create_edge(type_name=EdgeType.HAS_START, source=world, target=center)
-    # PROTOTYPE END
+            for loc in dungeon.locations
+        ]
 
-        
+        for a, b in dungeon.connections:
+            location_repo.connect_locations(nodes[a], nodes[b])
+
+        for node, loc in zip(nodes, dungeon.locations):
+            for entity in loc.entities:
+                location_repo.create_entity(
+                    location=node,
+                    name=entity.name,
+                    description=entity.description,
+                    scene_position=entity.scene_position,
+                )
+
+        for node, loc in zip(nodes, dungeon.locations):
+            if loc.is_center:
+                return node
+        return nodes[0]

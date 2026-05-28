@@ -1,12 +1,10 @@
-from arcadedb_embedded.graph import Vertex
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, Static
 from textual.containers import Horizontal, Vertical
 
-from src.core.model.database import EdgeType
-from src.database.repository.character import CharacterRepository
+from src.core.model.character import CharacterData
 from src.tui.widgets.pip_selector import PipSelector
 
 
@@ -18,10 +16,9 @@ class CharacterSheetModal(ModalScreen[None]):
         Binding("c", "dismiss", "Close"),
     ]
 
-    def __init__(self, character: Vertex, repo: CharacterRepository) -> None:
+    def __init__(self, character: CharacterData) -> None:
         super().__init__()
         self._character = character
-        self._repo = repo
 
     def compose(self) -> ComposeResult:
         with Vertical(id="character-sheet"):
@@ -57,28 +54,18 @@ class CharacterSheetModal(ModalScreen[None]):
             yield Button("Close", id="btn-close", variant="default")
 
     def on_mount(self) -> None:
-        self.query_one("#sheet-name", Label).update(self._character.get(name="name") or "—")
-        self.query_one("#sheet-description", Static).update(self._character.get(name="description") or "")
+        self.query_one("#sheet-name", Label).update(self._character.name or "—")
+        self.query_one("#sheet-description", Static).update(self._character.description or "")
 
-        try:
-            corpus = self._repo.get_attribute_value(self._repo.get_corpus(self._character))
-            mens = self._repo.get_attribute_value(self._repo.get_mens(self._character))
-            anima = self._repo.get_attribute_value(self._repo.get_anima(self._character))
-            self.query_one("#pip-corpus", PipSelector).value = corpus
-            self.query_one("#pip-mens", PipSelector).value = mens
-            self.query_one("#pip-anima", PipSelector).value = anima
-        except Exception:
-            pass
+        self.query_one("#pip-corpus", PipSelector).value = self._character.corpus
+        self.query_one("#pip-mens", PipSelector).value = self._character.mens
+        self.query_one("#pip-anima", PipSelector).value = self._character.anima
 
-        try:
-            personality = self._repo.get_personality(self._character)
-            self.query_one("#pip-extra", PipSelector).value = self._repo.get_trait_value(personality, EdgeType.HAS_EXTRAVERSION)
-            self.query_one("#pip-open", PipSelector).value = self._repo.get_trait_value(personality, EdgeType.HAS_OPENNESS)
-            self.query_one("#pip-agree", PipSelector).value = self._repo.get_trait_value(personality, EdgeType.HAS_AGREEABLENESS)
-            self.query_one("#pip-neuro", PipSelector).value = self._repo.get_trait_value(personality, EdgeType.HAS_NEUROTICISM)
-            self.query_one("#pip-consc", PipSelector).value = self._repo.get_trait_value(personality, EdgeType.HAS_CONSCIENTIOUSNESS)
-        except Exception:
-            pass
+        self.query_one("#pip-extra", PipSelector).value = self._character.extraversion
+        self.query_one("#pip-open", PipSelector).value = self._character.openness
+        self.query_one("#pip-agree", PipSelector).value = self._character.agreeableness
+        self.query_one("#pip-neuro", PipSelector).value = self._character.neuroticism
+        self.query_one("#pip-consc", PipSelector).value = self._character.conscientiousness
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-close":

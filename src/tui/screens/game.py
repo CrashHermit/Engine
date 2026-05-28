@@ -1,5 +1,3 @@
-import arcadedb_embedded as arcadedb
-from arcadedb_embedded.graph import Vertex
 from rich.markup import escape
 from textual import work
 from textual.app import ComposeResult
@@ -11,17 +9,15 @@ from textual.containers import Horizontal, Vertical
 from textual.worker import get_current_worker
 
 
+from src.core.model.character import CharacterData
+from src.core.model.location import LocationState
 from src.core.model.message import Message
-from src.database.repository.base import BaseRepository
-from src.database.repository.character import CharacterRepository
-from src.database.repository.location import LocationRepository
-from src.database.repository.world import WorldRepository
 from src.graph.main_graph import MainGraphBuilder
+from src.services.container import ServiceContainer
 from src.state import GraphState
 from src.tui.widgets.chat_panel import ChatPanel
 from src.tui.widgets.left_panel import LeftPanel
 from src.tui.modals.character_sheet import CharacterSheetModal
-
 
 
 class GameScreen(Screen):
@@ -30,13 +26,11 @@ class GameScreen(Screen):
         Binding("c", "character_sheet", "Character Sheet"),
     ]
 
-    def __init__(self, *, character: Vertex, database: arcadedb.Database) -> None:
+    def __init__(self, *, character: CharacterData, services: ServiceContainer) -> None:
         super().__init__()
         self._character = character
-        self._db = database
-        self._neighbors: list[Vertex] = []
-        self._current_location: Vertex | None = None
-        self._entities_at_location: list[str] = []
+        self._services = services
+        self._location_state: LocationState | None = None
         self._message_history: list[Message] = []
         self._intent_alignment_history: list[Message] = []
         self._graph = None
@@ -45,71 +39,56 @@ class GameScreen(Screen):
         with Vertical(id="game-layout"):
             with Horizontal(id="game-panels"):
                 yield LeftPanel(id="left-panel")
-                yield ChatPanel(character_name=self._character.get(name="name") or "You", id="chat-panel")
+                yield ChatPanel(character_name=self._character.name or "You", id="chat-panel")
 
     def on_mount(self) -> None:
-        base = BaseRepository(self._db)
-        self._location_repo = LocationRepository(base)
-        self._character_repo = CharacterRepository(base)
-        self._world_repo = WorldRepository(base)
         self._graph = MainGraphBuilder().build()
 
-        location = self._character_repo.get_current_location(self._character)
-        if location is None:
-            location = self._world_repo.get_start_location()
-            if location is not None:
-                self._character_repo.place_character(self._character, location)
-        if location is None:
+        location_id = self._services.character.get_current_location_id(self._character.id)
+        state = self._services.location.get_state(location_id) if location_id else None
+        if state is None:
             self.app.notify("This world has no starting location.", severity="error")
             self.app.pop_screen()
             return
-        self._show_location(location)
+        self._show_location(state)
 
     def on_key(self, event: Key) -> None:
         chat_input = self.query_one("#msg-input", Input)
         if chat_input.has_focus:
             return
-        if event.key.isdigit():
+        if event.key.isdigit() and self._location_state is not None:
             index = int(event.key) - 1
-            if 0 <= index < len(self._neighbors):
+            neighbors = self._location_state.neighbors
+            if 0 <= index < len(neighbors):
                 event.stop()
-                self._move(self._neighbors[index])
+                self._move(neighbors[index].id)
 
-    def _move(self, destination: Vertex) -> None:
-        self._character_repo.move_character(self._character, destination)
-        self._show_location(destination)
+    def _move(self, destination_id: str) -> None:
+        self._services.character.move_character(self._character.id, destination_id)
+        state = self._services.location.get_state(destination_id)
+        if state is not None:
+            self._show_location(state)
 
-    def _show_location(self, location: Vertex) -> None:
-        self._current_location = location
-        self._neighbors = self._location_repo.get_neighbors(location)
-        entities = self._location_repo.get_entities(location)
-        self._entities_at_location = [
-            f"{e.get(name='name')}: {e.get(name='description')}. Location: {e.get(name='scene_position')}"
-            for e in entities
-        ]
-        name = location.get(name="name") or "Unknown"
-        description = location.get(name="description") or ""
+    def _show_location(self, state: LocationState) -> None:
+        self._location_state = state
+        location = state.location
         exits = " · ".join(
-            f"[{i + 1}] {n.get(name='name')}"
-            for i, n in enumerate(self._neighbors)
+            f"[{i + 1}] {n.name}" for i, n in enumerate(state.neighbors)
         ) or "No exits."
-        display_entities = [
-            f"{e.get(name='name')} — {e.get(name='scene_position')}"
-            for e in entities
-        ]
+        display_entities = [f"{e.name} — {e.scene_position}" for e in state.entities]
 
         panel = self.query_one(LeftPanel)
-        panel.write_scene(name, description, exits, display_entities)
+        panel.write_scene(location.name, location.description, exits, display_entities)
         panel.update_info(
-            character_name=self._character.get(name="name") or "—",
-            location_name=name,
+            character_name=self._character.name or "—",
+            location_name=location.name,
         )
 
     def on_chat_panel_message_sent(self, event: ChatPanel.MessageSent) -> None:
         self.process_chat_message(event.text)
 
     def action_character_sheet(self) -> None:
-        self.app.push_screen(CharacterSheetModal(self._character, self._character_repo))
+        self.app.push_screen(CharacterSheetModal(self._character))
 
     @work(exclusive=True)
     async def process_chat_message(self, text: str) -> None:
@@ -122,20 +101,28 @@ class GameScreen(Screen):
 
         try:
             human_msg = Message(role="human", content=text, name="")
-            loc = self._current_location
-            state = GraphState(
+            state = self._location_state
+            entities_at_location = (
+                [
+                    f"{e.name}: {e.description}. Location: {e.scene_position}"
+                    for e in state.entities
+                ]
+                if state is not None
+                else []
+            )
+            graph_state = GraphState(
                 message_history=self._message_history,
                 intent_alignment_history=self._intent_alignment_history,
                 human_message=human_msg,
                 ai_message=None,
                 question=None,
                 is_intent_alignment_achieved=None,
-                character_description=self._character.get(name="description") or "",
-                location_description=loc.get(name="description") or "" if loc else "",
-                entities_at_location=self._entities_at_location,
+                character_description=self._character.description or "",
+                location_description=state.location.description if state else "",
+                entities_at_location=entities_at_location,
             )
 
-            result = await self._graph.ainvoke(state)
+            result = await self._graph.ainvoke(graph_state)
 
             if get_current_worker().is_cancelled:
                 return
