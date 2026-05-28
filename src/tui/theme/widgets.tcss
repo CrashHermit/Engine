@@ -1,0 +1,142 @@
+/* Dark Adventures — Widgets */
+
+/* ── Left Panel Widget ───────────────────────────────── */
+
+LeftPanel {
+    width: 40%;
+    height: 100%;
+    border-right: solid $da-gold;
+}
+
+#left-toggle {
+    height: 3;
+    padding: 0 1;
+    border-bottom: solid $da-muted;
+    align: left middle;
+}
+
+#left-toggle Button {
+    width: auto;
+    min-width: 10;
+    margin-right: 1;
+}
+
+#left-switcher {
+    height: 1fr;
+}
+
+#scene {
+    height: 1fr;
+    padding: 1;
+}
+
+#character {
+    height: 1fr;
+    padding: 1 2;
+}
+
+#info-char-name {
+    margin-bottom: 1;
+    color: $da-text;
+}
+
+#info-location {
+    color: $da-muted;
+}
+
+#chat-panel {
+    width: 1fr;
+}
+
+/* ── Chat Panel Widget ────────────────────────────── */
+
+ChatPanel {
+    height: 100%;
+    layout: vertical;
+}
+
+#chat-layout {
+    height: 100%;
+    layout: vertical;
+}
+
+#chat-log {
+    height: 1fr;
+    padding: 1;
+    background: $da-bg;
+}
+
+#input-bar {
+    height: 3;
+    padding: 0 1;
+    border-top: solid $da-muted;
+    align: left middle;
+}
+
+#msg-input {
+    width: 1fr;
+    margin-right: 1;
+}
+
+/* ── Pip Selector Widget ──────────────────────────── */
+
+PipSelector {
+    height: 1;
+    padding: 0 1;
+    margin-bottom: 1;
+    background: $da-bg;
+}
+
+PipSelector:focus {
+    background: $da-panel;
+}
+
+/* ── Value Stepper Widget ─────────────────────────── */
+
+ValueStepper {
+    height: 1;
+    layout: horizontal;
+    align: left middle;
+    margin-bottom: 1;
+}
+
+ValueStepper .stepper-label {
+    width: 18;
+}
+
+ValueStepper .stepper-controls {
+    width: 1fr;
+    align: center middle;
+}
+
+ValueStepper .stepper-button {
+    width: 3;
+    min-width: 3;
+    height: 1;
+    padding: 0;
+    content-align: center middle;
+    margin: 0 1;
+    background: $da-panel;
+    color: $da-text;
+}
+
+ValueStepper .stepper-button:hover {
+    background: $da-muted;
+    color: $da-gold;
+}
+
+ValueStepper .stepper-value {
+    width: 3;
+    content-align: center middle;
+    color: $da-text;
+}
+
+ValueStepper .stepper-button.-disabled {
+    color: $da-muted;
+    background: $da-bg;
+}
+
+ValueStepper .stepper-button.-disabled:hover {
+    color: $da-muted;
+    background: $da-bg;
+}

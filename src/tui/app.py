@@ -9,7 +9,12 @@ from src.tui.screens.start import StartScreen
 class GameApp(App):
     ALLOW_SELECT = False
 
-    CSS_PATH = "theme.tcss"
+    CSS_PATH = [
+        "theme/base.tcss",
+        "theme/screens.tcss",
+        "theme/widgets.tcss",
+        "theme/modals.tcss",
+    ]
     TITLE = "Dark Adventures"
     BINDINGS = [
         Binding("ctrl+q", "quit", "Quit"),

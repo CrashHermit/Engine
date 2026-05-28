@@ -1,0 +1,103 @@
+/* Dark Adventures — Screen Layouts */
+
+/* ── Start Screen ─────────────────────────────────── */
+
+#start-menu {
+    layout: vertical;
+    width: auto;
+    height: auto;
+}
+
+#start-title {
+    color: $da-gold;
+    text-style: bold;
+    text-align: center;
+    width: 100%;
+    margin-bottom: 3;
+}
+
+#start-menu Button {
+    width: 30;
+    margin: 1 0;
+}
+
+/* ── World List Screen ────────────────────────────── */
+
+#world-list-container {
+    padding: 1 2;
+    height: 1fr;
+    layout: vertical;
+}
+
+#worlds-title {
+    color: $da-gold;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#world-list-footer {
+    height: 3;
+    align: left middle;
+    padding-top: 1;
+}
+
+#world-list-footer Button {
+    margin-right: 1;
+}
+
+/* ── World Detail Screen ──────────────────────────── */
+
+#detail-panels {
+    height: 1fr;
+}
+
+#char-list-panel {
+    width: 35%;
+    border-right: solid $da-gold;
+    padding: 1;
+    layout: vertical;
+}
+
+#char-list-title {
+    color: $da-gold;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#char-detail-panel {
+    width: 65%;
+    padding: 1 2;
+    layout: vertical;
+}
+
+#char-name {
+    color: $da-gold;
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+#char-description {
+    margin-bottom: 2;
+}
+
+#detail-actions {
+    height: auto;
+    padding: 1;
+    align: left middle;
+    border-top: solid $da-muted;
+}
+
+#detail-actions Button {
+    margin-right: 1;
+}
+
+/* ── Game Screen ──────────────────────────────────── */
+
+#game-layout {
+    height: 100%;
+    layout: vertical;
+}
+
+#game-panels {
+    height: 1fr;
+}

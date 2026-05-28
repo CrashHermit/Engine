@@ -42,7 +42,7 @@ class GameScreen(Screen):
         with Vertical(id="game-layout"):
             with Horizontal(id="game-panels"):
                 yield LeftPanel(id="left-panel")
-                yield ChatPanel(id="chat-panel")
+                yield ChatPanel(character_name=self._character.get(name="name") or "You", id="chat-panel")
 
     def on_mount(self) -> None:
         base = BaseRepository(self._db)
@@ -88,16 +88,14 @@ class GameScreen(Screen):
         )
 
     def on_chat_panel_message_sent(self, event: ChatPanel.MessageSent) -> None:
-        self.process_chat_message(event.text, event.channel)
+        self.process_chat_message(event.text)
 
     def action_character_sheet(self) -> None:
         self.app.push_screen(CharacterSheetModal(self._character, self._character_repo))
 
     @work(exclusive=True)
-    async def process_chat_message(self, text: str, channel: str) -> None:
+    async def process_chat_message(self, text: str) -> None:
         if get_current_worker().is_cancelled or self._graph is None:
-            return
-        if channel != "ic":
             return
 
         human_msg = Message(role="human", content=text, name="")
