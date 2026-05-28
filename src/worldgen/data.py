@@ -14,8 +14,8 @@ class WorldData:
     description: str
     seed: int
     size: int
-    major_count: int
-    major_radius_pct: int
-    detail_count: int
-    detail_radius_pct: int
+    biome: str
+    temperature: float
+    precipitation: float
+    elevation: float
     tiles: dict[tuple[int, int], TileData] = field(default_factory=dict)

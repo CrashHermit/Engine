@@ -6,9 +6,10 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.events import Key
 from textual.screen import Screen
-from textual.widgets import Input
+from textual.widgets import Input, RichLog
 from textual.containers import Horizontal, Vertical
 from textual.worker import get_current_worker
+
 
 from src.core.model.message import Message
 from src.database.repository.base import BaseRepository
@@ -19,6 +20,7 @@ from src.state import GraphState
 from src.tui.widgets.chat_panel import ChatPanel
 from src.tui.widgets.left_panel import LeftPanel
 from src.tui.modals.character_sheet import CharacterSheetModal
+
 
 
 class GameScreen(Screen):
@@ -50,7 +52,7 @@ class GameScreen(Screen):
 
         location = self._character_repo.get_current_location(self._character)
         if location is None:
-            self.query_one("#scene-log", RichLog).write("[red]No starting location.[/red]")
+            self.query_one("#scene", RichLog).write("[red]No starting location.[/red]")
             return
         self._show_location(location)
 

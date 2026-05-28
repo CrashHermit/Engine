@@ -24,14 +24,14 @@ class CreateWorldModal(ModalScreen[dict[str, str] | None]):
             yield Input(value="100", id="world-size")
             yield Label(content="Seed (blank for random)")
             yield Input(placeholder="e.g. 42", id="world-seed")
-            yield Label(content="Major blobs")
-            yield Input(value="2", id="world-major-count")
-            yield Label(content="Major radius %")
-            yield Input(value="35", id="world-major-radius")
-            yield Label(content="Detail blobs")
-            yield Input(value="6", id="world-detail-count")
-            yield Label(content="Detail radius %")
-            yield Input(value="12", id="world-detail-radius")
+            yield Label(content="Biome")
+            yield Input(value="Forest", id="world-biome")
+            yield Label(content="Temperature")
+            yield Input(value="20", id="world-temperature")
+            yield Label(content="Precipitation")
+            yield Input(value="100", id="world-precipitation")
+            yield Label(content="Elevation")
+            yield Input(value="100", id="world-elevation")
             with Horizontal(id="modal-actions"):
                 yield Button(label="Cancel", id="btn-cancel", variant="default")
                 yield Button(label="Create", id="btn-create", variant="primary")
@@ -55,10 +55,10 @@ class CreateWorldModal(ModalScreen[dict[str, str] | None]):
         try:
             seed: int = int(seed_raw) if seed_raw else random.randint(a=1, b=999_999)
             size: int = int(self.query_one("#world-size", Input).value.strip())
-            major_count: int = int(self.query_one("#world-major-count", Input).value.strip())
-            major_radius_pct: int = int(self.query_one("#world-major-radius", Input).value.strip())
-            detail_count: int = int(self.query_one("#world-detail-count", Input).value.strip())
-            detail_radius_pct: int = int(self.query_one("#world-detail-radius", Input).value.strip())
+            biome: str = self.query_one("#world-biome", Input).value.strip()
+            temperature: float = float(self.query_one("#world-temperature", Input).value.strip())
+            precipitation: float = float(self.query_one("#world-precipitation", Input).value.strip())
+            elevation: float = float(self.query_one("#world-elevation", Input).value.strip())
         except ValueError:
             self.notify(message="Numeric fields must contain valid integers", severity="error")
             return
@@ -69,10 +69,10 @@ class CreateWorldModal(ModalScreen[dict[str, str] | None]):
                 description=description,
                 seed=seed,
                 size=size,
-                major_count=major_count,
-                major_radius_pct=major_radius_pct,
-                detail_count=detail_count,
-                detail_radius_pct=detail_radius_pct,
+                biome=biome,
+                temperature=temperature,
+                precipitation=precipitation,
+                elevation=elevation,
             )
         except FileExistsError:
             self.notify(message=f"World with '{name}' already exists")
