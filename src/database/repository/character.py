@@ -3,6 +3,22 @@ from arcadedb_embedded.graph import Vertex
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
 
+# Edges from a character into the sub-structure it exclusively owns. Deleting a
+# character cascades along these (but never along LOCATED_AT, which points at a
+# shared location the character does not own).
+_OWNED_EDGES = [
+    EdgeType.HAS_CORPUS,
+    EdgeType.HAS_MENS,
+    EdgeType.HAS_ANIMA,
+    EdgeType.HAS_PERSONALITY,
+    EdgeType.HAS_EXTRAVERSION,
+    EdgeType.HAS_OPENNESS,
+    EdgeType.HAS_NEUROTICISM,
+    EdgeType.HAS_AGREEABLENESS,
+    EdgeType.HAS_CONSCIENTIOUSNESS,
+    EdgeType.HAS_ATTRIBUTE,
+]
+
 
 class CharacterRepository:
     def __init__(self, base: BaseRepository) -> None:
@@ -32,7 +48,21 @@ class CharacterRepository:
         return attribute
 
     def delete_character(self, character: Vertex) -> None:
-        self._base.delete_vertex(character)
+        """Delete the character and every node it owns (attributes, personality,
+        traits), leaving shared vertices such as its location untouched."""
+        self._delete_owned(character)
+
+    def _delete_owned(self, vertex: Vertex) -> None:
+        # Materialize owned children before deleting, then recurse depth-first so
+        # leaves are removed before their parents.
+        children: list[Vertex] = [
+            edge.get_in()
+            for edge_type in _OWNED_EDGES
+            for edge in vertex.get_out_edges(edge_type)
+        ]
+        for child in children:
+            self._delete_owned(child)
+        self._base.delete_vertex(vertex)
 
     ############################################################################
     # Read verbs

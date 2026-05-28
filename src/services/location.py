@@ -18,10 +18,11 @@ class LocationService:
         self._characters = characters
 
     def get_state_for_character(self, character_id: str) -> LocationState | None:
-        """Where the character currently is, plus its exits and entities."""
+        """Where the character currently is, plus its exits and entities. Returns
+        None only when the character has no location yet."""
         character = self._characters.get_character(character_id)
         if character is None:
-            return None
+            raise ValueError(f"Character not found: {character_id}")
         location = self._characters.get_current_location(character)
         return self._build_state(location) if location is not None else None
 
