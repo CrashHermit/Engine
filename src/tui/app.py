@@ -31,8 +31,7 @@ class GameApp(App):
             self.server.stop()
 
     def action_help(self) -> None:
-        self.action_show_help_panel()
-        # TODO: push HelpModal
+        pass  # TODO: push HelpModal
 
 
 def main() -> None:

@@ -28,7 +28,7 @@ class StartScreen(Screen):
     
     def _on_dismiss(self, result: dict[str, str] | None) -> None:
         if result:
-            self.app.push_screen(WorldListScreen(created_world=result))
+            self.app.push_screen(WorldListScreen())
 
     # PROTOTYPE START
     def _quick_start(self) -> None:

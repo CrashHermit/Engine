@@ -6,16 +6,17 @@ from textual.widget import Widget
 from textual.reactive import reactive
 from textual.widgets import Static, Label
 
-class ValueStepperEvent(Message):
-    def __init__(self, stepper: "ValueStepper", new_value: int) -> None:
-        super().__init__()
-        self.stepper: ValueStepper = stepper
-        self.new_value: int = new_value
 
 class ValueStepper(Widget):
     """Label + [-] value [+] row. Styles live in theme.tcss (custom $da-* vars)."""
 
     value: reactive[int] = reactive(0)
+
+    class Changed(Message):
+        def __init__(self, stepper: "ValueStepper", new_value: int) -> None:
+            super().__init__()
+            self.stepper: ValueStepper = stepper
+            self.new_value: int = new_value
 
     def __init__(
         self,
@@ -59,8 +60,8 @@ class ValueStepper(Widget):
 
         if clicked_id == "btn-dec" and self.value > self.min_val:
             self.value -= 1
-            self.post_message(message=ValueStepperEvent(stepper=self, new_value=self.value))
+            self.post_message(self.Changed(self, self.value))
         elif clicked_id == "btn-inc" and self.value < self.max_val:
             self.value += 1
-            self.post_message(message=ValueStepperEvent(stepper=self, new_value=self.value))
+            self.post_message(self.Changed(self, self.value))
         event.stop()

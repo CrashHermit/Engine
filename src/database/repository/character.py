@@ -8,22 +8,56 @@ class CharacterRepository:
     def __init__(self, base: BaseRepository) -> None:
         self._base: BaseRepository = base
 
-    def get_user_characters(self, user: Vertex) -> list[Vertex]:
-        edges: list[Edge] = user.get_out_edges(EdgeType.HAS_CHARACTER)
-        return [edge.get_in() for edge in edges]
+    def list_characters(self) -> list[Vertex]:
+        results = self._base._database.query("sql", f"SELECT FROM {VertexType.CHARACTER}")
+        return [v for r in results if (v := r.get_vertex()) is not None]
 
-    def create_character(self, user: Vertex, name: str, description: str) -> Vertex:
-        character: Vertex = self._base.create_vertex(
-            type_name=VertexType.CHARACTER,
-            name=name,
-            description=description,
-        )
-        self._base.create_edge(
-            type_name=EdgeType.HAS_CHARACTER,
-            source=user,
-            target=character,
-        )
-        return character
+    def create_full_character(
+        self,
+        name: str,
+        description: str,
+        corpus: int,
+        mens: int,
+        anima: int,
+        extraversion: int,
+        openness: int,
+        agreeableness: int,
+        neuroticism: int,
+        conscientiousness: int,
+    ) -> Vertex:
+        with self._base.transaction():
+            character = self._base.create_vertex(VertexType.CHARACTER, name=name, description=description)
+
+            for vtype, etype, val in [
+                (VertexType.CORPUS, EdgeType.HAS_CORPUS, corpus),
+                (VertexType.MENS, EdgeType.HAS_MENS, mens),
+                (VertexType.ANIMA, EdgeType.HAS_ANIMA, anima),
+            ]:
+                trait = self._base.create_vertex(vtype)
+                self._base.create_edge(etype, character, trait)
+                attr = self._base.create_vertex(VertexType.ATTRIBUTE, value=val)
+                self._base.create_edge(EdgeType.HAS_ATTRIBUTE, trait, attr)
+
+            mens_v = character.get_out_edges(EdgeType.HAS_MENS)[0].get_in()
+            personality = self._base.create_vertex(VertexType.PERSONALITY)
+            self._base.create_edge(EdgeType.HAS_PERSONALITY, mens_v, personality)
+
+            for vtype, etype, val in [
+                (VertexType.EXTRAVERSION, EdgeType.HAS_EXTRAVERSION, extraversion),
+                (VertexType.OPENNESS, EdgeType.HAS_OPENNESS, openness),
+                (VertexType.AGREEABLENESS, EdgeType.HAS_AGREEABLENESS, agreeableness),
+                (VertexType.NEUROTICISM, EdgeType.HAS_NEUROTICISM, neuroticism),
+                (VertexType.CONSCIENTIOUSNESS, EdgeType.HAS_CONSCIENTIOUSNESS, conscientiousness),
+            ]:
+                trait = self._base.create_vertex(vtype)
+                self._base.create_edge(etype, personality, trait)
+                attr = self._base.create_vertex(VertexType.ATTRIBUTE, value=val)
+                self._base.create_edge(EdgeType.HAS_ATTRIBUTE, trait, attr)
+
+            return character
+
+    def delete_character(self, character: Vertex) -> None:
+        self._base.delete_vertex(character)
 
     def create_trait(self, character: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
         trait: Vertex = self._base.create_vertex(type_name=vertex_type)
