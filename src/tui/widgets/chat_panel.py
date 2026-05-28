@@ -24,7 +24,7 @@ class ChatPanel(Widget):
                 yield Label("Channel:", id="channel-label")
                 yield Button("IC", id="btn-ic", variant="primary")
                 yield Button("OOC", id="btn-ooc", variant="default")
-            yield RichLog(id="chat-log", highlight=True, markup=True, wrap=True)
+            yield RichLog(id="chat-log", min_width=0, wrap=True, markup=True, highlight=True)
             with Horizontal(id="input-bar"):
                 yield Input(placeholder="Type your message...", id="msg-input")
                 yield Button("Send", id="btn-send", variant="primary")

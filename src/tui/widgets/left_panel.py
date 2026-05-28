@@ -16,7 +16,7 @@ class LeftPanel(Widget):
             yield Button("Scene", id="btn-scene", variant="primary")
             yield Button("Character", id="btn-character", variant="default")
         with ContentSwitcher(initial="scene", id="left-switcher"):
-            yield RichLog(id="scene", highlight=True, markup=True, wrap=True)
+            yield RichLog(id="scene", min_width=0, wrap=True, markup=True, highlight=True)
             with Vertical(id="character"):
                 yield Label("—", id="info-char-name")
                 yield Label("—", id="info-location")
