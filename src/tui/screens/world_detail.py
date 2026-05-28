@@ -12,6 +12,7 @@ from src.tui.modals.confirm_modal import ConfirmModal
 from src.tui.widgets.pip_selector import PipSelector
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
+from src.database.schema import SchemaManager
 
 
 class WorldDetailScreen(Screen):
@@ -46,6 +47,7 @@ class WorldDetailScreen(Screen):
     def on_mount(self) -> None:
         try:
             self._db = self.app.connection.open_database(self.world_name)
+            SchemaManager(self._db).ensure()
             base = BaseRepository(self._db)
             self._character_repo = CharacterRepository(base)
             self._characters = self._character_repo.list_characters()
