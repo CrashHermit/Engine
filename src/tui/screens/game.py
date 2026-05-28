@@ -104,6 +104,8 @@ class GameScreen(Screen):
             message_history=self._message_history,
             human_message=human_msg,
             ai_message=None,
+            character_name=self._character.get(name="name") or "",
+            character_description=self._character.get(name="description") or "",
             location_name=loc.get(name="name") or "" if loc else "",
             location_description=loc.get(name="description") or "" if loc else "",
         )

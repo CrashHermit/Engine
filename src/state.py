@@ -12,3 +12,5 @@ class GraphState(BaseModel):
     ai_message: Message | None = None
     location_name: str = ""
     location_description: str = ""
+    character_name: str = ""
+    character_description: str = ""

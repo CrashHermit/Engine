@@ -15,6 +15,8 @@ class NarratorNode:
     async def __call__(self, state: GraphState) -> dict:
         history = "\n".join(m.format() for m in state.message_history)
         prediction: Prediction = await self._program.aforward(
+            character_name=state.character_name,
+            character_description=state.character_description,
             location_name=state.location_name,
             location_description=state.location_description,
             message_history=history,
