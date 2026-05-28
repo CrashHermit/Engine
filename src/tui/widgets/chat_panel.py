@@ -34,8 +34,16 @@ class ChatPanel(Widget):
         self._send_message()
         event.stop()
 
+    def set_processing(self, active: bool) -> None:
+        input_widget = self.query_one("#msg-input", Input)
+        btn = self.query_one("#btn-send", Button)
+        input_widget.disabled = active
+        btn.disabled = active
+
     def _send_message(self) -> None:
         input_widget = self.query_one("#msg-input", Input)
+        if input_widget.disabled:
+            return
         text = input_widget.value.strip()
         if not text:
             return
