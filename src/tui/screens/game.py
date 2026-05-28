@@ -86,7 +86,7 @@ class GameScreen(Screen):
         self.process_chat_message(event.text, event.channel)
 
     def action_character_sheet(self) -> None:
-        self.app.push_screen(CharacterSheetModal())
+        self.app.push_screen(CharacterSheetModal(self._character, self._character_repo))
 
     @work(exclusive=True, thread=True)
     def process_chat_message(self, text: str, channel: str) -> None:

@@ -1,19 +1,27 @@
+from arcadedb_embedded.graph import Vertex
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, Static
 from textual.containers import Horizontal, Vertical
 
-from ..widgets.pip_selector import PipSelector
+from src.core.model.database import EdgeType
+from src.database.repository.character import CharacterRepository
+from src.tui.widgets.pip_selector import PipSelector
 
 
 class CharacterSheetModal(ModalScreen[None]):
-    """Full-screen character sheet: stats, equipment, inventory, personality."""
+    """Read-only character sheet for the active character."""
 
     BINDINGS = [
         Binding("escape", "dismiss", "Close"),
         Binding("c", "dismiss", "Close"),
     ]
+
+    def __init__(self, character: Vertex, repo: CharacterRepository) -> None:
+        super().__init__()
+        self._character = character
+        self._repo = repo
 
     def compose(self) -> ComposeResult:
         with Vertical(id="character-sheet"):
@@ -21,46 +29,56 @@ class CharacterSheetModal(ModalScreen[None]):
 
             with Horizontal(id="sheet-identity"):
                 with Vertical(id="sheet-left"):
-                    yield Label("Aldric the Bold", id="sheet-name")
-                    yield Static(
-                        "A seasoned warrior from the northern provinces. "
-                        "Scarred but unbroken, he carries the weight of a dozen campaigns.",
-                        id="sheet-description",
-                    )
+                    yield Label("", id="sheet-name")
+                    yield Static("", id="sheet-description")
                 with Vertical(id="sheet-right"):
                     yield Label("Attributes", id="attrs-title")
-                    yield PipSelector("Corpus", max_val=4, value=2, readonly=True)
-                    yield PipSelector("Mens", max_val=4, value=1, readonly=True)
-                    yield PipSelector("Anima", max_val=4, value=2, readonly=True)
+                    yield PipSelector("Corpus", max_val=4, value=0, readonly=True, id="pip-corpus")
+                    yield PipSelector("Mens", max_val=4, value=0, readonly=True, id="pip-mens")
+                    yield PipSelector("Anima", max_val=4, value=0, readonly=True, id="pip-anima")
 
             yield Label("Condition", id="condition-title")
-            yield Static(
-                "HP: 10 / 10  |  Wounds: None  |  Status: Healthy",
-                id="sheet-condition",
-            )
+            yield Static("HP: — / —  |  Wounds: —  |  Status: —", id="sheet-condition")
 
             yield Label("Equipment", id="equipment-title")
-            yield Static(
-                "Longsword (1d8+2)  |  Shield (+2 AC)  |  Chain Mail (AC 14)  |  Torch  |  Rations ×3",
-                id="sheet-equipment",
-            )
+            yield Static("—", id="sheet-equipment")
 
             yield Label("Inventory", id="inventory-title")
-            yield Static(
-                "50 gold  |  Healing Potion  |  Rope (50ft)  |  Flint & Steel",
-                id="sheet-inventory",
-            )
+            yield Static("—", id="sheet-inventory")
 
             yield Label("Personality", id="personality-title")
             with Horizontal(id="personality-traits"):
-                yield PipSelector("Extraversion", min_val=1, max_val=5, value=3, readonly=True)
-                yield PipSelector("Openness", min_val=1, max_val=5, value=4, readonly=True)
-                yield PipSelector("Agreeableness", min_val=1, max_val=5, value=2, readonly=True)
-                yield PipSelector("Neuroticism", min_val=1, max_val=5, value=3, readonly=True)
-                yield PipSelector("Conscientiousness", min_val=1, max_val=5, value=4, readonly=True)
+                yield PipSelector("Extraversion", min_val=1, max_val=5, value=1, readonly=True, id="pip-extra")
+                yield PipSelector("Openness", min_val=1, max_val=5, value=1, readonly=True, id="pip-open")
+                yield PipSelector("Agreeableness", min_val=1, max_val=5, value=1, readonly=True, id="pip-agree")
+                yield PipSelector("Neuroticism", min_val=1, max_val=5, value=1, readonly=True, id="pip-neuro")
+                yield PipSelector("Conscientiousness", min_val=1, max_val=5, value=1, readonly=True, id="pip-consc")
 
             yield Button("Close", id="btn-close", variant="default")
-            # TODO: populate from CharacterRepository for the active character
+
+    def on_mount(self) -> None:
+        self.query_one("#sheet-name", Label).update(self._character.get(name="name") or "—")
+        self.query_one("#sheet-description", Static).update(self._character.get(name="description") or "")
+
+        try:
+            corpus = self._repo.get_attribute_value(self._repo.get_corpus(self._character))
+            mens = self._repo.get_attribute_value(self._repo.get_mens(self._character))
+            anima = self._repo.get_attribute_value(self._repo.get_anima(self._character))
+            self.query_one("#pip-corpus", PipSelector).value = corpus
+            self.query_one("#pip-mens", PipSelector).value = mens
+            self.query_one("#pip-anima", PipSelector).value = anima
+        except Exception:
+            pass
+
+        try:
+            personality = self._repo.get_personality(self._character)
+            self.query_one("#pip-extra", PipSelector).value = self._repo.get_trait_value(personality, EdgeType.HAS_EXTRAVERSION)
+            self.query_one("#pip-open", PipSelector).value = self._repo.get_trait_value(personality, EdgeType.HAS_OPENNESS)
+            self.query_one("#pip-agree", PipSelector).value = self._repo.get_trait_value(personality, EdgeType.HAS_AGREEABLENESS)
+            self.query_one("#pip-neuro", PipSelector).value = self._repo.get_trait_value(personality, EdgeType.HAS_NEUROTICISM)
+            self.query_one("#pip-consc", PipSelector).value = self._repo.get_trait_value(personality, EdgeType.HAS_CONSCIENTIOUSNESS)
+        except Exception:
+            pass
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-close":

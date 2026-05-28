@@ -95,6 +95,10 @@ class CharacterRepository:
         attribute: Vertex = node.get_out_edges(EdgeType.HAS_ATTRIBUTE)[0].get_in()
         self._base.update_vertex(vertex=attribute, value=value)
 
+    def get_trait_value(self, personality: Vertex, edge_type: EdgeType) -> int:
+        trait = personality.get_out_edges(edge_type)[0].get_in()
+        return self.get_attribute_value(trait)
+
     def get_current_location(self, character: Vertex) -> Vertex | None:
         edges = character.get_out_edges(EdgeType.LOCATED_AT)
         return edges[0].get_in() if edges else None
