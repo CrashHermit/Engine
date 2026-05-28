@@ -10,3 +10,5 @@ class GraphState(BaseModel):
     message_history: Annotated[list[Message], operator.add] = Field(default_factory=list)
     human_message: Message | None = None
     ai_message: Message | None = None
+    location_name: str = ""
+    location_description: str = ""

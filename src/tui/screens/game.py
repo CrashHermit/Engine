@@ -32,6 +32,7 @@ class GameScreen(Screen):
         self._character = character
         self._db = database
         self._neighbors: list[Vertex] = []
+        self._current_location: Vertex | None = None
         self._message_history: list[Message] = []
         self._graph = None
 
@@ -68,6 +69,7 @@ class GameScreen(Screen):
         self._show_location(destination)
 
     def _show_location(self, location: Vertex) -> None:
+        self._current_location = location
         self._neighbors = self._location_repo.get_neighbors(location)
         name = location.get(name="name") or "Unknown"
         description = location.get(name="description") or ""
@@ -97,10 +99,13 @@ class GameScreen(Screen):
             return
 
         human_msg = Message(role="human", content=text, name="")
+        loc = self._current_location
         state = GraphState(
             message_history=self._message_history,
             human_message=human_msg,
             ai_message=None,
+            location_name=loc.get(name="name") or "" if loc else "",
+            location_description=loc.get(name="description") or "" if loc else "",
         )
 
         result = await self._graph.ainvoke(state)
