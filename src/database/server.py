@@ -20,10 +20,21 @@ class Server:
         self._http_port: int = http_port
         self._server: arcadedb.ArcadeDBServer | None = None
 
+    def _remove_stale_locks(self) -> None:
+        databases_path = Path(self._root_path) / "databases"
+        if not databases_path.exists():
+            return
+        for lock_file in databases_path.rglob(".lock"):
+            try:
+                lock_file.unlink()
+            except OSError:
+                pass
+
     def start(self) -> None:
         if self._server is not None:
             return
         Path(self._root_path).mkdir(parents=True, exist_ok=True)
+        self._remove_stale_locks()
         self._server = arcadedb.create_server(
             root_path=self._root_path,
             root_password=self._root_password,
