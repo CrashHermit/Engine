@@ -31,9 +31,13 @@ class LeftPanel(Widget):
             self.current_view = event.button.id.removeprefix("btn-")
             event.stop()
 
-    def write_scene(self, name: str, description: str, exits: str) -> None:
+    def write_scene(self, name: str, description: str, exits: str, entities: list[str] | None = None) -> None:
+        entity_lines = ""
+        if entities:
+            lines = "\n".join(f"  · {e}" for e in entities)
+            entity_lines = f"\n\n[dim]Entities:[/dim]\n[dim]{lines}[/dim]"
         self.query_one("#scene", RichLog).write(
-            f"\n[bold #c9a84c]{name}[/bold #c9a84c]\n\n{description}\n\n[dim]{exits}[/dim]"
+            f"\n[bold #c9a84c]{name}[/bold #c9a84c]\n\n{description}{entity_lines}\n\n[dim]{exits}[/dim]"
         )
 
     def update_info(self, character_name: str, location_name: str) -> None:
