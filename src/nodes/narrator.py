@@ -14,6 +14,7 @@ class NarratorNode:
 
     async def __call__(self, state: GraphState) -> dict:
         history = "\n".join(m.format() for m in state.message_history)
+        action_list = "\n".join(f"{i + 1}. {a}" for i, a in enumerate(state.action_list))
         prediction: Prediction = await self._program.aforward(
             character_name=state.character_name,
             character_description=state.character_description,
@@ -21,6 +22,7 @@ class NarratorNode:
             location_description=state.location_description,
             message_history=history,
             human_message=state.human_message.content,
+            action_list=action_list,
         )
 
         ai_message = Message(
