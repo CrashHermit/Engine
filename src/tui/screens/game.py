@@ -115,7 +115,11 @@ class GameScreen(Screen):
                 ai_message=None,
                 question=None,
                 is_intent_alignment_achieved=None,
+                character_name=self._character.name or "",
                 character_description=self._character.description or "",
+                corpus=self._character.corpus,
+                mens=self._character.mens,
+                anima=self._character.anima,
                 location_description=state.location.description if state else "",
                 entities_at_location=entities_at_location,
             )
