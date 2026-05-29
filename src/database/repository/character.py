@@ -1,7 +1,12 @@
-from arcadedb_embedded.graph import Vertex
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
+
+if TYPE_CHECKING:
+    from arcadedb_embedded.graph import Vertex
 
 # Edges from a character into the sub-structure it exclusively owns. Deleting a
 # character cascades along these (but never along LOCATED_AT, which points at a
@@ -98,6 +103,34 @@ class CharacterRepository:
     def get_trait_value(self, personality: Vertex, edge_type: EdgeType) -> int:
         trait = personality.get_out_edges(edge_type)[0].get_in()
         return self.get_attribute_value(trait)
+
+    ############################################################################
+    # Survival economy (decisions #11-14) — stored as CHARACTER properties
+    ############################################################################
+
+    def get_stress(self, character: Vertex) -> int:
+        return character.get(name="stress") or 0
+
+    def get_trauma(self, character: Vertex) -> int:
+        return character.get(name="trauma") or 0
+
+    def get_vices(self, character: Vertex) -> list[str]:
+        return list(character.get(name="vices") or [])
+
+    def set_economy(
+        self,
+        character: Vertex,
+        *,
+        stress: int,
+        trauma: int,
+        vices: list[str],
+    ) -> None:
+        self._base.update_vertex(
+            vertex=character,
+            stress=stress,
+            trauma=trauma,
+            vices=vices,
+        )
 
     ############################################################################
     # Position verbs

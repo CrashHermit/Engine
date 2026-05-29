@@ -41,3 +41,12 @@ class GraphState(BaseModel):
     landed_magnitude: int | None = None     # what actually lands, after scaling
     outcome_avoided: bool | None = None     # cleanly avoided (6 / crit)
     outcome_crit: bool | None = None        # a benefit is owed
+
+    # --- resistance / push reactive turn (decisions #6, #11) ---
+    resistance_history: Annotated[list[Message], operator.add] = Field(default_factory=list)
+    resistance_offer: bool | None = None    # the just-landed consequence is resistible
+    is_resisting: bool | None = None        # this turn is a resist/push reply, not a fresh action
+    resist_decision: bool | None = None     # parsed: did the player choose to resist/push?
+    # effects intended by this turn, applied by the TUI via services (decision #21)
+    harm_part: str | None = None            # which part a harm threat hits
+    stress_delta: int = 0                   # stress to add (push/resist cost, consequences)

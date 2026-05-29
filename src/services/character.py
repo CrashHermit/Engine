@@ -126,4 +126,7 @@ class CharacterService:
             agreeableness=self._characters.get_trait_value(personality, EdgeType.HAS_AGREEABLENESS),
             neuroticism=self._characters.get_trait_value(personality, EdgeType.HAS_NEUROTICISM),
             conscientiousness=self._characters.get_trait_value(personality, EdgeType.HAS_CONSCIENTIOUSNESS),
+            stress=self._characters.get_stress(character),
+            trauma=self._characters.get_trauma(character),
+            vices=self._characters.get_vices(character),
         )

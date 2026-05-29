@@ -1,12 +1,15 @@
+from __future__ import annotations
+
 import uuid
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Generator
-
-import arcadedb_embedded as arcadedb
-from arcadedb_embedded.graph import Edge, Vertex
+from typing import TYPE_CHECKING, Any, Generator
 
 from src.core.model.database import EdgeType, VertexType
+
+if TYPE_CHECKING:
+    import arcadedb_embedded as arcadedb
+    from arcadedb_embedded.graph import Edge, Vertex
 
 
 class BaseRepository:

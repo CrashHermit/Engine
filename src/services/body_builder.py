@@ -1,8 +1,8 @@
 from arcadedb_embedded.graph import Vertex
 
-from core.model.part import Shape, Status, SizeScale
-from database.repository.base import BaseRepository
-from database.repository.part import PartRepository
+from src.core.model.part import Shape, Status, SizeScale
+from src.database.repository.base import BaseRepository
+from src.database.repository.part import PartRepository
 
 
 class BodyBuilderService:

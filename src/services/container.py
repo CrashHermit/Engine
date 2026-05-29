@@ -4,8 +4,11 @@ from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
 from src.database.repository.location import LocationRepository
 from src.database.repository.message import MessageRepository
+from src.database.repository.part import PartRepository
 from src.database.repository.world import WorldRepository
 from src.services.character import CharacterService
+from src.services.economy import EconomyService
+from src.services.harm import HarmService
 from src.services.location import LocationService
 from src.services.message import MessageService
 
@@ -26,7 +29,12 @@ class ServiceContainer:
         worlds = WorldRepository(base)
         locations = LocationRepository(base)
         messages = MessageRepository(base)
+        parts = PartRepository(base)
 
         self.character = CharacterService(base, characters, worlds)
         self.location = LocationService(base, locations, characters)
         self.message = MessageService(base, messages)
+        # Per-run systems (decisions #11-14, #19), applied via services after a
+        # turn resolves (decision #21).
+        self.economy = EconomyService(base, characters)
+        self.harm = HarmService(base, parts, characters)

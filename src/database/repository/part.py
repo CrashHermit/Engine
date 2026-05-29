@@ -1,8 +1,13 @@
-from arcadedb_embedded.graph import Vertex
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
 
 from src.core.model.database import EdgeType, VertexType
 from src.core.model.part import Shape, Status, SizeScale
 from src.database.repository.base import BaseRepository
+
+if TYPE_CHECKING:
+    from arcadedb_embedded.graph import Vertex
 
 
 class PartRepository:
@@ -35,6 +40,36 @@ class PartRepository:
 
     def attach(self, source: Vertex, target: Vertex) -> None:
         self._base.create_edge(type_name=EdgeType.ATTACHED_TO, source=source, target=target)
+
+    ############################################################################
+    # Reads + persistent harm (decision #19) — wound boxes stored on the PART
+    ############################################################################
+
+    def list_parts(self, character: Vertex) -> list[Vertex]:
+        return [edge.get_in() for edge in character.get_out_edges(EdgeType.HAS_PART)]
+
+    def get_part(self, character: Vertex, name: str) -> Vertex | None:
+        for part in self.list_parts(character):
+            if part.get(name="name") == name:
+                return part
+        return None
+
+    def attached_parts(self, part: Vertex) -> list[Vertex]:
+        """Parts attached beyond this one, toward the extremities (the distal side)."""
+        return [edge.get_in() for edge in part.get_out_edges(EdgeType.ATTACHED_TO)]
+
+    def get_wound_boxes(self, part: Vertex) -> int:
+        return part.get(name="wound_boxes") or 0
+
+    def get_capacity(self, part: Vertex, default: int) -> int:
+        return part.get(name="wound_capacity") or default
+
+    def set_wound_state(self, part: Vertex, *, filled: int, status: str) -> None:
+        self._base.update_vertex(vertex=part, wound_boxes=filled, status=status)
+
+    def remove_part(self, part: Vertex) -> None:
+        """Delete a part vertex (DESTROYED parts are severed from the body)."""
+        self._base.delete_vertex(part)
 
     def add_source(self, part: Vertex) -> Vertex:
         source = self._base.create_vertex(type_name=VertexType.SOURCE)
