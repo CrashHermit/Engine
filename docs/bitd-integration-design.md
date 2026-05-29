@@ -72,6 +72,20 @@ Relevant existing facts that shape the design:
 | 12 | **Relief is vice-only, continuous and fiction-gated** (rest was considered and cut). Indulging in the fiction (right place/moment) routes to a vice-resolution: **roll your lowest attribute, clear that many stress**; if the roll **exceeds current stress you overindulge** → a complication. No formal downtime phase. | Canonical BitD relief. The overindulgence rule *is* the anti-spam gate (safe when strung-out, risky when nearly fresh), so vice-only + permadeath stays balanced without cooldown state. Continuous/fiction-gated fits the engine (no mission/downtime structure exists). Designed to be downtime-slottable later. |
 | 13 | **Permadeath at max trauma.** Stress overflow → reset to 0, gain **1 trauma + a trauma condition**; at **4 trauma the character is lost** (retired/dead/broken) and a new one begins. | Failure has real teeth; stories get endings. The lean, resistance-heavy economy means trauma genuinely accrues. |
 | 14 | **Vices are freeform descriptors that accumulate, trauma-linked.** Characters start with one freeform vice; **each trauma grants a new one** — a coping mechanism born from the wound, building a *scar-record*. More vices broadens *access* (more fictions qualify as relief), **not power** (clear is still roll-lowest + overindulgence gate). | Marries relief and permadeath into one grim bargain — every step toward being lost hands you a new way to cope. Freeform matches the engine's LLM-driven, broad-category ethos. |
+| 15 | **Consequence = severity (code) + type & fiction (LLM).** A code table maps **position × tier → a severity rung** on the ladder `None → Minor → Standard → Severe → Fatal`. The consequence-selector LLM then picks the **type** (harm / complication / worse-position / lost-opportunity / reduced-effect), writes the fiction at that rung, and tags the **channel** (corpus/mens/anima). **Resistance steps severity down one rung.** | Keeps the balance-critical magnitude in code (safe on small models), leaves flavor to the LLM. Unifies BitD's harm levels and all consequence types under one magnitude axis, and answers "how much does a resist mitigate" = one rung. |
+| 16 | **Severity is position-only; the tier decides success, not severity.** `controlled→Minor, risky→Standard, desperate→Severe`. A **6** = success, no consequence; **4–5** = success **+** position-severity consequence; **1–3** = fail **+** the *same* position-severity consequence; **crit** = success + benefit. **Fatal is not a normal cell** — reserved for explicitly lethal fiction (selector may escalate Desperate→Fatal). | With lean pools, 1–3 is common; a tier-bump would route most failures to Severe → runaway lethality. Position-only pins danger to how exposed the player chose to be (the dial the system actually set), which stays gritty without a death spiral. |
+
+### Consequence-severity table (decisions #15–16)
+
+| roll ↓ / position → | Controlled | Risky | Desperate |
+|---|---|---|---|
+| **6** | success, no consequence | success, no consequence | success, no consequence |
+| **4–5** | success **+ Minor** | success **+ Standard** | success **+ Severe** |
+| **1–3** | fail **+ Minor** | fail **+ Standard** | fail **+ Severe** |
+| **crit (2+ 6s)** | success **+ benefit** | success **+ benefit** | success **+ benefit** |
+
+Code reads the cell → severity rung; LLM fills type + fiction + channel. Resist = −1 rung;
+`None` = no consequence. (`benefit` content = open node "crit & success benefits".)
 
 ### Over-reach defense, in layers
 1. **Intent alignment** (exists) rejects impossible / nonexistent-target reaches. Also catches a re-affirmed tail that the changed fiction has made impossible.
@@ -196,8 +210,11 @@ Tackle these next, against this saved foundation:
       consequence machinery / narrated complication); trauma-condition representation
       (freeform vs list); the **"character lost" endgame flow** (new character in same world?
       game-over? campaign continuity — touches world/character services + TUI).
-- [ ] **Position → consequence-severity mapping** — the concrete table (controlled/risky/
-      desperate × outcome tier → consequence magnitude).
+- [x] ~~**Position → consequence-severity mapping**~~ — done (decisions #15–16, table above).
+- [ ] **Persistent harm model** — when a consequence's type is `harm`, what does the wound
+      *do* afterward? Own harm track (BitD-style, with mechanical penalties) vs folded into
+      stress/trauma/conditions. Note: rest was cut, so a separate harm track needs a healing
+      path or it becomes a death spiral. Also: where Fatal enters (lethal fiction vs harm stacking).
 - [ ] **Effect → reach-within-beat spec** — effect no longer enforces anti-chaining
       (decision #9 does, structurally). Remaining question: how `effect` shapes *how much
       of the single resolved beat* a success accomplishes (limited/standard/great) as a
