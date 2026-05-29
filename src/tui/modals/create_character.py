@@ -6,8 +6,11 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 
 from src.tui.widgets.value_stepper import ValueStepper
 
-_POOL_TOTAL: int = 5
-_TRAIT_MAX: int = 5
+# Unified 0–4 "dot" scale for the whole sheet (decision #20): attributes are the
+# dice ratings, traits are flavor/steering signal — both 0–4.
+_POOL_TOTAL: int = 4
+_TRAIT_MAX: int = 4
+_TRAIT_DEFAULT: int = 2
 _ATTR_IDS: tuple[str, str, str] = ("step-corpus", "step-mens", "step-anima")
 
 
@@ -28,6 +31,8 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
             yield Input(placeholder="Character name...", id="char-name")
             yield Label(content="Description")
             yield TextArea(id="char-description")
+            yield Label(content="Vice  (a freeform indulgence — your relief)")
+            yield Input(placeholder="e.g. cheap wine, old grudges...", id="char-vice")
 
             with Vertical(id="char-attributes-section"):
                 yield Label(content=f"Attributes  (distribute {_POOL_TOTAL} points)", id="attr-label")
@@ -37,12 +42,12 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
                 yield ValueStepper(label="Anima", min_val=0, max_val=4, value=0, id="step-anima")
 
             with Vertical(id="char-personality-section"):
-                yield Label(content="Personality  (rate each 1–5)", id="trait-label")
-                yield ValueStepper(label="Extraversion", min_val=1, max_val=_TRAIT_MAX, value=1, id="step-extra")
-                yield ValueStepper(label="Openness", min_val=1, max_val=_TRAIT_MAX, value=1, id="step-open")
-                yield ValueStepper(label="Agreeableness", min_val=1, max_val=_TRAIT_MAX, value=1, id="step-agree")
-                yield ValueStepper(label="Neuroticism", min_val=1, max_val=_TRAIT_MAX, value=1, id="step-neuro")
-                yield ValueStepper(label="Conscientiousness", min_val=1, max_val=_TRAIT_MAX, value=1, id="step-consc")
+                yield Label(content="Personality  (rate each 0–4)", id="trait-label")
+                yield ValueStepper(label="Extraversion", min_val=0, max_val=_TRAIT_MAX, value=_TRAIT_DEFAULT, id="step-extra")
+                yield ValueStepper(label="Openness", min_val=0, max_val=_TRAIT_MAX, value=_TRAIT_DEFAULT, id="step-open")
+                yield ValueStepper(label="Agreeableness", min_val=0, max_val=_TRAIT_MAX, value=_TRAIT_DEFAULT, id="step-agree")
+                yield ValueStepper(label="Neuroticism", min_val=0, max_val=_TRAIT_MAX, value=_TRAIT_DEFAULT, id="step-neuro")
+                yield ValueStepper(label="Conscientiousness", min_val=0, max_val=_TRAIT_MAX, value=_TRAIT_DEFAULT, id="step-consc")
 
             with Horizontal(id="modal-actions"):
                 yield Button(label="Cancel", id="btn-cancel", variant="default")
@@ -71,6 +76,7 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
             self.dismiss(result={
                 "name": name,
                 "description": self.query_one("#char-description", TextArea).text.strip(),
+                "vice": self.query_one("#char-vice", Input).value.strip(),
                 "corpus": self.query_one("#step-corpus", ValueStepper).value,
                 "mens": self.query_one("#step-mens", ValueStepper).value,
                 "anima": self.query_one("#step-anima", ValueStepper).value,

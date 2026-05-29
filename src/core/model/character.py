@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -14,3 +14,7 @@ class CharacterData:
     agreeableness: int
     neuroticism: int
     conscientiousness: int
+    # Per-run survival economy (decisions #11-14). Stored as CHARACTER properties.
+    stress: int = 0
+    trauma: int = 0
+    vices: list[str] = field(default_factory=list)

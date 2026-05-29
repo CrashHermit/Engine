@@ -15,6 +15,7 @@ from src.core.model.message import Message
 from src.graph.main_graph import MainGraphBuilder
 from src.services.container import ServiceContainer
 from src.state import GraphState
+from src.tui.turn_effects import apply_turn_effects, next_turn_carry
 from src.tui.widgets.chat_panel import ChatPanel
 from src.tui.widgets.left_panel import LeftPanel
 from src.tui.modals.character_sheet import CharacterSheetModal
@@ -86,7 +87,25 @@ class GameScreen(Screen):
         self.process_chat_message(event.text)
 
     def action_character_sheet(self) -> None:
-        self.app.push_screen(CharacterSheetModal(self._character))
+        # Re-read so the sheet reflects stress/trauma/vices accrued this session.
+        latest = self._services.character.get_character(self._character.id) or self._character
+        self._character = latest
+        self.app.push_screen(CharacterSheetModal(latest))
+
+    def _apply_effects_and_carry(self, result, content, log, chat_panel) -> None:
+        """Boundary work after a narrated turn (decision #21): persist intended
+        effects via services, then surface the deferred tail as a hint (#10)."""
+        result_for_carry = dict(result)
+        result_for_carry["ai_message_content"] = content
+        try:
+            notes = apply_turn_effects(result_for_carry, self._services, self._character.id)
+        except Exception as e:  # never let bookkeeping break the narrated turn
+            notes = [f"effects error: {e}"]
+        for note in notes:
+            log.write(f"[dim]· {escape(note)}[/dim]")
+
+        carry = next_turn_carry(result_for_carry)
+        chat_panel.set_pending_intent(carry.pending_intent)
 
     @work(exclusive=True)
     async def process_chat_message(self, text: str) -> None:
@@ -115,7 +134,11 @@ class GameScreen(Screen):
                 ai_message=None,
                 question=None,
                 is_intent_alignment_achieved=None,
+                character_name=self._character.name or "",
                 character_description=self._character.description or "",
+                corpus=self._character.corpus,
+                mens=self._character.mens,
+                anima=self._character.anima,
                 location_description=state.location.description if state else "",
                 entities_at_location=entities_at_location,
             )
@@ -139,6 +162,7 @@ class GameScreen(Screen):
                 self._intent_alignment_history = []
                 content = ai_msg.content if hasattr(ai_msg, "content") else ai_msg.get("content", "")
                 log.write(f"[bold #c9a84c]Narrator:[/bold #c9a84c] {escape(content)}")
+                self._apply_effects_and_carry(result, content, log, chat_panel)
             elif question:
                 self._intent_alignment_history = result.get("intent_alignment_history", self._intent_alignment_history)
                 log.write(f"[bold #7ec8e3]Intent Alignment:[/bold #7ec8e3] {escape(question)}")

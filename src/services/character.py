@@ -61,6 +61,7 @@ class CharacterService:
         agreeableness: int,
         neuroticism: int,
         conscientiousness: int,
+        vice: str = "",
     ) -> CharacterData:
         attribute_values = {
             VertexType.CORPUS: corpus,
@@ -77,6 +78,15 @@ class CharacterService:
 
         with self._base.transaction():
             character = self._characters.create_character(name=name, description=description)
+
+            # Starting survival economy (decisions #11-14): a fresh track and the
+            # one freeform starting vice.
+            self._characters.set_economy(
+                character,
+                stress=0,
+                trauma=0,
+                vices=[vice] if vice else [],
+            )
 
             for vertex_type, edge_type in _ATTRIBUTES:
                 node = self._characters.add_node(character, vertex_type, edge_type)
@@ -126,4 +136,7 @@ class CharacterService:
             agreeableness=self._characters.get_trait_value(personality, EdgeType.HAS_AGREEABLENESS),
             neuroticism=self._characters.get_trait_value(personality, EdgeType.HAS_NEUROTICISM),
             conscientiousness=self._characters.get_trait_value(personality, EdgeType.HAS_CONSCIENTIOUSNESS),
+            stress=self._characters.get_stress(character),
+            trauma=self._characters.get_trauma(character),
+            vices=self._characters.get_vices(character),
         )
