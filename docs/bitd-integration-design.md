@@ -1,6 +1,6 @@
 # Blades in the Dark — Resolution Integration Design
 
-> **Status:** Living design doc. The decisions in §3 are locked; §7 is the open agenda.
+> **Status:** Living design doc. The decisions in §3 are locked; §8 is the open agenda.
 > **Branch:** `claude/bitd-integration-design-ujx7Z`
 > **Scope:** Replacing the current "decompose intent into an action list" step with a
 > proper Blades-in-the-Dark (BitD) action-resolution loop, decomposed into small
@@ -76,6 +76,7 @@ Relevant existing facts that shape the design:
 | 16 | **Position collapsed; failure stays real** *(replaces position-only)*. **No per-roll position judge**: **risky is the default**; a lightweight fiction flag escalates to **desperate** (4–5 counts as full; only a 6 avoids) or relaxes to **controlled** (rare). **`failure-of-goal` is a common, first-class threat type** — not auto-success. | Deep Cuts de-emphasises position → one fewer module for small models. Keeping failure-as-threat preserves the gritty "you might not pull it off" feel *and* keeps the model **classifying**, not open-authoring. |
 | 17 | **Resolution = Deep Cuts cherry-pick (hybrid).** Keep a lightweight **action-roll frame** (you attempt X; failure is possible), but adopt Deep Cuts' mechanical upgrades: **avoid/reduced/full** scaling (#7), **unified push/resist + flat 0/1/2/3 cost** (#11), one **1–4 magnitude ladder** (#15), **collapsed position** (#16). **Rejected:** the *full* threat roll (effect fully decoupled / always-accomplish) — it leans hardest on the model's weakest skill (open threat authoring) and softens real failure. | Best-of-both: Deep Cuts' clean math + fewer structural judgments, without its agency-softening or heavier authoring burden. Better fit for small models, the gritty tone, and the model's far stronger familiarity with *classic* Blades. |
 | 18 | **Prefer maximal module splitting for trainability.** Where a step would emit several outputs, split it into **one narrow single-judgment module per output** (separate classifiers for each label); isolate generation to the narrator. Concretely: gate split from segmenter (revises #9); `threat-namer` split into `threat-type` + `threat-magnitude` + `threat-channel`, with its fiction folded into the narrator. | Pure classifiers get **crisp metrics**, cheap bootstrapped datasets, and far better DSPy optimisation (`BootstrapFewShot`/`MIPROv2`), and each can run on the **cheapest adequate model**. Independent classifiers fan out in parallel, so splitting rarely costs latency. |
+| 19 | **Persistent harm = a tunable damage pool per body part; `Status` is derived** *(model "C")*. Each part on the body graph carries a small **wound-box pool**; a `harm` threat fills **`magnitude` boxes** on a fiction-chosen part (boxes **accumulate** — small wounds add up). The `Status` enum gains a fourth rung — **NORMAL / COMPROMISED / CRITICAL / DESTROYED** — and is **computed from box-fill thresholds**, not stored, so the rest of the engine still reads a clean word. **DESTROYED** detaches the part (and everything distal) from the graph; **Fatal / overflow on a vital part = death** (#13). Mechanical bite feeds back via the part's **`PartFunction` + derived status** into the effect / threat-magnitude classifiers. **Healing removes boxes** (fiction-gated treatment → granular partial recovery). Box count + thresholds are **code-side dials** (default gritty, tuned at playtest). | Accumulates like BitD harm while keeping a legible status as a *derived* view and full tuning latitude — the knob-in-code ethos used throughout. Costs one integer per part (the graph already stores parts), and healing-by-box falls out naturally. **Rejected:** absolute "worst-wound" mapping (no accumulation, fixed lethality) and fixed additive steps (untunable). |
 
 ### Resolution model — Deep Cuts cherry-pick (#15–18)
 
@@ -215,7 +216,50 @@ is an open node; `CharacterData` only needs the *starting* vice + attributes.)
 
 ---
 
-## 7. Open nodes (agenda)
+## 7. Harm & the body (decision #19)
+
+Physical consequences live on the **existing body graph** (`core/model/part.py`), not on an
+abstract harm track — Deep Cuts harm reimagined for an engine that already has anatomy.
+Model **"C"**: each part is a small filling damage bar, and its status word is *read off* the bar.
+
+### Wound boxes (the damage pool)
+- Every part carries a small **wound-box pool** (default size is a code-side dial; sturdier
+  parts may scale larger).
+- A `harm` threat lands on a **fiction-chosen part** and **fills `magnitude` boxes**
+  (Minor 1 · Standard 2 · Severe 3 · Fatal 4). Boxes **accumulate** — many small wounds
+  eventually cripple a part.
+- The magnitude that fills boxes is **already reduced** by the roll (4–5 → −1) and any
+  push/resist (#11, #15) — the pool only ever sees what actually lands.
+
+### Status is derived, not stored
+- The `Status` enum gains a fourth rung: **NORMAL → COMPROMISED → CRITICAL → DESTROYED**.
+- Status is **computed from how full the pool is**, via thresholds (also code-side dials).
+  Illustrative tuning on a 4-box part: `0 → NORMAL · 1–2 → COMPROMISED · 3 → CRITICAL ·
+  4 → DESTROYED`.
+- So the UI and every classifier still see a clean word; the bar lives underneath. This is
+  why "C" beat storing the word directly (model "A"): **same legible read, but wounds
+  accumulate and the curve is tunable** by moving the lines / adding boxes.
+
+### Destruction & death
+- **DESTROYED** = the part is lost: the body graph **detaches it and everything distal**
+  (sever a thigh → the shin and foot go with it).
+- **Fatal magnitude — or overflow — on a vital part = character death**, feeding the
+  permadeath economy (a new character begins, #13).
+
+### Feedback into framing (the mechanical bite)
+- A wounded part bites through its **`PartFunction` + derived status**: when an intent leans
+  on a function, the relevant classifiers see the impairment.
+- A COMPROMISED/CRITICAL `MOVEMENT` part **worsens effect and/or raises threat-magnitude**
+  on movement-leaning actions; a DESTROYED one removes that function outright. This loop is
+  what makes harm *matter* turn-to-turn rather than being an inert number.
+
+### Healing
+- Treatment is **fiction-gated** and **removes boxes**, so recovery is **granular/partial**
+  (good care drops a CRITICAL leg to COMPROMISED before it's whole). Exact rates/gates → playtest.
+
+---
+
+## 8. Open nodes (agenda)
 
 Tackle these next, against this saved foundation:
 
@@ -227,12 +271,17 @@ Tackle these next, against this saved foundation:
 - [x] ~~**Position → consequence-severity mapping**~~ — superseded by the **Deep Cuts cherry-pick**
       (decisions #15–17): threat magnitude (1–4) scaled by outcome (avoid/reduced/full); position
       collapsed to risky-default + desperate flag; failure-of-goal is a threat type.
-- [~] **Persistent harm model** — leaning **wounds-as-healable-conditions on the existing body
-      graph** (`core/model/part.py` `Status: NORMAL/COMPROMISED/CRITICAL`). A `harm` threat at
-      magnitude 1–4 degrades a fiction-chosen body part's status; mechanical bite derives from
-      the part's `PartFunction`; healing is fiction-gated treatment; Fatal = vital part critical /
-      part destroyed (graph supports severing). **Still to nail:** magnitude→status mapping,
-      how part status feeds back into effect/threat framing, healing rules. (Next node.)
+- [x] ~~**Persistent harm model**~~ — done (§7, decision #19): per-part **wound-box pool**
+      (model "C"), `Status` gains **DESTROYED** and is **derived from box-fill thresholds**,
+      `PartFunction` + status feeds the effect/threat classifiers, healing removes boxes,
+      DESTROYED severs via the graph, Fatal/overflow on a vital part = death. Box count +
+      thresholds are code-side dials. **Remaining sub-details** below (part selection,
+      non-corpus harm).
+- [ ] **Harm-location selection** — which corpus part a `harm` threat hits. Fiction-driven;
+      open whether it's a tiny `harm-locator` classifier or folded into the narrator (#18 ethos).
+- [ ] **Non-corpus harm routing** — a `harm`-type threat on the **mens/anima** channel has no
+      body part. Does it route to stress/trauma, to freeform conditions, or get reframed as a
+      complication? (Touches §6 + §7.)
 - [ ] **Effect → reach-within-beat spec** — effect no longer enforces anti-chaining
       (decision #9 does, structurally). Remaining question: how `effect` shapes *how much
       of the single resolved beat* a success accomplishes (limited/standard/great) as a
@@ -248,15 +297,15 @@ Tackle these next, against this saved foundation:
 - [ ] **State additions** — `GraphState` fields for: `intent_type`, `lead_up`,
       `contested_beat`, `deferred_tail`, `attribute`, `effect`, `threat` (+type/channel/magnitude),
       `position_flag` (default risky), dice result + tier, scaled-threat, `resistance_history`,
-      pending offer. Per-run character state: `stress`, `trauma`, accumulating `vices`. Mind the
-      parallel-write reducer pattern.
+      pending offer. Per-run character state: `stress`, `trauma`, accumulating `vices`, and
+      **per-part wound-box counts** on the body graph. Mind the parallel-write reducer pattern.
 - [ ] **TUI: hint widget** — dedicated dim label above the input (persists while typing,
       styled `continue:` prefix), `pending_intent` on `GameScreen`, empty-enter-accepts
       wiring in `ChatPanel` (decision #10).
 
 ---
 
-## 8. Open questions deferred to playtest
+## 9. Open questions deferred to playtest
 - Exact lean budget (`{2,1,1}` vs `{2,2,0}` vs tunable).
 - Exact stress/trauma track size (default 9/4; lean resistance-heavy economy may want shorter).
 - Resistance attribute when the player's flavor implies a *different* channel than the
@@ -264,3 +313,5 @@ Tackle these next, against this saved foundation:
 - Bonus-dice sources under Deep Cuts (assist / devil's bargain) — exact rules TBD.
 - Per-module model routing: which classifiers run on the tiniest model vs the narrator's
   stronger one (enabled by the #18 split) — tune by eval.
+- Wound-box tuning (#19): default pool size, per-part-size scaling, where the
+  COMPROMISED/CRITICAL/DESTROYED threshold lines sit, and healing rates.
