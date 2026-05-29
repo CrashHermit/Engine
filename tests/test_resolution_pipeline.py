@@ -5,7 +5,7 @@ from src.core.mechanics.dice import RollTier
 from src.core.model.message import Message
 from src.graph.main_graph import MainGraphBuilder
 from src.nodes.narrator import format_outcome
-from src.nodes.resolution import _STUB_BASE_MAGNITUDE, ResolutionNode
+from src.nodes.resolution import ResolutionNode
 from src.state import GraphState
 
 
@@ -27,21 +27,19 @@ def test_main_graph_compiles():
 
 def test_resolution_node_invariants():
     node = ResolutionNode(rng=random.Random(0))
-    state = _state(corpus=3)
+    # Framing comes from state now (set by the fan-out classifiers upstream).
+    state = _state(attribute="corpus", corpus=3, base_magnitude=2)
     for _ in range(50):
         out = _run(node(state))
-        assert out["attribute"] == "corpus"
-        assert out["threat_channel"] == "corpus"
-        assert out["threat_type"] == "harm"
         assert out["roll_tier"] in {t.value for t in RollTier}
         assert len(out["roll_dice"]) == 3  # rating 3 -> 3 dice
-        assert 0 <= out["landed_magnitude"] <= int(_STUB_BASE_MAGNITUDE)
+        assert 0 <= out["landed_magnitude"] <= 2  # cannot exceed the base magnitude
         assert isinstance(out["outcome_avoided"], bool)
 
 
 def test_resolution_zero_rating_uses_two_dice():
     node = ResolutionNode(rng=random.Random(1))
-    out = _run(node(_state(corpus=0)))
+    out = _run(node(_state(attribute="corpus", corpus=0)))
     assert len(out["roll_dice"]) == 2  # 0-rating -> roll 2d6, take worst
 
 

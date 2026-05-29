@@ -2,19 +2,18 @@ from dspy import Predict
 from dspy.primitives.prediction import Prediction
 
 from src.lm import lm
-from src.signatures.roll_gate import RollGateSignature
+from src.signatures.segmenter import SegmenterSignature
 from src.state import GraphState
 
 
-class RollGateNode:
-    """Binary gate (decision #9, split from the segmenter per #18): does the beat
-    carry danger + uncertainty? On gate=true the `segmenter` runs next and owns the
-    {lead_up, contested_beat, deferred_tail} split; on gate=false we narrate the
-    whole message directly, so the contested_beat is seeded to the full message.
+class SegmenterNode:
+    """Split the message into {lead_up, contested_beat, deferred_tail} (decision
+    #9). Runs only on the gate=true path; the tail is held, never sent downstream.
+    Replaces the Phase-1 stub segmentation that lived in the roll-gate.
     """
 
     def __init__(self) -> None:
-        self._program: Predict = Predict(signature=RollGateSignature)
+        self._program: Predict = Predict(signature=SegmenterSignature)
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
@@ -27,9 +26,10 @@ class RollGateNode:
             message_history=message_history,
             human_message=state.human_message.content,
         )
+        contested_beat = (prediction.contested_beat or "").strip()
         return {
-            "needs_roll": bool(prediction.needs_roll),
-            # No-roll path narrates the message as-is; the segmenter overwrites this
-            # on the roll path.
-            "contested_beat": state.human_message.content,
+            "lead_up": (prediction.lead_up or "").strip(),
+            # Fall back to the whole message if the model returns an empty beat.
+            "contested_beat": contested_beat or state.human_message.content,
+            "deferred_tail": (prediction.deferred_tail or "").strip(),
         }
