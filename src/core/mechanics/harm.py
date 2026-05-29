@@ -3,7 +3,8 @@
 Each body part carries a small **wound-box pool**; a `harm` threat fills
 `magnitude` boxes. The part's `Status` is *derived* from how full the pool is via
 tunable thresholds -- so the rest of the engine still reads a clean word
-(NORMAL / COMPROMISED / CRITICAL / DESTROYED) while wounds accumulate underneath.
+(NORMAL / GRAZED / COMPROMISED / CRITICAL / DESTROYED) while wounds accumulate
+underneath.
 
 Box count and thresholds are dials (defaults below; tuned at playtest). A
 DESTROYED part detaches from the body graph along with everything distal to it --
