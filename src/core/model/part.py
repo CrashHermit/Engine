@@ -14,8 +14,10 @@ class Shape(StrEnum):
 
 class Status(StrEnum):
     NORMAL = "normal"
+    GRAZED = "grazed"
     COMPROMISED = "compromised"
     CRITICAL = "critical"
+    DESTROYED = "destroyed"
 
 
 class SizeScale(StrEnum):
