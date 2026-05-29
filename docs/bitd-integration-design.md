@@ -381,10 +381,20 @@ suite exists**; persistence is ArcadeDB via a services→repos layer; the TUI re
   mirroring `intent_alignment_history`, plus the `resist/push parser`.
 - Add the **vice path**: `intent-type router` + `vice matcher` + code `vice-clear`.
 
-### Phase 4 — TUI & polish
-- Deferred-tail **hint widget** + `pending_intent` on `GameScreen`; empty-enter-accepts in
-  `ChatPanel` (#10).
-- Character-creation **dot allocation** on the 0–4 sheet (#20); surface intent-type routing.
+### Phase 4 — TUI & polish *(largely done)*
+- [x] **Integration boundary** (decision #21): `src/tui/turn_effects.py` — a Textual-free
+  `apply_turn_effects` (persists harm/stress via services after `ainvoke`) + `next_turn_carry`
+  (deferred tail + resistance offer). `GameScreen` calls it post-narration. Unit-tested.
+- [x] Deferred-tail **hint widget** + `pending_intent` on `ChatPanel` (dim `continue:` line,
+  toggled via `display`); **empty-enter-accepts**, typing overrides (#10).
+- [x] Character-creation **dot allocation** on the unified **0–4** sheet (#20): attributes
+  *and* the Big-Five traits are now 0–4; starting **vice** field (#14) threaded service-side.
+- [x] Character sheet surfaces **condition** (stress / trauma / vices, `format_condition`),
+  re-read on open so the session's accrued harm/stress shows.
+- [ ] **Remaining:** wire the **resistance turn** into the graph + `GameScreen` re-entry (needs
+  live TUI state), the **vice-path** router/matcher, and the **harm-location** step that sets
+  `harm_part` (open design node, §8) — until it ships, `apply_turn_effects` simply skips harm.
+- [ ] Surface intent-type routing in the UI.
 
 ### Cross-cutting unknowns (settle as we reach them)
 - **Per-run state home** — `stress` / `trauma` / `vices` as CHARACTER properties, wound-box

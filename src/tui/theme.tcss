@@ -252,6 +252,15 @@ ChatPanel {
     background: $da-bg;
 }
 
+/* Deferred-tail hint (decision #10): a dim line above the input, shown only
+   when a pending intent exists (toggled via `display` in code). */
+#continue-hint {
+    height: auto;
+    padding: 0 1;
+    color: $da-muted;
+    display: none;
+}
+
 #input-bar {
     height: 3;
     padding: 0 1;

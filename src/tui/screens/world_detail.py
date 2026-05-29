@@ -85,14 +85,15 @@ class WorldDetailScreen(Screen):
             self._services.character.create_character(
                 name=str(result["name"]),
                 description=str(result.get("description", "")),
+                vice=str(result.get("vice", "")),
                 corpus=int(result.get("corpus", 0)),
                 mens=int(result.get("mens", 0)),
                 anima=int(result.get("anima", 0)),
-                extraversion=int(result.get("extraversion", 1)),
-                openness=int(result.get("openness", 1)),
-                agreeableness=int(result.get("agreeableness", 1)),
-                neuroticism=int(result.get("neuroticism", 1)),
-                conscientiousness=int(result.get("conscientiousness", 1)),
+                extraversion=int(result.get("extraversion", 2)),
+                openness=int(result.get("openness", 2)),
+                agreeableness=int(result.get("agreeableness", 2)),
+                neuroticism=int(result.get("neuroticism", 2)),
+                conscientiousness=int(result.get("conscientiousness", 2)),
             )
             self._characters = self._services.character.list_characters()
             self._refresh_character_list()

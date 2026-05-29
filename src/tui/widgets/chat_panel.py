@@ -2,7 +2,7 @@ from rich.markup import escape
 from textual.message import Message
 from textual.widget import Widget
 from textual.app import ComposeResult
-from textual.widgets import Button, Input, RichLog
+from textual.widgets import Button, Input, RichLog, Static
 from textual.containers import Vertical, Horizontal
 
 
@@ -17,13 +17,28 @@ class ChatPanel(Widget):
     def __init__(self, character_name: str = "You", **kwargs) -> None:
         super().__init__(**kwargs)
         self._character_name = character_name
+        # The deferred tail (decision #10): a passive suggestion, surfaced as a dim
+        # hint above the input. Empty-enter accepts it; typing overrides it.
+        self._pending_intent: str = ""
 
     def compose(self) -> ComposeResult:
         with Vertical(id="chat-layout"):
             yield RichLog(id="chat-log", min_width=0, wrap=True, markup=True, highlight=True)
+            yield Static("", id="continue-hint")
             with Horizontal(id="input-bar"):
                 yield Input(placeholder="Type your message...", id="msg-input")
                 yield Button("Send", id="btn-send", variant="primary")
+
+    def set_pending_intent(self, intent: str) -> None:
+        """Show (or clear) the deferred-tail hint above the input (decision #10)."""
+        self._pending_intent = (intent or "").strip()
+        hint = self.query_one("#continue-hint", Static)
+        if self._pending_intent:
+            hint.update(f"[dim]continue:[/dim] [italic dim]{escape(self._pending_intent)}[/italic dim]")
+            hint.display = True
+        else:
+            hint.update("")
+            hint.display = False
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-send":
@@ -45,8 +60,13 @@ class ChatPanel(Widget):
         if input_widget.disabled:
             return
         text = input_widget.value.strip()
+        # Empty-enter accepts the pending deferred tail; typing overrides it (#10).
         if not text:
-            return
+            if not self._pending_intent:
+                return
+            text = self._pending_intent
+        # Sending clears the hint; a new tail (if any) is set by the next result.
+        self.set_pending_intent("")
         log = self.query_one("#chat-log", RichLog)
         log.write(f"[bold #a0bfdf]{escape(self._character_name)}:[/bold #a0bfdf] {escape(text)}")
         input_widget.value = ""
