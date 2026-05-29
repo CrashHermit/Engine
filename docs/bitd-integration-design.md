@@ -66,21 +66,23 @@ Relevant existing facts that shape the design:
 | 6 | **Resistance = weighty reactive follow-up turn.** The consequence lands in the fiction first; the turn ends offering resistance; the player's **typed** reply drives a resistance-resolution path on the next invocation (mirrors the existing `intent_alignment` re-invoke loop). | Most tabletop-faithful feel; cheapest to build (no checkpointer); keeps every turn atomic. Typed (not buttons) so the player can **flavor how they resist** ("I twist so it catches my pauldron") — that flavor feeds narration. |
 | 7 | **Dice: take-highest, outcome *scales the threat*** *(revised under #17)*. Ratings **0–4**; pool = the attribute's rating (0 = roll **2d6 take the worst**). Take highest die → **6 = avoid** the threat · **4–5 = reduced** (magnitude −1) · **1–3 = full** threat · **two+ 6s = crit** (avoid + benefit). **No pre-roll push** (Deep Cuts removes it); bonus dice only from **assist / devil's bargain** (TBD). `failure-of-goal` is itself a threat type, so the roll can still fail the action (see #16). | Keeps the lean take-highest curve on the three attributes, but adopts Deep Cuts' graceful **avoid / reduced / full** scaling instead of classic's success/partial/fail. |
 | 8 | **Lean ~4-dot starting budget** (e.g. `{2,1,1}` or `{2,2,0}`), ratings grow toward the 4 cap via advancement. | Three broad attributes inflate pools vs BitD's 12 thin actions; a lean budget keeps typical pools at **1–2 dice**, preserving the gritty, swingy "competence is earned" tone. Consequence: 4–5 and 1–3 are the *common* results, so the consequence/resistance pipeline is the engine's **hot path**. |
-| 9 | **Anti-chaining is enforced by input-starvation, not by the narrator.** The narrator is *not* trusted to "stop at the edge of effect". Instead the **scoper segments the message into `{lead_up, contested_beat, deferred_tail}`**, and the narrator only ever receives `lead_up + contested_beat + outcome + effect + consequence` — never the tail or the raw full chain. It cannot run ahead because the rest isn't in its context. The gate (decision #2) and scoper merge into one judgment: *"find the first beat needing a roll; if none, it's all lead-up → no roll."* | Asking a generative model to self-limit mid-prose is a soft constraint that fails exactly when needed (worse on small models). Robustness comes from controlling the narrator's **input**, guaranteed by the graph. |
+| 9 | **Anti-chaining is enforced by input-starvation, not by the narrator.** The narrator is *not* trusted to "stop at the edge of effect". Instead the **scoper segments the message into `{lead_up, contested_beat, deferred_tail}`**, and the narrator only ever receives `lead_up + contested_beat + outcome + effect + consequence` — never the tail or the raw full chain. It cannot run ahead because the rest isn't in its context. *(Per #18, the gate and segmenter are **split**: a binary `roll-gate` runs first; the `segmenter` runs only on gate=true.)* | Asking a generative model to self-limit mid-prose is a soft constraint that fails exactly when needed (worse on small models). Robustness comes from controlling the narrator's **input**, guaranteed by the graph. |
 | 10 | **Deferred tail is held as a passive *suggestion*, never an execution queue.** It is stored (`pending_intent`) and surfaced next turn via a **dedicated hint widget** (a dim line above the input that persists while typing, with a styled `continue:` prefix; empty-enter accepts it, typing overrides it). Re-affirming the tail sends it back through the **whole pipeline** as a fresh message, so it is **re-scoped against the updated fiction**; it is never auto-rolled from storage. | After a consequence the fiction has changed, so a stale queued action shouldn't auto-execute — the player should re-decide. Reusing the full pipeline means no special resume code, no stale actions, and natural recursion (a multi-beat plan peels one contested beat per turn). |
 | 11 | **Unified push/resist; flat stress cost; always works** *(revised under #17)*. Pre-roll push is gone. *After* a roll, spend stress (roll the relevant attribute, take highest) to **bump the outcome one step** (1–3→4–5→6, i.e. reduce a consequence one magnitude) **or** gain more effect. Cost is **flat** by the push roll's highest die: **crit 0 · 6→1 · 4–5→2 · 1–3→3**. The improvement always lands; dice only set the price. Default track **9 stress / 4 trauma** (tunable). | Deep Cuts' cleaner 0–3 scale and push/resist unification (one mechanic, not two). Still "always works, dice set price"; still the **hot path** with lean pools. |
 | 12 | **Relief is vice-only, continuous and fiction-gated** (rest was considered and cut). Indulging in the fiction (right place/moment) routes to a vice-resolution: **roll your lowest attribute, clear that many stress**; if the roll **exceeds current stress you overindulge** → a complication. No formal downtime phase. | Canonical BitD relief. The overindulgence rule *is* the anti-spam gate (safe when strung-out, risky when nearly fresh), so vice-only + permadeath stays balanced without cooldown state. Continuous/fiction-gated fits the engine (no mission/downtime structure exists). Designed to be downtime-slottable later. |
 | 13 | **Permadeath at max trauma.** Stress overflow → reset to 0, gain **1 trauma + a trauma condition**; at **4 trauma the character is lost** (retired/dead/broken) and a new one begins. | Failure has real teeth; stories get endings. The lean, resistance-heavy economy means trauma genuinely accrues. |
 | 14 | **Vices are freeform descriptors that accumulate, trauma-linked.** Characters start with one freeform vice; **each trauma grants a new one** — a coping mechanism born from the wound, building a *scar-record*. More vices broadens *access* (more fictions qualify as relief), **not power** (clear is still roll-lowest + overindulgence gate). | Marries relief and permadeath into one grim bargain — every step toward being lost hands you a new way to cope. Freeform matches the engine's LLM-driven, broad-category ethos. |
-| 15 | **Consequence = threat magnitude (1–4) + type & fiction (LLM), *scaled by outcome*** *(revised under #17)*. The `threat-namer` authors the looming threat **before the roll**: it picks **type** (harm / complication / worse-position / lost-opportunity / **failure-of-goal**), writes the fiction, tags the **channel** (corpus/mens/anima), and sets **magnitude** on `Minor(1) / Standard(2) / Severe(3) / Fatal(4)`. **Code scales by the roll** (6 avoid · 4–5 mag−1 · 1–3 full); push/resist reduces one more step. | Keeps the balance-critical magnitude structured (safe on small models), leaves flavor to the LLM, and unifies harm levels + all consequence types under one 1–4 ladder that also feeds body-part status. |
+| 15 | **Consequence = structured threat (classifiers) *scaled by outcome*** *(revised under #17, split under #18)*. Three classifiers fix the threat **before the roll**: **type** (harm / complication / worse-position / lost-opportunity / **failure-of-goal**), **channel** (corpus/mens/anima), **magnitude** on `Minor(1) / Standard(2) / Severe(3) / Fatal(4)`. **Code scales by the roll** (6 avoid · 4–5 mag−1 · 1–3 full); push/resist reduces one more step. The **narrator** writes all fiction, post-roll, from the landed threat. | Keeps the balance-critical magnitude structured (safe on small models), isolates generation to the narrator, and unifies harm levels + all consequence types under one 1–4 ladder that also feeds body-part status. |
 | 16 | **Position collapsed; failure stays real** *(replaces position-only)*. **No per-roll position judge**: **risky is the default**; a lightweight fiction flag escalates to **desperate** (4–5 counts as full; only a 6 avoids) or relaxes to **controlled** (rare). **`failure-of-goal` is a common, first-class threat type** — not auto-success. | Deep Cuts de-emphasises position → one fewer module for small models. Keeping failure-as-threat preserves the gritty "you might not pull it off" feel *and* keeps the model **classifying**, not open-authoring. |
 | 17 | **Resolution = Deep Cuts cherry-pick (hybrid).** Keep a lightweight **action-roll frame** (you attempt X; failure is possible), but adopt Deep Cuts' mechanical upgrades: **avoid/reduced/full** scaling (#7), **unified push/resist + flat 0/1/2/3 cost** (#11), one **1–4 magnitude ladder** (#15), **collapsed position** (#16). **Rejected:** the *full* threat roll (effect fully decoupled / always-accomplish) — it leans hardest on the model's weakest skill (open threat authoring) and softens real failure. | Best-of-both: Deep Cuts' clean math + fewer structural judgments, without its agency-softening or heavier authoring burden. Better fit for small models, the gritty tone, and the model's far stronger familiarity with *classic* Blades. |
+| 18 | **Prefer maximal module splitting for trainability.** Where a step would emit several outputs, split it into **one narrow single-judgment module per output** (separate classifiers for each label); isolate generation to the narrator. Concretely: gate split from segmenter (revises #9); `threat-namer` split into `threat-type` + `threat-magnitude` + `threat-channel`, with its fiction folded into the narrator. | Pure classifiers get **crisp metrics**, cheap bootstrapped datasets, and far better DSPy optimisation (`BootstrapFewShot`/`MIPROv2`), and each can run on the **cheapest adequate model**. Independent classifiers fan out in parallel, so splitting rarely costs latency. |
 
-### Resolution model — Deep Cuts cherry-pick (#15–17)
+### Resolution model — Deep Cuts cherry-pick (#15–18)
 
-Per contested beat: establish **effect** (what success looks like) and have the `threat-namer`
-author **one threat** = `{type, fiction, channel, magnitude 1–4}`. Roll the attribute pool,
-take highest:
+Per contested beat: establish **effect** (what success looks like) and have the three threat
+classifiers (`threat-type`, `threat-magnitude`, `threat-channel`) produce the structured threat
+= `{type, magnitude 1–4, channel}` (its **fiction is written by the narrator**, post-roll). Roll
+the attribute pool, take highest:
 
 | highest die | how the threat lands |
 |---|---|
@@ -94,11 +96,11 @@ Magnitude ladder: `0 none · 1 Minor · 2 Standard · 3 Severe · 4 Fatal`. **Pu
 unified) bumps the result one step / reduces magnitude one more, at flat cost
 **crit 0 · 6→1 · 4–5→2 · 1–3→3** stress. Because `failure-of-goal` is a valid threat type, a
 full (or reduced) result can mean you don't accomplish the beat. **Code owns magnitude + scaling;
-the LLM owns type + fiction + channel.**
+the classifiers own type / magnitude / channel; the narrator owns all fiction.**
 
 ### Over-reach defense, in layers
 1. **Intent alignment** (exists) rejects impossible / nonexistent-target reaches. Also catches a re-affirmed tail that the changed fiction has made impossible.
-2. **Scoper segmentation** peels off `lead_up` and `deferred_tail`; only the single `contested_beat` is rolled. The tail is *held*, not passed downstream.
+2. **Segmenter** peels off `lead_up` and `deferred_tail`; only the single `contested_beat` is rolled. The tail is *held*, not passed downstream.
 3. **Input-starvation (structural).** The narrator receives only `lead_up + contested_beat + outcome + effect + consequence`. It physically cannot narrate the chain because the chain isn't in its context. **This — not a narrator prompt — is the enforcement.** Effect still governs *how far one success carries within the resolved beat*, but that's a quality dial, not the anti-chaining mechanism.
 
 ---
@@ -111,24 +113,25 @@ Replace the single `action_generator` node with the resolution subgraph:
 START → intent_alignment → [ RESOLUTION ] → narrator → END
 
 RESOLUTION (Deep Cuts cherry-pick):
-  scoper ──(no contested beat)──────────────────────────────────► narrator(lead_up only)
-    │  segments → {lead_up, contested_beat, deferred_tail}
-    │  deferred_tail ──► held in state (pending_intent), NOT passed downstream
-    └──(contested beat)──► ┌─ attribute ─────┐
-                           ├─ effect ────────┤─► join ─► [dice + scale: code] ─► (offer/resolve)
-                           └─ threat-namer ──┘            (6 avoid · 4-5 mag-1 · 1-3 full)
-                                                                         │
+  gate ──(no roll)──────────────────────────────────────────────► narrator(lead_up only)
+    └──(roll)──► segmenter ── {lead_up, contested_beat, deferred_tail}
+                    │           deferred_tail ──► held (pending_intent), NOT downstream
+                    └──► ┌─ attribute ────────┐
+                         ├─ effect ───────────┤
+                         ├─ threat-type ──────┤─► join ─► [dice + scale: code] ─► (offer/resolve)
+                         ├─ threat-magnitude ─┤            (6 avoid · 4-5 mag-1 · 1-3 full)
+                         └─ threat-channel ───┘                        │
   narrator receives ONLY: lead_up + contested_beat + outcome + effect + threat-as-landed
 ```
 
-- **Scoper = gate + segmenter** (one judgment): finds the first beat needing a roll; if
-  none, the whole message is `lead_up` → no roll → narrate it. Everything after the first
-  contested beat is `deferred_tail`, peeled off and **held** (see decision #10), never
-  passed to the narrator.
-- **Framing fan-out** (`attribute`, `effect`, `threat-namer`) = parallel edges off the
-  scoped beat; mutually independent. **`position` is gone** (risky default + desperate flag,
-  #16) — one fewer judgment.
-- **`threat-namer`** authors `{type, fiction, channel, magnitude 1–4}` *before* the roll.
+- **Gate** (binary, #9 revised): does the beat carry **danger + uncertainty**? If not →
+  `lead_up` → no roll → narrate. If yes → segmenter.
+- **Segmenter** (runs only on gate=true): split into `{lead_up, contested_beat, deferred_tail}`;
+  the tail is peeled off and **held** (decision #10), never passed to the narrator.
+- **Framing fan-out** — five parallel classifiers off the scoped beat (`attribute`, `effect`,
+  `threat-type`, `threat-magnitude`, `threat-channel`), mutually independent. **`position` is
+  gone** (risky default + desperate flag, #16); the old `threat-namer` is **split into three
+  classifiers** (#18) with its fiction folded into the narrator.
 - **Dice + scaling** in **deterministic code** (roll take-highest → avoid/reduced/full per
   #15–17). If multiple threats stack, fan out with **`Send`**.
 - **Narrator is bounded by construction** — it only ever sees the single resolved beat and
@@ -140,7 +143,7 @@ RESOLUTION (Deep Cuts cherry-pick):
 
 ### Tail lifecycle (worked)
 1. Player: *"cross the courtyard, cut down the guard, then grab the crown."*
-2. Scoper → `lead_up`: cross courtyard · `contested_beat`: cut down guard · `deferred_tail`: grab the crown.
+2. Gate → roll needed; segmenter → `lead_up`: cross courtyard · `contested_beat`: cut down guard · `deferred_tail`: grab the crown.
 3. Beat rolled + narrated; narrator never sees "grab the crown". Tail stored as `pending_intent`.
 4. Next turn the hint widget shows `continue: grab the crown`. Empty-enter accepts; typing overrides.
 5. If accepted, "grab the crown" enters the **whole pipeline fresh** and is re-scoped against
@@ -154,19 +157,24 @@ RESOLUTION (Deep Cuts cherry-pick):
 | Module | Task | Output |
 |--------|------|--------|
 | **intent-type router** | is this a *contested action* or a *vice / relief act*? (extensible: gather-info, etc.) | enum → routes to action path or vice path |
-| **scoper** (gate + segmenter) | segment the message; find the first beat needing a roll | `{lead_up, contested_beat \| none, deferred_tail}` — `none` ⇒ no roll |
+| **roll-gate** | does the beat carry danger + uncertainty? | bool — `false` ⇒ no roll |
+| **segmenter** (gate=true only) | split message around the first contested beat | `{lead_up, contested_beat, deferred_tail}` |
 | **attribute selector** | which of Corpus / Mens / Anima | 3-way |
 | **effect judge** | what success accomplishes (limited / standard / great) | 3-way |
-| **threat-namer** | author the looming threat *before* the roll | `{type, fiction, channel, magnitude 1–4}` |
+| **threat-type** | kind of threat | 5-way (harm / complication / worse-position / lost-opportunity / failure-of-goal) |
+| **threat-magnitude** | how bad | 1–4 (Minor / Standard / Severe / Fatal) |
+| **threat-channel** | which attribute resists it | 3-way (corpus / mens / anima) |
 | *dice + scale* | take-highest → avoid / reduced (mag−1) / full | numbers (code, no LLM) |
 | **resist/push parser** | resist / endure / push-for-effect (typed reply) | enum; raw text passed through as flavor |
 | **vice matcher** | does this indulgence match one of the character's vices? | bool + which vice (gates the relief path) |
 | *vice clear* | roll lowest attribute, clear stress; overindulge if roll > current stress | numbers (code, no LLM) |
-| **narrator** | prose of the resolved beat | prose — **bounded by construction**: receives only `lead_up + contested_beat + outcome + effect + consequence`, never the tail |
+| **narrator** | prose of the resolved beat (incl. the threat's fiction) | prose — **bounded by construction**: receives only `lead_up + contested_beat + outcome + effect + threat-as-landed`, never the tail |
 
-> The gate and scoper are **merged** (decision #9): one segmentation judgment that emits
-> `contested_beat = none` to mean "no roll needed". Whether splitting them back out helps a
-> given small model is a playtest question.
+> Every LLM step above is a **single-judgment classifier** except the narrator (the lone
+> generative module). This is decision **#18** (split for trainability): pure classifiers get
+> crisp metrics + cheap datasets + better DSPy optimisation, and can be routed to the
+> cheapest adequate model; the five framing classifiers fan out in parallel, so the split
+> costs little latency.
 
 ---
 
@@ -251,9 +259,8 @@ Tackle these next, against this saved foundation:
 ## 8. Open questions deferred to playtest
 - Exact lean budget (`{2,1,1}` vs `{2,2,0}` vs tunable).
 - Exact stress/trauma track size (default 9/4; lean resistance-heavy economy may want shorter).
-- Whether `gate`+`scoper` merge is safe on the target small model.
 - Resistance attribute when the player's flavor implies a *different* channel than the
   threat's tag (current rule: threat channel wins; flavor colors prose only).
 - Bonus-dice sources under Deep Cuts (assist / devil's bargain) — exact rules TBD.
-- Whether `threat-namer` (type + fiction + channel + magnitude) is one module or split for
-  the target small model.
+- Per-module model routing: which classifiers run on the tiniest model vs the narrator's
+  stronger one (enabled by the #18 split) — tune by eval.
