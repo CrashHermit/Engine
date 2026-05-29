@@ -26,28 +26,30 @@ DEFAULT_CAPACITY = 4
 class WoundThresholds:
     """Minimum fill to reach each status (defaults for a 4-box part).
 
-    The defaults are a clean, consecutive ladder that maps the magnitude scale
-    straight onto the status scale for a single hit on a fresh part::
+    The defaults are a clean ladder that maps the magnitude scale **1:1** onto the
+    status scale for a single hit on a fresh part::
 
-        fill 0-1 -> NORMAL       (a Minor graze is just a scratch)
-        fill 2   -> COMPROMISED  (Standard)
-        fill 3   -> CRITICAL     (Severe)
-        fill 4   -> DESTROYED    (Fatal)
+        fill 0 -> NORMAL
+        fill 1 -> GRAZED       (Minor)
+        fill 2 -> COMPROMISED  (Standard)
+        fill 3 -> CRITICAL     (Severe)
+        fill 4 -> DESTROYED    (Fatal)
 
-    NORMAL is any fill below ``compromised`` -- it isn't a threshold, it's the
-    floor. Wounds still accumulate, so two Minors also reach COMPROMISED.
+    NORMAL is any fill below ``grazed`` -- it isn't a threshold, it's the floor.
+    Wounds still accumulate, so two Minors reach COMPROMISED.
     """
 
+    grazed: int = 1
     compromised: int = 2
     critical: int = 3
     destroyed: int = 4
 
     def __post_init__(self) -> None:
-        if not 0 < self.compromised <= self.critical <= self.destroyed:
+        if not 0 < self.grazed <= self.compromised <= self.critical <= self.destroyed:
             raise ValueError(
                 "thresholds must be a positive, non-descending ladder "
-                f"(compromised={self.compromised}, critical={self.critical}, "
-                f"destroyed={self.destroyed})"
+                f"(grazed={self.grazed}, compromised={self.compromised}, "
+                f"critical={self.critical}, destroyed={self.destroyed})"
             )
 
     def status_for(self, filled: int) -> Status:
@@ -57,6 +59,8 @@ class WoundThresholds:
             return Status.CRITICAL
         if filled >= self.compromised:
             return Status.COMPROMISED
+        if filled >= self.grazed:
+            return Status.GRAZED
         return Status.NORMAL
 
 

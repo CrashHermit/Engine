@@ -2,29 +2,29 @@ from src.core.mechanics.harm import WoundPool, WoundThresholds, distal_parts
 from src.core.model.part import Status
 
 
-def test_default_status_ladder_is_consecutive():
-    # No skipped fill level, and NORMAL is a real band (0-1), not a single point.
-    pool = WoundPool()  # capacity 4, thresholds 2/3/4
+def test_default_status_ladder_is_one_to_one_with_magnitude():
+    # Every fill level has its own status — 1:1 with the magnitude ladder.
+    pool = WoundPool()  # capacity 4, thresholds 1/2/3/4
     expected = [
         Status.NORMAL,       # 0
-        Status.NORMAL,       # 1 — a Minor scratch
-        Status.COMPROMISED,  # 2
-        Status.CRITICAL,     # 3
-        Status.DESTROYED,    # 4
+        Status.GRAZED,       # 1 — Minor
+        Status.COMPROMISED,  # 2 — Standard
+        Status.CRITICAL,     # 3 — Severe
+        Status.DESTROYED,    # 4 — Fatal
     ]
     for fill, status in enumerate(expected):
         assert WoundPool(filled=fill).status is status
 
 
 def test_default_status_progression():
-    pool = WoundPool()  # capacity 4, thresholds 2/3/4
+    pool = WoundPool()  # capacity 4, thresholds 1/2/3/4
     assert pool.status is Status.NORMAL
 
-    pool.apply(1)  # Minor — still just a scratch
+    pool.apply(1)  # Minor
     assert pool.filled == 1
-    assert pool.status is Status.NORMAL
+    assert pool.status is Status.GRAZED
 
-    pool.apply(1)  # a second Minor accumulates
+    pool.apply(1)  # accumulates to Standard
     assert pool.filled == 2
     assert pool.status is Status.COMPROMISED
 
@@ -90,7 +90,8 @@ def test_invalid_capacity_and_negative_heal():
 
 def test_invalid_thresholds_rejected():
     for bad in (
-        {"compromised": 0},                            # must be positive
+        {"grazed": 0},                                 # must be positive
+        {"grazed": 3, "compromised": 2},               # must not descend
         {"compromised": 3, "critical": 2},             # must not descend
         {"compromised": 2, "critical": 5, "destroyed": 4},
     ):

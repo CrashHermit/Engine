@@ -14,9 +14,10 @@ class Shape(StrEnum):
 
 class Status(StrEnum):
     NORMAL = "normal"
+    GRAZED = "grazed"            # a Minor wound — named so the narrator has a word for it
     COMPROMISED = "compromised"
     CRITICAL = "critical"
-    DESTROYED = "destroyed"  # part lost; detaches from the body graph (decision #19)
+    DESTROYED = "destroyed"      # part lost; detaches from the body graph (decision #19)
 
 
 class SizeScale(StrEnum):
