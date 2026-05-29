@@ -19,6 +19,10 @@ class _FakePart:
         self.status = Status.NORMAL.value
         self.removed = False
 
+    def get(self, name=None):
+        # Mirror the arcadedb Vertex.get(name=...) API the service reads names with.
+        return getattr(self, name)
+
 
 class _FakeCharRepo:
     def get_character(self, character_id):
