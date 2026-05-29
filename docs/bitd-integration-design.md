@@ -276,7 +276,8 @@ Tackle these next, against this saved foundation:
       (decisions #15–17): threat magnitude (1–4) scaled by outcome (avoid/reduced/full); position
       collapsed to risky-default + desperate flag; failure-of-goal is a threat type.
 - [x] ~~**Persistent harm model**~~ — done (§7, decision #19): per-part **wound-box pool**
-      (model "C"), `Status` gains **DESTROYED** and is **derived from box-fill thresholds**,
+      (model "C"), `Status` gains **GRAZED + DESTROYED** (now 1:1 with the magnitude ladder)
+      and is **derived from box-fill thresholds**,
       `PartFunction` + status feeds the effect/threat classifiers, healing removes boxes,
       DESTROYED severs via the graph, Fatal/overflow on a vital part = death. Box count +
       thresholds are code-side dials. **Remaining sub-details** below (part selection,
