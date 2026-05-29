@@ -13,5 +13,6 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "textual>=0.80.0",
     "uvicorn[standard]>=0.30.0",
-    "textual-canvas>=1.1.0"
+    "textual-canvas>=1.1.0",
+    "langgraph-checkpoint-sqlite>=3.1.0",
 ]

@@ -1,14 +1,16 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-
+from langgraph.checkpoint.memory import MemorySaver
 from src.nodes.intent_alignment_router import IntentAlignmentRouterNode
 from src.nodes.intent_question_generator import IntentQuestionGeneratorNode
 from src.nodes.intent_synthesizer import IntentSynthesizerNode
-from src.state import GraphState
+from src.state import 
+from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
+from langgraph.checkpoint.base import BaseCheckpointSaver
 
 
 class IntentAlignmentGraphBuilder:
-    def __init__(self) -> None:
+    def __init__(self, checkpointer: MemorySaver | None = None) -> None:
         self.workflow: StateGraph = StateGraph(GraphState)
 
     def build(self) -> CompiledStateGraph:
@@ -25,10 +27,13 @@ class IntentAlignmentGraphBuilder:
                 False: "intent_question_generator",
             },
         )
-        self.workflow.add_edge("intent_question_generator", END)
+        self.workflow.add_edge("intent_question_generator", "intent_alignment_router")
         self.workflow.add_edge("intent_synthesizer", END)
 
-        return self.workflow.compile()
+        return self.workflow.compile(
+            checkpointer=self._checkpointer,
+            interrrupt_after=["intent_question_generator"],
+        )
 
 
 def route_by_intent_alignment_router(state: GraphState) -> bool:
