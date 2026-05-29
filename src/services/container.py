@@ -8,6 +8,7 @@ from src.database.repository.world import WorldRepository
 from src.services.character import CharacterService
 from src.services.location import LocationService
 from src.services.message import MessageService
+from src.services.graph import GraphService
 
 
 class ServiceContainer:
@@ -18,8 +19,16 @@ class ServiceContainer:
     repositories directly.
     """
 
-    def __init__(self, database: arcadedb.Database) -> None:
+    def __init__(
+        self,
+        database: arcadedb.Database,
+        *,
+        world_name: str,
+        graph_service: GraphService,
+    ) -> None:
         self._database = database
+        self.world_name = world_name
+        self.graph_service = graph_service
 
         base = BaseRepository(database)
         characters = CharacterRepository(base)

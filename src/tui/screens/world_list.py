@@ -58,6 +58,9 @@ class WorldListScreen(Screen):
         elif event.button.id == "btn-enter":
             world_name: str | None = self._selected_world_name()
             if world_name:
+                if self.app.factory is None:
+                    self.app.notify(message="Session still starting up, try again.", severity="warning")
+                    return
                 try:
                     services = self.app.factory.open(world_name)
                 except Exception as e:

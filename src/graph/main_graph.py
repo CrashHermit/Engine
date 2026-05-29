@@ -1,3 +1,4 @@
+from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -8,8 +9,12 @@ from src.state import GraphState
 
 
 class MainGraphBuilder:
-    def __init__(self) -> None:
+    def __init__(self, *, checkpointer: BaseCheckpointSaver) -> None:
+        self._checkpointer = checkpointer
         self.workflow: StateGraph = StateGraph(GraphState)
+        # Subgraph is compiled without its own checkpointer; it inherits the
+        # parent's at runtime, which is what makes its interrupt() pause and
+        # resume the whole main graph.
         self.intent_alignment_graph: CompiledStateGraph = IntentAlignmentGraphBuilder().build()
 
     def build(self) -> CompiledStateGraph:
@@ -22,4 +27,4 @@ class MainGraphBuilder:
         self.workflow.add_edge("action_generator", "narrator")
         self.workflow.add_edge("narrator", END)
 
-        return self.workflow.compile()
+        return self.workflow.compile(checkpointer=self._checkpointer)

@@ -1,0 +1,25 @@
+from langgraph.types import interrupt
+
+from src.core.model.message import Message
+from src.state import GraphState
+
+
+class IntentClarificationNode:
+    """Pauses the graph and waits for the player's answer to the clarifying
+    question produced by the question generator.
+
+    The graph stays suspended (state frozen in the checkpointer) until it is
+    resumed with ``Command(resume=<player answer>)``. On resume this node
+    re-runs from the top, ``interrupt()`` returns the player's answer, and we
+    append it to the intent alignment history before routing back to the
+    router for re-evaluation.
+    """
+
+    async def __call__(self, state: GraphState) -> dict:
+        answer: str = interrupt({"question": state.question})
+        answer_message = Message(
+            role="human",
+            content=answer,
+            name=state.human_message.name if state.human_message else "",
+        )
+        return {"intent_alignment_history": [answer_message]}

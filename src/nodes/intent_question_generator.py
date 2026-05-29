@@ -27,6 +27,6 @@ class IntentQuestionGeneratorNode:
         )
         question_message = Message(role="ai", content=prediction.question, name="Intent Alignment")
         return {
-            "intent_alignment_history": [state.human_message, question_message],
+            "intent_alignment_history": [question_message],
             "question": prediction.question,
         }

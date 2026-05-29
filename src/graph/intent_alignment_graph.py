@@ -1,21 +1,21 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
-from langgraph.checkpoint.memory import MemorySaver
+
 from src.nodes.intent_alignment_router import IntentAlignmentRouterNode
+from src.nodes.intent_clarification import IntentClarificationNode
 from src.nodes.intent_question_generator import IntentQuestionGeneratorNode
 from src.nodes.intent_synthesizer import IntentSynthesizerNode
-from src.state import 
-from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-from langgraph.checkpoint.base import BaseCheckpointSaver
+from src.state import GraphState
 
 
 class IntentAlignmentGraphBuilder:
-    def __init__(self, checkpointer: MemorySaver | None = None) -> None:
+    def __init__(self) -> None:
         self.workflow: StateGraph = StateGraph(GraphState)
 
     def build(self) -> CompiledStateGraph:
         self.workflow.add_node("intent_alignment_router", IntentAlignmentRouterNode())
         self.workflow.add_node("intent_question_generator", IntentQuestionGeneratorNode())
+        self.workflow.add_node("intent_clarification", IntentClarificationNode())
         self.workflow.add_node("intent_synthesizer", IntentSynthesizerNode())
 
         self.workflow.add_edge(START, "intent_alignment_router")
@@ -27,13 +27,14 @@ class IntentAlignmentGraphBuilder:
                 False: "intent_question_generator",
             },
         )
-        self.workflow.add_edge("intent_question_generator", "intent_alignment_router")
+        self.workflow.add_edge("intent_question_generator", "intent_clarification")
+        self.workflow.add_edge("intent_clarification", "intent_alignment_router")
         self.workflow.add_edge("intent_synthesizer", END)
 
-        return self.workflow.compile(
-            checkpointer=self._checkpointer,
-            interrrupt_after=["intent_question_generator"],
-        )
+        # No checkpointer here: as a subgraph node it inherits the parent's,
+        # which is what lets the interrupt() in intent_clarification pause and
+        # resume the whole graph.
+        return self.workflow.compile()
 
 
 def route_by_intent_alignment_router(state: GraphState) -> bool:
