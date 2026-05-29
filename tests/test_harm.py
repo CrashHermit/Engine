@@ -2,19 +2,37 @@ from src.core.mechanics.harm import WoundPool, WoundThresholds, distal_parts
 from src.core.model.part import Status
 
 
+def test_default_status_ladder_is_consecutive():
+    # No skipped fill level, and NORMAL is a real band (0-1), not a single point.
+    pool = WoundPool()  # capacity 4, thresholds 2/3/4
+    expected = [
+        Status.NORMAL,       # 0
+        Status.NORMAL,       # 1 — a Minor scratch
+        Status.COMPROMISED,  # 2
+        Status.CRITICAL,     # 3
+        Status.DESTROYED,    # 4
+    ]
+    for fill, status in enumerate(expected):
+        assert WoundPool(filled=fill).status is status
+
+
 def test_default_status_progression():
-    pool = WoundPool()  # capacity 4, thresholds 1/3/4
+    pool = WoundPool()  # capacity 4, thresholds 2/3/4
     assert pool.status is Status.NORMAL
 
-    pool.apply(2)  # Standard
+    pool.apply(1)  # Minor — still just a scratch
+    assert pool.filled == 1
+    assert pool.status is Status.NORMAL
+
+    pool.apply(1)  # a second Minor accumulates
     assert pool.filled == 2
     assert pool.status is Status.COMPROMISED
 
-    pool.apply(1)  # Minor graze tips it
+    pool.apply(1)
     assert pool.filled == 3
     assert pool.status is Status.CRITICAL
 
-    overflow = pool.apply(2)  # Standard -> caps out, destroyed
+    overflow = pool.apply(2)  # caps out, destroyed
     assert pool.filled == 4
     assert pool.status is Status.DESTROYED
     assert pool.destroyed is True
@@ -68,6 +86,19 @@ def test_invalid_capacity_and_negative_heal():
     except ValueError:
         return
     raise AssertionError("expected ValueError on negative heal")
+
+
+def test_invalid_thresholds_rejected():
+    for bad in (
+        {"compromised": 0},                            # must be positive
+        {"compromised": 3, "critical": 2},             # must not descend
+        {"compromised": 2, "critical": 5, "destroyed": 4},
+    ):
+        try:
+            WoundThresholds(**bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"expected ValueError for {bad}")
 
 
 def test_distal_parts_severs_the_whole_limb():

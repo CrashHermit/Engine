@@ -236,8 +236,10 @@ Model **"C"**: each part is a small filling damage bar, and its status word is *
 ### Status is derived, not stored
 - The `Status` enum gains a fourth rung: **NORMAL → COMPROMISED → CRITICAL → DESTROYED**.
 - Status is **computed from how full the pool is**, via thresholds (also code-side dials).
-  Illustrative tuning on a 4-box part: `0 → NORMAL · 1–2 → COMPROMISED · 3 → CRITICAL ·
-  4 → DESTROYED`.
+  Default tuning on a 4-box part is a **consecutive ladder** that maps the magnitude scale
+  onto the status scale for a single hit: `0–1 → NORMAL · 2 → COMPROMISED · 3 → CRITICAL ·
+  4 → DESTROYED` (a Minor graze is just a scratch; wounds still accumulate, so two Minors
+  reach COMPROMISED). No fill level is skipped, and NORMAL is a real band, not a point.
 - So the UI and every classifier still see a clean word; the bar lives underneath. This is
   why "C" beat storing the word directly (model "A"): **same legible read, but wounds
   accumulate and the curve is tunable** by moving the lines / adding boxes.

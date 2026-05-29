@@ -24,11 +24,31 @@ DEFAULT_CAPACITY = 4
 
 @dataclass(frozen=True)
 class WoundThresholds:
-    """Minimum fill to reach each damaged status (defaults for a 4-box part)."""
+    """Minimum fill to reach each status (defaults for a 4-box part).
 
-    compromised: int = 1
+    The defaults are a clean, consecutive ladder that maps the magnitude scale
+    straight onto the status scale for a single hit on a fresh part::
+
+        fill 0-1 -> NORMAL       (a Minor graze is just a scratch)
+        fill 2   -> COMPROMISED  (Standard)
+        fill 3   -> CRITICAL     (Severe)
+        fill 4   -> DESTROYED    (Fatal)
+
+    NORMAL is any fill below ``compromised`` -- it isn't a threshold, it's the
+    floor. Wounds still accumulate, so two Minors also reach COMPROMISED.
+    """
+
+    compromised: int = 2
     critical: int = 3
     destroyed: int = 4
+
+    def __post_init__(self) -> None:
+        if not 0 < self.compromised <= self.critical <= self.destroyed:
+            raise ValueError(
+                "thresholds must be a positive, non-descending ladder "
+                f"(compromised={self.compromised}, critical={self.critical}, "
+                f"destroyed={self.destroyed})"
+            )
 
     def status_for(self, filled: int) -> Status:
         if filled >= self.destroyed:
