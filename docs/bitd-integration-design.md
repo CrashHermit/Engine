@@ -68,6 +68,10 @@ Relevant existing facts that shape the design:
 | 8 | **Lean ~4-dot starting budget** (e.g. `{2,1,1}` or `{2,2,0}`), ratings grow toward the 4 cap via advancement. | Three broad attributes inflate pools vs BitD's 12 thin actions; a lean budget keeps typical pools at **1–2 dice**, preserving the gritty, swingy "competence is earned" tone. Consequence: 4–5 and 1–3 are the *common* results, so the consequence/resistance pipeline is the engine's **hot path**. |
 | 9 | **Anti-chaining is enforced by input-starvation, not by the narrator.** The narrator is *not* trusted to "stop at the edge of effect". Instead the **scoper segments the message into `{lead_up, contested_beat, deferred_tail}`**, and the narrator only ever receives `lead_up + contested_beat + outcome + effect + consequence` — never the tail or the raw full chain. It cannot run ahead because the rest isn't in its context. The gate (decision #2) and scoper merge into one judgment: *"find the first beat needing a roll; if none, it's all lead-up → no roll."* | Asking a generative model to self-limit mid-prose is a soft constraint that fails exactly when needed (worse on small models). Robustness comes from controlling the narrator's **input**, guaranteed by the graph. |
 | 10 | **Deferred tail is held as a passive *suggestion*, never an execution queue.** It is stored (`pending_intent`) and surfaced next turn via a **dedicated hint widget** (a dim line above the input that persists while typing, with a styled `continue:` prefix; empty-enter accepts it, typing overrides it). Re-affirming the tail sends it back through the **whole pipeline** as a fresh message, so it is **re-scoped against the updated fiction**; it is never auto-rolled from storage. | After a consequence the fiction has changed, so a stale queued action shouldn't auto-execute — the player should re-decide. Reusing the full pipeline means no special resume code, no stale actions, and natural recursion (a multi-beat plan peels one contested beat per turn). |
+| 11 | **Stress is the survival currency; resistance always works, dice only set the price.** Resisting a consequence *always* reduces/avoids it — there is **no fail branch**. Cost = `6 − highest die` of a roll of the consequence's channel attribute; a crit (2+ sixes) **clears 1 stress** instead. Push-yourself costs **2 stress**. Default track **9 stress / 4 trauma** (tunable). | Faithful to BitD and keeps the resistance flow a single clean line (roll → pay → mitigate → maybe overflow). With lean 1–2 dice pools, players reach for resistance constantly — stress is the hot resource. |
+| 12 | **Relief is vice-only, continuous and fiction-gated** (rest was considered and cut). Indulging in the fiction (right place/moment) routes to a vice-resolution: **roll your lowest attribute, clear that many stress**; if the roll **exceeds current stress you overindulge** → a complication. No formal downtime phase. | Canonical BitD relief. The overindulgence rule *is* the anti-spam gate (safe when strung-out, risky when nearly fresh), so vice-only + permadeath stays balanced without cooldown state. Continuous/fiction-gated fits the engine (no mission/downtime structure exists). Designed to be downtime-slottable later. |
+| 13 | **Permadeath at max trauma.** Stress overflow → reset to 0, gain **1 trauma + a trauma condition**; at **4 trauma the character is lost** (retired/dead/broken) and a new one begins. | Failure has real teeth; stories get endings. The lean, resistance-heavy economy means trauma genuinely accrues. |
+| 14 | **Vices are freeform descriptors that accumulate, trauma-linked.** Characters start with one freeform vice; **each trauma grants a new one** — a coping mechanism born from the wound, building a *scar-record*. More vices broadens *access* (more fictions qualify as relief), **not power** (clear is still roll-lowest + overindulgence gate). | Marries relief and permadeath into one grim bargain — every step toward being lost hands you a new way to cope. Freeform matches the engine's LLM-driven, broad-category ethos. |
 
 ### Over-reach defense, in layers
 1. **Intent alignment** (exists) rejects impossible / nonexistent-target reaches. Also catches a re-affirmed tail that the changed fiction has made impossible.
@@ -127,6 +131,7 @@ RESOLUTION:
 
 | Module | Task | Output |
 |--------|------|--------|
+| **intent-type router** | is this a *contested action* or a *vice / relief act*? (extensible: gather-info, etc.) | enum → routes to action path or vice path |
 | **scoper** (gate + segmenter) | segment the message; find the first beat needing a roll | `{lead_up, contested_beat \| none, deferred_tail}` — `none` ⇒ no roll |
 | **attribute selector** | which of Corpus / Mens / Anima | 3-way |
 | **position judge** | controlled / risky / desperate | 3-way |
@@ -135,6 +140,8 @@ RESOLUTION:
 | *dice* | take-highest resolution | numbers (code, no LLM) |
 | **consequence selector** | given result + position, pick consequence | enum + text + `channel` |
 | **resist parser** | resist vs endure (typed reply) | binary; raw text passed through as flavor |
+| **vice matcher** | does this indulgence match one of the character's vices? | bool + which vice (gates the relief path) |
+| *vice clear* | roll lowest attribute, clear stress; overindulge if roll > current stress | numbers (code, no LLM) |
 | **narrator** | prose of the resolved beat | prose — **bounded by construction**: receives only `lead_up + contested_beat + outcome + effect + consequence`, never the tail |
 
 > The gate and scoper are **merged** (decision #9): one segmentation judgment that emits
@@ -143,13 +150,52 @@ RESOLUTION:
 
 ---
 
-## 6. Open nodes (agenda)
+## 6. Stress, vice & trauma (decisions #11–14)
+
+The survival economy. Two intent paths share one stress track.
+
+### Stress out (it rises)
+- **Resistance** (hot path). Always works — no fail branch. The player chooses to resist a
+  consequence; we roll the consequence's **channel attribute** (pool = that rating, take
+  highest) and charge **`6 − highest die`** stress (6 → 0, 1 → 5). A **crit (2+ sixes)
+  clears 1 stress** instead. The consequence is then reduced/avoided (how much it mitigates
+  ties into the position→severity table — open node).
+- **Push-yourself**: 2 stress for +1d or bumped effect.
+
+### Stress in (it falls) — vice only
+- **Continuous, fiction-gated.** No downtime phase. The intent-type router detects a
+  vice/relief act and routes it to the vice path (not the action fan-out).
+- **vice matcher** checks the indulgence against the character's freeform vice descriptor(s).
+- **Clear** = roll **lowest attribute**, clear that many stress. If the roll **> current
+  stress → overindulge** → a complication. The overindulgence rule *is* the anti-spam gate:
+  safe when strung-out, risky when nearly fresh.
+
+### Overflow → trauma → permadeath
+- Stress overflow ⇒ reset to 0, **+1 trauma + a trauma condition**.
+- **4 trauma ⇒ the character is lost** (retired/dead/broken); a new one begins.
+
+### Vices accumulate (trauma-linked scar-record)
+- Start with **one** freeform vice; **each trauma grants a new one** — a coping mechanism
+  born from the wound. More vices broadens *access* (more fictions qualify as relief), not
+  *power* (clear is still roll-lowest + overindulgence gate). A veteran near max trauma has
+  several crutches and almost no margin.
+
+### State home (note)
+Stress, trauma, and the accumulating vice list are **mutable per-run state**, not part of the
+static `CharacterData` dataclass — they live with persisted character/run state. (Exact home
+is an open node; `CharacterData` only needs the *starting* vice + attributes.)
+
+---
+
+## 7. Open nodes (agenda)
 
 Tackle these next, against this saved foundation:
 
-- [ ] **Stress & trauma track** — track size, what happens at max stress (trauma), how
-      resistance spends stress (roll the channel, take 6 − highest die as stress cost).
-      Load-bearing because the lean tone makes resistance frequent.
+- [x] ~~**Stress & trauma track**~~ — done (§6, decisions #11–14).
+- [ ] **Overindulgence & trauma specifics** — overindulgence complication (likely reuse the
+      consequence machinery / narrated complication); trauma-condition representation
+      (freeform vs list); the **"character lost" endgame flow** (new character in same world?
+      game-over? campaign continuity — touches world/character services + TUI).
 - [ ] **Position → consequence-severity mapping** — the concrete table (controlled/risky/
       desperate × outcome tier → consequence magnitude).
 - [ ] **Effect → reach-within-beat spec** — effect no longer enforces anti-chaining
@@ -164,18 +210,21 @@ Tackle these next, against this saved foundation:
 - [ ] **Clocks** — adopt BitD progress/danger clocks? Where stored, who advances them.
 - [ ] **Other roll types** — fortune rolls, gather-information, flashbacks: in or out of
       initial scope.
-- [ ] **State additions** — `GraphState` fields for: `lead_up`, `contested_beat`,
-      `deferred_tail`, attribute/position/effect, dice result + tier, pending consequence
-      (+channel), `resistance_history`, pending offer, stress. Mind the parallel-write
-      reducer pattern.
+- [ ] **State additions** — `GraphState` fields for: `intent_type`, `lead_up`,
+      `contested_beat`, `deferred_tail`, attribute/position/effect, dice result + tier,
+      pending consequence (+channel), `resistance_history`, pending offer. Per-run character
+      state: `stress`, `trauma`, accumulating `vices`. Mind the parallel-write reducer pattern.
 - [ ] **TUI: hint widget** — dedicated dim label above the input (persists while typing,
       styled `continue:` prefix), `pending_intent` on `GameScreen`, empty-enter-accepts
       wiring in `ChatPanel` (decision #10).
 
 ---
 
-## 7. Open questions deferred to playtest
+## 8. Open questions deferred to playtest
 - Exact lean budget (`{2,1,1}` vs `{2,2,0}` vs tunable).
+- Exact stress/trauma track size (default 9/4; lean resistance-heavy economy may want shorter).
 - Whether `gate`+`scoper` merge is safe on the target small model.
 - Resistance attribute when the player's flavor implies a *different* channel than the
   consequence's tag (current rule: consequence channel wins; flavor colors prose only).
+- How much a resistance roll mitigates (full avoid vs reduce-by-one-level) — ties to the
+  position→severity table.
