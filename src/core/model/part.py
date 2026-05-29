@@ -16,6 +16,7 @@ class Status(StrEnum):
     NORMAL = "normal"
     COMPROMISED = "compromised"
     CRITICAL = "critical"
+    DESTROYED = "destroyed"  # part lost; detaches from the body graph (decision #19)
 
 
 class SizeScale(StrEnum):
