@@ -45,7 +45,8 @@ Relevant existing facts that shape the design:
 
 - `CharacterData` (`src/core/model/character.py`) **already has `corpus`, `mens`,
   `anima`** integer fields (plus Big Five personality traits). The three resolution
-  attributes already exist in the data model.
+  attributes already exist in the data model. *(They are stored as implied 0–100 ints
+  today; **decision #20** moves the whole sheet to a unified **0–4** dot scale.)*
 - `GraphState` (`src/state.py`) uses the `Annotated[list[...], operator.add]` reducer
   pattern for accumulating fields — relevant for parallel fan-out (concurrent nodes must
   write distinct keys or use a reducer).
@@ -77,6 +78,7 @@ Relevant existing facts that shape the design:
 | 17 | **Resolution = Deep Cuts cherry-pick (hybrid).** Keep a lightweight **action-roll frame** (you attempt X; failure is possible), but adopt Deep Cuts' mechanical upgrades: **avoid/reduced/full** scaling (#7), **unified push/resist + flat 0/1/2/3 cost** (#11), one **1–4 magnitude ladder** (#15), **collapsed position** (#16). **Rejected:** the *full* threat roll (effect fully decoupled / always-accomplish) — it leans hardest on the model's weakest skill (open threat authoring) and softens real failure. | Best-of-both: Deep Cuts' clean math + fewer structural judgments, without its agency-softening or heavier authoring burden. Better fit for small models, the gritty tone, and the model's far stronger familiarity with *classic* Blades. |
 | 18 | **Prefer maximal module splitting for trainability.** Where a step would emit several outputs, split it into **one narrow single-judgment module per output** (separate classifiers for each label); isolate generation to the narrator. Concretely: gate split from segmenter (revises #9); `threat-namer` split into `threat-type` + `threat-magnitude` + `threat-channel`, with its fiction folded into the narrator. | Pure classifiers get **crisp metrics**, cheap bootstrapped datasets, and far better DSPy optimisation (`BootstrapFewShot`/`MIPROv2`), and each can run on the **cheapest adequate model**. Independent classifiers fan out in parallel, so splitting rarely costs latency. |
 | 19 | **Persistent harm = a tunable damage pool per body part; `Status` is derived** *(model "C")*. Each part on the body graph carries a small **wound-box pool**; a `harm` threat fills **`magnitude` boxes** on a fiction-chosen part (boxes **accumulate** — small wounds add up). The `Status` enum gains a fourth rung — **NORMAL / COMPROMISED / CRITICAL / DESTROYED** — and is **computed from box-fill thresholds**, not stored, so the rest of the engine still reads a clean word. **DESTROYED** detaches the part (and everything distal) from the graph; **Fatal / overflow on a vital part = death** (#13). Mechanical bite feeds back via the part's **`PartFunction` + derived status** into the effect / threat-magnitude classifiers. **Healing removes boxes** (fiction-gated treatment → granular partial recovery). Box count + thresholds are **code-side dials** (default gritty, tuned at playtest). | Accumulates like BitD harm while keeping a legible status as a *derived* view and full tuning latitude — the knob-in-code ethos used throughout. Costs one integer per part (the graph already stores parts), and healing-by-box falls out naturally. **Rejected:** absolute "worst-wound" mapping (no accumulation, fixed lethality) and fixed additive steps (untunable). |
+| 20 | **Unified 0–4 "dot" scale for the whole character sheet.** **Corpus / Mens / Anima are the dice ratings** (pool = rating; 0 = 2d6-take-worst, #7) on **0–4**, allocated from the lean dot budget (#8) and advanced toward the 4 cap. The **Big-Five traits move to the same 0–4 scale** — *not* dice pools but flavor/steering signal for the narrator + intent classifiers, dot-allocated at creation. **Replaces the implied 0–100 ints** in `CharacterData` and the ArcadeDB attribute/personality value nodes. | One coherent dot-allocation model for character building — the player just spends dots — matching the locked budget/advancement decisions (#8). A 0–4 personality band (with a label) is **more legible signal for a small LLM** than an arbitrary 0–100, and far simpler to author. Cost: a data-model + DB-value migration and a char-creation tweak (`value_stepper` / `pip_selector` already exist). |
 
 ### Resolution model — Deep Cuts cherry-pick (#15–18)
 
@@ -315,3 +317,77 @@ Tackle these next, against this saved foundation:
   stronger one (enabled by the #18 split) — tune by eval.
 - Wound-box tuning (#19): default pool size, per-part-size scaling, where the
   COMPROMISED/CRITICAL/DESTROYED threshold lines sit, and healing rates.
+
+---
+
+## 10. Build plan (implementation phases)
+
+Two sequencing principles fall out of the design + the current codebase (§2):
+
+- **Spine vs. systems.** The resolution **spine** — `gate → segmenter → framing fan-out →
+  dice/scale → narrator` — produces a complete, narratable turn *on its own*. The **systems**
+  (stress/vice/trauma economy #11–14, persistent harm #19, resistance #6) hang off the threat
+  result and are **strictly additive** — so we never have to build a half-broken whole.
+- **Code vs. model.** A large, balance-critical slice of §5 is marked *"code, no LLM"*
+  (dice, scaling, push cost, magnitude ladder, vice-clear) plus #19's wound pool. These are
+  **pure functions** with zero model/graph/DB coupling — the most testable, highest-confidence
+  thing in the project, and the natural first slice. Unsettled numbers enter as **parameters**,
+  so "deferred to playtest" never blocks building.
+
+Current baseline (from the code survey): `START → intent_alignment → action_generator →
+narrator → END`; `GraphState` is a Pydantic model with `Annotated[list, operator.add]`
+reducers; DSPy is raw `Predict` on **one** global LM (no compilation/routing); **no test
+suite exists**; persistence is ArcadeDB via a services→repos layer; the TUI rebuilds
+`GraphState` each turn.
+
+### Phase 0 — Mechanics core + first test suite *(pure code; no LLM/graph/DB)*
+- New `src/core/mechanics/`: `dice` (pool from 0–4 rating, take-highest, rating-0 =
+  2d6-take-worst, crit = 2+ sixes → result tier), `scaling` (tier + base magnitude +
+  desperate flag → landed 0–4), `push` (cost table + one-step bump), `harm` (`WoundPool`:
+  fill boxes, derive `Status`; **extend the enum with `DESTROYED`**; a pure "which parts
+  detach" helper), `economy` (stress→overflow→trauma→lost; vice-clear).
+- Migrate the character sheet to **0–4** (#20): narrow type/validation + DB-value
+  reinterpretation.
+- Stand up **pytest** + a `tests/` tree; the deterministic functions make near-exhaustive
+  tests cheap. All tunables are defaulted params.
+- **Deliverable:** a tested mechanics library + green suite. Unblocks everything; no risk.
+
+### Phase 1 — Walking skeleton *(graph wired, minimal LLM)*
+- Replace `action_generator` with a resolution subgraph: a real `roll-gate`, **stubbed**
+  framing (hardcoded attribute/threat), the Phase-0 code dice/scale, and the existing
+  `narrator` **re-bounded to its #9 input** (`lead_up + contested_beat + outcome + effect +
+  threat-as-landed`).
+- Extend `GraphState` with the resolution fields (see agenda §8 → State additions).
+- **Deliverable:** one turn flows end-to-end and narrates a *scaled* outcome through the TUI.
+  Proves wiring, state shape, and narrator-bounding before any classifier work.
+
+### Phase 2 — Classifiers *(one at a time, replacing stubs)*
+- `segmenter`, `attribute`, `effect`, `threat-type` / `threat-magnitude` / `threat-channel`
+  — each **1 signature + 1 node** (the existing `action_generator`→`narrator` pattern).
+- Wire the **parallel framing fan-out** (the five must write **disjoint** `GraphState` keys,
+  or use reducers, to avoid lost concurrent writes).
+- Stand up a **minimal DSPy eval set** per classifier (a metric *before* optimizing).
+  Compilation (`BootstrapFewShot`/`MIPROv2`) and per-module model routing are **deferred** —
+  classifiers ship zero-shot on the single LM first.
+
+### Phase 3 — Systems
+- Connect the threat result to **harm/body** (`WoundPool` persisted on PART vertices; sever
+  via a service) and the **stress/trauma** economy (per-run state home on the CHARACTER).
+- Add **resistance/push** as the reactive follow-up turn: a `resistance_history` carry
+  mirroring `intent_alignment_history`, plus the `resist/push parser`.
+- Add the **vice path**: `intent-type router` + `vice matcher` + code `vice-clear`.
+
+### Phase 4 — TUI & polish
+- Deferred-tail **hint widget** + `pending_intent` on `GameScreen`; empty-enter-accepts in
+  `ChatPanel` (#10).
+- Character-creation **dot allocation** on the 0–4 sheet (#20); surface intent-type routing.
+
+### Cross-cutting unknowns (settle as we reach them)
+- **Per-run state home** — `stress` / `trauma` / `vices` as CHARACTER properties, wound-box
+  counts as PART properties: needs ArcadeDB schema + repo/service additions.
+- **Cross-turn carry** — the TUI rebuilds `GraphState` each turn, so the deferred tail and
+  resistance offer live on `GameScreen`, not in graph state (the #6/#10 design already assumes
+  this; survey confirms it).
+- **Reducer/fan-out concurrency** — the Phase-2 fan-out is the first place concurrent writes
+  hit `GraphState`; get disjoint keys / reducers right here.
+- **Model routing / DSPy optimization** — a parallel track that can lag the spine entirely.
