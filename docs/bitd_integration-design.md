@@ -314,7 +314,9 @@ Tackle these next, against this saved foundation:
       - [x] **Canonical part lists** — **Decision #27**: **all parts (corpus, mens, anima) are
         generated at character creation** — no fixed canonical lists at engine level.
         `PartFunction` tags are fixed enums (classifiers reason on function); surface names
-        are character-authored/generated. Open: *how* are parts generated at creation?
+        are character-authored/generated. Part generation method is a **sub-node of the
+        character creation flow** (§8) — deferred until the full description/creation system
+        is designed (current description field is a placeholder).
 - [ ] **Effect → reach-within-beat spec** — effect no longer enforces anti-chaining
       (decision #9 does, structurally). Remaining question: how `effect` shapes *how much
       of the single resolved beat* a success accomplishes (limited/standard/great) as a
@@ -322,7 +324,9 @@ Tackle these next, against this saved foundation:
 - [ ] **Crit & success benefits** — what a critical (2+ sixes) and a clean 6 grant beyond
       "it works".
 - [ ] **Character creation flow** — how the ~4 dots get assigned (UI already has
-      `value_stepper` / `pip_selector` widgets and a `create_character` modal).
+      `value_stepper` / `pip_selector` widgets and a `create_character` modal). Also owns
+      **part generation** (decision #27 sub-node): blocked on the full description system
+      (current description field is a placeholder).
 - [ ] **Advancement / XP** — triggers, raising attributes toward the 4 cap.
 - [ ] **Clocks** — adopt BitD progress/danger clocks? Where stored, who advances them.
 - [ ] **Other roll types** — fortune rolls, gather-information, flashbacks: in or out of
