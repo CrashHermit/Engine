@@ -353,14 +353,17 @@ Tackle these next, against this saved foundation:
       are all Phase 4+ work. Fortune rolls and gather-info layer naturally onto the action
       spine once it's proven; flashbacks interact with memory/history in non-trivial ways
       and need separate design.
-- [ ] **State additions** — `GraphState` fields for: `intent_type`, `lead_up`,
-      `contested_beat`, `deferred_tail`, `attribute`, `effect`, `threat` (+type/channel/magnitude),
-      `position_flag` (default risky), dice result + tier, scaled-threat, `resistance_history`,
-      pending offer. Per-run character state: `stress`, `trauma`, accumulating `vices`, and
-      **per-part wound-box counts** on the body graph. Mind the parallel-write reducer pattern.
-- [ ] **TUI: hint widget** — dedicated dim label above the input (persists while typing,
-      styled `continue:` prefix), `pending_intent` on `GameScreen`, empty-enter-accepts
-      wiring in `ChatPanel` (decision #10).
+- [ ] **State additions** — implementation detail; design-complete from locked decisions.
+      `GraphState` fields needed: `intent_type`, `lead_up`, `contested_beat`, `deferred_tail`,
+      `attribute`, `threat` (+type/channel/magnitude/function), `position_flag` (risky default
+      + desperate flag, #16), dice result + tier, scaled-threat, `resistance_history`, pending
+      offer. (`effect` dropped, #31.) Per-run character state: `stress`, `trauma`, accumulating
+      `vices` + `trauma_conditions` (tag + label, #22), and **per-slot wound-box counts** keyed
+      by channel + slot index (#29/#30). Mind the parallel-write reducer pattern for the
+      framing fan-out.
+- [x] ~~**TUI: hint widget**~~ — design-complete per decision #10. Dedicated dim `continue:`
+      label above input, persists while typing, `pending_intent` on `GameScreen`,
+      empty-enter-accepts in `ChatPanel`. Implementation deferred to Phase 4.
 
 ---
 
