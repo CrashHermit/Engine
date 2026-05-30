@@ -367,7 +367,17 @@ Tackle these next, against this saved foundation:
 
 ---
 
-## 9. Open questions deferred to playtest
+## 9. Known revisits (not deferred — flagged for intentional future design)
+
+- **`PartFunction` enum** (`src/core/model/part.py`) — the functional pool model (#29)
+  uses `PartFunction` as the harm target taxonomy, but the current enum values
+  (`SOURCE`, `SINK`, `STORAGE`, `MANIPULATOR`, `MOVEMENT`, `OPENING`, `CHANNEL`,
+  `CONTROLLABLE`) were designed for structural/physical parts, not the broader
+  corpus/mens/anima functional pool model. When the character creation flow and full
+  description system are designed, revisit and restructure `PartFunction` to cover
+  mind and spirit capabilities alongside physical ones. **Do not touch until then.**
+
+## 10. Open questions deferred to playtest
 - Exact lean budget (`{2,1,1}` vs `{2,2,0}` vs tunable).
 - Exact stress/trauma track size (default 9/4; lean resistance-heavy economy may want shorter).
 - Resistance attribute when the player's flavor implies a *different* channel than the
