@@ -349,8 +349,10 @@ Tackle these next, against this saved foundation:
       subsume or reshape per-scene progress/danger clocks. Revisit once the world model is
       better defined. Don't design BitD-style clocks in isolation until the world clock
       design is settled.
-- [ ] **Other roll types** — fortune rolls, gather-information, flashbacks: in or out of
-      initial scope.
+- [ ] **Other roll types** — deferred. Fortune rolls, gather-information, and flashbacks
+      are all Phase 4+ work. Fortune rolls and gather-info layer naturally onto the action
+      spine once it's proven; flashbacks interact with memory/history in non-trivial ways
+      and need separate design.
 - [ ] **State additions** — `GraphState` fields for: `intent_type`, `lead_up`,
       `contested_beat`, `deferred_tail`, `attribute`, `effect`, `threat` (+type/channel/magnitude),
       `position_flag` (default risky), dice result + tier, scaled-threat, `resistance_history`,
