@@ -345,7 +345,10 @@ Tackle these next, against this saved foundation:
 - [ ] **Advancement / XP** — deferred. Out of initial scope. Most natural trigger designs
       when we return: per-roll XP on 1–3 outcomes (learn from failure), or milestone/story-beat
       detection. Doesn't block Phase 0–3.
-- [ ] **Clocks** — adopt BitD progress/danger clocks? Where stored, who advances them.
+- [ ] **Clocks** — deferred. A **world clock** concept is under consideration that may
+      subsume or reshape per-scene progress/danger clocks. Revisit once the world model is
+      better defined. Don't design BitD-style clocks in isolation until the world clock
+      design is settled.
 - [ ] **Other roll types** — fortune rolls, gather-information, flashbacks: in or out of
       initial scope.
 - [ ] **State additions** — `GraphState` fields for: `intent_type`, `lead_up`,
