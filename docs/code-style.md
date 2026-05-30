@@ -119,7 +119,7 @@ from src.core.mechanic.dice import RollTier
 from src.services.container import ServiceContainer
 ```
 
-Import order: stdlib → third-party → `src.*` (enforced by ruff isort).
+Import order: stdlib → third-party → `src.*`.
 
 Do **not** use bare `from core...` or `from services...` paths.
 
@@ -173,7 +173,7 @@ Same pattern elsewhere: `add_stress(...) → StressResult`, `scale_threat(...) �
 
 ### Default arguments
 
-Do not call constructors in parameter defaults (ruff B008). Use a module-level
+Do not call constructors in parameter defaults. Use a module-level
 singleton instead:
 
 ```python
@@ -342,15 +342,9 @@ uv sync --group dev
 
 | Task | Command |
 |------|---------|
-| Lint | `uv run ruff check src tests` |
-| Format | `uv run ruff format src tests` |
-| Auto-fix | `uv run ruff check src tests --fix` |
 | Test | `uv run pytest` |
 
-Run **lint + format** before committing. Ruff enforces import order (isort),
-modern Python syntax (pyupgrade), and common footguns (bugbear).
-
-Settings at a glance:
+Style conventions at a glance:
 
 - Line length: **100**
 - Quote style: **double**
@@ -364,5 +358,5 @@ Settings at a glance:
 | Document | Scope |
 |----------|-------|
 | [`bitd_integration-design.md`](bitd_integration-design.md) | Game mechanics, graph topology, locked decisions |
-| `pyproject.toml` | Dependencies, ruff config |
+| `pyproject.toml` | Dependencies |
 | `src/services/container.py` | Session service wiring and layer-boundary note |

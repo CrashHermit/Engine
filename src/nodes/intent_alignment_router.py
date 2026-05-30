@@ -1,13 +1,9 @@
-from typing import TYPE_CHECKING
-
-from dspy import Predict
+from dspy import Predict, Prediction
 
 from src.lm import lm
 from src.signatures.intent_alignment_router import IntentAlignmentRouterSignature
 from src.state import GraphState
 
-if TYPE_CHECKING:
-    from dspy.primitives.prediction import Prediction
 
 
 class IntentAlignmentRouterNode:
@@ -15,7 +11,7 @@ class IntentAlignmentRouterNode:
         self._program: Predict = Predict(signature=IntentAlignmentRouterSignature)
         self._program.lm = lm
 
-    async def __call__(self, state: GraphState) -> dict:
+    async def __call__(self, state: GraphState) -> dict[str, bool]:
         message_history: str = "\n".join(m.format() for m in state.message_history)
         intent_alignment_history: str = "\n".join(
             m.format() for m in state.intent_alignment_history
