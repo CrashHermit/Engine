@@ -79,6 +79,17 @@ Relevant existing facts that shape the design:
 | 18 | **Prefer maximal module splitting for trainability.** Where a step would emit several outputs, split it into **one narrow single-judgment module per output** (separate classifiers for each label); isolate generation to the narrator. Concretely: gate split from segmenter (revises #9); `threat-namer` split into `threat-type` + `threat-magnitude` + `threat-channel`, with its fiction folded into the narrator. | Pure classifiers get **crisp metrics**, cheap bootstrapped datasets, and far better DSPy optimisation (`BootstrapFewShot`/`MIPROv2`), and each can run on the **cheapest adequate model**. Independent classifiers fan out in parallel, so splitting rarely costs latency. |
 | 19 | **Persistent harm = a tunable damage pool per body part; `Status` is derived** *(model "C")*. Each part on the body graph carries a small **wound-box pool**; a `harm` threat fills **`magnitude` boxes** on a fiction-chosen part (boxes **accumulate** — small wounds add up). The `Status` enum becomes a five-rung ladder — **NORMAL / GRAZED / COMPROMISED / CRITICAL / DESTROYED**, 1:1 with the magnitude scale — and is **computed from box-fill thresholds**, not stored, so the rest of the engine still reads a clean word. **DESTROYED** detaches the part (and everything distal) from the graph; **Fatal / overflow on a vital part = death** (#13). Mechanical bite feeds back via the part's **`PartFunction` + derived status** into the effect / threat-magnitude classifiers. **Healing removes boxes** (fiction-gated treatment → granular partial recovery). Box count + thresholds are **code-side dials** (default gritty, tuned at playtest). | Accumulates like BitD harm while keeping a legible status as a *derived* view and full tuning latitude — the knob-in-code ethos used throughout. Costs one integer per part (the graph already stores parts), and healing-by-box falls out naturally. **Rejected:** absolute "worst-wound" mapping (no accumulation, fixed lethality) and fixed additive steps (untunable). |
 | 20 | **Unified 0–4 "dot" scale for the whole character sheet.** **Corpus / Mens / Anima are the dice ratings** (pool = rating; 0 = 2d6-take-worst, #7) on **0–4**, allocated from the lean dot budget (#8) and advanced toward the 4 cap. The **Big-Five traits move to the same 0–4 scale** — *not* dice pools but flavor/steering signal for the narrator + intent classifiers, dot-allocated at creation. **Replaces the implied 0–100 ints** in `CharacterData` and the ArcadeDB attribute/personality value nodes. | One coherent dot-allocation model for character building — the player just spends dots — matching the locked budget/advancement decisions (#8). A 0–4 personality band (with a label) is **more legible signal for a small LLM** than an arbitrary 0–100, and far simpler to author. Cost: a data-model + DB-value migration and a char-creation tweak (`value_stepper` / `pip_selector` already exist). |
+| 27 | **All parts (corpus, mens, anima) are generated at character creation — no fixed canonical lists.** `PartFunction` tags are fixed enums (the typed signal classifiers reason on); surface names are character-authored/generated. Applies uniformly to body, mind, and spirit. | Consistent with the engine's broad-category, LLM-driven ethos. Gives players immediate narrative ownership of what their character's body, psyche, and soul *are*, while keeping classifier signal clean via fixed function tags. |
+| 26 | **Mind parts (mens) and spirit parts (anima) are first-class parts.** The wound-box model (#19) applies uniformly across all three channels. A `harm` threat on any channel lands on a part from that channel's pool (body / mind / spirit). `Status`, `PartFunction`, and the `threat-part` classifier all span all three. Amends #25: `threat-part` is active for corpus, mens, and anima. | Extends a proven model rather than adding a second system. Stress remains the *shared* economy (push/resist cost); part damage is *localized* impairment on top of it. |
+| 29 | **Harm targets functional capability pools, not individual parts. Amends #19, #25, #27.** Each character has a slottable budget of functional pool slots allocated at creation — a pool slot is typed by `PartFunction` category and stacking is allowed (e.g. 3× MANIPULATOR + 1× MOVEMENT = a three-armed snake). Each slot is an independent wound pool. The `threat-function` classifier (replaces `threat-part`, #25) selects a `PartFunction` category; if multiple slots share that type, the most contextually appropriate one takes the damage. DESTROYED on a slot = that slot non-functional (#28); all slots of a type destroyed = that function fully lost. **Slot budgets are per-channel** (#30): each of corpus / mens / anima has its own fixed allocation. Budget sizes and whether they tie to attribute ratings are deferred to playtest/character-creation design. `PartFunction` enum left unchanged for now — to be revisited. | Stacking lets creatures/characters express anatomy naturally (three arms, two minds, etc.) while keeping the damage model uniform. Each slot failing independently gives granular attrition. Per-channel budgets ensure every character has presence in all three domains. |
+| 32 | **Crit benefit is narrator-authored freeform.** On 2+ sixes the threat is avoided and the narrator invents a contextually appropriate benefit from the fiction (positional advantage, information, resource, unexpected opening, etc.). No classifier. | Benefits are additive and have no balance risk, so narrator creative latitude is safe here. A classifier can't improve on a narrator that already knows the full scene. |
+| 31 | **Effect classifier dropped.** The narrator derives success quality directly from `{outcome tier + threat-as-landed}`. Anti-chaining is structural (#9); roll outcome (avoided/reduced/full) already encodes how well the beat went. Framing fan-out is 4 parallel classifiers: attribute, threat-type, threat-magnitude, threat-channel + threat-function. | Eliminates the weakest module in the inventory. No information lost — the narrator has everything it needs from outcome tier and threat. |
+| 30 | **Functional pool slot budgets are per-channel.** Corpus, mens, and anima each have their own fixed slot allocation at creation. Guarantees minimum presence in all three domains; cleaner for balance than a unified pool. Whether the per-channel budget ties to the attribute dot rating is deferred to playtest. | A character with zero mental or spiritual pools is an unhandled edge case; per-channel budgets prevent it structurally. |
+| 28 | **DESTROYED = non-functional, uniformly across all three channels. Amends #19.** A DESTROYED part (corpus, mens, or anima) cannot perform its `PartFunction` but still exists. Healing (fiction-gated box removal) can recover even from DESTROYED. The detachment/distal-cascade rule from #19 is removed. Vital parts: DESTROYED triggers the permadeath path (#13) regardless of channel. | Makes the status ladder identical across body, mind, and spirit — simpler implementation, no channel-special-casing, and recovery is always possible in principle. Severance was body-only physics with no clean mental/spiritual equivalent. |
+| 25 | **Harm-location = `threat-part` classifier in the framing fan-out.** Runs in parallel with `threat-type` / `threat-magnitude` / `threat-channel`; takes `{contested_beat, threat description, body state}` and returns a part ID. Active only when `threat-channel = corpus`. The part is known before the roll and before the narrator writes, giving the harm machinery a clean typed target. | Parallel timing costs no latency; one narrow judgment per module (#18); avoids fragile narrator-to-extractor round-trips. |
+| 24 | **Overindulgence complication reuses the consequence machinery.** Overindulgence generates a structured `{type, magnitude, channel}` threat via the same classifiers and narrator as combat consequences. Magnitude is capped at Standard (2) — a setback, not a death sentence. | No new code paths; mechanically legible to the player; classifiers already fan out in parallel so overhead is minimal. |
+| 23 | **"Character lost" endgame = new character, same world, continuity.** At 4 trauma the old `CharacterData` is flagged `retired/lost` and persists in the world (available as NPC or memory). The TUI transitions to the character-creation flow; the run continues in the same world with the replacement. World state (location, entities) carries over. No data is destroyed. | Matches BitD's legacy-game ethos; costs only a status flag + a TUI transition. The replacement flow (dot-allocation UI) is already partially built. Clean slate (option B) loses narrative continuity; silent removal (option C) loses the NPC echo. |
+| 22 | **Trauma conditions = structured tag + freeform display label.** Each trauma condition carries a typed `TraumaCategory` enum tag (for classifier reasoning) and a narrator-generated freeform label (what the player sees). Taxonomy is content-mode-aware — a clean set now, adult set added when adult mechanics land. Conditions accumulate alongside vices as a scar-record. | Freeform alone can't support future mechanical hooks; a full fixed list is too rigid for adult content extensibility. The hybrid gives classifiers a clean type while keeping the surface feel organic. |
 | 21 | **Effects are applied at the integration boundary, not inside graph nodes.** Graph nodes stay **pure** — they read `GraphState` and emit *intended* effects (the resolved roll, harm to apply, a stress delta) back into state; they never touch repositories or services. After `ainvoke`, the **TUI applies those effects via services** (which own the transactions over the repos), exactly as it already post-processes the result and owns the `ServiceContainer`. The Phase-0 mechanics core returns plain data precisely so a service can persist it. | Matches the locked layering (`ServiceContainer`: screens/nodes talk to services, **never repos**) and the engine's current shape (graph built once, `GraphState` rebuilt per turn, no DB session injected into nodes). Keeps nodes **unit-testable offline** (no DB/LLM), keeps services the **single write path**, and avoids coupling the graph to a live ArcadeDB session. **Rejected:** injecting `ServiceContainer` into nodes — preserves the rule but couples the graph to the DB and hurts node testability. |
 
 ### Resolution model — Deep Cuts cherry-pick (#15–18)
@@ -121,11 +132,11 @@ RESOLUTION (Deep Cuts cherry-pick):
     └──(roll)──► segmenter ── {lead_up, contested_beat, deferred_tail}
                     │           deferred_tail ──► held (pending_intent), NOT downstream
                     └──► ┌─ attribute ────────┐
-                         ├─ effect ───────────┤
                          ├─ threat-type ──────┤─► join ─► [dice + scale: code] ─► (offer/resolve)
                          ├─ threat-magnitude ─┤            (6 avoid · 4-5 mag-1 · 1-3 full)
-                         └─ threat-channel ───┘                        │
-  narrator receives ONLY: lead_up + contested_beat + outcome + effect + threat-as-landed
+                         ├─ threat-channel ───┤
+                         └─ threat-function ──┘                        │
+  narrator receives ONLY: lead_up + contested_beat + outcome + threat-as-landed
 ```
 
 - **Gate** (binary, #9 revised): does the beat carry **danger + uncertainty**? If not →
@@ -164,7 +175,7 @@ RESOLUTION (Deep Cuts cherry-pick):
 | **roll-gate** | does the beat carry danger + uncertainty? | bool — `false` ⇒ no roll |
 | **segmenter** (gate=true only) | split message around the first contested beat | `{lead_up, contested_beat, deferred_tail}` |
 | **attribute selector** | which of Corpus / Mens / Anima | 3-way |
-| **effect judge** | what success accomplishes (limited / standard / great) | 3-way |
+| ~~**effect judge**~~ | ~~what success accomplishes (limited / standard / great)~~ | *dropped — decision #31* |
 | **threat-type** | kind of threat | 5-way (harm / complication / worse-position / lost-opportunity / failure-of-goal) |
 | **threat-magnitude** | how bad | 1–4 (Minor / Standard / Severe / Fatal) |
 | **threat-channel** | which attribute resists it | 3-way (corpus / mens / anima) |
@@ -269,49 +280,104 @@ Model **"C"**: each part is a small filling damage bar, and its status word is *
 Tackle these next, against this saved foundation:
 
 - [x] ~~**Stress & trauma track**~~ — done (§6, decisions #11–14).
-- [ ] **Overindulgence & trauma specifics** — overindulgence complication (likely reuse the
-      consequence machinery / narrated complication); trauma-condition representation
-      (freeform vs list); the **"character lost" endgame flow** (new character in same world?
-      game-over? campaign continuity — touches world/character services + TUI).
+- [x] ~~**Overindulgence & trauma specifics**~~ — closed (decisions #22–24).
+      - [x] **Overindulgence complication** — **Decision #24**: reuse the consequence machinery.
+        Overindulgence produces a structured `{type, magnitude, channel}` threat, classified
+        and narrated by the same pipeline. Magnitude capped at Standard (2) — a setback, not
+        a death sentence.
+      - [x] **Trauma-condition representation** — **Decision #22**: a structured **tag** (enum
+        `TraumaCategory`) + a **freeform display label** generated by the narrator at overflow.
+        The tag gives classifiers a clean type to reason on; the label is what the player sees.
+        Taxonomy is content-mode-aware (clean set + adult set added later when adult mechanics
+        are introduced). Conditions accumulate alongside vices as a scar-record.
+      - [x] **"Character lost" endgame flow** — **Decision #23**: **new character, same world,
+        continuity**. At 4 trauma the old `CharacterData` is flagged `retired/lost` and persists
+        in the world (available as NPC/memory). The TUI transitions to the character-creation
+        flow; the run continues in the same world with the replacement character. No data is
+        destroyed. The world state (location, entities) carries over.
 - [x] ~~**Position → consequence-severity mapping**~~ — superseded by the **Deep Cuts cherry-pick**
       (decisions #15–17): threat magnitude (1–4) scaled by outcome (avoid/reduced/full); position
       collapsed to risky-default + desperate flag; failure-of-goal is a threat type.
-- [x] ~~**Persistent harm model**~~ — done (§7, decision #19): per-part **wound-box pool**
+- [x] ~~**Persistent harm model**~~ — done (§7, decisions #19, #28–29): **functional pool model**
       (model "C"), `Status` gains **GRAZED + DESTROYED** (now 1:1 with the magnitude ladder)
       and is **derived from box-fill thresholds**,
       `PartFunction` + status feeds the effect/threat classifiers, healing removes boxes,
       DESTROYED severs via the graph, Fatal/overflow on a vital part = death. Box count +
       thresholds are code-side dials. **Remaining sub-details** below (part selection,
       non-corpus harm).
-- [ ] **Harm-location selection** — which corpus part a `harm` threat hits. Fiction-driven;
-      open whether it's a tiny `harm-locator` classifier or folded into the narrator (#18 ethos).
-- [ ] **Non-corpus harm routing** — a `harm`-type threat on the **mens/anima** channel has no
-      body part. Does it route to stress/trauma, to freeform conditions, or get reframed as a
-      complication? (Touches §6 + §7.)
-- [ ] **Effect → reach-within-beat spec** — effect no longer enforces anti-chaining
-      (decision #9 does, structurally). Remaining question: how `effect` shapes *how much
-      of the single resolved beat* a success accomplishes (limited/standard/great) as a
-      narration quality dial.
-- [ ] **Crit & success benefits** — what a critical (2+ sixes) and a clean 6 grant beyond
-      "it works".
+- [x] ~~**Harm-location selection**~~ — **Decision #25**: a **`threat-part` classifier** runs in
+      the framing fan-out alongside `threat-type` / `threat-magnitude` / `threat-channel`.
+      Takes `{contested_beat, threat description, body state}` → returns a part ID. Runs in
+      parallel (no latency cost); gives the harm machinery a clean typed part before the roll
+      and before the narrator writes anything. Consistent with decision #18.
+- [x] ~~**Non-corpus harm routing**~~ — **Decision #26**: **mind parts (mens) and spirit parts
+      (anima)** exist as first-class parts alongside body parts. A `harm` threat on any channel
+      lands on a part from that channel's pool. The wound-box model (#19), `Status` ladder,
+      `PartFunction`, and `threat-part` classifier (#25) all apply uniformly across corpus /
+      mens / anima. Decision #25 amended: `threat-part` is active on **all three channels**,
+      selecting from the appropriate part pool.
+      - [x] **Canonical part lists** — **Decision #27**: **all parts (corpus, mens, anima) are
+        generated at character creation** — no fixed canonical lists at engine level.
+        `PartFunction` tags are fixed enums (classifiers reason on function); surface names
+        are character-authored/generated. Part generation method is a **sub-node of the
+        character creation flow** (§8) — deferred until the full description/creation system
+        is designed (current description field is a placeholder).
+      - [x] **DESTROYED semantics** — **Decision #28**: **DESTROYED = non-functional**, uniformly
+        across corpus, mens, and anima. The part still exists but cannot perform its function.
+        Healing (fiction-gated, removes boxes) can recover even from DESTROYED. **Amends #19**:
+        the detachment/distal-cascade rule is removed — no part ever physically severs. Vital
+        parts: DESTROYED on a vital part triggers the permadeath path (#13/#19) — the function
+        loss is catastrophic regardless of channel.
+- [x] ~~**Effect → reach-within-beat spec**~~ — **Decision #31**: **effect classifier dropped.**
+      Anti-chaining is structural (#9); the roll outcome tier (avoided/reduced/full) already
+      signals success quality to the narrator. The narrator derives narration quality from
+      `{outcome tier + threat-as-landed}` directly. Framing fan-out reduced from 5 to 4
+      parallel classifiers.
+- [x] ~~**Crit & success benefits**~~ — **Decision #32**: crit benefit is **narrator-authored
+      freeform**. The narrator reads the fiction and invents a contextually appropriate
+      benefit (positional advantage, information, an unexpected opening, etc.). No classifier;
+      the narrator owns it entirely. Safe to be generous — benefits are additive, not a gate
+      or consequence.
 - [ ] **Character creation flow** — how the ~4 dots get assigned (UI already has
-      `value_stepper` / `pip_selector` widgets and a `create_character` modal).
-- [ ] **Advancement / XP** — triggers, raising attributes toward the 4 cap.
-- [ ] **Clocks** — adopt BitD progress/danger clocks? Where stored, who advances them.
-- [ ] **Other roll types** — fortune rolls, gather-information, flashbacks: in or out of
-      initial scope.
-- [ ] **State additions** — `GraphState` fields for: `intent_type`, `lead_up`,
-      `contested_beat`, `deferred_tail`, `attribute`, `effect`, `threat` (+type/channel/magnitude),
-      `position_flag` (default risky), dice result + tier, scaled-threat, `resistance_history`,
-      pending offer. Per-run character state: `stress`, `trauma`, accumulating `vices`, and
-      **per-part wound-box counts** on the body graph. Mind the parallel-write reducer pattern.
-- [ ] **TUI: hint widget** — dedicated dim label above the input (persists while typing,
-      styled `continue:` prefix), `pending_intent` on `GameScreen`, empty-enter-accepts
-      wiring in `ChatPanel` (decision #10).
+      `value_stepper` / `pip_selector` widgets and a `create_character` modal). Also owns
+      **part generation** (decision #27 sub-node): blocked on the full description system
+      (current description field is a placeholder).
+- [ ] **Advancement / XP** — deferred. Out of initial scope. Most natural trigger designs
+      when we return: per-roll XP on 1–3 outcomes (learn from failure), or milestone/story-beat
+      detection. Doesn't block Phase 0–3.
+- [ ] **Clocks** — deferred. A **world clock** concept is under consideration that may
+      subsume or reshape per-scene progress/danger clocks. Revisit once the world model is
+      better defined. Don't design BitD-style clocks in isolation until the world clock
+      design is settled.
+- [ ] **Other roll types** — deferred. Fortune rolls, gather-information, and flashbacks
+      are all Phase 4+ work. Fortune rolls and gather-info layer naturally onto the action
+      spine once it's proven; flashbacks interact with memory/history in non-trivial ways
+      and need separate design.
+- [ ] **State additions** — implementation detail; design-complete from locked decisions.
+      `GraphState` fields needed: `intent_type`, `lead_up`, `contested_beat`, `deferred_tail`,
+      `attribute`, `threat` (+type/channel/magnitude/function), `position_flag` (risky default
+      + desperate flag, #16), dice result + tier, scaled-threat, `resistance_history`, pending
+      offer. (`effect` dropped, #31.) Per-run character state: `stress`, `trauma`, accumulating
+      `vices` + `trauma_conditions` (tag + label, #22), and **per-slot wound-box counts** keyed
+      by channel + slot index (#29/#30). Mind the parallel-write reducer pattern for the
+      framing fan-out.
+- [x] ~~**TUI: hint widget**~~ — design-complete per decision #10. Dedicated dim `continue:`
+      label above input, persists while typing, `pending_intent` on `GameScreen`,
+      empty-enter-accepts in `ChatPanel`. Implementation deferred to Phase 4.
 
 ---
 
-## 9. Open questions deferred to playtest
+## 9. Known revisits (not deferred — flagged for intentional future design)
+
+- **`PartFunction` enum** (`src/core/model/part.py`) — the functional pool model (#29)
+  uses `PartFunction` as the harm target taxonomy, but the current enum values
+  (`SOURCE`, `SINK`, `STORAGE`, `MANIPULATOR`, `MOVEMENT`, `OPENING`, `CHANNEL`,
+  `CONTROLLABLE`) were designed for structural/physical parts, not the broader
+  corpus/mens/anima functional pool model. When the character creation flow and full
+  description system are designed, revisit and restructure `PartFunction` to cover
+  mind and spirit capabilities alongside physical ones. **Do not touch until then.**
+
+## 10. Open questions deferred to playtest
 - Exact lean budget (`{2,1,1}` vs `{2,2,0}` vs tunable).
 - Exact stress/trauma track size (default 9/4; lean resistance-heavy economy may want shorter).
 - Resistance attribute when the player's flavor implies a *different* channel than the
