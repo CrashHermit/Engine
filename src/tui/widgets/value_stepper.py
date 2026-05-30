@@ -1,10 +1,12 @@
+from typing import Any
+
 from textual import events
 from textual.app import ComposeResult
 from textual.containers import Horizontal
 from textual.message import Message
-from textual.widget import Widget
 from textual.reactive import reactive
-from textual.widgets import Static, Label
+from textual.widget import Widget
+from textual.widgets import Label, Static
 
 
 class ValueStepper(Widget):
@@ -25,7 +27,7 @@ class ValueStepper(Widget):
         max_val: int = 5,
         value: int = 0,
         readonly: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
         self._label: str = label
@@ -38,7 +40,9 @@ class ValueStepper(Widget):
         yield Label(content=self._label, classes="stepper-label")
         with Horizontal(classes="stepper-controls"):
             yield Static(content="-", id="btn-dec", classes="stepper-button")
-            yield Static(content=str(self._initial_value), id="stepper-value", classes="stepper-value")
+            yield Static(
+                content=str(self._initial_value), id="stepper-value", classes="stepper-value"
+            )
             yield Static(content="+", id="btn-inc", classes="stepper-button")
 
     def on_mount(self) -> None:

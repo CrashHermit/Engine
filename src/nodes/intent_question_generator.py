@@ -1,9 +1,14 @@
+from typing import TYPE_CHECKING
+
 from dspy import Predict
-from dspy.primitives.prediction import Prediction
-from src.lm import lm
+
 from src.core.model.message import Message
+from src.lm import lm
 from src.signatures.intent_question_generator import IntentQuestionGeneratorSignature
 from src.state import GraphState
+
+if TYPE_CHECKING:
+    from dspy.primitives.prediction import Prediction
 
 
 class IntentQuestionGeneratorNode:
@@ -13,7 +18,9 @@ class IntentQuestionGeneratorNode:
 
     async def __call__(self, state: GraphState) -> dict:
         message_history: str = "\n".join(m.format() for m in state.message_history)
-        intent_alignment_history: str = "\n".join(m.format() for m in state.intent_alignment_history)
+        intent_alignment_history: str = "\n".join(
+            m.format() for m in state.intent_alignment_history
+        )
         entities: str = "\n".join(state.entities_at_location) if state.entities_at_location else ""
         prediction: Prediction = await self._program.aforward(
             character_name=state.character_name,

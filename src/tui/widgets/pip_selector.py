@@ -1,3 +1,5 @@
+from typing import Any
+
 from textual import events
 from textual.message import Message
 from textual.reactive import reactive
@@ -26,7 +28,7 @@ class PipSelector(Static):
         max_val: int = 5,
         value: int = 0,
         readonly: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> None:
         super().__init__("", **kwargs)
         self._label = label

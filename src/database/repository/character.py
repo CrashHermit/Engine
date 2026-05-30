@@ -56,9 +56,7 @@ class CharacterRepository:
         # Materialize owned children before deleting, then recurse depth-first so
         # leaves are removed before their parents.
         children: list[Vertex] = [
-            edge.get_in()
-            for edge_type in _OWNED_EDGES
-            for edge in vertex.get_out_edges(edge_type)
+            edge.get_in() for edge_type in _OWNED_EDGES for edge in vertex.get_out_edges(edge_type)
         ]
         for child in children:
             self._delete_owned(child)

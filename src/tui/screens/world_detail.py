@@ -1,14 +1,14 @@
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, ListItem, ListView, Static
-from textual.containers import Horizontal, Vertical
 
 from src.core.model.character import CharacterData
 from src.services.container import ServiceContainer
-from src.tui.screens.game import GameScreen
-from src.tui.modals.create_character import CreateCharacterModal
 from src.tui.modals.confirm_modal import ConfirmModal
+from src.tui.modals.create_character import CreateCharacterModal
+from src.tui.screens.game import GameScreen
 from src.tui.widgets.pip_selector import PipSelector
 
 
@@ -58,7 +58,9 @@ class WorldDetailScreen(Screen):
 
     def _clear_character_detail(self) -> None:
         self.query_one("#char-name", Label).update("—")
-        self.query_one("#char-description", Static).update("No characters yet. Create one to begin.")
+        self.query_one("#char-description", Static).update(
+            "No characters yet. Create one to begin."
+        )
         self.query_one("#pip-corpus", PipSelector).value = 0
         self.query_one("#pip-mens", PipSelector).value = 0
         self.query_one("#pip-anima", PipSelector).value = 0
@@ -119,10 +121,14 @@ class WorldDetailScreen(Screen):
                     title="Delete Character?",
                     message=f'Are you sure you want to delete "{character.name}"?',
                 ),
-                callback=lambda confirmed: self._on_delete_character_confirmed(character, confirmed),
+                callback=lambda confirmed: self._on_delete_character_confirmed(
+                    character, confirmed
+                ),
             )
 
-    def _on_delete_character_confirmed(self, character: CharacterData, confirmed: bool | None) -> None:
+    def _on_delete_character_confirmed(
+        self, character: CharacterData, confirmed: bool | None
+    ) -> None:
         if not confirmed:
             return
         try:

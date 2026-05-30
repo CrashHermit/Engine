@@ -12,9 +12,8 @@ the highest die of the push roll:
     1-3  -> 3
 """
 
-from core.mechanic.dice import RollTier
-from core.mechanic.magnitude import clamp_magnitude
-
+from src.core.mechanic.dice import RollTier
+from src.core.mechanic.magnitude import clamp_magnitude
 
 PUSH_COST: dict[RollTier, int] = {
     RollTier.CRIT: 0,
@@ -23,8 +22,10 @@ PUSH_COST: dict[RollTier, int] = {
     RollTier.BAD: 3,
 }
 
+
 def push_cost(tier: RollTier) -> int:
     return PUSH_COST[tier]
+
 
 def improve_magnitude(landed_magnitude: int, steps: int = 1) -> int:
     if steps < 0:

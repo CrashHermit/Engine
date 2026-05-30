@@ -2,16 +2,19 @@ import random
 
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
+from textual.containers import Horizontal, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, TextArea
-from textual.containers import Horizontal, VerticalScroll
+
 from src.services.world import WorldService
 
 
 class CreateWorldModal(ModalScreen[dict[str, str] | None]):
     """Form for creating a new world (new ArcadeDB database)."""
 
-    BINDINGS: list[BindingType] = [Binding(key="escape", action="dismiss_cancel", description="Cancel")]
+    BINDINGS: list[BindingType] = [
+        Binding(key="escape", action="dismiss_cancel", description="Cancel")
+    ]
 
     def compose(self) -> ComposeResult:
         with VerticalScroll(id="create-world-dialog"):
@@ -57,7 +60,9 @@ class CreateWorldModal(ModalScreen[dict[str, str] | None]):
             size: int = int(self.query_one("#world-size", Input).value.strip())
             biome: str = self.query_one("#world-biome", Input).value.strip()
             temperature: float = float(self.query_one("#world-temperature", Input).value.strip())
-            precipitation: float = float(self.query_one("#world-precipitation", Input).value.strip())
+            precipitation: float = float(
+                self.query_one("#world-precipitation", Input).value.strip()
+            )
             elevation: float = float(self.query_one("#world-elevation", Input).value.strip())
         except ValueError:
             self.notify(message="Numeric fields must contain valid integers", severity="error")
@@ -80,7 +85,6 @@ class CreateWorldModal(ModalScreen[dict[str, str] | None]):
         except Exception as e:
             self.notify(message=f"Failed to create world: {e}", severity="error")
             return
-
 
         self.dismiss(result={"name": name, "description": description})
 

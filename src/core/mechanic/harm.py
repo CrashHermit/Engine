@@ -8,11 +8,13 @@ tunable thresholds -- so the rest of the engine still reads a clean word
 underneath.
 """
 
-from dataclasses import dataclass, field
-from core.mechanic.magnitude import clamp_magnitude
+from dataclasses import dataclass, field, replace
+
+from src.core.mechanic.magnitude import clamp_magnitude
 from src.core.model.part import Status
 
 DEFAULT_CAPACITY: int = 4
+
 
 @dataclass(frozen=True)
 class WoundThresholds:
@@ -40,6 +42,7 @@ class WoundThresholds:
             return Status.GRAZED
         return Status.NORMAL
 
+
 @dataclass(frozen=True)
 class WoundPool:
     capacity: int = DEFAULT_CAPACITY
@@ -54,13 +57,25 @@ class WoundPool:
     def destroyed(self) -> bool:
         return self.status is Status.DESTROYED
 
-    def apply(self, magnitude: int) -> None:
-        mag: int = clamp_magnitude(magnitude=magnitude)
-        total: int = self.filled + mag
-        self.filled = min(self.capacity, total)
-        return max(0, total - self.capacity)
 
-    def heal(self, amount: int) -> None:
-        if amount < 0:
-            raise ValueError("amount must be non-negative")
-        self.filled = max(0, self.filled - amount)
+@dataclass(frozen=True)
+class WoundApplyResult:
+    pool: WoundPool
+    overflow: int
+
+
+def apply_wounds(pool: WoundPool, magnitude: int) -> WoundApplyResult:
+    mag: int = clamp_magnitude(magnitude=magnitude)
+    total: int = pool.filled + mag
+    new_filled: int = min(pool.capacity, total)
+    overflow: int = max(0, total - pool.capacity)
+    return WoundApplyResult(
+        pool=replace(pool, filled=new_filled),
+        overflow=overflow,
+    )
+
+
+def heal_wounds(pool: WoundPool, amount: int) -> WoundPool:
+    if amount < 0:
+        raise ValueError("amount must be non-negative")
+    return replace(pool, filled=max(0, pool.filled - amount))

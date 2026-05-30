@@ -125,5 +125,7 @@ class CharacterService:
             openness=self._characters.get_trait_value(personality, EdgeType.HAS_OPENNESS),
             agreeableness=self._characters.get_trait_value(personality, EdgeType.HAS_AGREEABLENESS),
             neuroticism=self._characters.get_trait_value(personality, EdgeType.HAS_NEUROTICISM),
-            conscientiousness=self._characters.get_trait_value(personality, EdgeType.HAS_CONSCIENTIOUSNESS),
+            conscientiousness=self._characters.get_trait_value(
+                personality, EdgeType.HAS_CONSCIENTIOUSNESS
+            ),
         )

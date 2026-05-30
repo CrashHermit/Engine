@@ -1,4 +1,4 @@
-from dspy import Signature, InputField, OutputField
+from dspy import InputField, OutputField, Signature
 
 
 class IntentAlignmentRouterSignature(Signature):
@@ -11,11 +11,22 @@ class IntentAlignmentRouterSignature(Signature):
     that does not exist in the current location.
     """
 
-    character_description: str = InputField(default="", description="A description of the player character")
-    location_description: str = InputField(default="", description="A description of the current location")
-    entities_at_location: str = InputField(default="", description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'")
+    character_description: str = InputField(
+        default="", description="A description of the player character"
+    )
+    location_description: str = InputField(
+        default="", description="A description of the current location"
+    )
+    entities_at_location: str = InputField(
+        default="",
+        description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'",
+    )
     message_history: str = InputField(default="", description="The conversation history so far")
     human_message: str = InputField(description="The player's current message or action")
-    intent_alignment_history: str = InputField(default="", description="The prior clarification Q&A for this action")
+    intent_alignment_history: str = InputField(
+        default="", description="The prior clarification Q&A for this action"
+    )
 
-    is_intent_alignment_achieved: bool = OutputField(description="Whether the player's intent is clear enough to act on")
+    is_intent_alignment_achieved: bool = OutputField(
+        description="Whether the player's intent is clear enough to act on"
+    )

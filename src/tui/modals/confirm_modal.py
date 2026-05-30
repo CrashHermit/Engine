@@ -48,7 +48,6 @@ class ConfirmDeleteWorldModal(ConfirmModal):
         super().__init__(
             title="Delete World?",
             message=(
-                f'Are you sure you want to delete the world "{world_name}"? '
-                "This cannot be undone."
+                f'Are you sure you want to delete the world "{world_name}"? This cannot be undone.'
             ),
         )

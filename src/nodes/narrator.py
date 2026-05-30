@@ -1,10 +1,14 @@
-from dspy.primitives.prediction import Prediction
+from typing import TYPE_CHECKING
+
 from dspy import Predict
 
 from src.core.model.message import Message
+from src.lm import lm
 from src.signatures.narrator import NarratorSignature
 from src.state import GraphState
-from src.lm import lm
+
+if TYPE_CHECKING:
+    from dspy.primitives.prediction import Prediction
 
 
 class NarratorNode:

@@ -3,6 +3,7 @@ from src.worldgen.data import TileData, WorldData
 # Hex torus: 3 outgoing directions per tile (east, north, northeast).
 # Each tile also receives 3 complementary incoming edges from its neighbours.
 
+
 class GridStage:
     def run(self, data: WorldData) -> WorldData:
         size: int = data.size

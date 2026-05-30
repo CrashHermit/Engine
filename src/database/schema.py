@@ -1,8 +1,12 @@
-from arcadedb_embedded.schema import Schema
-from arcadedb_embedded.core import Database
+from typing import TYPE_CHECKING
+
 import arcadedb_embedded as arcadedb
-from src.core.model.database import VertexType
-from src.core.model.database import EdgeType
+from arcadedb_embedded.schema import Schema
+
+from src.core.model.database import EdgeType, VertexType
+
+if TYPE_CHECKING:
+    from arcadedb_embedded.core import Database
 
 PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "id": arcadedb.PropertyType.STRING,
@@ -60,7 +64,16 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
     VertexType.CONSCIENTIOUSNESS: [],
     VertexType.ATTRIBUTE: ["value"],
     VertexType.TILE: ["q", "r", "elevation"],
-    VertexType.WORLD: ["name", "description", "seed", "size", "major_count", "major_radius_pct", "detail_count", "detail_radius_pct"],
+    VertexType.WORLD: [
+        "name",
+        "description",
+        "seed",
+        "size",
+        "major_count",
+        "major_radius_pct",
+        "detail_count",
+        "detail_radius_pct",
+    ],
     VertexType.ENTITY: ["name", "description", "scene_position"],  # PROTOTYPE
 }
 
@@ -99,7 +112,9 @@ class SchemaManager:
     def ensure(self) -> None:
         schema: Schema = self.database.schema
         for vertex_type in VertexType:
-            self._vertex(schema=schema, name=vertex_type, properties=VERTEX_SCHEMA.get(vertex_type, []))
+            self._vertex(
+                schema=schema, name=vertex_type, properties=VERTEX_SCHEMA.get(vertex_type, [])
+            )
         for edge_type in EdgeType:
             self._edge(schema=schema, name=edge_type, properties=EDGE_SCHEMA.get(edge_type, []))
         self._indexes(schema)

@@ -1,9 +1,11 @@
+from typing import Any
+
 from rich.markup import escape
+from textual.app import ComposeResult
+from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.widget import Widget
-from textual.app import ComposeResult
 from textual.widgets import Button, Input, RichLog
-from textual.containers import Vertical, Horizontal
 
 
 class ChatPanel(Widget):
@@ -12,18 +14,18 @@ class ChatPanel(Widget):
     class MessageSent(Message):
         def __init__(self, text: str) -> None:
             super().__init__()
-            self.text = text
+            self.text: str = text
 
-    def __init__(self, character_name: str = "You", **kwargs) -> None:
+    def __init__(self, character_name: str = "You", **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self._character_name = character_name
+        self._character_name: str = character_name
 
     def compose(self) -> ComposeResult:
         with Vertical(id="chat-layout"):
             yield RichLog(id="chat-log", min_width=0, wrap=True, markup=True, highlight=True)
             with Horizontal(id="input-bar"):
                 yield Input(placeholder="Type your message...", id="msg-input")
-                yield Button("Send", id="btn-send", variant="primary")
+                yield Button(label="Send", id="btn-send", variant="primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-send":

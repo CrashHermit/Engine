@@ -35,7 +35,9 @@ class LocationRepository:
                 neighbors.append(edge.get_out())
         return neighbors
 
-    def create_entity(self, location: Vertex, name: str, description: str, scene_position: str) -> Vertex:
+    def create_entity(
+        self, location: Vertex, name: str, description: str, scene_position: str
+    ) -> Vertex:
         entity = self._base.create_vertex(
             type_name=VertexType.ENTITY,
             name=name,

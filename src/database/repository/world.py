@@ -1,4 +1,5 @@
 from arcadedb_embedded.graph import Vertex
+
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
 
@@ -14,6 +15,7 @@ class WorldRepository:
             return None
         edges = worlds[0].get_out_edges(EdgeType.HAS_START)
         return edges[0].get_in() if edges else None
+
     # PROTOTYPE END
 
     def create_world(

@@ -15,19 +15,19 @@ This module is pure: `roll_pool` injects randomness via an optional `rng`, and
 with no randomness at all.
 """
 
-from random import Random
+from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Sequence
+from random import Random
 
 ATTRIBUTE_CAP: int = 4
 
 
 class RollTier(StrEnum):
-    CRIT = "crit"       # critical success (2+ sixes)
-    CLEAN = "clean"     # highest die is a single 6
-    PARTIAL = "partial" # highest die is a 4 or 5
-    BAD = "bad"         # highest die is a 1, 2, or 3
+    CRIT = "crit"  # critical success (2+ sixes)
+    CLEAN = "clean"  # highest die is a single 6
+    PARTIAL = "partial"  # highest die is a 4 or 5
+    BAD = "bad"  # highest die is a 1, 2, or 3
 
 
 @dataclass(frozen=True)
@@ -37,8 +37,10 @@ class RollResult:
     tier: RollTier
     zero_pool: bool
 
+
 def _d6(rng: Random) -> int:
     return rng.randint(a=1, b=6)
+
 
 def classify(dice: Sequence[int], *, zero_pool: bool = False) -> RollTier:
     if not dice:

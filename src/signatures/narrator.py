@@ -4,6 +4,7 @@ from dspy import (
     Signature,
 )
 
+
 class NarratorSignature(Signature):
     """
     You are the narrator of a dark fantasy game in the spirit of Blades in the Dark.
@@ -20,10 +21,19 @@ class NarratorSignature(Signature):
     unfolds. If an action is risky or has a cost, let the fiction show it.
     """
 
-    character_description: str = InputField(default="", description="A description of the player character")
-    location_description: str = InputField(default="", description="A description of the current location")
-    entities_at_location: str = InputField(default="", description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'")
+    character_description: str = InputField(
+        default="", description="A description of the player character"
+    )
+    location_description: str = InputField(
+        default="", description="A description of the current location"
+    )
+    entities_at_location: str = InputField(
+        default="",
+        description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'",
+    )
     message_history: str = InputField(default="", description="The conversation history so far")
     human_message: str = InputField(description="The player's intended action")
-    action_list: str = InputField(default="", description="Ordered list of discrete actions to narrate through")
+    action_list: str = InputField(
+        default="", description="Ordered list of discrete actions to narrate through"
+    )
     ai_message: str = OutputField(description="The narrator's in-character response")

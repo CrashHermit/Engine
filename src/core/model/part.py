@@ -22,16 +22,16 @@ class Status(StrEnum):
 
 class SizeScale(StrEnum):
     MICROSCOPIC = "microscopic"  # cell / bacteria
-    MINIATURE = "miniature"      # fingernail / coin
-    TINY = "tiny"                # finger / thumb
-    SMALL = "small"              # hand / foot
-    SLIGHT = "slight"            # child / large dog
-    MEDIUM = "medium"            # full human body
-    TOWERING = "towering"        # horse / large humanoid
-    LARGE = "large"              # car / elephant
-    HUGE = "huge"                # building / whale
-    COLOSSAL = "colossal"        # skyscraper / mountain
-    TITANIC = "titanic"          # island / continent
+    MINIATURE = "miniature"  # fingernail / coin
+    TINY = "tiny"  # finger / thumb
+    SMALL = "small"  # hand / foot
+    SLIGHT = "slight"  # child / large dog
+    MEDIUM = "medium"  # full human body
+    TOWERING = "towering"  # horse / large humanoid
+    LARGE = "large"  # car / elephant
+    HUGE = "huge"  # building / whale
+    COLOSSAL = "colossal"  # skyscraper / mountain
+    TITANIC = "titanic"  # island / continent
 
 
 class PartFunction(StrEnum):

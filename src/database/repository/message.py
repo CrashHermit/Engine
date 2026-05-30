@@ -1,10 +1,12 @@
 import uuid
-
-from arcadedb_embedded.graph import Vertex
+from typing import TYPE_CHECKING
 
 from src.core.model.database import EdgeType, VertexType
 from src.core.model.message import Message
 from src.database.repository.base import BaseRepository
+
+if TYPE_CHECKING:
+    from arcadedb_embedded.graph import Vertex
 
 
 class MessageRepository:

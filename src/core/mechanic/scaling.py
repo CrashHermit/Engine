@@ -1,12 +1,15 @@
-from enum import StrEnum
 from dataclasses import dataclass
-from core.mechanic.magnitude import clamp_magnitude
+from enum import StrEnum
+
 from src.core.mechanic.dice import RollTier
+from src.core.mechanic.magnitude import clamp_magnitude
+
 
 class Position(StrEnum):
     CONTROLLED = "controlled"
     RISKY = "risky"
     DESPERATE = "desperate"
+
 
 REDUCTION: dict[Position, dict[RollTier, int]] = {
     Position.CONTROLLED: {
@@ -29,6 +32,7 @@ class Outcome:
     landed_magnitude: int
     avoided: bool
     crit: bool
+
 
 def scale_threat(
     base_magnitude: int,

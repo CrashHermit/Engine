@@ -1,7 +1,7 @@
 from arcadedb_embedded.graph import Vertex
 
 from src.core.model.database import EdgeType, VertexType
-from src.core.model.part import Shape, Status, SizeScale
+from src.core.model.part import Shape, SizeScale, Status
 from src.database.repository.base import BaseRepository
 
 

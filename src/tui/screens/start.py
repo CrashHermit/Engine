@@ -1,10 +1,11 @@
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
+from textual.containers import CenterMiddle, VerticalGroup
 from textual.screen import Screen
 from textual.widgets import Button, Label
-from textual.containers import CenterMiddle, VerticalGroup
-from src.tui.screens.world_list import WorldListScreen
+
 from src.tui.modals.create_world import CreateWorldModal
+from src.tui.screens.world_list import WorldListScreen
 
 
 class StartScreen(Screen):

@@ -1,4 +1,3 @@
-from src.database.repository.base import BaseRepository
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
 from src.worldgen.data import TileData
@@ -10,7 +9,7 @@ class TileRepository:
 
     def create_tiles(self, tiles: dict[tuple[int, int], TileData]) -> None:
         vertices = {}
-        for (q, r), tile in tiles.items():
+        for (q, r), _tile in tiles.items():
             vertices[(q, r)] = self._base.create_vertex(
                 type_name=VertexType.TILE,
                 q=q,

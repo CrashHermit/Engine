@@ -1,15 +1,18 @@
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
+from textual.containers import Horizontal, Vertical
 from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, ListItem, ListView
-from textual.containers import Horizontal, Vertical
-from src.tui.screens.world_detail import WorldDetailScreen
-from src.tui.modals.create_world import CreateWorldModal
+
 from src.tui.modals.confirm_modal import ConfirmDeleteWorldModal
+from src.tui.modals.create_world import CreateWorldModal
+from src.tui.screens.world_detail import WorldDetailScreen
 
 
 class WorldListScreen(Screen):
-    BINDINGS: list[BindingType] = [Binding(key="escape", action="app.pop_screen", description="Back")]
+    BINDINGS: list[BindingType] = [
+        Binding(key="escape", action="app.pop_screen", description="Back")
+    ]
 
     def __init__(self) -> None:
         super().__init__()
@@ -59,7 +62,9 @@ class WorldListScreen(Screen):
             world_name: str | None = self._selected_world_name()
             if world_name:
                 if self.app.factory is None:
-                    self.app.notify(message="Session still starting up, try again.", severity="warning")
+                    self.app.notify(
+                        message="Session still starting up, try again.", severity="warning"
+                    )
                     return
                 try:
                     services = self.app.factory.open(world_name)
@@ -73,7 +78,9 @@ class WorldListScreen(Screen):
                 return
             self.app.push_screen(
                 ConfirmDeleteWorldModal(world_name=world_name),
-                callback=lambda confirmed: self._on_delete_world_confirmed(world_name=world_name, confirmed=confirmed),
+                callback=lambda confirmed: self._on_delete_world_confirmed(
+                    world_name=world_name, confirmed=confirmed
+                ),
             )
 
     def _on_delete_world_confirmed(self, world_name: str, confirmed: bool | None) -> None:

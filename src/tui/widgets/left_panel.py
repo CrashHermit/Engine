@@ -1,9 +1,8 @@
 from textual.app import ComposeResult
+from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
 from textual.widget import Widget
-from textual.widgets import Button, Label, RichLog
-from textual.widgets import ContentSwitcher
-from textual.containers import Horizontal, Vertical
+from textual.widgets import Button, ContentSwitcher, Label, RichLog
 
 
 class LeftPanel(Widget):
@@ -24,14 +23,18 @@ class LeftPanel(Widget):
     def watch_current_view(self, view: str) -> None:
         self.query_one("#left-switcher", ContentSwitcher).current = view
         self.query_one("#btn-scene", Button).variant = "primary" if view == "scene" else "default"
-        self.query_one("#btn-character", Button).variant = "primary" if view == "character" else "default"
+        self.query_one("#btn-character", Button).variant = (
+            "primary" if view == "character" else "default"
+        )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id in ("btn-scene", "btn-character"):
             self.current_view = event.button.id.removeprefix("btn-")
             event.stop()
 
-    def write_scene(self, name: str, description: str, exits: str, entities: list[str] | None = None) -> None:
+    def write_scene(
+        self, name: str, description: str, exits: str, entities: list[str] | None = None
+    ) -> None:
         entity_lines = ""
         if entities:
             lines = "\n".join(f"  · {e}" for e in entities)

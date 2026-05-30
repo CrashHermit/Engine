@@ -88,7 +88,7 @@ class WorldService:
         for a, b in dungeon.connections:
             location_repo.connect_locations(nodes[a], nodes[b])
 
-        for node, loc in zip(nodes, dungeon.locations):
+        for node, loc in zip(nodes, dungeon.locations, strict=True):
             for entity in loc.entities:
                 location_repo.create_entity(
                     location=node,
@@ -97,7 +97,7 @@ class WorldService:
                     scene_position=entity.scene_position,
                 )
 
-        for node, loc in zip(nodes, dungeon.locations):
+        for node, loc in zip(nodes, dungeon.locations, strict=True):
             if loc.is_center:
                 return node
         return nodes[0]

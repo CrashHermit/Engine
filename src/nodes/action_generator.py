@@ -1,8 +1,13 @@
+from typing import TYPE_CHECKING
+
 from dspy import Predict
-from dspy.primitives.prediction import Prediction
+
 from src.lm import lm
 from src.signatures.action_generator import ActionGeneratorSignature
 from src.state import GraphState
+
+if TYPE_CHECKING:
+    from dspy.primitives.prediction import Prediction
 
 
 class ActionGeneratorNode:

@@ -1,13 +1,17 @@
 from dataclasses import dataclass
 
-
 DEFAULT_STRESS_MAX: int = 9
 DEFAULT_TRAUMA_MAX: int = 4
+
 
 @dataclass(frozen=True)
 class EconomyConfig:
     stress_max: int = DEFAULT_STRESS_MAX
     trauma_max: int = DEFAULT_TRAUMA_MAX
+
+
+DEFAULT_ECONOMY_CONFIG = EconomyConfig()
+
 
 @dataclass(frozen=True)
 class StressResult:
@@ -16,13 +20,17 @@ class StressResult:
     trauma_gained: bool
     lost: bool
 
+
 @dataclass(frozen=True)
 class ViceResult:
     stress: int
     cleared: int
     overindulged: bool
 
-def add_stress(stress: int, trauma: int, amount: int, config: EconomyConfig = EconomyConfig()) -> StressResult:
+
+def add_stress(
+    stress: int, trauma: int, amount: int, config: EconomyConfig = DEFAULT_ECONOMY_CONFIG
+) -> StressResult:
     if amount < 0:
         raise ValueError("amount must be non-negative")
 
@@ -44,6 +52,7 @@ def add_stress(stress: int, trauma: int, amount: int, config: EconomyConfig = Ec
         trauma_gained=True,
         lost=loss,
     )
+
 
 def clear_vice(stress: int, vice_roll: int) -> ViceResult:
     if vice_roll < 0:

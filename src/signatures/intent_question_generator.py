@@ -1,4 +1,4 @@
-from dspy import Signature, InputField, OutputField
+from dspy import InputField, OutputField, Signature
 
 
 class IntentQuestionGeneratorSignature(Signature):
@@ -13,11 +13,20 @@ class IntentQuestionGeneratorSignature(Signature):
     Ask only one question at a time with a brief explanation of why you need it.
     """
 
-    character_description: str = InputField(default="", description="A description of the player character")
-    location_description: str = InputField(default="", description="A description of the current location")
-    entities_at_location: str = InputField(default="", description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'")
+    character_description: str = InputField(
+        default="", description="A description of the player character"
+    )
+    location_description: str = InputField(
+        default="", description="A description of the current location"
+    )
+    entities_at_location: str = InputField(
+        default="",
+        description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'",
+    )
     message_history: str = InputField(default="", description="The conversation history so far")
     human_message: str = InputField(description="The player's current message or action")
-    intent_alignment_history: str = InputField(default="", description="The prior clarification Q&A for this action")
+    intent_alignment_history: str = InputField(
+        default="", description="The prior clarification Q&A for this action"
+    )
 
     question: str = OutputField(description="One clarification question to ask the player")

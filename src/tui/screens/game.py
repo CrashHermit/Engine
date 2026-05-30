@@ -2,21 +2,20 @@ from rich.markup import escape
 from textual import work
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import Horizontal, Vertical
 from textual.events import Key
 from textual.screen import Screen
 from textual.widgets import Input, RichLog
-from textual.containers import Horizontal, Vertical
 from textual.worker import get_current_worker
-
 
 from src.core.model.character import CharacterData
 from src.core.model.location import LocationState
 from src.core.model.message import Message
 from src.services.container import ServiceContainer
 from src.state import GraphState
+from src.tui.modals.character_sheet import CharacterSheetModal
 from src.tui.widgets.chat_panel import ChatPanel
 from src.tui.widgets.left_panel import LeftPanel
-from src.tui.modals.character_sheet import CharacterSheetModal
 
 
 class GameScreen(Screen):
@@ -68,9 +67,9 @@ class GameScreen(Screen):
     def _show_location(self, state: LocationState) -> None:
         self._location_state = state
         location = state.location
-        exits = " · ".join(
-            f"[{i + 1}] {n.name}" for i, n in enumerate(state.neighbors)
-        ) or "No exits."
+        exits = (
+            " · ".join(f"[{i + 1}] {n.name}" for i, n in enumerate(state.neighbors)) or "No exits."
+        )
         display_entities = [f"{e.name} — {e.scene_position}" for e in state.entities]
 
         panel = self.query_one(LeftPanel)
@@ -110,24 +109,22 @@ class GameScreen(Screen):
             if resuming:
                 result = await graph_service.resume(text, config=config)
             else:
-                result = await graph_service.ainvoke(
-                    self._build_graph_state(text), config=config
-                )
+                result = await graph_service.ainvoke(self._build_graph_state(text), config=config)
 
             if get_current_worker().is_cancelled:
                 return
 
             question = graph_service.interrupt_question(result)
             if question is not None:
-                log.write(
-                    f"[bold #7ec8e3]Intent Alignment:[/bold #7ec8e3] {escape(question)}"
-                )
+                log.write(f"[bold #7ec8e3]Intent Alignment:[/bold #7ec8e3] {escape(question)}")
                 return
 
             ai_msg = result.get("ai_message")
             if ai_msg is not None:
                 self._message_history = result.get("message_history", self._message_history)
-                content = ai_msg.content if hasattr(ai_msg, "content") else ai_msg.get("content", "")
+                content = (
+                    ai_msg.content if hasattr(ai_msg, "content") else ai_msg.get("content", "")
+                )
                 log.write(f"[bold #c9a84c]Narrator:[/bold #c9a84c] {escape(content)}")
             else:
                 log.write("[dim red]No response from graph.[/dim red]")
@@ -142,10 +139,7 @@ class GameScreen(Screen):
     def _build_graph_state(self, text: str) -> GraphState:
         state = self._location_state
         entities_at_location = (
-            [
-                f"{e.name}: {e.description}. Location: {e.scene_position}"
-                for e in state.entities
-            ]
+            [f"{e.name}: {e.description}. Location: {e.scene_position}" for e in state.entities]
             if state is not None
             else []
         )

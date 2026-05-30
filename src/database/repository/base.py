@@ -1,7 +1,8 @@
 import uuid
+from collections.abc import Generator
 from contextlib import contextmanager
-from datetime import datetime, timezone
-from typing import Any, Generator
+from datetime import UTC, datetime
+from typing import Any
 
 import arcadedb_embedded as arcadedb
 from arcadedb_embedded.graph import Edge, Vertex
@@ -15,11 +16,11 @@ class BaseRepository:
         self._now: datetime | None = None
 
     @contextmanager
-    def transaction(self) -> Generator[None, None, None]:
+    def transaction(self) -> Generator[None]:
         if self._database.is_transaction_active():
             yield
             return
-        self._now = datetime.now(tz=timezone.utc)
+        self._now = datetime.now(tz=UTC)
         try:
             with self._database.transaction():
                 yield
@@ -27,7 +28,7 @@ class BaseRepository:
             self._now = None
 
     def _current_time(self) -> datetime:
-        return self._now if self._now is not None else datetime.now(tz=timezone.utc)
+        return self._now if self._now is not None else datetime.now(tz=UTC)
 
     ############################################################################
     # Vertex operations
@@ -50,9 +51,7 @@ class BaseRepository:
             return [self.create_vertex(type_name=type_name, **item) for item in items]
 
     def get_vertex(self, type_name: VertexType, id: str) -> Vertex | None:
-        return self._database.lookup_by_key(
-            type_name=type_name, keys=["id"], values=[id]
-        )
+        return self._database.lookup_by_key(type_name=type_name, keys=["id"], values=[id])
 
     def update_vertex(self, vertex: Vertex, **properties: Any) -> None:
         properties.setdefault("updated_at", self._current_time())

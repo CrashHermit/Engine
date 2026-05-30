@@ -1,8 +1,8 @@
 from textual.app import ComposeResult
 from textual.binding import Binding
+from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, Static
-from textual.containers import Horizontal, Vertical
 
 from src.core.model.character import CharacterData
 from src.tui.widgets.pip_selector import PipSelector
@@ -45,11 +45,26 @@ class CharacterSheetModal(ModalScreen[None]):
 
             yield Label("Personality", id="personality-title")
             with Horizontal(id="personality-traits"):
-                yield PipSelector("Extraversion", min_val=1, max_val=5, value=1, readonly=True, id="pip-extra")
-                yield PipSelector("Openness", min_val=1, max_val=5, value=1, readonly=True, id="pip-open")
-                yield PipSelector("Agreeableness", min_val=1, max_val=5, value=1, readonly=True, id="pip-agree")
-                yield PipSelector("Neuroticism", min_val=1, max_val=5, value=1, readonly=True, id="pip-neuro")
-                yield PipSelector("Conscientiousness", min_val=1, max_val=5, value=1, readonly=True, id="pip-consc")
+                yield PipSelector(
+                    "Extraversion", min_val=1, max_val=5, value=1, readonly=True, id="pip-extra"
+                )
+                yield PipSelector(
+                    "Openness", min_val=1, max_val=5, value=1, readonly=True, id="pip-open"
+                )
+                yield PipSelector(
+                    "Agreeableness", min_val=1, max_val=5, value=1, readonly=True, id="pip-agree"
+                )
+                yield PipSelector(
+                    "Neuroticism", min_val=1, max_val=5, value=1, readonly=True, id="pip-neuro"
+                )
+                yield PipSelector(
+                    "Conscientiousness",
+                    min_val=1,
+                    max_val=5,
+                    value=1,
+                    readonly=True,
+                    id="pip-consc",
+                )
 
             yield Button("Close", id="btn-close", variant="default")
 

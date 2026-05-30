@@ -1,12 +1,14 @@
 import uuid
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.graph.state import CompiledStateGraph
-from langgraph.types import Command
+from langgraph.types import Command, StateSnapshot
 
 from src.graph.main_graph import MainGraphBuilder
 from src.state import GraphState
+
+if TYPE_CHECKING:
+    from langgraph.graph.state import CompiledStateGraph
 
 
 class GraphService:
@@ -28,7 +30,7 @@ class GraphService:
     async def ainvoke(self, input: GraphState | Command, *, config: dict) -> dict[str, Any]:
         return await self.graph.ainvoke(input, config=config)
 
-    async def aget_state(self, *, config: dict):
+    async def aget_state(self, *, config: dict[str, Any]) -> StateSnapshot:
         return await self.graph.aget_state(config=config)
 
     async def is_paused(self, *, config: dict) -> bool:
