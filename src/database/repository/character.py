@@ -120,3 +120,10 @@ class CharacterRepository:
             source=character,
             target=to_location,
         )
+
+    ############################################################################
+    # Economy verbs
+    ############################################################################
+
+    def get_stress(self, character: Vertex) -> int:
+        return 

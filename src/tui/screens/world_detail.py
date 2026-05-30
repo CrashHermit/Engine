@@ -23,21 +23,22 @@ class WorldDetailScreen(Screen):
 
     def compose(self) -> ComposeResult:
         yield Header()
-        with Horizontal(id="detail-panels"):
-            with Vertical(id="char-list-panel"):
-                yield Label("Characters", id="char-list-title")
-                yield ListView(id="char-list")
-            with Vertical(id="char-detail-panel"):
-                yield Label("—", id="char-name")
-                yield Static("", id="char-description")
-                yield PipSelector("Corpus", max_val=4, value=0, readonly=True, id="pip-corpus")
-                yield PipSelector("Mens", max_val=4, value=0, readonly=True, id="pip-mens")
-                yield PipSelector("Anima", max_val=4, value=0, readonly=True, id="pip-anima")
-        with Horizontal(id="detail-actions"):
-            yield Button("Back", id="btn-back", variant="default")
-            yield Button("New Character", id="btn-new-char", variant="default")
-            yield Button("Delete", id="btn-delete", variant="error")
-            yield Button("Play", id="btn-play", variant="success")
+        with Vertical(id="detail-layout"):
+            with Horizontal(id="detail-panels"):
+                with Vertical(id="char-list-panel"):
+                    yield Label("Characters", id="char-list-title")
+                    yield ListView(id="char-list")
+                with Vertical(id="char-detail-panel"):
+                    yield Label("—", id="char-name")
+                    yield Static("", id="char-description")
+                    yield PipSelector("Corpus", max_val=4, value=0, readonly=True, id="pip-corpus")
+                    yield PipSelector("Mens", max_val=4, value=0, readonly=True, id="pip-mens")
+                    yield PipSelector("Anima", max_val=4, value=0, readonly=True, id="pip-anima")
+            with Horizontal(id="detail-actions"):
+                yield Button("Back", id="btn-back", variant="default")
+                yield Button("New Character", id="btn-new-char", variant="default")
+                yield Button("Delete", id="btn-delete", variant="error")
+                yield Button("Play", id="btn-play", variant="success")
         yield Footer()
 
     def on_mount(self) -> None:

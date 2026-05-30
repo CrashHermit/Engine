@@ -11,14 +11,14 @@ class LeftPanel(Widget):
     current_view: reactive[str] = reactive("scene")
 
     def compose(self) -> ComposeResult:
-        with Horizontal(id="left-toggle"):
-            yield Button("Scene", id="btn-scene", variant="primary")
-            yield Button("Character", id="btn-character", variant="default")
         with ContentSwitcher(initial="scene", id="left-switcher"):
             yield RichLog(id="scene", min_width=0, wrap=True, markup=True, highlight=True)
             with Vertical(id="character"):
                 yield Label("—", id="info-char-name")
                 yield Label("—", id="info-location")
+        with Horizontal(id="left-toggle"):
+            yield Button("Scene", id="btn-scene", variant="primary")
+            yield Button("Character", id="btn-character", variant="default")
 
     def watch_current_view(self, view: str) -> None:
         self.query_one("#left-switcher", ContentSwitcher).current = view

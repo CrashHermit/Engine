@@ -101,9 +101,10 @@ ListView > ListItem.--highlight {
 }
 
 #world-list-footer {
-    height: 3;
+    height: auto;
+    min-height: 5;
     align: left middle;
-    padding-top: 1;
+    padding: 1 0;
 }
 
 #world-list-footer Button {
@@ -111,6 +112,11 @@ ListView > ListItem.--highlight {
 }
 
 /* ── World Detail Screen ──────────────────────────── */
+
+#detail-layout {
+    height: 1fr;
+    layout: vertical;
+}
 
 #detail-panels {
     height: 1fr;
@@ -147,7 +153,8 @@ ListView > ListItem.--highlight {
 
 #detail-actions {
     height: auto;
-    padding: 1;
+    min-height: 5;
+    padding: 1 0;
     align: left middle;
     border-top: solid $da-muted;
 }
@@ -159,26 +166,30 @@ ListView > ListItem.--highlight {
 /* ── Game Screen ──────────────────────────────────── */
 
 #game-layout {
-    height: 100%;
+    height: 1fr;
     layout: vertical;
 }
 
 #game-panels {
     height: 1fr;
+    min-height: 0;
 }
 
 /* ── Left Panel Widget ───────────────────────────────── */
 
 LeftPanel {
     width: 40%;
-    height: 100%;
+    height: 1fr;
+    min-height: 0;
+    layout: vertical;
     border-right: solid $da-gold;
 }
 
 #left-toggle {
-    height: 3;
-    padding: 0 1;
-    border-bottom: solid $da-muted;
+    height: auto;
+    min-height: 5;
+    padding: 1;
+    border-top: solid $da-muted;
     align: left middle;
 }
 
@@ -190,10 +201,12 @@ LeftPanel {
 
 #left-switcher {
     height: 1fr;
+    min-height: 0;
 }
 
 #scene {
     height: 1fr;
+    min-height: 0;
     padding: 1;
 }
 
@@ -219,12 +232,14 @@ LeftPanel {
 /* ── Chat Panel Widget ────────────────────────────── */
 
 ChatPanel {
-    height: 100%;
+    height: 1fr;
+    min-height: 0;
     layout: vertical;
 }
 
 #chat-layout {
-    height: 100%;
+    height: 1fr;
+    min-height: 0;
     layout: vertical;
 }
 
@@ -248,13 +263,15 @@ ChatPanel {
 
 #chat-log {
     height: 1fr;
+    min-height: 0;
     padding: 1;
     background: $da-bg;
 }
 
 #input-bar {
-    height: 3;
-    padding: 0 1;
+    height: auto;
+    min-height: 5;
+    padding: 1;
     border-top: solid $da-muted;
     align: left middle;
 }
