@@ -342,7 +342,9 @@ Tackle these next, against this saved foundation:
       `value_stepper` / `pip_selector` widgets and a `create_character` modal). Also owns
       **part generation** (decision #27 sub-node): blocked on the full description system
       (current description field is a placeholder).
-- [ ] **Advancement / XP** — triggers, raising attributes toward the 4 cap.
+- [ ] **Advancement / XP** — deferred. Out of initial scope. Most natural trigger designs
+      when we return: per-roll XP on 1–3 outcomes (learn from failure), or milestone/story-beat
+      detection. Doesn't block Phase 0–3.
 - [ ] **Clocks** — adopt BitD progress/danger clocks? Where stored, who advances them.
 - [ ] **Other roll types** — fortune rolls, gather-information, flashbacks: in or out of
       initial scope.
