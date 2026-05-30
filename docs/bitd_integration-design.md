@@ -82,6 +82,7 @@ Relevant existing facts that shape the design:
 | 27 | **All parts (corpus, mens, anima) are generated at character creation — no fixed canonical lists.** `PartFunction` tags are fixed enums (the typed signal classifiers reason on); surface names are character-authored/generated. Applies uniformly to body, mind, and spirit. | Consistent with the engine's broad-category, LLM-driven ethos. Gives players immediate narrative ownership of what their character's body, psyche, and soul *are*, while keeping classifier signal clean via fixed function tags. |
 | 26 | **Mind parts (mens) and spirit parts (anima) are first-class parts.** The wound-box model (#19) applies uniformly across all three channels. A `harm` threat on any channel lands on a part from that channel's pool (body / mind / spirit). `Status`, `PartFunction`, and the `threat-part` classifier all span all three. Amends #25: `threat-part` is active for corpus, mens, and anima. | Extends a proven model rather than adding a second system. Stress remains the *shared* economy (push/resist cost); part damage is *localized* impairment on top of it. |
 | 29 | **Harm targets functional capability pools, not individual parts. Amends #19, #25, #27.** Each character has a slottable budget of functional pool slots allocated at creation — a pool slot is typed by `PartFunction` category and stacking is allowed (e.g. 3× MANIPULATOR + 1× MOVEMENT = a three-armed snake). Each slot is an independent wound pool. The `threat-function` classifier (replaces `threat-part`, #25) selects a `PartFunction` category; if multiple slots share that type, the most contextually appropriate one takes the damage. DESTROYED on a slot = that slot non-functional (#28); all slots of a type destroyed = that function fully lost. **Slot budgets are per-channel** (#30): each of corpus / mens / anima has its own fixed allocation. Budget sizes and whether they tie to attribute ratings are deferred to playtest/character-creation design. `PartFunction` enum left unchanged for now — to be revisited. | Stacking lets creatures/characters express anatomy naturally (three arms, two minds, etc.) while keeping the damage model uniform. Each slot failing independently gives granular attrition. Per-channel budgets ensure every character has presence in all three domains. |
+| 31 | **Effect classifier dropped.** The narrator derives success quality directly from `{outcome tier + threat-as-landed}`. Anti-chaining is structural (#9); roll outcome (avoided/reduced/full) already encodes how well the beat went. Framing fan-out is 4 parallel classifiers: attribute, threat-type, threat-magnitude, threat-channel + threat-function. | Eliminates the weakest module in the inventory. No information lost — the narrator has everything it needs from outcome tier and threat. |
 | 30 | **Functional pool slot budgets are per-channel.** Corpus, mens, and anima each have their own fixed slot allocation at creation. Guarantees minimum presence in all three domains; cleaner for balance than a unified pool. Whether the per-channel budget ties to the attribute dot rating is deferred to playtest. | A character with zero mental or spiritual pools is an unhandled edge case; per-channel budgets prevent it structurally. |
 | 28 | **DESTROYED = non-functional, uniformly across all three channels. Amends #19.** A DESTROYED part (corpus, mens, or anima) cannot perform its `PartFunction` but still exists. Healing (fiction-gated box removal) can recover even from DESTROYED. The detachment/distal-cascade rule from #19 is removed. Vital parts: DESTROYED triggers the permadeath path (#13) regardless of channel. | Makes the status ladder identical across body, mind, and spirit — simpler implementation, no channel-special-casing, and recovery is always possible in principle. Severance was body-only physics with no clean mental/spiritual equivalent. |
 | 25 | **Harm-location = `threat-part` classifier in the framing fan-out.** Runs in parallel with `threat-type` / `threat-magnitude` / `threat-channel`; takes `{contested_beat, threat description, body state}` and returns a part ID. Active only when `threat-channel = corpus`. The part is known before the roll and before the narrator writes, giving the harm machinery a clean typed target. | Parallel timing costs no latency; one narrow judgment per module (#18); avoids fragile narrator-to-extractor round-trips. |
@@ -130,11 +131,11 @@ RESOLUTION (Deep Cuts cherry-pick):
     └──(roll)──► segmenter ── {lead_up, contested_beat, deferred_tail}
                     │           deferred_tail ──► held (pending_intent), NOT downstream
                     └──► ┌─ attribute ────────┐
-                         ├─ effect ───────────┤
                          ├─ threat-type ──────┤─► join ─► [dice + scale: code] ─► (offer/resolve)
                          ├─ threat-magnitude ─┤            (6 avoid · 4-5 mag-1 · 1-3 full)
-                         └─ threat-channel ───┘                        │
-  narrator receives ONLY: lead_up + contested_beat + outcome + effect + threat-as-landed
+                         ├─ threat-channel ───┤
+                         └─ threat-function ──┘                        │
+  narrator receives ONLY: lead_up + contested_beat + outcome + threat-as-landed
 ```
 
 - **Gate** (binary, #9 revised): does the beat carry **danger + uncertainty**? If not →
@@ -173,7 +174,7 @@ RESOLUTION (Deep Cuts cherry-pick):
 | **roll-gate** | does the beat carry danger + uncertainty? | bool — `false` ⇒ no roll |
 | **segmenter** (gate=true only) | split message around the first contested beat | `{lead_up, contested_beat, deferred_tail}` |
 | **attribute selector** | which of Corpus / Mens / Anima | 3-way |
-| **effect judge** | what success accomplishes (limited / standard / great) | 3-way |
+| ~~**effect judge**~~ | ~~what success accomplishes (limited / standard / great)~~ | *dropped — decision #31* |
 | **threat-type** | kind of threat | 5-way (harm / complication / worse-position / lost-opportunity / failure-of-goal) |
 | **threat-magnitude** | how bad | 1–4 (Minor / Standard / Severe / Fatal) |
 | **threat-channel** | which attribute resists it | 3-way (corpus / mens / anima) |
@@ -326,10 +327,11 @@ Tackle these next, against this saved foundation:
         the detachment/distal-cascade rule is removed — no part ever physically severs. Vital
         parts: DESTROYED on a vital part triggers the permadeath path (#13/#19) — the function
         loss is catastrophic regardless of channel.
-- [ ] **Effect → reach-within-beat spec** — effect no longer enforces anti-chaining
-      (decision #9 does, structurally). Remaining question: how `effect` shapes *how much
-      of the single resolved beat* a success accomplishes (limited/standard/great) as a
-      narration quality dial.
+- [x] ~~**Effect → reach-within-beat spec**~~ — **Decision #31**: **effect classifier dropped.**
+      Anti-chaining is structural (#9); the roll outcome tier (avoided/reduced/full) already
+      signals success quality to the narrator. The narrator derives narration quality from
+      `{outcome tier + threat-as-landed}` directly. Framing fan-out reduced from 5 to 4
+      parallel classifiers.
 - [ ] **Crit & success benefits** — what a critical (2+ sixes) and a clean 6 grant beyond
       "it works".
 - [ ] **Character creation flow** — how the ~4 dots get assigned (UI already has
