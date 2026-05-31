@@ -1,4 +1,5 @@
 from dspy import Predict, Prediction
+
 from src.core.model.message import Message
 from src.lm import lm
 from src.signature.narrator import NarratorSignature
@@ -11,24 +12,21 @@ class NarratorNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        history: str = "\n".join(m.format() for m in state.message_history)
-        entities: str = "\n".join(state.entities_at_location) if state.entities_at_location else ""
+        history = "\n".join(m.format() for m in state.message_history)
+        entities = "\n".join(state.entities_at_location) if state.entities_at_location else ""
         prediction: Prediction = await self._program.aforward(
-            character_name=state.character_name,
             character_description=state.character_description,
-            location_name=state.location_name,
             location_description=state.location_description,
             entities_at_location=entities,
             message_history=history,
-            human_message=state.human_message.content,
+            contested_beat=state.contested_beat or "",
+            narration_directive=state.narration_directive or "",
+            anchors=state.anchors or "",
+            prior_prose=state.prior_prose or "",
         )
-
-        ai_message = Message(
-            role="ai",
-            content=prediction.ai_message.strip(),
-            name="Narrator",
-        )
+        text = prediction.ai_message.strip()
+        ai_message = Message(role="ai", content=text, name="Narrator")
         return {
-            "message_history": [state.human_message, ai_message],
             "ai_message": ai_message,
+            "prior_prose": text,
         }

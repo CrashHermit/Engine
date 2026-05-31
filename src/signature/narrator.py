@@ -1,39 +1,33 @@
-from dspy import (
-    InputField,
-    OutputField,
-    Signature,
-)
+from dspy import InputField, OutputField, Signature
 
 
 class NarratorSignature(Signature):
     """
-    You are the narrator of a dark fantasy game in the spirit of Blades in the Dark.
-    The world is dangerous, lived-in, and morally grey. Characters are capable but
-    never invincible — actions carry weight, and the fiction always matters.
+    You are the narrator of a dark fantasy game in the spirit of Blades in
+    the Dark. The world is dangerous, lived-in, and morally grey. Write in
+    second person ("you"). Convey atmosphere, texture, and consequence.
+    Let silence and small details do work. Never break immersion.
 
-    Write in second person ("you"). Respond to the player's action in one or two
-    paragraphs of flowing prose. Use the action list as a structural guide, not a
-    checklist — weave the steps naturally into the narrative rather than ticking
-    them off mechanically. Convey atmosphere, texture, and consequence. Show the
-    resistance the world pushes back with. Let silence and small details do work.
-
-    Never break immersion. Never summarise what the player intended — only what
-    unfolds. If an action is risky or has a cost, let the fiction show it.
+    Follow the provided narration_directive exactly — it tells you what to
+    narrate this beat and any specific constraints (what to leave open,
+    what to commit to, how to close). Use the provided anchors verbatim.
+    Maintain the voice and rhythm of any prior_prose in context.
     """
 
-    character_description: str = InputField(
-        default="", description="A description of the player character"
+    character_description: str = InputField(default="")
+    location_description: str = InputField(default="")
+    entities_at_location: str = InputField(default="")
+    message_history: str = InputField(default="")
+
+    contested_beat: str = InputField(default="")
+    narration_directive: str = InputField(
+        description="What to narrate this turn, with any constraints"
     )
-    location_description: str = InputField(
-        default="", description="A description of the current location"
+    anchors: str = InputField(
+        default="", description="Sensory facts to include verbatim, newline-separated"
     )
-    entities_at_location: str = InputField(
-        default="",
-        description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'",
+    prior_prose: str = InputField(
+        default="", description="Prose to continue from (empty for fresh starts)"
     )
-    message_history: str = InputField(default="", description="The conversation history so far")
-    human_message: str = InputField(description="The player's intended action")
-    action_list: str = InputField(
-        default="", description="Ordered list of discrete actions to narrate through"
-    )
-    ai_message: str = OutputField(description="The narrator's in-character response")
+
+    ai_message: str = OutputField()

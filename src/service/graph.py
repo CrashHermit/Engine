@@ -49,5 +49,20 @@ class GraphService:
             return payload.get("question")
         return str(payload)
 
+    @staticmethod
+    def interrupt_offer(result: dict) -> str | None:
+        """Pull the resistance offer out of a paused result.
+
+        When ``ResistOfferNode`` pauses via ``interrupt()``, the offer text
+        lives in the payload under the ``"offer"`` key.
+        """
+        interrupts = result.get("__interrupt__")
+        if not interrupts:
+            return None
+        payload = interrupts[0].value
+        if isinstance(payload, dict):
+            return payload.get("offer")
+        return None
+
     async def resume(self, answer: str, *, config: dict) -> dict:
         return await self.graph.ainvoke(Command(resume=answer), config=config)

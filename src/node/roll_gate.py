@@ -20,4 +20,7 @@ class RollGateNode:
             message_history=history,
             human_message=state.human_message.content,
         )
-        return {"needs_roll": prediction.needs_roll}
+        updates: dict = {"needs_roll": prediction.needs_roll}
+        if not prediction.needs_roll and state.human_message:
+            updates["lead_up"] = state.human_message.content
+        return updates

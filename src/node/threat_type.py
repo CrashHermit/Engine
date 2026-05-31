@@ -1,13 +1,13 @@
 from dspy import Predict, Prediction
 
 from src.lm import lm
-from src.signature.threat_channel import ThreatChannelSignature
+from src.signature.threat_type import ThreatTypeSignature
 from src.state import GraphState
 
 
-class ThreatChannelNode:
+class ThreatTypeNode:
     def __init__(self) -> None:
-        self._program: Predict = Predict(signature=ThreatChannelSignature)
+        self._program: Predict = Predict(signature=ThreatTypeSignature)
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
@@ -18,4 +18,4 @@ class ThreatChannelNode:
             entities_at_location=entities,
             contested_beat=state.contested_beat,
         )
-        return {"threat_channel": prediction.channel}
+        return {"threat_type": prediction.threat_type}
