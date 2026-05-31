@@ -83,7 +83,7 @@ Relevant existing facts that shape the design:
 | 26 | **Mind parts (mens) and spirit parts (anima) are first-class parts.** The wound-box model (#19) applies uniformly across all three channels. A `harm` threat on any channel lands on a part from that channel's pool (body / mind / spirit). `Status`, `PartFunction`, and the `threat-part` classifier all span all three. Amends #25: `threat-part` is active for corpus, mens, and anima. | Extends a proven model rather than adding a second system. Stress remains the *shared* economy (push/resist cost); part damage is *localized* impairment on top of it. |
 | 29 | **Harm targets functional capability pools, not individual parts. Amends #19, #25, #27.** Each character has a slottable budget of functional pool slots allocated at creation — a pool slot is typed by `PartFunction` category and stacking is allowed (e.g. 3× MANIPULATOR + 1× MOVEMENT = a three-armed snake). Each slot is an independent wound pool. The `threat-function` classifier (replaces `threat-part`, #25) selects a `PartFunction` category; if multiple slots share that type, the most contextually appropriate one takes the damage. DESTROYED on a slot = that slot non-functional (#28); all slots of a type destroyed = that function fully lost. **Slot budgets are per-channel** (#30): each of corpus / mens / anima has its own fixed allocation. Budget sizes and whether they tie to attribute ratings are deferred to playtest/character-creation design. `PartFunction` enum left unchanged for now — to be revisited. | Stacking lets creatures/characters express anatomy naturally (three arms, two minds, etc.) while keeping the damage model uniform. Each slot failing independently gives granular attrition. Per-channel budgets ensure every character has presence in all three domains. |
 | 32 | **Crit benefit is narrator-authored freeform.** On 2+ sixes the threat is avoided and the narrator invents a contextually appropriate benefit from the fiction (positional advantage, information, resource, unexpected opening, etc.). No classifier. | Benefits are additive and have no balance risk, so narrator creative latitude is safe here. A classifier can't improve on a narrator that already knows the full scene. |
-| 33 | **Narrator family: `held-planner` (classifier-shaped) + `narrator` (single generative). Amends #18.** When a consequence is significant + resistible, the turn-N narration must commit to the impact while leaving depth/finality ambiguous so it can resolve in either direction across the resist window (#11, #15). That negation-heavy task — "describe the wound but don't commit to its depth" — disproportionately hurts small models. Split the step into two narrow modules: a `held-planner` emits a structured **`HeldScaffold`** (`impact_focus`, `sensory_anchors`, `ambiguity_wedge`, `tension_close`, `resist_options`); the `narrator` writes prose from that scaffold (held mode) or from `{prior prose, resist resolution, final landed threat}` (final mode). Both modes are **positively framed** because bimodality is carried by *input shape*, not by negation-heavy prose instructions. Trained sequentially: classifier-style `held-planner` first; `narrator` against its frozen scaffold outputs. The narrator remains the **only** generative module; the same pattern accommodates future narrow narrators (`vice-narrator`, `tick-narrator` for status-effect playouts). | Concentrates generation in one module so style continuity across the held/final hand-off is automatic (no inter-narrator drift, no style-coordination system), while isolating the "what to leave ambiguous" judgment in a classifier-shaped module where small models excel and `BootstrapFewShot`/`MIPROv2` give crisp metrics. Honors #18 by splitting a single bimodal generative task into a narrow classifier + a narrow generator. **Rejected:** one narrator with a `consequence_mode` flag (small models over-commit on the negation-heavy held mode); two full generative narrators (training-dependency drift, doubled generative surface, style coordination cost). |
+| 33 | **Narrator family: `held-planner` + `final-planner` (both classifier-shaped) + `narrator` (single generative). Amends #18.** When a consequence is significant + resistible (≥ Standard), a `held-planner` emits a structured `HeldScaffold` (`impact_focus`, `sensory_anchors: list`, `ambiguity_wedge: list`, `tension_close`, `resist_options_text`). After the player's resistance response, a `final-planner` emits a `FinalScaffold` (`resolutions: list`, `new_anchors: list`, `closing_beat`, `incorporate_player_text`). Minor consequences (< Standard) skip the held/resist loop and route directly to `final-planner`. Deterministic **directive-templating functions** in `core/mechanic/narration_directive.py` convert each scaffold into a `narration_directive` string: `mundane_directive(lead_up)`, `held_directive(HeldScaffold)`, `final_directive(FinalScaffold, resist_action)`. A **single `NarratorNode`** receives only `{narration_directive, anchors, prior_prose, context}` — it never branches on mode; it just follows the directive. `resist_action` is ground-truth from state, not an LLM output — `FinalPlannerNode` reads it from `state.resist_action` and passes it to `final_directive()` directly. **Significance gate:** `landed_magnitude ≥ Standard (2)` → held path; `< Standard` → final path (no resist offer). A `TurnCloseNode` appends `[human_message, ai_message]` to `message_history` at every terminal path, decoupling history writes from the narrator. | One voice mechanically guaranteed — same signature, same LM, same prompt at every narration point; no inter-mode style drift possible. Bimodality moves into the planners (typed structured outputs, where small models excel and `BootstrapFewShot`/`MIPROv2` give crisp metrics) and into directive templating (deterministic Python, zero model error). The narrator gets one positively-framed task: follow the directive. Extensible: a new narration mode (vice indulgence, status-effect tick, scene transition) is a new planner + new directive function; the narrator is unchanged. Sequential compilation: planners first (structured-output metric); narrator against `(directive, anchors) → prose` traces. **Rejected:** one narrator with a mode flag (small models over-commit on negation-heavy prose instructions); narrator receiving mode-specific raw inputs without a directive layer (bimodality in the prompt rather than in code, which breaks extensibility and style guarantees). |
 | 31 | **Effect classifier dropped.** The narrator derives success quality directly from `{outcome tier + threat-as-landed}`. Anti-chaining is structural (#9); roll outcome (avoided/reduced/full) already encodes how well the beat went. Framing fan-out is 4 parallel classifiers: attribute, threat-type, threat-magnitude, threat-channel + threat-function. | Eliminates the weakest module in the inventory. No information lost — the narrator has everything it needs from outcome tier and threat. |
 | 30 | **Functional pool slot budgets are per-channel.** Corpus, mens, and anima each have their own fixed slot allocation at creation. Guarantees minimum presence in all three domains; cleaner for balance than a unified pool. Whether the per-channel budget ties to the attribute dot rating is deferred to playtest. | A character with zero mental or spiritual pools is an unhandled edge case; per-channel budgets prevent it structurally. |
 | 28 | **DESTROYED = non-functional, uniformly across all three channels. Amends #19.** A DESTROYED part (corpus, mens, or anima) cannot perform its `PartFunction` but still exists. Healing (fiction-gated box removal) can recover even from DESTROYED. The detachment/distal-cascade rule from #19 is removed. Vital parts: DESTROYED triggers the permadeath path (#13) regardless of channel. | Makes the status ladder identical across body, mind, and spirit — simpler implementation, no channel-special-casing, and recovery is always possible in principle. Severance was body-only physics with no clean mental/spiritual equivalent. |
@@ -126,41 +126,56 @@ the classifiers own type / magnitude / channel; the narrator owns all fiction.**
 Replace the single `action_generator` node with the resolution subgraph:
 
 ```
-START → intent_alignment → [ RESOLUTION ] → narrator → END
+START → intent_alignment → [ RESOLUTION ] → END
 
 RESOLUTION (Deep Cuts cherry-pick):
-  gate ──(no roll)──────────────────────────────────────────────► narrator(lead_up only)
-    └──(roll)──► segmenter ── {lead_up, contested_beat, deferred_tail}
+  roll_gate
+    ├─(no roll)──► mundane ──────────────────────────────────────────────────────► narrator ──► turn_close ──► END
+    └─(roll)──► segmenter ── {lead_up, contested_beat, deferred_tail}
                     │           deferred_tail ──► held (pending_intent), NOT downstream
-                    └──► ┌─ attribute ────────┐
-                         ├─ threat-type ──────┤─► join ─► [dice + scale: code] ─► (offer/resolve)
-                         ├─ threat-magnitude ─┤            (6 avoid · 4-5 mag-1 · 1-3 full)
-                         ├─ threat-channel ───┤
-                         └─ threat-function ──┘                        │
-  narrator receives ONLY: lead_up + contested_beat + outcome + threat-as-landed
+                    └──► ┌─ attribute_selector ──┐
+                         ├─ threat_type ──────────┤─► dice_scale ──► significance_gate
+                         ├─ threat_magnitude ─────┤                    │            │
+                         └─ threat_channel ────────┘              < STANDARD    ≥ STANDARD
+                                                                       │              │
+                                                                 final_planner   held_planner
+                                                                       │              │
+                                                                       └──► narrator ◄┘
+                                                                                │
+                                                               ┌────────────────┴──────────────────┐
+                                                        (held_scaffold set,                  (all other calls)
+                                                         final_scaffold not set)                    │
+                                                               │                              turn_close ──► END
+                                                         resist_offer
+                                                               │
+                                                      resist_push_parser
+                                                               │
+                                                          resist_roll
+                                                               │
+                                                         final_planner ──► narrator ──► turn_close ──► END
 ```
 
 - **Gate** (binary, #9 revised): does the beat carry **danger + uncertainty**? If not →
-  `lead_up` → no roll → narrate. If yes → segmenter.
+  `mundane` builds a directive from `lead_up` in code; no LLM planner needed. If yes → segmenter.
 - **Segmenter** (runs only on gate=true): split into `{lead_up, contested_beat, deferred_tail}`;
   the tail is peeled off and **held** (decision #10), never passed to the narrator.
-- **Framing fan-out** — five parallel classifiers off the scoped beat (`attribute`, `effect`,
-  `threat-type`, `threat-magnitude`, `threat-channel`), mutually independent. **`position` is
-  gone** (risky default + desperate flag, #16); the old `threat-namer` is **split into three
-  classifiers** (#18) with its fiction folded into the narrator.
+- **Framing fan-out** — four parallel classifiers off the scoped beat (`attribute_selector`,
+  `threat_type`, `threat_magnitude`, `threat_channel`), mutually independent. **`position` is
+  gone** (risky default + desperate flag, #16); `effect` dropped (#31).
 - **Dice + scaling** in **deterministic code** (roll take-highest → avoid/reduced/full per
   #15–17). If multiple threats stack, fan out with **`Send`**.
-- **Narrator is bounded by construction** — it only ever sees the single resolved beat and
-  its outcome, so it cannot chain (decision #9). When a consequence is significant + resistible,
-  the narrator runs in **held mode** off a structured `HeldScaffold` from the upstream
-  `held-planner` (decision #33); on the resist resolution turn it runs in **final mode** off
-  `{prior prose, resist resolution, final landed threat}`. Held/final bimodality is carried in
-  input shape, not in prose-level instructions, so both modes are positively framed.
-- **Resistance** is a *separate turn*: if a consequence is significant + resistible, the
-  turn ends with the held-mode narration and an offer; the player's typed reply
-  re-enters via a `resistance_history` carry (mirrors `intent_alignment_history`) and the
-  final-mode narration writes the resolution. Push/resist is unified (#11): the same offer
-  also covers spending stress for more effect.
+- **Significance gate** (decision #33): `landed_magnitude ≥ Standard (2)` → `held_planner`;
+  `< Standard` → `final_planner` directly (no resist offer for Minor or avoided consequences).
+- **Narrator is bounded by construction** — receives only `{narration_directive, anchors,
+  prior_prose, context}`; never sees the deferred tail or raw consequence details (#9).
+  Directive templating in `core/mechanic/narration_directive.py` converts planner scaffolds
+  into directives in deterministic code (decision #33).
+- **Resistance** is a *separate interrupt*: after the held narrator, `resist_offer` pauses
+  the graph; the player's typed reply resumes it via `Command(resume=...)`; `resist_push_parser`
+  + `resist_roll` + `final_planner` + `narrator` + `turn_close` complete the turn.
+  Push/resist is unified (#11): the same offer covers both resistance and pushing for effect.
+- **`turn_close`** appends `[human_message, ai_message]` to `message_history` at every
+  terminal path; the narrator never writes to history directly.
 
 ### Tail lifecycle (worked)
 1. Player: *"cross the courtyard, cut down the guard, then grab the crown."*
@@ -186,20 +201,25 @@ RESOLUTION (Deep Cuts cherry-pick):
 | **threat-magnitude** | how bad | 1–4 (Minor / Standard / Severe / Fatal) |
 | **threat-channel** | which attribute resists it | 3-way (corpus / mens / anima) |
 | *dice + scale* | take-highest → avoid / reduced (mag−1) / full | numbers (code, no LLM) |
+| *significance gate* | `landed_magnitude ≥ Standard (2)` → held path; `< Standard` → final path | routing (code, no LLM — decision #33) |
 | **resist/push parser** | resist / endure / push-for-effect (typed reply) | enum; raw text passed through as flavor |
 | **vice matcher** | does this indulgence match one of the character's vices? | bool + which vice (gates the relief path) |
 | *vice clear* | roll lowest attribute, clear stress; overindulge if roll > current stress | numbers (code, no LLM) |
-| **held-planner** (significant + resistible consequences only) | extract the held-state scaffold for the turn-N narration so the narrator can be positively framed | structured — `HeldScaffold = {impact_focus, sensory_anchors, ambiguity_wedge, tension_close, resist_options}` (decision #33) |
-| **narrator** | prose of the resolved beat (incl. the threat's fiction) | prose — **bounded by construction**: receives only `lead_up + contested_beat + outcome + threat-as-landed`, never the tail. Two modes by input shape (decision #33): *held* takes the `HeldScaffold`; *final* takes `{prior prose, resist resolution, final landed threat}`. |
+| **held-planner** (≥ Standard consequence only) | extract the held-state scaffold so the narrator can commit to impact while leaving depth/finality unresolved | structured — `HeldScaffold = {impact_focus, sensory_anchors: list, ambiguity_wedge: list, tension_close, resist_options_text}` (decision #33) |
+| **final-planner** (all consequence paths + post-resistance) | extract the resolution scaffold after the consequence (or resistance) has settled | structured — `FinalScaffold = {resolutions: list, new_anchors: list, closing_beat, incorporate_player_text}` (decision #33) |
+| *directive templating* | convert planner scaffold → `narration_directive` string | deterministic Python in `core/mechanic/narration_directive.py`; no LLM (decision #33) |
+| **narrator** | prose of the resolved beat, following the directive exactly | prose — **bounded by construction**: receives only `{narration_directive, anchors, prior_prose, context}`, never the tail or raw consequence details (#9). Single signature, single node — no mode branching (decision #33). |
+| *turn_close* | append `[human_message, ai_message]` to `message_history` at turn end | state update (code, no LLM) |
 
 > Every LLM step above is a **single-judgment classifier** except the **narrator** — the lone
-> generative module. The `held-planner` is classifier-shaped (structured output) even though it
-> precedes the narrator's held-mode call; it isolates the "what to leave ambiguous" judgment so
-> the narrator stays positively framed in both modes (decision **#33**). This is decision **#18**
-> (split for trainability) carried into the generative step: pure classifiers get crisp metrics +
-> cheap datasets + better DSPy optimisation, and can be routed to the cheapest adequate model.
-> The framing classifiers fan out in parallel, so the split costs little latency. Sequential
-> compilation: classifier-shaped modules first, narrator against frozen upstream outputs.
+> generative module. `held-planner` and `final-planner` are both classifier-shaped (structured
+> output); they isolate every "what to commit to / what to leave open" judgment in modules where
+> small models excel and `BootstrapFewShot`/`MIPROv2` give crisp metrics (decision **#33**).
+> Directive templating converts their outputs to narrator instructions in deterministic Python —
+> zero model error on the translation step. The narrator receives one input shape regardless of
+> which planner ran, so its training traces are uniform. Sequential compilation: planners first;
+> narrator against `(directive, anchors) → prose` traces with frozen upstream outputs. This is
+> decision **#18** (split for trainability) carried through to the generative step.
 
 ---
 
