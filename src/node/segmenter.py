@@ -19,7 +19,7 @@ class SegmenterNode:
             human_message=state.human_message.content,
         )
         return {
-            "lead_up": prediction.lead_up,
-            "contested_beat": prediction.contested_beat,
-            "deferred_tail": prediction.deferred_tail,
+            "lead_up": prediction.lead_up.strip(),
+            "contested_beat": prediction.contested_beat.strip(),
+            "deferred_tail": prediction.deferred_tail.strip(),
         }

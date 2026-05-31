@@ -43,11 +43,11 @@ def _state(human_text: str) -> GraphState:
             ("", "cut the rope", "drop into the alley"),
             ("", "cut the rope", "drop into the alley"),
         ),
-        # whitespace passthrough (raw model strings)
+        # whitespace handling
         (
             "I attack.",
             ("  ", "  I attack.  ", ""),
-            ("  ", "  I attack.  ", ""),
+            ("", "I attack.", ""),
         ),
     ],
 )
