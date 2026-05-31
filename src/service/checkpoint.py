@@ -1,16 +1,12 @@
 from pathlib import Path
-from typing import TYPE_CHECKING
-
+from collections.abc import AsyncIterator
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
-
-if TYPE_CHECKING:
-    from collections.abc import AsyncIterator
 
 
 class CheckpointService:
     def __init__(self, db_path: str | Path = "data/checkpointers.sqlite") -> None:
-        self._db_path = Path(db_path)
+        self._db_path: Path = Path(db_path)
         self._cm: AsyncIterator[AsyncSqliteSaver] | None = None
         self.saver: BaseCheckpointSaver | None = None
 
