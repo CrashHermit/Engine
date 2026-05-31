@@ -4,7 +4,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from src.core.model.message import Message
-from src.core.model.resist import HeldScaffold, ResistAction
+from src.core.model.resist import FinalScaffold, HeldScaffold, ResistAction
 from src.core.model.threat import Channel, ThreatType
 from src.core.mechanic.magnitude import Magnitude
 from src.core.mechanic.scaling import Outcome, Position
@@ -40,9 +40,14 @@ class GraphState(BaseModel):
     roll_result: RollResult | None = None
     outcome: Outcome | None = None
 
-    # Resistance / push turn
+    # Narration pipeline
+    narration_directive: str | None = None
+    anchors: str | None = None
+    prior_prose: str | None = None
     held_scaffold: HeldScaffold | None = None
-    held_narration: str | None = None
+    final_scaffold: FinalScaffold | None = None
+
+    # Resistance / push turn
     resist_response: str | None = None
     resist_action: ResistAction | None = None
     resist_flavor: str | None = None

@@ -5,22 +5,23 @@ from src.core.model.resist import HeldScaffold
 
 class HeldPlannerSignature(Signature):
     """
-    A consequence has landed. Extract a structured scaffold so the narrator can
-    convey the impact while leaving its depth deliberately ambiguous — the player
-    may still resist.
+    A significant consequence has landed (Standard, Severe, or Fatal). Extract
+    a structured scaffold so the narrator can commit to the impact while
+    deliberately leaving its depth and finality unresolved — the player may
+    still resist or push.
 
     - impact_focus: the core of what the threat strikes (body part, memory,
       relationship, resource, position). One short phrase.
     - sensory_anchors: 2–3 concrete sensory details to ground the prose in the
       moment (sound, sensation, image). Keep them immediate and specific.
-    - ambiguity_wedge: what to leave unresolved — severity, permanence, the
-      exact extent of damage. One sentence framing what the narrator must NOT
-      commit to.
-    - tension_close: how to end the beat's prose with the consequence hanging —
-      a breath of space, a held moment, an open question. One sentence.
-    - resist_options: 2–3 ways the character could plausibly resist or push
-      back in the fiction (twist, brace, redirect, call on something). These
-      inform the narrator's word choice so the fiction leaves a door open.
+    - ambiguity_wedge: 2–3 dimensions to leave unresolved — severity,
+      permanence, the exact extent of damage. Each as a short phrase the
+      narrator must NOT commit to.
+    - tension_close: one sentence describing how to end the beat — a breath
+      of space, a held moment, an open question.
+    - resist_options_text: 2–3 ways the character could plausibly resist or
+      push back in the fiction. One sentence, suitable as the resist offer
+      presented after the prose.
     """
 
     character_description: str = InputField(default="")

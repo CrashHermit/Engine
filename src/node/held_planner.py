@@ -1,6 +1,8 @@
 from dspy import Predict, Prediction
 
 from src.core.mechanic.magnitude import Magnitude
+from src.core.mechanic.narration_directive import held_directive
+from src.core.model.resist import HeldScaffold
 from src.lm import lm
 from src.signature.held_planner import HeldPlannerSignature
 from src.state import GraphState
@@ -25,4 +27,9 @@ class HeldPlannerNode:
             threat_channel=state.threat_channel.value if state.threat_channel else "",
             landed_magnitude=mag_label,
         )
-        return {"held_scaffold": prediction.scaffold}
+        scaffold: HeldScaffold = prediction.scaffold
+        return {
+            "held_scaffold": scaffold,
+            "narration_directive": held_directive(scaffold),
+            "anchors": "\n".join(scaffold.sensory_anchors),
+        }
