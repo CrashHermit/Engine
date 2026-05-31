@@ -6,10 +6,10 @@ MAX_MAGNITUDE: int = 4
 
 class Magnitude(IntEnum):
     NONE = 0
-    MINIMAL = 1
-    MODERATE = 2
-    SUBSTANTIAL = 3
-    MASSIVE = 4
+    MINOR = 1
+    STANDARD = 2
+    SEVERE = 3
+    FATAL = 4
 
 
 def clamp_magnitude(magnitude: int) -> int:

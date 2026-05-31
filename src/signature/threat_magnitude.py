@@ -1,6 +1,6 @@
 from dspy import InputField, OutputField, Signature
 
-from src.core.model.threat import Magnitude
+from src.core.mechanic.magnitude import Magnitude
 
 
 class ThreatMagnitudeSignature(Signature):

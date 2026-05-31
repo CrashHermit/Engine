@@ -4,7 +4,8 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from src.core.model.message import Message
-from src.core.model.threat import Channel, Magnitude
+from src.core.model.threat import Channel
+from src.core.mechanic.magnitude import Magnitude
 from src.core.mechanic.scaling import Outcome, Position
 from src.core.mechanic.dice import RollResult
 
