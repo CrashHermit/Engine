@@ -11,7 +11,7 @@ from textual.worker import get_current_worker
 from src.core.model.character import CharacterData
 from src.core.model.location import LocationState
 from src.core.model.message import Message
-from src.services.container import ServiceContainer
+from src.service.container import ServiceContainer
 from src.state import GraphState
 from src.tui.modals.character_sheet import CharacterSheetModal
 from src.tui.widgets.chat_panel import ChatPanel

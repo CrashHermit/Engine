@@ -2,8 +2,8 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from src.database.connection import DatabaseConnection
 from src.database.schema import SchemaManager
-from src.services.container import ServiceContainer
-from src.services.graph import GraphService
+from src.service.container import ServiceContainer
+from src.service.graph import GraphService
 
 
 class WorldSessionFactory:

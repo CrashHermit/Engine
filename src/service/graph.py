@@ -1,14 +1,10 @@
 import uuid
-from typing import TYPE_CHECKING, Any
-
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.types import Command, StateSnapshot
+from langgraph.graph.state import CompiledStateGraph
 
 from src.graph.main_graph import MainGraphBuilder
 from src.state import GraphState
-
-if TYPE_CHECKING:
-    from langgraph.graph.state import CompiledStateGraph
 
 
 class GraphService:
@@ -27,10 +23,10 @@ class GraphService:
             }
         }
 
-    async def ainvoke(self, input: GraphState | Command, *, config: dict) -> dict[str, Any]:
+    async def ainvoke(self, input: GraphState | Command, *, config: dict) -> dict:
         return await self.graph.ainvoke(input, config=config)
 
-    async def aget_state(self, *, config: dict[str, Any]) -> StateSnapshot:
+    async def aget_state(self, *, config: dict) -> StateSnapshot:
         return await self.graph.aget_state(config=config)
 
     async def is_paused(self, *, config: dict) -> bool:
@@ -38,7 +34,7 @@ class GraphService:
         return bool(snapshot.next)
 
     @staticmethod
-    def interrupt_question(result: dict[str, Any]) -> str | None:
+    def interrupt_question(result: dict) -> str | None:
         """Pull the clarifying question out of a paused result.
 
         When the intent alignment subgraph pauses via ``interrupt()``, the
@@ -53,5 +49,5 @@ class GraphService:
             return payload.get("question")
         return str(payload)
 
-    async def resume(self, answer: str, *, config: dict) -> dict[str, Any]:
+    async def resume(self, answer: str, *, config: dict) -> dict:
         return await self.graph.ainvoke(Command(resume=answer), config=config)

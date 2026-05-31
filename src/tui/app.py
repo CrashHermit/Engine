@@ -3,8 +3,8 @@ from textual.binding import Binding
 
 from src.database.connection import DatabaseConnection
 from src.database.server import Server
-from src.services.checkpoint import CheckpointService
-from src.services.factory import WorldSessionFactory
+from src.service.checkpoint import CheckpointService
+from src.service.factory import WorldSessionFactory
 from src.tui.screens.start import StartScreen
 
 

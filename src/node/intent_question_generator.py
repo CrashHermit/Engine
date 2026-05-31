@@ -1,14 +1,9 @@
-from typing import TYPE_CHECKING
-
-from dspy import Predict
+from dspy import Predict, Prediction
 
 from src.core.model.message import Message
 from src.lm import lm
-from src.signatures.intent_question_generator import IntentQuestionGeneratorSignature
+from src.signature.intent_question_generator import IntentQuestionGeneratorSignature
 from src.state import GraphState
-
-if TYPE_CHECKING:
-    from dspy.primitives.prediction import Prediction
 
 
 class IntentQuestionGeneratorNode:

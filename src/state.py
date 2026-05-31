@@ -14,6 +14,9 @@ class GraphState(BaseModel):
     question: str | None = None
     is_intent_alignment_achieved: bool | None = None
     needs_roll: bool | None = None
+    lead_up: str | None = None
+    contested_beat: str | None = None
+    deferred_tail: str | None = None
     action_list: list[str] = Field(default_factory=list)
     location_name: str = ""
     location_description: str = ""

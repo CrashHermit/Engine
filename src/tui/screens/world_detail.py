@@ -5,7 +5,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Footer, Header, Label, ListItem, ListView, Static
 
 from src.core.model.character import CharacterData
-from src.services.container import ServiceContainer
+from src.service.container import ServiceContainer
 from src.tui.modals.confirm_modal import ConfirmModal
 from src.tui.modals.create_character import CreateCharacterModal
 from src.tui.screens.game import GameScreen

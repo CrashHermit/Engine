@@ -6,7 +6,7 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, TextArea
 
-from src.services.world import WorldService
+from src.service.world import WorldService
 
 
 class CreateWorldModal(ModalScreen[dict[str, str] | None]):

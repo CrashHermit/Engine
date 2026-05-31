@@ -7,10 +7,10 @@ from src.database.repository.character import CharacterRepository
 from src.database.repository.location import LocationRepository
 from src.database.repository.message import MessageRepository
 from src.database.repository.world import WorldRepository
-from src.services.character import CharacterService
-from src.services.graph import GraphService
-from src.services.location import LocationService
-from src.services.message import MessageService
+from src.service.character import CharacterService
+from src.service.graph import GraphService
+from src.service.location import LocationService
+from src.service.message import MessageService
 
 if TYPE_CHECKING:
     from src.core.model.database import Database

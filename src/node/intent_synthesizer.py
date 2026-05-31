@@ -1,14 +1,9 @@
-from typing import TYPE_CHECKING
-
-from dspy import Predict
+from dspy import Predict, Prediction
 
 from src.core.model.message import Message
 from src.lm import lm
-from src.signatures.intent_synthesizer import IntentSynthesizerSignature
+from src.signature.intent_synthesizer import IntentSynthesizerSignature
 from src.state import GraphState
-
-if TYPE_CHECKING:
-    from dspy.primitives.prediction import Prediction
 
 
 class IntentSynthesizerNode:
