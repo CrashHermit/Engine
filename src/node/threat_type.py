@@ -1,13 +1,13 @@
 from dspy import Predict, Prediction
-from src.core.mechanic.magnitude import Magnitude
+
 from src.lm import lm
-from src.signature.threat_magnitude import ThreatMagnitudeSignature
+from src.signature.threat_type import ThreatTypeSignature
 from src.state import GraphState
 
 
-class ThreatMagnitudeNode:
+class ThreatTypeNode:
     def __init__(self) -> None:
-        self._program: Predict = Predict(signature=ThreatMagnitudeSignature)
+        self._program: Predict = Predict(signature=ThreatTypeSignature)
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
@@ -17,4 +17,4 @@ class ThreatMagnitudeNode:
             entities_at_location=state.entities_at_location,
             contested_beat=state.contested_beat,
         )
-        return {"magnitude": Magnitude[prediction.magnitude]}
+        return {"threat_type": prediction.threat_type}

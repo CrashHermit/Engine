@@ -53,8 +53,14 @@ def classify(dice: Sequence[int], *, zero_pool: bool = False) -> RollTier:
             return RollTier.PARTIAL
         return RollTier.BAD
 
-    if not zero_pool and dice.count(6) >= 2:
+    if dice.count(6) >= 2:
         return RollTier.CRIT
+    best: int = max(dice)
+    if best == 6:
+        return RollTier.CLEAN
+    if best >= 4:
+        return RollTier.PARTIAL
+    return RollTier.BAD
 
 
 def result_from_dice(dice: Sequence[int], *, zero_pool: bool = False) -> RollResult:

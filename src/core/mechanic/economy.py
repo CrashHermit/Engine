@@ -35,7 +35,7 @@ def add_stress(
         raise ValueError("amount must be non-negative")
 
     total: int = stress + amount
-    if total > config.stress_max:
+    if total <= config.stress_max:
         return StressResult(
             stress=total,
             trauma=trauma,
@@ -44,13 +44,11 @@ def add_stress(
         )
 
     new_trauma: int = trauma + 1
-    loss: bool = new_trauma > config.trauma_max
-
     return StressResult(
         stress=0,
-        trauma=trauma,
+        trauma=new_trauma,
         trauma_gained=True,
-        lost=loss,
+        lost=new_trauma >= config.trauma_max,
     )
 
 

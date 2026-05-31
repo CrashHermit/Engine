@@ -4,7 +4,6 @@ from dspy import InputField, OutputField, Signature
 
 
 class ThreatMagnitudeLevel(StrEnum):
-    NONE = "NONE"
     MINOR = "MINOR"
     STANDARD = "STANDARD"
     SEVERE = "SEVERE"
@@ -15,10 +14,8 @@ class ThreatMagnitudeSignature(Signature):
     """
     You are a threat magnitude classifier. Given the contested beat, decide
     how severe the consequence would be if the action fully fails. Use the
-    0–4 ladder:
+    1–4 ladder:
 
-    - NONE (0): no real threat; the action is uncontested or trivially safe.
-      No roll needed.
     - MINOR (1): a graze, a setback, a small complication, embarrassment.
       Recoverable in-scene.
     - STANDARD (2): a real wound, a meaningful complication, a position drop.

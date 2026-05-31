@@ -4,7 +4,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from src.core.model.message import Message
-from src.core.model.threat import Channel
+from src.core.model.threat import Channel, ThreatType
 from src.core.mechanic.magnitude import Magnitude
 from src.core.mechanic.scaling import Outcome, Position
 from src.core.mechanic.dice import RollResult
@@ -27,6 +27,7 @@ class GraphState(BaseModel):
     character_name: str = ""
     character_description: str = ""
     attribute: Channel | None = None
+    threat_type: ThreatType | None = None
     magnitude: Magnitude | None = None
     threat_channel: Channel | None = None
     corpus_rating: int = 0
