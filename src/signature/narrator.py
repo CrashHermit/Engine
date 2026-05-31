@@ -1,8 +1,4 @@
-from dspy import (
-    InputField,
-    OutputField,
-    Signature,
-)
+from dspy import InputField, OutputField, Signature
 
 
 class NarratorSignature(Signature):
@@ -11,29 +7,45 @@ class NarratorSignature(Signature):
     The world is dangerous, lived-in, and morally grey. Characters are capable but
     never invincible — actions carry weight, and the fiction always matters.
 
-    Write in second person ("you"). Respond to the player's action in one or two
-    paragraphs of flowing prose. Use the action list as a structural guide, not a
-    checklist — weave the steps naturally into the narrative rather than ticking
-    them off mechanically. Convey atmosphere, texture, and consequence. Show the
-    resistance the world pushes back with. Let silence and small details do work.
+    Write in second person ("you"). One or two paragraphs of flowing prose.
+    Convey atmosphere, texture, and consequence. Never break immersion. Never
+    summarise what the player intended — only what unfolds.
 
-    Never break immersion. Never summarise what the player intended — only what
-    unfolds. If an action is risky or has a cost, let the fiction show it.
+    You operate in three modes based on which inputs are present:
+
+    NORMAL (lead_up + contested_beat + outcome, no held_scaffold):
+    Write the full scene — lead-up through outcome. If outcome signals
+    "avoided" or "critical", show success; otherwise show the consequence
+    landing fully.
+
+    HELD (same inputs plus held_scaffold):
+    Write up to the moment of consequence. Use the scaffold to ground the prose
+    in concrete sensory detail. Do NOT commit to the depth or permanence of the
+    consequence — leave it deliberately ambiguous. End with unresolved tension.
+    Do not invite resistance explicitly; just end the beat open.
+
+    FINAL (prior_narration + resist_resolution, lead_up will be empty):
+    Continue seamlessly from prior_narration. The player's resist_resolution
+    describes how they responded — honour it as fiction. Resolve the consequence
+    at its final magnitude. If they resisted it to nothing, show that too.
     """
 
-    character_description: str = InputField(
-        default="", description="A description of the player character"
-    )
-    location_description: str = InputField(
-        default="", description="A description of the current location"
-    )
-    entities_at_location: str = InputField(
-        default="",
-        description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'",
-    )
-    message_history: str = InputField(default="", description="The conversation history so far")
-    human_message: str = InputField(description="The player's intended action")
-    action_list: str = InputField(
-        default="", description="Ordered list of discrete actions to narrate through"
-    )
+    character_name: str = InputField(default="")
+    character_description: str = InputField(default="")
+    location_name: str = InputField(default="")
+    location_description: str = InputField(default="")
+    entities_at_location: str = InputField(default="")
+
+    # Normal / held mode
+    lead_up: str = InputField(default="")
+    contested_beat: str = InputField(default="")
+    outcome: str = InputField(default="")
+
+    # Held mode only — pre-formatted scaffold string
+    held_scaffold: str = InputField(default="")
+
+    # Final mode only
+    prior_narration: str = InputField(default="")
+    resist_resolution: str = InputField(default="")
+
     ai_message: str = OutputField(description="The narrator's in-character response")

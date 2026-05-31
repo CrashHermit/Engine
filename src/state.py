@@ -4,6 +4,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from src.core.model.message import Message
+from src.core.model.resist import HeldScaffold, ResistAction
 from src.core.model.threat import Channel, ThreatType
 from src.core.mechanic.magnitude import Magnitude
 from src.core.mechanic.scaling import Outcome, Position
@@ -38,3 +39,15 @@ class GraphState(BaseModel):
 
     roll_result: RollResult | None = None
     outcome: Outcome | None = None
+
+    # Resistance / push turn
+    held_scaffold: HeldScaffold | None = None
+    held_narration: str | None = None
+    resist_response: str | None = None
+    resist_action: ResistAction | None = None
+    resist_flavor: str | None = None
+    resist_roll_result: RollResult | None = None
+
+    # Per-turn economy (initialised from persisted character state by the TUI)
+    stress: int = 0
+    trauma: int = 0

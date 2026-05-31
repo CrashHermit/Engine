@@ -119,6 +119,19 @@ class GameScreen(Screen):
                 log.write(f"[bold #7ec8e3]Intent Alignment:[/bold #7ec8e3] {escape(question)}")
                 return
 
+            offer = graph_service.interrupt_offer(result)
+            if offer is not None:
+                # Held narration arrived with the interrupt — show it before the offer.
+                ai_msg = result.get("ai_message")
+                if ai_msg is not None:
+                    content = (
+                        ai_msg.content if hasattr(ai_msg, "content") else ai_msg.get("content", "")
+                    )
+                    log.write(f"[bold #c9a84c]Narrator:[/bold #c9a84c] {escape(content)}")
+                log.write(f"[bold #a87ee3]Resistance:[/bold #a87ee3] {escape(offer)}")
+                # Turn is still in progress; do NOT rotate run_id.
+                return
+
             ai_msg = result.get("ai_message")
             if ai_msg is not None:
                 self._message_history = result.get("message_history", self._message_history)
