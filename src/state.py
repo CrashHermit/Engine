@@ -4,6 +4,9 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from src.core.model.message import Message
+from src.core.model.threat import Channel, Magnitude
+from src.core.mechanic.scaling import Outcome, Position
+from src.core.mechanic.dice import RollResult
 
 
 class GraphState(BaseModel):
@@ -17,9 +20,19 @@ class GraphState(BaseModel):
     lead_up: str | None = None
     contested_beat: str | None = None
     deferred_tail: str | None = None
-    action_list: list[str] = Field(default_factory=list)
     location_name: str = ""
     location_description: str = ""
     entities_at_location: list[str] = Field(default_factory=list)
     character_name: str = ""
     character_description: str = ""
+    attribute: Channel | None = None
+    magnitude: Magnitude | None = None
+    threat_channel: Channel | None = None
+    corpus_rating: int = 0
+    mens_rating: int = 0
+    anima_rating: int = 0
+
+    position: Position = Position.RISKY
+
+    roll_result: RollResult | None = None
+    outcome: Outcome | None = None

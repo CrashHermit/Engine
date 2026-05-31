@@ -30,10 +30,6 @@ class IntentAlignmentGraphBuilder:
         self.workflow.add_edge("intent_question_generator", "intent_clarification")
         self.workflow.add_edge("intent_clarification", "intent_alignment_router")
         self.workflow.add_edge("intent_synthesizer", END)
-
-        # No checkpointer here: as a subgraph node it inherits the parent's,
-        # which is what lets the interrupt() in intent_clarification pause and
-        # resume the whole graph.
         return self.workflow.compile()
 
 
