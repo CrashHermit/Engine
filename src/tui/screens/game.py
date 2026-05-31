@@ -12,7 +12,7 @@ from src.core.model.character import CharacterData
 from src.core.model.location import LocationState
 from src.core.model.message import Message
 from src.service.container import ServiceContainer
-from src.state import GraphState
+from src.service.turn import CompletedResult, PausedResult, TurnContext
 from src.tui.modals.character_sheet import CharacterSheetModal
 from src.tui.widgets.chat_panel import ChatPanel
 from src.tui.widgets.left_panel import LeftPanel
@@ -94,65 +94,39 @@ class GameScreen(Screen):
         log = self.query_one("#chat-log", RichLog)
         chat_panel.set_processing(True)
 
-        graph_service = self._services.graph_service
-        config = graph_service.thread_config(
-            world_name=self._services.world_name,
-            character_id=self._character.id,
+        turn_service = self._services.turn
+        ctx = TurnContext(
+            character=self._character,
+            location_state=self._location_state,
+            message_history=self._message_history,
             run_id=self._run_id,
         )
 
         try:
-            # A pending interrupt on this thread means we are mid-clarification,
-            # so this message is the player's answer; otherwise it's a new action.
-            resuming = await graph_service.is_paused(config=config)
-
-            if resuming:
-                result = await graph_service.resume(text, config=config)
+            # A pending interrupt means we are mid-clarification; this message
+            # is the player's answer. Otherwise it starts a new action.
+            if await turn_service.is_paused(ctx):
+                result = await turn_service.resume_turn(text, ctx)
             else:
-                result = await graph_service.ainvoke(self._build_graph_state(text), config=config)
+                result = await turn_service.run_turn(text, ctx)
 
             if get_current_worker().is_cancelled:
                 return
 
-            question = graph_service.interrupt_question(result)
-            if question is not None:
-                log.write(f"[bold #7ec8e3]Intent Alignment:[/bold #7ec8e3] {escape(question)}")
+            if isinstance(result, PausedResult):
+                log.write(f"[bold #7ec8e3]Intent Alignment:[/bold #7ec8e3] {escape(result.question)}")
                 return
 
-            ai_msg = result.get("ai_message")
-            if ai_msg is not None:
-                self._message_history = result.get("message_history", self._message_history)
-                content = (
-                    ai_msg.content if hasattr(ai_msg, "content") else ai_msg.get("content", "")
-                )
-                log.write(f"[bold #c9a84c]Narrator:[/bold #c9a84c] {escape(content)}")
+            assert isinstance(result, CompletedResult)
+            if result.narration:
+                self._message_history = result.message_history
+                log.write(f"[bold #c9a84c]Narrator:[/bold #c9a84c] {escape(result.narration)}")
             else:
                 log.write("[dim red]No response from graph.[/dim red]")
 
             # Action finished; next message starts a brand-new thread.
-            self._run_id = graph_service.new_run_id()
+            self._run_id = result.next_run_id
         except Exception as e:
             log.write(f"[bold red]Error:[/bold red] {escape(str(e))}")
         finally:
             chat_panel.set_processing(False)
-
-    def _build_graph_state(self, text: str) -> GraphState:
-        state = self._location_state
-        entities_at_location = (
-            [f"{e.name}: {e.description}. Location: {e.scene_position}" for e in state.entities]
-            if state is not None
-            else []
-        )
-        return GraphState(
-            message_history=self._message_history,
-            intent_alignment_history=[],
-            human_message=Message(role="human", content=text, name=""),
-            ai_message=None,
-            question=None,
-            is_intent_alignment_achieved=None,
-            character_name=self._character.name or "",
-            character_description=self._character.description or "",
-            location_name=state.location.name if state else "",
-            location_description=state.location.description if state else "",
-            entities_at_location=entities_at_location,
-        )

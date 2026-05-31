@@ -11,6 +11,7 @@ from src.service.character import CharacterService
 from src.service.graph import GraphService
 from src.service.location import LocationService
 from src.service.message import MessageService
+from src.service.turn import TurnService
 
 if TYPE_CHECKING:
     from src.core.model.database import Database
@@ -45,3 +46,6 @@ class ServiceContainer:
         self.character: CharacterService = CharacterService(base, characters, worlds)
         self.location: LocationService = LocationService(base, locations, characters)
         self.message: MessageService = MessageService(base, messages)
+        self.turn: TurnService = TurnService(
+            self.graph_service, self.character, self.location, world_name
+        )
