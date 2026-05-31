@@ -1,13 +1,6 @@
-from enum import StrEnum
-
 from dspy import InputField, OutputField, Signature
 
-
-class ThreatMagnitudeLevel(StrEnum):
-    MINOR = "MINOR"
-    STANDARD = "STANDARD"
-    SEVERE = "SEVERE"
-    FATAL = "FATAL"
+from src.core.model.threat import ThreatMagnitudeLevel
 
 
 class ThreatMagnitudeSignature(Signature):

@@ -13,3 +13,10 @@ class ThreatType(StrEnum):
     WORSE_POSITION = "worse_position"
     LOST_OPPORTUNITY = "lost_opportunity"
     FAILURE_OF_GOAL = "failure_of_goal"
+
+
+class ThreatMagnitudeLevel(StrEnum):
+    MINOR = "MINOR"
+    STANDARD = "STANDARD"
+    SEVERE = "SEVERE"
+    FATAL = "FATAL"

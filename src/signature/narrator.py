@@ -35,16 +35,10 @@ class NarratorSignature(Signature):
     location_name: str = InputField(default="")
     location_description: str = InputField(default="")
     entities_at_location: str = InputField(default="")
-
-    # Normal / held mode
     lead_up: str = InputField(default="")
     contested_beat: str = InputField(default="")
     outcome: str = InputField(default="")
-
-    # Held mode only — pre-formatted scaffold string
     held_scaffold: str = InputField(default="")
-
-    # Final mode only
     prior_narration: str = InputField(default="")
     resist_resolution: str = InputField(default="")
 
