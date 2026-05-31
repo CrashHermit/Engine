@@ -1,7 +1,9 @@
 from dspy import Predict, Prediction
+from src.core.mechanic.magnitude import Magnitude
 from src.lm import lm
 from src.signature.threat_magnitude import ThreatMagnitudeSignature
 from src.state import GraphState
+
 
 class ThreatMagnitudeNode:
     def __init__(self) -> None:
@@ -14,4 +16,4 @@ class ThreatMagnitudeNode:
             location_description=state.location_description,
             contested_beat=state.contested_beat,
         )
-        return {"magnitude": prediction.magnitude}
+        return {"magnitude": Magnitude[prediction.magnitude]}

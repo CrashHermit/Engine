@@ -1,6 +1,13 @@
+from enum import StrEnum
+
 from dspy import InputField, OutputField, Signature
 
-from src.core.mechanic.magnitude import Magnitude
+
+class ThreatMagnitudeLevel(StrEnum):
+    MINOR = "MINOR"
+    STANDARD = "STANDARD"
+    SEVERE = "SEVERE"
+    FATAL = "FATAL"
 
 
 class ThreatMagnitudeSignature(Signature):
@@ -30,6 +37,6 @@ class ThreatMagnitudeSignature(Signature):
         description="The single contested action that needs a roll"
     )
 
-    magnitude: Magnitude = OutputField(
+    magnitude: ThreatMagnitudeLevel = OutputField(
         description="Severity of the consequence on the 1–4 ladder"
     )
