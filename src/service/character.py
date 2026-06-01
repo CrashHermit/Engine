@@ -1,7 +1,6 @@
 from arcadedb_embedded.graph import Vertex
 import logging
 
-from src.core.mechanic.economy import DEFAULT_ECONOMY_CONFIG
 from src.core.model.character import CharacterData
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
@@ -97,21 +96,11 @@ class CharacterService:
                 node = self._characters.add_node(personality, vertex_type, edge_type)
                 self._characters.add_attribute(node, trait_values[vertex_type])
 
-            self._characters.add_economy(character)
-
             start_location = self._worlds.get_start_location()
             if start_location is not None:
                 self._characters.place_character(character, start_location)
 
             return self._to_data(character)
-
-    def set_economy(self, character_id: str, *, stress: int, trauma: int) -> None:
-        """Persist the per-run economy (stress / trauma) back onto the character."""
-        self._logger.debug("set_economy id=%s stress=%s trauma=%s", character_id, stress, trauma)
-        character = self._require(character_id)
-        with self._base.transaction():
-            self._characters.set_stress(character, stress)
-            self._characters.set_trauma(character, trauma)
 
     def delete_character(self, character_id: str) -> None:
         self._logger.info("delete_character id=%s", character_id)
@@ -145,8 +134,4 @@ class CharacterService:
             conscientiousness=self._characters.get_trait_value(
                 personality, EdgeType.HAS_CONSCIENTIOUSNESS
             ),
-            stress=self._characters.get_stress(character),
-            trauma=self._characters.get_trauma(character),
-            stress_max=DEFAULT_ECONOMY_CONFIG.stress_max,
-            trauma_max=DEFAULT_ECONOMY_CONFIG.trauma_max,
         )

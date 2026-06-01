@@ -1,3 +1,6 @@
+from core.model.database import EdgeType
+
+
 from arcadedb_embedded.graph import Edge, Vertex
 
 from src.core.model.database import EdgeType, VertexType
@@ -10,8 +13,6 @@ _OWNED_EDGES: list[EdgeType] = [
     EdgeType.HAS_CORPUS,
     EdgeType.HAS_MENS,
     EdgeType.HAS_ANIMA,
-    EdgeType.HAS_STRESS,
-    EdgeType.HAS_TRAUMA,
     EdgeType.HAS_PERSONALITY,
     EdgeType.HAS_EXTRAVERSION,
     EdgeType.HAS_OPENNESS,
@@ -123,46 +124,6 @@ class CharacterRepository:
     ############################################################################
     # Economy verbs
     ############################################################################
-    # Stress and trauma are modelled exactly like the core attributes: a typed
-    # node (STRESS / TRAUMA) hung off the character by a HAS_STRESS / HAS_TRAUMA
-    # edge, whose value lives on an ATTRIBUTE node via HAS_ATTRIBUTE. This reuses
-    # add_node / add_attribute / get_attribute_value / set_attribute_value.
-
-    def add_economy(self, character: Vertex) -> None:
-        """Attach STRESS and TRAUMA nodes (value 0) to a fresh character."""
-        for vertex_type, edge_type in (
-            (VertexType.STRESS, EdgeType.HAS_STRESS),
-            (VertexType.TRAUMA, EdgeType.HAS_TRAUMA),
-        ):
-            node = self.add_node(character, vertex_type, edge_type)
-            self.add_attribute(node, 0)
 
     def get_stress(self, character: Vertex) -> int:
-        return self._economy_value(character, EdgeType.HAS_STRESS)
-
-    def get_trauma(self, character: Vertex) -> int:
-        return self._economy_value(character, EdgeType.HAS_TRAUMA)
-
-    def set_stress(self, character: Vertex, value: int) -> None:
-        node = self._ensure_economy_node(character, VertexType.STRESS, EdgeType.HAS_STRESS)
-        self.set_attribute_value(node, value)
-
-    def set_trauma(self, character: Vertex, value: int) -> None:
-        node = self._ensure_economy_node(character, VertexType.TRAUMA, EdgeType.HAS_TRAUMA)
-        self.set_attribute_value(node, value)
-
-    def _economy_value(self, character: Vertex, edge_type: EdgeType) -> int:
-        # Tolerant read: characters created before the economy nodes existed
-        # simply have none — treat that as 0 rather than erroring.
-        edges = character.get_out_edges(edge_type)
-        return self.get_attribute_value(edges[0].get_in()) if edges else 0
-
-    def _ensure_economy_node(
-        self, character: Vertex, vertex_type: VertexType, edge_type: EdgeType
-    ) -> Vertex:
-        edges = character.get_out_edges(edge_type)
-        if edges:
-            return edges[0].get_in()
-        node = self.add_node(character, vertex_type, edge_type)
-        self.add_attribute(node, 0)
-        return node
+        return 
