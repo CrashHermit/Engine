@@ -35,7 +35,7 @@ class CharacterSheetModal(ModalScreen[None]):
                     yield PipSelector("Anima", max_val=4, value=0, readonly=True, id="pip-anima")
 
             yield Label("Condition", id="condition-title")
-            yield Static("", id="sheet-condition")
+            yield Static("HP: — / —  |  Wounds: —  |  Status: —", id="sheet-condition")
 
             yield Label("Equipment", id="equipment-title")
             yield Static("—", id="sheet-equipment")
@@ -71,11 +71,6 @@ class CharacterSheetModal(ModalScreen[None]):
     def on_mount(self) -> None:
         self.query_one("#sheet-name", Label).update(self._character.name or "—")
         self.query_one("#sheet-description", Static).update(self._character.description or "")
-
-        self.query_one("#sheet-condition", Static).update(
-            f"Stress: {self._character.stress} / {self._character.stress_max}"
-            f"  |  Trauma: {self._character.trauma} / {self._character.trauma_max}"
-        )
 
         self.query_one("#pip-corpus", PipSelector).value = self._character.corpus
         self.query_one("#pip-mens", PipSelector).value = self._character.mens
