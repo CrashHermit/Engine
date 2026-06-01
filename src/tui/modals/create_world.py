@@ -69,7 +69,7 @@ class CreateWorldModal(ModalScreen[dict[str, str] | None]):
             return
 
         try:
-            WorldService(self.app.connection).create_world(
+            WorldService(self.app.bootstrap.connection).create_world(
                 name=name,
                 description=description,
                 seed=seed,

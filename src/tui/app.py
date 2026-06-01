@@ -1,11 +1,8 @@
 from textual.app import App
 from textual.binding import Binding
 
-from src.database.connection import DatabaseConnection
-from src.database.server import Server
+from src.bootstrap import AppBootstrap
 from src.logging_utils import configure_logging
-from src.service.checkpoint import CheckpointService
-from src.service.factory import WorldSessionFactory
 from src.tui.screens.start import StartScreen
 
 
@@ -22,29 +19,21 @@ class GameApp(App):
     def __init__(self) -> None:
         super().__init__()
         configure_logging()
-        self.server: Server | None = None
-        self.checkpoint: CheckpointService = CheckpointService()
-        # Set once the async session worker finishes (see _init_session).
-        self.factory: WorldSessionFactory | None = None
+        # Composition root lives in src/bootstrap so the TUI never imports
+        # src/database directly. Screens read `self.app.bootstrap.connection`
+        # and `self.app.bootstrap.factory`.
+        self.bootstrap: AppBootstrap = AppBootstrap()
 
     def on_mount(self) -> None:
-        self.server: Server = Server()
-        self.server.start()
-        self.connection: DatabaseConnection = DatabaseConnection(self.server)
+        self.bootstrap.start_server()
         self.run_worker(self._init_session, exclusive=True)
 
     async def _init_session(self) -> None:
-        await self.checkpoint.start()
-        self.factory: WorldSessionFactory = WorldSessionFactory(
-            self.connection,
-            checkpointer=self.checkpoint.saver,
-        )
+        await self.bootstrap.start_session()
         self.push_screen(StartScreen())
 
     def on_unmount(self) -> None:
-        self.run_worker(self.checkpoint.stop, exclusive=True)
-        if self.server:
-            self.server.stop()
+        self.run_worker(self.bootstrap.stop, exclusive=True)
 
     def action_help(self) -> None:
         pass  # TODO: push HelpModal
