@@ -7,7 +7,6 @@ from textual.events import Key
 from textual.screen import Screen
 from textual.widgets import Input, RichLog
 
-from src.core.mechanic.economy import DEFAULT_ECONOMY_CONFIG
 from src.core.model.character import CharacterData
 from src.core.model.location import LocationState
 from src.service.container import ServiceContainer
@@ -111,7 +110,7 @@ class GameScreen(Screen):
             case TraumaGained(trauma):
                 log.write(
                     f"[bold #d98c5f]Trauma:[/bold #d98c5f] stress broke you — "
-                    f"trauma is now {trauma} / {DEFAULT_ECONOMY_CONFIG.trauma_max}."
+                    f"trauma is now {trauma} / {self._coordinator.character.trauma_max}."
                 )
             case CharacterLost():
                 log.write(

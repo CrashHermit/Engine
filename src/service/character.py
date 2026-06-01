@@ -1,6 +1,7 @@
 from arcadedb_embedded.graph import Vertex
 import logging
 
+from src.core.mechanic.economy import DEFAULT_ECONOMY_CONFIG
 from src.core.model.character import CharacterData
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
@@ -146,4 +147,6 @@ class CharacterService:
             ),
             stress=self._characters.get_stress(character),
             trauma=self._characters.get_trauma(character),
+            stress_max=DEFAULT_ECONOMY_CONFIG.stress_max,
+            trauma_max=DEFAULT_ECONOMY_CONFIG.trauma_max,
         )

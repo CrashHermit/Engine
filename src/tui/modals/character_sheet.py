@@ -4,7 +4,6 @@ from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Label, Static
 
-from src.core.mechanic.economy import DEFAULT_ECONOMY_CONFIG
 from src.core.model.character import CharacterData
 from src.tui.widgets.pip_selector import PipSelector
 
@@ -74,8 +73,8 @@ class CharacterSheetModal(ModalScreen[None]):
         self.query_one("#sheet-description", Static).update(self._character.description or "")
 
         self.query_one("#sheet-condition", Static).update(
-            f"Stress: {self._character.stress} / {DEFAULT_ECONOMY_CONFIG.stress_max}"
-            f"  |  Trauma: {self._character.trauma} / {DEFAULT_ECONOMY_CONFIG.trauma_max}"
+            f"Stress: {self._character.stress} / {self._character.stress_max}"
+            f"  |  Trauma: {self._character.trauma} / {self._character.trauma_max}"
         )
 
         self.query_one("#pip-corpus", PipSelector).value = self._character.corpus
