@@ -84,8 +84,12 @@ async def test_submit_yields_clarifying_question_without_rotating_run_id():
 
 @pytest.mark.asyncio
 async def test_submit_yields_held_narration_then_offer_without_rotating_run_id():
-    result = _interrupt({"offer": "Resist and twist aside?"})
-    result["ai_message"] = _ai("The blade bites deep.")
+    # The held narration is carried in the interrupt payload, not in
+    # result["ai_message"] — the resolution subgraph's ai_message does not
+    # propagate to the parent result while paused on the resist interrupt.
+    result = _interrupt(
+        {"offer": "Resist and twist aside?", "narration": "The blade bites deep."}
+    )
     coord = _coordinator(result=result)
     before = coord._run_id
 

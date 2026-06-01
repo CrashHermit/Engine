@@ -51,6 +51,19 @@ def _interrupt_offer(result: dict) -> str | None:
     return None
 
 
+def _interrupt_narration(result: dict) -> str | None:
+    """Held narration carried in a paused ResistOfferNode payload, if present.
+
+    The narrator runs inside the resolution subgraph, so its ai_message does
+    not surface in the parent graph result while the subgraph is paused on the
+    resist interrupt. The held prose is therefore carried in the interrupt
+    payload, not in result["ai_message"]."""
+    payload = _interrupt_payload(result)
+    if isinstance(payload, dict):
+        return payload.get("narration")
+    return None
+
+
 def _message_content(ai_msg: object) -> str:
     """Pull text out of an ai_message that may be a Message or a plain dict."""
     if hasattr(ai_msg, "content"):
@@ -126,10 +139,12 @@ class GameCoordinator:
 
                 offer = _interrupt_offer(result)
                 if offer is not None:
-                    # Held narration arrived with the interrupt — emit it first.
-                    ai_msg = result.get("ai_message")
-                    if ai_msg is not None:
-                        yield Narration(_message_content(ai_msg))
+                    # Held narration is carried in the interrupt payload (the
+                    # subgraph's ai_message does not reach the parent result
+                    # while paused) — emit the consequence before the offer.
+                    narration = _interrupt_narration(result)
+                    if narration:
+                        yield Narration(narration)
                     # Turn still in progress; do NOT rotate run_id.
                     yield ResistanceOffer(offer)
                     return
