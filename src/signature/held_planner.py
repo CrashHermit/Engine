@@ -5,7 +5,7 @@ from src.core.model.resist import HeldScaffold
 
 class HeldPlannerSignature(Signature):
     """
-    A significant consequence has landed (Standard, Severe, or Fatal). Extract
+    A consequence has landed (Minor, Standard, Severe, or Fatal). Extract
     a structured scaffold so the narrator can commit to the impact while
     deliberately leaving its depth and finality unresolved — the player may
     still resist or push.
