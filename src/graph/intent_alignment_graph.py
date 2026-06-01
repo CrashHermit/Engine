@@ -1,6 +1,7 @@
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
+from src.graph.logged_node import LoggedNode
 from src.node.intent_alignment_router import IntentAlignmentRouterNode
 from src.node.intent_clarification import IntentClarificationNode
 from src.node.intent_question_generator import IntentQuestionGeneratorNode
@@ -13,10 +14,22 @@ class IntentAlignmentGraphBuilder:
         self.workflow: StateGraph = StateGraph(GraphState)
 
     def build(self) -> CompiledStateGraph:
-        self.workflow.add_node("intent_alignment_router", IntentAlignmentRouterNode())
-        self.workflow.add_node("intent_question_generator", IntentQuestionGeneratorNode())
-        self.workflow.add_node("intent_clarification", IntentClarificationNode())
-        self.workflow.add_node("intent_synthesizer", IntentSynthesizerNode())
+        self.workflow.add_node(
+            "intent_alignment_router",
+            LoggedNode("intent_alignment_router", IntentAlignmentRouterNode()),
+        )
+        self.workflow.add_node(
+            "intent_question_generator",
+            LoggedNode("intent_question_generator", IntentQuestionGeneratorNode()),
+        )
+        self.workflow.add_node(
+            "intent_clarification",
+            LoggedNode("intent_clarification", IntentClarificationNode()),
+        )
+        self.workflow.add_node(
+            "intent_synthesizer",
+            LoggedNode("intent_synthesizer", IntentSynthesizerNode()),
+        )
 
         self.workflow.add_edge(START, "intent_alignment_router")
         self.workflow.add_conditional_edges(

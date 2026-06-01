@@ -3,6 +3,7 @@ from textual.binding import Binding
 
 from src.database.connection import DatabaseConnection
 from src.database.server import Server
+from src.logging_utils import configure_logging
 from src.service.checkpoint import CheckpointService
 from src.service.factory import WorldSessionFactory
 from src.tui.screens.start import StartScreen
@@ -20,6 +21,7 @@ class GameApp(App):
 
     def __init__(self) -> None:
         super().__init__()
+        configure_logging()
         self.server: Server | None = None
         self.checkpoint: CheckpointService = CheckpointService()
         # Set once the async session worker finishes (see _init_session).

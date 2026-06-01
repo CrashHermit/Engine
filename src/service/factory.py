@@ -1,3 +1,5 @@
+import logging
+
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from src.database.connection import DatabaseConnection
@@ -17,13 +19,17 @@ class WorldSessionFactory:
         *,
         checkpointer: BaseCheckpointSaver,
     ) -> None:
+        self._logger = logging.getLogger("engine.service.world_session_factory")
         self._connection = connection
         self._checkpointer = checkpointer
         self._graph_service = GraphService(checkpointer=checkpointer)
+        self._logger.info("world session factory initialized")
 
     def open(self, world_name: str) -> ServiceContainer:
+        self._logger.info("opening world=%s", world_name)
         database = self._connection.open_database(world_name)
         SchemaManager(database=database).ensure()
+        self._logger.debug("schema ensured world=%s", world_name)
         return ServiceContainer(
             database=database,
             world_name=world_name,

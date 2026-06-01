@@ -1,4 +1,5 @@
 from pathlib import Path
+import logging
 
 import arcadedb_embedded as arcadedb
 from arcadedb_embedded.exceptions import ArcadeDBError
@@ -8,17 +9,20 @@ from src.database.server import Server
 
 class DatabaseConnection:
     def __init__(self, server: Server) -> None:
+        self._logger = logging.getLogger("engine.repository.database_connection")
         self._server: Server = server
 
     def _db_dir(self, name: str) -> Path:
         return Path(self._server.root_path) / "databases" / name
 
     def create_database(self, name: str) -> arcadedb.Database:
+        self._logger.info("create database name=%s", name)
         if self._db_dir(name).exists():
             raise FileExistsError(f"Database {name!r} already exists")
         return self._server.arcadedb_server.create_database(name=name)
 
     def open_database(self, name: str) -> arcadedb.Database:
+        self._logger.info("open database name=%s", name)
         if not self._db_dir(name).exists():
             raise FileNotFoundError(f"Database {name!r} does not exist")
         return self._server.arcadedb_server.get_database(name=name)
@@ -30,6 +34,7 @@ class DatabaseConnection:
         return sorted(entry.name for entry in databases_dir.iterdir() if entry.is_dir())
 
     def delete_database(self, name: str) -> None:
+        self._logger.info("delete database name=%s", name)
         java_server = self._server.arcadedb_server._java_server
         if not java_server.existsDatabase(name):
             raise FileNotFoundError(f"Database {name!r} does not exist")

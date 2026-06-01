@@ -1,4 +1,5 @@
 from arcadedb_embedded.graph import Vertex
+import logging
 
 from src.core.model.character import CharacterData
 from src.core.model.database import EdgeType, VertexType
@@ -30,6 +31,7 @@ class CharacterService:
         characters: CharacterRepository,
         worlds: WorldRepository,
     ) -> None:
+        self._logger = logging.getLogger("engine.service.character")
         self._base = base
         self._characters = characters
         self._worlds = worlds
@@ -39,7 +41,9 @@ class CharacterService:
     ############################################################################
 
     def list_characters(self) -> list[CharacterData]:
-        return [self._to_data(v) for v in self._characters.list_characters()]
+        data = [self._to_data(v) for v in self._characters.list_characters()]
+        self._logger.debug("list_characters count=%s", len(data))
+        return data
 
     def get_character(self, character_id: str) -> CharacterData | None:
         vertex = self._characters.get_character(character_id)
@@ -62,6 +66,7 @@ class CharacterService:
         neuroticism: int,
         conscientiousness: int,
     ) -> CharacterData:
+        self._logger.info("create_character name=%s", name)
         attribute_values = {
             VertexType.CORPUS: corpus,
             VertexType.MENS: mens,
@@ -98,6 +103,7 @@ class CharacterService:
             return self._to_data(character)
 
     def delete_character(self, character_id: str) -> None:
+        self._logger.info("delete_character id=%s", character_id)
         character = self._require(character_id)
         with self._base.transaction():
             self._characters.delete_character(character)

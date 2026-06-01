@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING
 
 import arcadedb_embedded
+import logging
 
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
@@ -32,6 +33,7 @@ class ServiceContainer:
         world_name: str,
         graph_service: GraphService,
     ) -> None:
+        self._logger = logging.getLogger("engine.service.container")
         self._database: Database = database
         self.world_name: str = world_name
         self.graph_service: GraphService = graph_service
@@ -45,3 +47,4 @@ class ServiceContainer:
         self.character: CharacterService = CharacterService(base, characters, worlds)
         self.location: LocationService = LocationService(base, locations, characters)
         self.message: MessageService = MessageService(base, messages)
+        self._logger.info("service container ready world=%s", world_name)

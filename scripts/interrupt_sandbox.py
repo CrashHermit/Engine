@@ -1,8 +1,12 @@
 import asyncio
+import logging
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.types import Command
+from src.logging_utils import configure_logging
+
+logger = logging.getLogger("engine.sandbox.interrupt")
 
 class State(TypedDict):
     user_text: str
@@ -46,24 +50,25 @@ def build():
     )
 
 async def main():
+    configure_logging()
     graph = build()
     config = {"configurable": {"thread_id": "1"}}
 
     result = await graph.ainvoke({"user_text": "Hello, how are you?"}, config=config)
-    print("After turn 1:", result)
+    logger.info("After turn 1: %s", result)
 
     snapshot = graph.get_state(config=config)
-    print("next:", snapshot.next)
-    print("values:", snapshot.values)
+    logger.info("next: %s", snapshot.next)
+    logger.info("values: %s", snapshot.values)
 
     result = await graph.ainvoke(
         Command(update={"user_text": "ANSWER: I'm fine, thank you!"}),
         config=config,
     )
     snapshot = graph.get_state(config=config)
-    print("After resume:", result)
-    print("next:", snapshot.next)
-    print("values:", snapshot.values)
+    logger.info("After resume: %s", result)
+    logger.info("next: %s", snapshot.next)
+    logger.info("values: %s", snapshot.values)
 
 if __name__ == "__main__":
     asyncio.run(main())

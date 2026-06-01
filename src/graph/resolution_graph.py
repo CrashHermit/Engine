@@ -2,6 +2,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from src.core.mechanic.magnitude import Magnitude
+from src.graph.logged_node import LoggedNode
 from src.node.attribute_selector import AttributeSelectorNode
 from src.node.dice_scale import DiceScaleNode
 from src.node.final_planner import FinalPlannerNode
@@ -41,34 +42,40 @@ class ResolutionGraphBuilder:
         self.workflow: StateGraph = StateGraph(GraphState)
 
     def build(self) -> CompiledStateGraph:
-        narrator = NarratorNode()
+        narrator = LoggedNode("narrator", NarratorNode())
 
         # ── nodes ──────────────────────────────────────────────────────────
-        self.workflow.add_node("roll_gate", RollGateNode())
-        self.workflow.add_node("mundane", MundaneNode())
-        self.workflow.add_node("segmenter", SegmenterNode())
+        self.workflow.add_node("roll_gate", LoggedNode("roll_gate", RollGateNode()))
+        self.workflow.add_node("mundane", LoggedNode("mundane", MundaneNode()))
+        self.workflow.add_node("segmenter", LoggedNode("segmenter", SegmenterNode()))
 
         # Framing fan-out (parallel)
-        self.workflow.add_node("attribute_selector", AttributeSelectorNode())
-        self.workflow.add_node("threat_type", ThreatTypeNode())
-        self.workflow.add_node("threat_magnitude", ThreatMagnitudeNode())
-        self.workflow.add_node("threat_channel", ThreatChannelNode())
+        self.workflow.add_node(
+            "attribute_selector", LoggedNode("attribute_selector", AttributeSelectorNode())
+        )
+        self.workflow.add_node("threat_type", LoggedNode("threat_type", ThreatTypeNode()))
+        self.workflow.add_node(
+            "threat_magnitude", LoggedNode("threat_magnitude", ThreatMagnitudeNode())
+        )
+        self.workflow.add_node("threat_channel", LoggedNode("threat_channel", ThreatChannelNode()))
 
-        self.workflow.add_node("dice_scale", DiceScaleNode())
+        self.workflow.add_node("dice_scale", LoggedNode("dice_scale", DiceScaleNode()))
 
         # Planner nodes
-        self.workflow.add_node("held_planner", HeldPlannerNode())
-        self.workflow.add_node("final_planner", FinalPlannerNode())
+        self.workflow.add_node("held_planner", LoggedNode("held_planner", HeldPlannerNode()))
+        self.workflow.add_node("final_planner", LoggedNode("final_planner", FinalPlannerNode()))
 
         # Single narrator instance used at every narration point
         self.workflow.add_node("narrator", narrator)
 
-        self.workflow.add_node("turn_close", TurnCloseNode())
+        self.workflow.add_node("turn_close", LoggedNode("turn_close", TurnCloseNode()))
 
         # Resistance path
-        self.workflow.add_node("resist_offer", ResistOfferNode())
-        self.workflow.add_node("resist_push_parser", ResistPushParserNode())
-        self.workflow.add_node("resist_roll", ResistRollNode())
+        self.workflow.add_node("resist_offer", LoggedNode("resist_offer", ResistOfferNode()))
+        self.workflow.add_node(
+            "resist_push_parser", LoggedNode("resist_push_parser", ResistPushParserNode())
+        )
+        self.workflow.add_node("resist_roll", LoggedNode("resist_roll", ResistRollNode()))
 
         # ── edges ──────────────────────────────────────────────────────────
         self.workflow.add_edge(START, "roll_gate")
