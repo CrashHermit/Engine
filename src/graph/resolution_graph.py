@@ -26,8 +26,13 @@ def _route_by_roll_gate(state: GraphState) -> str:
 
 
 def _route_by_significance(state: GraphState) -> str:
+    # Any consequence that actually lands (>= Minor) earns the held/resist
+    # dance; only avoided results (clean/crit, landed 0) skip straight to the
+    # final narration. Gating on the post-roll landed magnitude rather than the
+    # base threat means a reduced roll can still leave a Minor consequence the
+    # player may resist down to nothing.
     m = state.outcome.landed_magnitude if state.outcome else 0
-    return "held_planner" if m >= Magnitude.STANDARD else "final_planner"
+    return "held_planner" if m >= Magnitude.MINOR else "final_planner"
 
 
 def _route_after_narrator(state: GraphState) -> str:
