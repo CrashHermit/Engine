@@ -34,7 +34,7 @@ class WorldListScreen(Screen):
         self._reload_worlds()
 
     def _reload_worlds(self) -> None:
-        self._worlds = self.app.connection.list_databases()
+        self._worlds = self.app.bootstrap.connection.list_databases()
         self._refresh_world_list()
 
     def _selected_world_name(self) -> str | None:
@@ -61,13 +61,13 @@ class WorldListScreen(Screen):
         elif event.button.id == "btn-enter":
             world_name: str | None = self._selected_world_name()
             if world_name:
-                if self.app.factory is None:
+                if self.app.bootstrap.factory is None:
                     self.app.notify(
                         message="Session still starting up, try again.", severity="warning"
                     )
                     return
                 try:
-                    services = self.app.factory.open(world_name)
+                    services = self.app.bootstrap.factory.open(world_name)
                 except Exception as e:
                     self.app.notify(message=f"Failed to open world: {e}", severity="error")
                     return
@@ -87,7 +87,7 @@ class WorldListScreen(Screen):
         if not confirmed:
             return
         try:
-            self.app.connection.delete_database(name=world_name)
+            self.app.bootstrap.connection.delete_database(name=world_name)
         except Exception as e:
             self.app.notify(message=f"Failed to delete world: {e}", severity="error")
             return
