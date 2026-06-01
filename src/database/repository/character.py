@@ -1,4 +1,7 @@
-from arcadedb_embedded.graph import Vertex
+from core.model.database import EdgeType
+
+
+from arcadedb_embedded.graph import Edge, Vertex
 
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
@@ -6,7 +9,7 @@ from src.database.repository.base import BaseRepository
 # Edges from a character into the sub-structure it exclusively owns. Deleting a
 # character cascades along these (but never along LOCATED_AT, which points at a
 # shared location the character does not own).
-_OWNED_EDGES = [
+_OWNED_EDGES: list[EdgeType] = [
     EdgeType.HAS_CORPUS,
     EdgeType.HAS_MENS,
     EdgeType.HAS_ANIMA,
@@ -50,17 +53,14 @@ class CharacterRepository:
     def delete_character(self, character: Vertex) -> None:
         """Delete the character and every node it owns (attributes, personality,
         traits), leaving shared vertices such as its location untouched."""
-        self._delete_owned(character)
-
-    def _delete_owned(self, vertex: Vertex) -> None:
-        # Materialize owned children before deleting, then recurse depth-first so
-        # leaves are removed before their parents.
         children: list[Vertex] = [
-            edge.get_in() for edge_type in _OWNED_EDGES for edge in vertex.get_out_edges(edge_type)
+            edge.get_in()
+            for edge_type in _OWNED_EDGES
+            for edge in character.get_out_edges(edge_type)
         ]
         for child in children:
-            self._delete_owned(child)
-        self._base.delete_vertex(vertex)
+            self.delete_character(character=child)
+        self._base.delete_vertex(vertex=character)
 
     ############################################################################
     # Read verbs
@@ -102,7 +102,7 @@ class CharacterRepository:
     ############################################################################
 
     def get_current_location(self, character: Vertex) -> Vertex | None:
-        edges = character.get_out_edges(EdgeType.LOCATED_AT)
+        edges: list[Edge] = character.get_out_edges(EdgeType.LOCATED_AT)
         return edges[0].get_in() if edges else None
 
     def place_character(self, character: Vertex, location: Vertex) -> None:
