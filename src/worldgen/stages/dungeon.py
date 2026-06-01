@@ -70,6 +70,11 @@ _HEX_NODES = [
                 "description": "A vertical fissure running the full height of the far wall. It is wide enough to fit a hand into, and utterly dark beyond.",
                 "scene_position": "running floor to ceiling along the far wall behind the rubble",
             },
+            {
+                "name": "Large Aggressive Spider (Ready to Strike)",
+                "description": "A large aggressive spider, about the size of a man's torso, is crawling along the wall. Ready to strike and attack at any moment.",
+                "scene_position": "crawling along the wall",
+            }
         ],
     },
     {
