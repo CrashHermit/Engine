@@ -91,7 +91,7 @@ Relevant existing facts that shape the design:
 | 24 | **Overindulgence complication reuses the consequence machinery.** Overindulgence generates a structured `{type, magnitude, channel}` threat via the same classifiers and narrator as combat consequences. Magnitude is capped at Standard (2) — a setback, not a death sentence. | No new code paths; mechanically legible to the player; classifiers already fan out in parallel so overhead is minimal. |
 | 23 | **"Character lost" endgame = new character, same world, continuity.** At 4 trauma the old `CharacterData` is flagged `retired/lost` and persists in the world (available as NPC or memory). The TUI transitions to the character-creation flow; the run continues in the same world with the replacement. World state (location, entities) carries over. No data is destroyed. | Matches BitD's legacy-game ethos; costs only a status flag + a TUI transition. The replacement flow (dot-allocation UI) is already partially built. Clean slate (option B) loses narrative continuity; silent removal (option C) loses the NPC echo. |
 | 22 | **Trauma conditions = structured tag + freeform display label.** Each trauma condition carries a typed `TraumaCategory` enum tag (for classifier reasoning) and a narrator-generated freeform label (what the player sees). Taxonomy is content-mode-aware — a clean set now, adult set added when adult mechanics land. Conditions accumulate alongside vices as a scar-record. | Freeform alone can't support future mechanical hooks; a full fixed list is too rigid for adult content extensibility. The hybrid gives classifiers a clean type while keeping the surface feel organic. |
-| 21 | **Effects are applied at the integration boundary, not inside graph nodes.** Graph nodes stay **pure** — they read `GraphState` and emit *intended* effects (the resolved roll, harm to apply, a stress delta) back into state; they never touch repositories or services. After `ainvoke`, the **TUI applies those effects via services** (which own the transactions over the repos), exactly as it already post-processes the result and owns the `ServiceContainer`. The Phase-0 mechanics core returns plain data precisely so a service can persist it. | Matches the locked layering (`ServiceContainer`: screens/nodes talk to services, **never repos**) and the engine's current shape (graph built once, `GraphState` rebuilt per turn, no DB session injected into nodes). Keeps nodes **unit-testable offline** (no DB/LLM), keeps services the **single write path**, and avoids coupling the graph to a live ArcadeDB session. **Rejected:** injecting `ServiceContainer` into nodes — preserves the rule but couples the graph to the DB and hurts node testability. |
+| 21 | **Effects are applied at the integration boundary, not inside graph nodes.** Graph nodes stay **pure** — they read `GraphState` and emit *intended* effects (the resolved roll, harm to apply, a stress delta) back into state; they never touch repositories or services. After `ainvoke`, the **`GameCoordinator`** (`src/session/coordinator.py`) applies those effects via services (which own the transactions over the repos). The coordinator is the Textual-free integration boundary: it owns turn orchestration + all graph-shape translation and exposes a typed async event stream to the TUI, so the TUI only displays. The Phase-0 mechanics core returns plain data precisely so a service can persist it. *(Effect persistence itself is not yet wired — the coordinator currently relocates the existing turn loop; a later PR slots `apply_turn_effects` into `submit()`.)* | Matches the locked layering (`ServiceContainer`: screens/nodes talk to services, **never repos**) and the engine's current shape (graph built once, `GraphState` rebuilt per turn, no DB session injected into nodes). Keeps nodes **unit-testable offline** (no DB/LLM), keeps services the **single write path**, and avoids coupling the graph to a live ArcadeDB session. **Rejected:** injecting `ServiceContainer` into nodes — preserves the rule but couples the graph to the DB and hurts node testability. |
 
 ### Resolution model — Deep Cuts cherry-pick (#15–18)
 
@@ -392,8 +392,9 @@ Tackle these next, against this saved foundation:
       by channel + slot index (#29/#30). Mind the parallel-write reducer pattern for the
       framing fan-out.
 - [x] ~~**TUI: hint widget**~~ — design-complete per decision #10. Dedicated dim `continue:`
-      label above input, persists while typing, `pending_intent` on `GameScreen`,
-      empty-enter-accepts in `ChatPanel`. Implementation deferred to Phase 4.
+      label above input, persists while typing, `pending_intent` on the `GameCoordinator`
+      (`src/session/`), empty-enter-accepts in `ChatPanel`. Implementation deferred to Phase 4
+      (the field is reserved on the coordinator; the widget is not built).
 
 ---
 
@@ -477,12 +478,16 @@ suite exists**; persistence is ArcadeDB via a services→repos layer; the TUI re
   mirroring `intent_alignment_history`, plus the `resist/push parser`.
 - Add the **vice path**: `intent-type router` + `vice matcher` + code `vice-clear`.
 
-### Phase 4 — TUI & polish *(largely done)*
-- [x] **Integration boundary** (decision #21): `src/tui/turn_effects.py` — a Textual-free
-  `apply_turn_effects` (persists harm/stress via services after `ainvoke`) + `next_turn_carry`
-  (deferred tail + resistance offer). `GameScreen` calls it post-narration. Unit-tested.
-- [x] Deferred-tail **hint widget** + `pending_intent` on `ChatPanel` (dim `continue:` line,
-  toggled via `display`); **empty-enter-accepts**, typing overrides (#10).
+### Phase 4 — TUI & polish *(partly done)*
+- [~] **Integration boundary** (decision #21): built as `src/session/coordinator.py` — a
+  Textual-free `GameCoordinator` that owns turn orchestration, all graph-shape translation,
+  movement, and the per-turn carry (`_message_history`, `_run_id`, reserved `_pending_intent`).
+  It exposes `async submit(text) -> AsyncIterator[TurnEvent]`; `GameScreen` consumes the stream
+  and renders. Unit-tested with a faked `GraphService`. **Not yet built:** effect persistence
+  (`apply_turn_effects`) — the coordinator currently relocates the existing loop only.
+- [ ] Deferred-tail **hint widget** + `pending_intent` (dim `continue:` line, toggled via
+  `display`); **empty-enter-accepts**, typing overrides (#10). The `_pending_intent` field is
+  reserved on `GameCoordinator`; the widget is not built.
 - [x] Character-creation **dot allocation** on the unified **0–4** sheet (#20): attributes
   *and* the Big-Five traits are now 0–4; starting **vice** field (#14) threaded service-side.
 - [x] Character sheet surfaces **condition** (stress / trauma / vices, `format_condition`),
@@ -495,9 +500,9 @@ suite exists**; persistence is ArcadeDB via a services→repos layer; the TUI re
 ### Cross-cutting unknowns (settle as we reach them)
 - **Per-run state home** — `stress` / `trauma` / `vices` as CHARACTER properties, wound-box
   counts as PART properties: needs ArcadeDB schema + repo/service additions.
-- **Cross-turn carry** — the TUI rebuilds `GraphState` each turn, so the deferred tail and
-  resistance offer live on `GameScreen`, not in graph state (the #6/#10 design already assumes
-  this; survey confirms it).
+- **Cross-turn carry** — `GraphState` is rebuilt each turn, so the deferred tail and
+  resistance offer live on the **`GameCoordinator`** (`src/session/`), not in graph state
+  (the #6/#10 design already assumes this). The coordinator — not the TUI — now owns this carry.
 - **Reducer/fan-out concurrency** — the Phase-2 fan-out is the first place concurrent writes
   hit `GraphState`; get disjoint keys / reducers right here.
 - **Model routing / DSPy optimization** — a parallel track that can lag the spine entirely.

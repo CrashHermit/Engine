@@ -33,36 +33,5 @@ class GraphService:
         snapshot = await self.aget_state(config=config)
         return bool(snapshot.next)
 
-    @staticmethod
-    def interrupt_question(result: dict) -> str | None:
-        """Pull the clarifying question out of a paused result.
-
-        When the intent alignment subgraph pauses via ``interrupt()``, the
-        question lives in the interrupt payload (not the parent graph's
-        top-level state), so we read it from there.
-        """
-        interrupts = result.get("__interrupt__")
-        if not interrupts:
-            return None
-        payload = interrupts[0].value
-        if isinstance(payload, dict):
-            return payload.get("question")
-        return str(payload)
-
-    @staticmethod
-    def interrupt_offer(result: dict) -> str | None:
-        """Pull the resistance offer out of a paused result.
-
-        When ``ResistOfferNode`` pauses via ``interrupt()``, the offer text
-        lives in the payload under the ``"offer"`` key.
-        """
-        interrupts = result.get("__interrupt__")
-        if not interrupts:
-            return None
-        payload = interrupts[0].value
-        if isinstance(payload, dict):
-            return payload.get("offer")
-        return None
-
     async def resume(self, answer: str, *, config: dict) -> dict:
         return await self.graph.ainvoke(Command(resume=answer), config=config)

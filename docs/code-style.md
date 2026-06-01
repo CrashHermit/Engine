@@ -33,7 +33,8 @@ core/mechanic      →  pure functions (no I/O, DB, LLM)
 
 | Layer | Location | May import | Must not import |
 |-------|----------|------------|-----------------|
-| Integration | `src/tui/` | `services.*`, `state`, `core/model` | `database.repository.*` |
+| Display | `src/tui/` | `session.*`, `services.*`, `state`, `core/model` | `database.repository.*` |
+| Coordination | `src/session/` | `services.*`, `state`, `core/model` | `textual`, `tui/*`, `database.repository.*` |
 | Graph | `src/graph/`, `src/nodes/` | `state`, `signatures`, `core/mechanic`, `core/model`, `lm` | `services/*`, `database/*`, `tui/*` |
 | LLM contracts | `src/signatures/` | DSPy types | nodes, services, database |
 | Services | `src/services/` | `database.repository.*`, `core/model`, `core/mechanic` | `tui/*`, `nodes/*` |
@@ -47,9 +48,13 @@ Graph nodes read `GraphState` and return **partial state updates** — including
 They do **not** receive a `ServiceContainer` and do **not** call services or
 repositories.
 
-After `graph_service.ainvoke` / `resume`, the TUI applies those effects via
-services (e.g. `src/tui/turn_effects.py`). This keeps nodes unit-testable
-offline and gives services a single transactional write path.
+After `graph_service.ainvoke` / `resume`, the coordination layer applies those
+effects via services (`src/session/coordinator.py`, the `GameCoordinator`). The
+coordinator is Textual-free, owns turn orchestration and all graph-shape
+translation, and exposes a typed async event stream to the TUI — so the TUI only
+displays. This keeps nodes unit-testable offline, keeps the coordinator
+unit-testable without Textual, and gives services a single transactional write
+path. (Effect persistence itself is not yet wired — see decision #21.)
 
 ---
 
@@ -65,6 +70,7 @@ src/
   graph/         # LangGraph builders and routing functions
   services/      # use-case orchestration, vertex → DTO mapping
   database/      # connection, schema, repositories
+  session/       # turn coordination — the Textual-free integration boundary
   tui/           # Textual screens, modals, widgets
   worldgen/      # procedural world pipeline
   state.py       # GraphState
@@ -255,8 +261,9 @@ class ActionGeneratorNode:
 - Subgraphs compile **without their own checkpointer**; they inherit the parent's.
 - Routing functions are **plain module-level functions**
   (e.g. `route_by_intent_alignment_router`).
-- **`GraphState` is rebuilt each turn** from TUI/session data. Cross-turn carry
-  (`pending_intent`, resistance offer) lives on `GameScreen`, not in graph state.
+- **`GraphState` is rebuilt each turn** from session data. Cross-turn carry
+  (`message_history`, `_run_id`, `pending_intent`, resistance offer) lives on the
+  `GameCoordinator` (`src/session/`), not in graph state and not on the screen.
 - Paused subgraphs use LangGraph **`interrupt()`**; resume via
   `Command(resume=...)`.
 
@@ -269,11 +276,15 @@ reducers — never overwrite each other's fields in parallel.
 
 - **Screens** = full views; **Modals** = `ModalScreen[T]` overlays;
   **Widgets** = reusable pieces under `src/tui/widgets/`.
-- Inject **`ServiceContainer`** in screen constructors; store as `self._services`.
+- The game screen builds a **`GameCoordinator`** (`src/session/`) in its
+  constructor and holds only that; other screens inject **`ServiceContainer`**
+  and store it as `self._services`.
 - Widget IDs are **kebab-case** strings (`"msg-input"`, `"left-panel"`).
-- Use **`@work`** for async graph invocation off the UI thread.
-- Integration helpers that should be unit-tested live outside Textual
-  (e.g. `turn_effects.py` — no Textual imports).
+- Use **`@work`** to drive the coordinator's async turn stream off the UI thread
+  (`async for event in coordinator.submit(...)`).
+- Turn coordination lives outside Textual in `src/session/coordinator.py` — the
+  `GameCoordinator` has no Textual imports and is unit-tested with a faked
+  `GraphService`. The TUI maps each `TurnEvent` to a styled write.
 - Escape untrusted content before writing to Rich logs (`escape(...)`).
 
 ---
@@ -320,7 +331,8 @@ duplicated here — cross-reference by decision number instead.
 - **`core/mechanic/`** — table-driven unit tests; pure functions make exhaustive
   coverage cheap.
 - **Nodes** — testable with stubbed DSPy output; no DB or live LLM required.
-- **Integration helpers** (`turn_effects.py`) — Textual-free; mock services.
+- **Coordination** (`src/session/coordinator.py`) — Textual-free; fake `GraphService`
+  (patch its async methods) and assert the yielded `TurnEvent`s + `run_id` rotation.
 - **Layer boundaries** — optional AST test ensuring `nodes/` and `graph/` never
   import `services` or `database`.
 
