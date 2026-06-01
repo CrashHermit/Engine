@@ -7,14 +7,17 @@ from textual.events import Key
 from textual.screen import Screen
 from textual.widgets import Input, RichLog
 
+from src.core.mechanic.economy import DEFAULT_ECONOMY_CONFIG
 from src.core.model.character import CharacterData
 from src.core.model.location import LocationState
 from src.service.container import ServiceContainer
 from src.session.coordinator import GameCoordinator
 from src.session.result import (
+    CharacterLost,
     ClarifyingQuestion,
     Narration,
     ResistanceOffer,
+    TraumaGained,
     TurnError,
     TurnEvent,
 )
@@ -105,5 +108,15 @@ class GameScreen(Screen):
                     log.write("[dim red]No response from graph.[/dim red]")
             case ResistanceOffer(offer):
                 log.write(f"[bold #a87ee3]Resistance:[/bold #a87ee3] {escape(offer)}")
+            case TraumaGained(trauma):
+                log.write(
+                    f"[bold #d98c5f]Trauma:[/bold #d98c5f] stress broke you — "
+                    f"trauma is now {trauma} / {DEFAULT_ECONOMY_CONFIG.trauma_max}."
+                )
+            case CharacterLost():
+                log.write(
+                    "[bold red]Lost:[/bold red] the trauma has claimed you. "
+                    "This character is gone."
+                )
             case TurnError(message):
                 log.write(f"[bold red]Error:[/bold red] {escape(message)}")

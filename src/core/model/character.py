@@ -14,3 +14,7 @@ class CharacterData:
     agreeableness: int
     neuroticism: int
     conscientiousness: int
+    # Per-run economy, persisted on the character (decision #11–13). Defaulted
+    # so existing call sites that build a CharacterData need not change.
+    stress: int = 0
+    trauma: int = 0

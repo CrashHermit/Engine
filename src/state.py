@@ -56,3 +56,7 @@ class GraphState(BaseModel):
     # Per-turn economy (initialised from persisted character state by the TUI)
     stress: int = 0
     trauma: int = 0
+    # Set by resist_roll when a stress overflow converts to trauma (and, at the
+    # trauma cap, the character is lost). Surfaced by the coordinator post-turn.
+    trauma_gained: bool = False
+    character_lost: bool = False

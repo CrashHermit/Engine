@@ -27,6 +27,8 @@ class ResistRollNode:
             "resist_roll_result": roll,
             "stress": stress_result.stress,
             "trauma": stress_result.trauma,
+            "trauma_gained": stress_result.trauma_gained,
+            "character_lost": stress_result.lost,
         }
 
         if state.resist_action == ResistAction.RESIST and state.outcome is not None:
