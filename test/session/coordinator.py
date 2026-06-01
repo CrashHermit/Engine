@@ -115,6 +115,21 @@ async def test_submit_yields_narration_and_rotates_run_id_on_completion():
 
 
 @pytest.mark.asyncio
+async def test_submit_seeds_attribute_ratings_into_graph_state():
+    # _character() has corpus=2, mens=1, anima=1 — these must reach the graph
+    # so the action and resist rolls use the real pools, not a zero pool.
+    result = {"ai_message": _ai("done"), "message_history": []}
+    coord = _coordinator(result=result)
+
+    [e async for e in coord.submit("strike")]
+
+    sent_state = coord._services.graph_service.ainvoke.await_args.args[0]
+    assert sent_state.corpus_rating == 2
+    assert sent_state.mens_rating == 1
+    assert sent_state.anima_rating == 1
+
+
+@pytest.mark.asyncio
 async def test_submit_yields_turn_error_when_invoke_raises():
     coord = _coordinator(result={})
     coord._services.graph_service.ainvoke = AsyncMock(side_effect=RuntimeError("graph boom"))

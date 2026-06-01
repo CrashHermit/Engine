@@ -206,4 +206,10 @@ class GameCoordinator:
             entities_at_location=entities_at_location,
             stress=self._character.stress,
             trauma=self._character.trauma,
+            # Seed the dice pools from the character's attribute ratings so the
+            # action roll (dice_scale) and the resist roll use the real pool
+            # instead of a zero pool (2d6 take-worst). 0 still means roll-worst.
+            corpus_rating=self._character.corpus,
+            mens_rating=self._character.mens,
+            anima_rating=self._character.anima,
         )
