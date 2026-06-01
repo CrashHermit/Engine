@@ -258,9 +258,12 @@ The survival economy. Two intent paths share one stress track.
   several crutches and almost no margin.
 
 ### State home (note)
-Stress, trauma, and the accumulating vice list are **mutable per-run state**, not part of the
-static `CharacterData` dataclass — they live with persisted character/run state. (Exact home
-is an open node; `CharacterData` only needs the *starting* vice + attributes.)
+Stress, trauma, and the accumulating vice list are **mutable per-run state**. **Implemented:**
+stress and trauma persist on the CHARACTER as their own graph nodes — `CHARACTER -HAS_STRESS->
+STRESS -HAS_ATTRIBUTE-> ATTRIBUTE(value)` (and likewise `HAS_TRAUMA`), modelled exactly like
+the core attributes (corpus/mens/anima). The coordinator seeds them into `GraphState` at turn
+start and writes the post-turn values back via `CharacterService.set_economy`. `CharacterData`
+carries the loaded `stress`/`trauma` for display. (The vice list remains an open node.)
 
 ---
 
@@ -502,8 +505,9 @@ suite exists**; persistence is ArcadeDB via a services→repos layer; the TUI re
 - [ ] Surface intent-type routing in the UI.
 
 ### Cross-cutting unknowns (settle as we reach them)
-- **Per-run state home** — `stress` / `trauma` / `vices` as CHARACTER properties, wound-box
-  counts as PART properties: needs ArcadeDB schema + repo/service additions.
+- **Per-run state home** — `stress` / `trauma` **done**: persisted as CHARACTER-attached
+  STRESS / TRAUMA nodes (attribute pattern), seeded into `GraphState` and written back by the
+  coordinator. Remaining: `vices` on the CHARACTER and wound-box counts as PART properties.
 - **Cross-turn carry** — `GraphState` is rebuilt each turn, so the deferred tail and
   resistance offer live on the **`GameCoordinator`** (`src/session/`), not in graph state
   (the #6/#10 design already assumes this). The coordinator — not the TUI — now owns this carry.

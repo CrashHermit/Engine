@@ -29,10 +29,30 @@ class ResistanceOffer:
 
 
 @dataclass(frozen=True)
+class TraumaGained:
+    """A stress overflow converted to trauma this turn. Carries the new trauma
+    total so the display can show progress toward the cap."""
+
+    trauma: int
+
+
+@dataclass(frozen=True)
+class CharacterLost:
+    """The character hit the trauma cap and is lost (retired/dead/broken)."""
+
+
+@dataclass(frozen=True)
 class TurnError:
     """A turn failed; submit() is total and yields this instead of raising."""
 
     message: str
 
 
-TurnEvent = ClarifyingQuestion | Narration | ResistanceOffer | TurnError
+TurnEvent = (
+    ClarifyingQuestion
+    | Narration
+    | ResistanceOffer
+    | TraumaGained
+    | CharacterLost
+    | TurnError
+)

@@ -12,9 +12,11 @@ from src.core.model.location import LocationState
 from src.service.container import ServiceContainer
 from src.session.coordinator import GameCoordinator
 from src.session.result import (
+    CharacterLost,
     ClarifyingQuestion,
     Narration,
     ResistanceOffer,
+    TraumaGained,
     TurnError,
     TurnEvent,
 )
@@ -105,5 +107,15 @@ class GameScreen(Screen):
                     log.write("[dim red]No response from graph.[/dim red]")
             case ResistanceOffer(offer):
                 log.write(f"[bold #a87ee3]Resistance:[/bold #a87ee3] {escape(offer)}")
+            case TraumaGained(trauma):
+                log.write(
+                    f"[bold #d98c5f]Trauma:[/bold #d98c5f] stress broke you — "
+                    f"trauma is now {trauma} / {self._coordinator.character.trauma_max}."
+                )
+            case CharacterLost():
+                log.write(
+                    "[bold red]Lost:[/bold red] the trauma has claimed you. "
+                    "This character is gone."
+                )
             case TurnError(message):
                 log.write(f"[bold red]Error:[/bold red] {escape(message)}")

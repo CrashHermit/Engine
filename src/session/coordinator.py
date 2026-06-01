@@ -6,9 +6,11 @@ from src.core.model.location import LocationState
 from src.core.model.message import Message
 from src.service.container import ServiceContainer
 from src.session.result import (
+    CharacterLost,
     ClarifyingQuestion,
     Narration,
     ResistanceOffer,
+    TraumaGained,
     TurnError,
     TurnEvent,
 )
@@ -16,10 +18,10 @@ from src.state import GraphState
 
 # The integration boundary (design decision #21). GameCoordinator owns turn
 # orchestration and all graph-shape translation, so the TUI only displays. It
-# is Textual-free and unit-testable with a faked GraphService. Effect
-# persistence (harm/stress via services after ainvoke) will slot into submit()
-# in a later PR; for now this is a behaviour-preserving relocation of the logic
-# that lived on GameScreen.
+# is Textual-free and unit-testable with a faked GraphService. After a turn
+# completes it persists the per-run economy (stress / trauma) back onto the
+# character via the character service (see _persist_economy). Harm/body-part
+# persistence will slot in alongside it later.
 
 
 def _interrupt_payload(result: dict) -> dict | str | None:
@@ -156,10 +158,32 @@ class GameCoordinator:
                 else:
                     yield Narration("")
 
-                # Action finished; next message starts a brand-new thread.
+                # Action finished: persist the per-run economy and surface any
+                # trauma / permadeath, then rotate to a fresh thread.
+                for event in self._persist_economy(result):
+                    yield event
                 self._run_id = graph_service.new_run_id()
             except Exception as e:
                 yield TurnError(str(e))
+
+    def _persist_economy(self, result: dict) -> list[TurnEvent]:
+        """Write the turn's stress/trauma back onto the character (only when it
+        changed) and return any trauma / permadeath events to surface."""
+        stress = result.get("stress", self._character.stress)
+        trauma = result.get("trauma", self._character.trauma)
+        if (stress, trauma) != (self._character.stress, self._character.trauma):
+            self._character.stress = stress
+            self._character.trauma = trauma
+            self._services.character.set_economy(
+                self._character.id, stress=stress, trauma=trauma
+            )
+
+        events: list[TurnEvent] = []
+        if result.get("trauma_gained"):
+            events.append(TraumaGained(trauma))
+        if result.get("character_lost"):
+            events.append(CharacterLost())
+        return events
 
     def _build_graph_state(self, text: str) -> GraphState:
         state = self._location_state
@@ -180,4 +204,6 @@ class GameCoordinator:
             location_name=state.location.name if state else "",
             location_description=state.location.description if state else "",
             entities_at_location=entities_at_location,
+            stress=self._character.stress,
+            trauma=self._character.trauma,
         )
