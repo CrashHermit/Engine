@@ -37,3 +37,17 @@ def final_directive(scaffold: FinalScaffold, resist_action: ResistAction) -> str
         )
     base += f"End on this beat: {scaffold.closing_beat}."
     return base
+
+def resolution_directive(consequence: FinalScaffold, action: ResistAction, flavor: str) -> str:
+    if action == ResistAction.ENDURE:
+        return (
+            "In one or two sentences, continuing from the prior prose and matching "
+            f"its voice, narrate how this consequence lands as the character endures it: "
+            f"{consequence}. Do NOT present any resist offer."
+        )
+    return (
+        "In one or two sentences, continuing from the prior prose and matching its "
+        f"voice, narrate how the character's resistance plays out against this "
+        f'consequence: {consequence}. The player framed it as: "{flavor}". Show the '
+        "consequence reduced but still real. Do NOT present any resist offer."
+    )

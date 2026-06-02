@@ -11,7 +11,7 @@ class ThreatMagnitudeNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entities = "\n".join(state.entities_at_location) if state.entities_at_location else ""
+        entities: str = "\n".join(state.entities_at_location) if state.entities_at_location else ""
         prediction: Prediction = await self._program.aforward(
             character_description=state.character_description,
             location_description=state.location_description,

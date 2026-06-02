@@ -13,6 +13,8 @@ class EntityGen:
     name: str
     description: str
     scene_position: str
+    danger: str = "standard"
+    threat_channels: str = ""
 
 
 @dataclass

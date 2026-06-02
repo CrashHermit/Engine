@@ -3,12 +3,13 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
+from src.core.mechanic.dice import RollResult
+from src.core.mechanic.magnitude import Magnitude
+from src.core.model.entity import Danger  # noqa: F401  (kept for callers)
+from src.core.model.location import EntityData
 from src.core.model.message import Message
 from src.core.model.resist import FinalScaffold, HeldScaffold, ResistAction
-from src.core.model.threat import Channel, ThreatType
-from src.core.mechanic.magnitude import Magnitude
-from src.core.mechanic.scaling import Outcome, Position
-from src.core.mechanic.dice import RollResult
+from src.core.model.threat import Channel, Threat
 
 
 class GraphState(BaseModel):
@@ -22,41 +23,66 @@ class GraphState(BaseModel):
     lead_up: str | None = None
     contested_beat: str | None = None
     deferred_tail: str | None = None
+
     location_name: str = ""
     location_description: str = ""
+    # Rendered strings for prompts AND the structured spine for enumeration/caps.
     entities_at_location: list[str] = Field(default_factory=list)
+    scene_entities: list[EntityData] = Field(default_factory=list)
+
     character_name: str = ""
     character_description: str = ""
-    attribute: Channel | None = None
-    threat_type: ThreatType | None = None
-    magnitude: Magnitude | None = None
-    threat_channel: Channel | None = None
     corpus_rating: int = 0
     mens_rating: int = 0
     anima_rating: int = 0
 
-    position: Position = Position.RISKY
-
+    # The single action: which attribute it rolls, and the roll itself.
+    attribute: Channel | None = None
     roll_result: RollResult | None = None
-    outcome: Outcome | None = None
 
-    # Narration pipeline
+    # ── Threats ──────────────────────────────────────────────────────────
+    # Per-source classify branches (Send fan-out) append here; gather_threats
+    # copies into `threats` (plain, overwritten by dice_scale / resist).
+    pending_threats: Annotated[list[Threat], operator.add] = Field(default_factory=list)
+    threats: list[Threat] = Field(default_factory=list)
+    # Transient per-branch carriers for the Send fan-out (set per invocation).
+    classify_source: str = ""
+    classify_entity: EntityData | None = None
+
+    # ── Resist cycle ─────────────────────────────────────────────────────
+    # Stable iteration order: ids of the threats that landed, captured once at
+    # held time so resisting one to magnitude 0 can't shift the cursor.
+    resist_queue: list[str] = Field(default_factory=list)
+    resist_cursor: int = 0
+    resist_response: str | None = None       # transient: latest player reply
+    resist_action: ResistAction | None = None  # transient: parsed this iteration
+    resist_flavor: str | None = None
+
+    # ── Narration pipeline ───────────────────────────────────────────────
     narration_directive: str | None = None
     anchors: str | None = None
     prior_prose: str | None = None
     held_scaffold: HeldScaffold | None = None
     final_scaffold: FinalScaffold | None = None
 
-    # Resistance / push turn
-    resist_response: str | None = None
-    resist_action: ResistAction | None = None
-    resist_flavor: str | None = None
-    resist_roll_result: RollResult | None = None
-
-    # Per-turn economy (initialised from persisted character state by the TUI)
+    # ── Per-run economy ──────────────────────────────────────────────────
     stress: int = 0
     trauma: int = 0
-    # Set by resist_roll when a stress overflow converts to trauma (and, at the
-    # trauma cap, the character is lost). Surfaced by the coordinator post-turn.
     trauma_gained: bool = False
     character_lost: bool = False
+
+    # ── Derived helpers ──────────────────────────────────────────────────
+    @property
+    def landed_threats(self) -> list[Threat]:
+        return [
+            t
+            for t in self.threats
+            if t.outcome is not None and t.outcome.landed_magnitude >= Magnitude.MINOR
+        ]
+
+    @property
+    def current_threat(self) -> Threat | None:
+        if 0 <= self.resist_cursor < len(self.resist_queue):
+            tid = self.resist_queue[self.resist_cursor]
+            return next((t for t in self.threats if t.id == tid), None)
+        return None

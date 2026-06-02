@@ -62,6 +62,18 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
                     id="step-consc",
                 )
 
+            with Vertical(id="char-body-section"):
+                yield Label(content="Body Parts", id="body-label")
+                yield ValueStepper(
+                    label="Manipulator", min_val=0, max_val=4, value=0, id="step-manipulator"
+                )
+                yield ValueStepper(
+                    label="Movement", min_val=0, max_val=4, value=0, id="step-movement"
+                )
+                yield ValueStepper(
+                    label="Sense", min_val=0, max_val=4, value=0, id="step-storage"
+                )
+
             with Horizontal(id="modal-actions"):
                 yield Button(label="Cancel", id="btn-cancel", variant="default")
                 yield Button(label="Create", id="btn-create", variant="primary")

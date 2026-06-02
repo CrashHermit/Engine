@@ -1,24 +1,24 @@
 from langgraph.types import interrupt
 
+from src.core.mechanic.threat_envelope import describe_threat
 from src.state import GraphState
 
 
 class ResistOfferNode:
-    """Pauses the graph after the held narration and waits for the player's
-    resistance response. On resume, stores the player's text as resist_response
-    so the resist_push_parser can classify it.
-
-    The held narration is carried in the interrupt payload. This node runs
-    inside the resolution subgraph, and a subgraph's internal channel writes
-    (here, the narrator's ai_message) do NOT propagate to the parent graph
-    while the subgraph is paused on an interrupt — only the interrupt payload
-    crosses that boundary. Putting the prose in the payload is what lets the
-    coordinator show the consequence before presenting the resist offer."""
+    """Per-threat interrupt. Replay-pure: it only reads state and interrupts.
+    The payload carries the prior prose (cohesive setup before the first offer,
+    or the previous threat's resolution line thereafter) plus this threat's
+    consequence and the live stress total — the informed gamble."""
 
     async def __call__(self, state: GraphState) -> dict:
+        threat = state.current_threat
+        consequence = describe_threat(threat)
         response: str = interrupt(
             {
-                "offer": "Resist, push for effect, or endure?",
+                "offer": f"{consequence} — resist or endure?",
+                "consequence": consequence,
+                "threat_id": threat.id if threat else "",
+                "stress_now": state.stress,
                 "narration": state.prior_prose or "",
             }
         )

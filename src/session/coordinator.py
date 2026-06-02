@@ -187,11 +187,10 @@ class GameCoordinator:
 
     def _build_graph_state(self, text: str) -> GraphState:
         state = self._location_state
-        entities_at_location = (
-            [f"{e.name}: {e.description}. Location: {e.scene_position}" for e in state.entities]
-            if state is not None
-            else []
-        )
+        entities = state.entities if state is not None else []
+        entities_at_location = [
+            f"{e.name}: {e.description}. Location: {e.scene_position}" for e in entities
+        ]
         return GraphState(
             message_history=self._message_history,
             intent_alignment_history=[],
@@ -204,11 +203,9 @@ class GameCoordinator:
             location_name=state.location.name if state else "",
             location_description=state.location.description if state else "",
             entities_at_location=entities_at_location,
+            scene_entities=list(entities),  # structured spine for enumeration + caps
             stress=self._character.stress,
             trauma=self._character.trauma,
-            # Seed the dice pools from the character's attribute ratings so the
-            # action roll (dice_scale) and the resist roll use the real pool
-            # instead of a zero pool (2d6 take-worst). 0 still means roll-worst.
             corpus_rating=self._character.corpus,
             mens_rating=self._character.mens,
             anima_rating=self._character.anima,

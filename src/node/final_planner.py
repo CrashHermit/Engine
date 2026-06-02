@@ -1,6 +1,5 @@
 from dspy import Predict, Prediction
 
-from src.core.mechanic.magnitude import Magnitude
 from src.core.mechanic.narration_directive import final_directive
 from src.core.model.resist import FinalScaffold, ResistAction
 from src.lm import lm
@@ -9,37 +8,32 @@ from src.state import GraphState
 
 
 class FinalPlannerNode:
+    """Reached only when nothing landed (clean/crit, or every threat reduced to
+    0 at scale time). Narrates the avoided beat."""
+
     def __init__(self) -> None:
         self._program: Predict = Predict(signature=FinalPlannerSignature)
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
         entities = "\n".join(state.entities_at_location) if state.entities_at_location else ""
-        mag = state.outcome.landed_magnitude if state.outcome else 0
-        mag_label = Magnitude(mag).name if mag > 0 else "NONE"
-
-        held_ambiguities = (
-            "\n".join(state.held_scaffold.ambiguity_wedge)
-            if state.held_scaffold is not None
-            else ""
-        )
-        resist_action = state.resist_action or ResistAction.ENDURE
+        first = state.threats[0] if state.threats else None
 
         prediction: Prediction = await self._program.aforward(
             character_description=state.character_description,
             location_description=state.location_description,
             entities_at_location=entities,
             contested_beat=state.contested_beat or "",
-            threat_type=state.threat_type.value if state.threat_type else "",
-            threat_channel=state.threat_channel.value if state.threat_channel else "",
-            landed_magnitude=mag_label,
-            held_ambiguities=held_ambiguities,
-            resist_action=resist_action.value,
-            resist_flavor=state.resist_flavor or "",
+            threat_type=first.type.value if first else "",
+            threat_channel=first.channel.value if first else "",
+            landed_magnitude="NONE",
+            held_ambiguities="",
+            resist_action=ResistAction.ENDURE.value,
+            resist_flavor="",
         )
         scaffold: FinalScaffold = prediction.scaffold
         return {
             "final_scaffold": scaffold,
-            "narration_directive": final_directive(scaffold, resist_action),
+            "narration_directive": final_directive(scaffold, ResistAction.ENDURE),
             "anchors": "\n".join(scaffold.new_anchors),
         }

@@ -99,6 +99,8 @@ class WorldService:
                     name=entity.name,
                     description=entity.description,
                     scene_position=entity.scene_position,
+                    danger=entity.danger,
+                    threat_channels=entity.threat_channels,
                 )
 
         for node, loc in zip(nodes, dungeon.locations, strict=True):

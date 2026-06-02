@@ -15,21 +15,26 @@ class HeldPlannerNode:
 
     async def __call__(self, state: GraphState) -> dict:
         entities = "\n".join(state.entities_at_location) if state.entities_at_location else ""
-        mag = state.outcome.landed_magnitude if state.outcome else 0
-        mag_label = Magnitude(mag).name if mag > 0 else "MINOR"
+        landed = state.landed_threats
+        consequences = "\n".join(
+            f"{Magnitude(t.outcome.landed_magnitude).name} {t.type.value} "
+            f"({t.channel.value}) from the {t.source}"
+            for t in landed
+        )
 
         prediction: Prediction = await self._program.aforward(
             character_description=state.character_description,
             location_description=state.location_description,
             entities_at_location=entities,
             contested_beat=state.contested_beat or "",
-            threat_type=state.threat_type.value if state.threat_type else "",
-            threat_channel=state.threat_channel.value if state.threat_channel else "",
-            landed_magnitude=mag_label,
+            consequences=consequences,
         )
         scaffold: HeldScaffold = prediction.scaffold
         return {
             "held_scaffold": scaffold,
             "narration_directive": held_directive(scaffold),
             "anchors": "\n".join(scaffold.sensory_anchors),
+            # Stable iteration order for the resist cycle.
+            "resist_queue": [t.id for t in landed],
+            "resist_cursor": 0,
         }

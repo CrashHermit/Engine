@@ -5,37 +5,28 @@ from src.core.model.resist import HeldScaffold
 
 class HeldPlannerSignature(Signature):
     """
-    A consequence has landed (Minor, Standard, Severe, or Fatal). Extract
-    a structured scaffold so the narrator can commit to the impact while
-    deliberately leaving its depth and finality unresolved — the player may
-    still resist or push.
+    One or more consequences have landed at once. Produce a single COHESIVE
+    scaffold so the narrator can set the whole moment as one blended beat —
+    committing to each impact while leaving depth and finality unresolved (the
+    player will resist each in turn).
 
-    - impact_focus: the core of what the threat strikes (body part, memory,
-      relationship, resource, position). One short phrase.
-    - sensory_anchors: 2–3 concrete sensory details to ground the prose in the
-      moment (sound, sensation, image). Keep them immediate and specific.
-    - ambiguity_wedge: 2–3 dimensions to leave unresolved — severity,
-      permanence, the exact extent of damage. Each as a short phrase the
-      narrator must NOT commit to.
-    - tension_close: one sentence describing how to end the beat — a breath
-      of space, a held moment, an open question.
-    - resist_options_text: 2–3 ways the character could plausibly resist or
-      push back in the fiction. One sentence, suitable as the resist offer
-      presented after the prose.
+    - impact_focus: the core of what was struck, across all listed
+      consequences. One short phrase.
+    - sensory_anchors: 2–3 concrete sensory details grounding the combined
+      moment.
+    - ambiguity_wedge: 2–3 dimensions to leave open (severity, permanence,
+      extent) — the narrator must NOT commit to these.
+    - tension_close: one sentence ending the beat on a held breath.
+    - resist_options_text: not used as the per-threat offer (those are posed
+      one at a time downstream); keep it a short line of in-fiction options.
     """
 
     character_description: str = InputField(default="")
     location_description: str = InputField(default="")
     entities_at_location: str = InputField(default="")
-    contested_beat: str = InputField(
-        description="The single contested action that was rolled"
-    )
-    threat_type: str = InputField(description="The kind of consequence that landed")
-    threat_channel: str = InputField(description="The channel the consequence falls on")
-    landed_magnitude: str = InputField(
-        description="How severe the consequence is: MINOR, STANDARD, SEVERE, or FATAL"
+    contested_beat: str = InputField(description="The single contested action that was rolled")
+    consequences: str = InputField(
+        description="The landed consequences, one per line: 'SEVERE harm (corpus) from the warden'"
     )
 
-    scaffold: HeldScaffold = OutputField(
-        description="Structured scaffold for the held narration"
-    )
+    scaffold: HeldScaffold = OutputField(description="Cohesive scaffold for the held narration")

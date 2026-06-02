@@ -1,6 +1,7 @@
 from dspy import Predict, Prediction
 
-from src.core.mechanic.magnitude import Magnitude
+from src.core.mechanic.threat_envelope import describe_threat
+from src.core.model.resist import ResistAction
 from src.lm import lm
 from src.signature.resist_push_parser import ResistPushParserSignature
 from src.state import GraphState
@@ -12,17 +13,14 @@ class ResistPushParserNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        m = state.outcome.landed_magnitude if state.outcome else 0
-        mag = Magnitude(m).name.capitalize() if m > 0 else "none"
-        ttype = state.threat_type.value if state.threat_type else "consequence"
-        chan = state.threat_channel.value if state.threat_channel else ""
-        consequence = f"{mag} {ttype} ({chan})"
-
+        consequence = describe_threat(state.current_threat)
         prediction: Prediction = await self._program.aforward(
             consequence=consequence,
             player_response=state.resist_response or "",
         )
-        return {
-            "resist_action": prediction.action,
-            "resist_flavor": prediction.flavor,
-        }
+        # Push is retained mechanically but dropped from the offer surface
+        # (no effect-on-target to spend it on yet) — fold it into resist.
+        action = prediction.action
+        if action == ResistAction.PUSH:
+            action = ResistAction.RESIST
+        return {"resist_action": action, "resist_flavor": prediction.flavor}

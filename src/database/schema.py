@@ -35,6 +35,8 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "direction": arcadedb.PropertyType.STRING,
     "is_center": arcadedb.PropertyType.BOOLEAN,
     "scene_position": arcadedb.PropertyType.STRING,
+    "danger": arcadedb.PropertyType.STRING,
+    "threat_channels": arcadedb.PropertyType.STRING,
 }
 
 BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated_at"]
@@ -76,7 +78,7 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
         "detail_count",
         "detail_radius_pct",
     ],
-    VertexType.ENTITY: ["name", "description", "scene_position"],  # PROTOTYPE
+    VertexType.ENTITY: ["name", "description", "scene_position", "danger", "threat_channels"],
 }
 
 EDGE_SCHEMA: dict[EdgeType, list[str]] = {
