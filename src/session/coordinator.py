@@ -10,6 +10,7 @@ from src.session.result import (
     ClarifyingQuestion,
     Narration,
     ResistanceOffer,
+    TargetDefeated,
     TraumaGained,
     TurnError,
     TurnEvent,
@@ -158,9 +159,12 @@ class GameCoordinator:
                 else:
                     yield Narration("")
 
-                # Action finished: persist the per-run economy and surface any
-                # trauma / permadeath, then rotate to a fresh thread.
+                # Action finished: persist the per-run economy and the target
+                # clocks, surface any trauma / permadeath / defeat, then rotate
+                # to a fresh thread.
                 for event in self._persist_economy(result):
+                    yield event
+                for event in self._persist_entities(result):
                     yield event
                 self._run_id = graph_service.new_run_id()
             except Exception as e:
@@ -183,6 +187,31 @@ class GameCoordinator:
             events.append(TraumaGained(trauma))
         if result.get("character_lost"):
             events.append(CharacterLost())
+        return events
+
+    def _persist_entities(self, result: dict) -> list[TurnEvent]:
+        """Write back any target-clock changes, remove a defeated entity, and
+        refresh the cached location state so the next turn sees it."""
+        scene_entities = result.get("scene_entities") or []
+        if not scene_entities:
+            return []
+
+        self._services.location.persist_entity_wounds(scene_entities)
+
+        events: list[TurnEvent] = []
+        defeated_name = result.get("defeated_target") or ""
+        if defeated_name:
+            defeated_id = next(
+                (e.id for e in scene_entities if e.name == defeated_name and e.id), ""
+            )
+            if defeated_id:
+                self._services.location.remove_entity(defeated_id)
+            events.append(TargetDefeated(defeated_name))
+
+        # Refresh so subsequent turns reflect updated clocks / removals.
+        refreshed = self._services.location.get_state_for_character(self._character.id)
+        if refreshed is not None:
+            self._location_state = refreshed
         return events
 
     def _build_graph_state(self, text: str) -> GraphState:

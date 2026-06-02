@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 
+from src.core.mechanic.harm import WoundPool
 from src.core.model.entity import Danger
 from src.core.model.threat import Channel
 
@@ -14,6 +15,10 @@ class EntityData:
     danger: Danger = Danger.STANDARD
     threat_channels: frozenset[Channel] = field(default_factory=frozenset)
     id: str = ""
+    # Effect-on-target clock: the player's action fills it; full = defeated.
+    # Capacity is set from danger by the service (this default is a placeholder
+    # for in-memory construction).
+    wound: WoundPool = field(default_factory=WoundPool)
 
 
 @dataclass

@@ -16,6 +16,7 @@ from src.session.result import (
     ClarifyingQuestion,
     Narration,
     ResistanceOffer,
+    TargetDefeated,
     TraumaGained,
     TurnError,
     TurnEvent,
@@ -117,5 +118,7 @@ class GameScreen(Screen):
                     "[bold red]Lost:[/bold red] the trauma has claimed you. "
                     "This character is gone."
                 )
+            case TargetDefeated(name):
+                log.write(f"[bold #6ec06e]Defeated:[/bold #6ec06e] {escape(name)} is down.")
             case TurnError(message):
                 log.write(f"[bold red]Error:[/bold red] {escape(message)}")

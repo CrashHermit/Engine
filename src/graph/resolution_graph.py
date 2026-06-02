@@ -3,6 +3,7 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Send
 
 from src.graph.logged_node import LoggedNode
+from src.node.apply_effect import ApplyEffectNode
 from src.node.attribute_selector import AttributeSelectorNode
 from src.node.classify_threat import ClassifyThreatNode
 from src.node.dice_scale import DiceScaleNode
@@ -86,6 +87,7 @@ class ResolutionGraphBuilder:
         self.workflow.add_node("classify_threat", LoggedNode("classify_threat", ClassifyThreatNode()))
         self.workflow.add_node("gather_threats", LoggedNode("gather_threats", GatherThreatsNode()))
         self.workflow.add_node("dice_scale", LoggedNode("dice_scale", DiceScaleNode()))
+        self.workflow.add_node("apply_effect", LoggedNode("apply_effect", ApplyEffectNode()))
         self.workflow.add_node("held_planner", LoggedNode("held_planner", HeldPlannerNode()))
         self.workflow.add_node("final_planner", LoggedNode("final_planner", FinalPlannerNode()))
         self.workflow.add_node("narrator", LoggedNode("narrator", NarratorNode()))
@@ -109,7 +111,10 @@ class ResolutionGraphBuilder:
         self.workflow.add_conditional_edges("attribute_selector", _fan_out_threats, ["classify_threat"])
         self.workflow.add_edge("classify_threat", "gather_threats")
         self.workflow.add_edge("gather_threats", "dice_scale")
-        self.workflow.add_conditional_edges("dice_scale", _route_by_significance)
+        # One roll, two axes: scale threats (dice_scale) then land effect on the
+        # target (apply_effect) before deciding the held/resist path.
+        self.workflow.add_edge("dice_scale", "apply_effect")
+        self.workflow.add_conditional_edges("apply_effect", _route_by_significance)
 
         self.workflow.add_edge("held_planner", "narrator")
         self.workflow.add_edge("final_planner", "narrator")

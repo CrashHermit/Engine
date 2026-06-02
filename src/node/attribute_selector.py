@@ -11,9 +11,14 @@ class AttributeSelectorNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
+        entities = "\n".join(state.entities_at_location) if state.entities_at_location else ""
         prediction: Prediction = await self._program.aforward(
             character_description=state.character_description,
             location_description=state.location_description,
+            entities_at_location=entities,
             contested_beat=state.contested_beat,
         )
-        return {"attribute": prediction.attribute}
+        return {
+            "attribute": prediction.attribute,
+            "target_entity": (prediction.target or "").strip(),
+        }

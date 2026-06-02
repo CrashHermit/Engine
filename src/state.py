@@ -36,9 +36,15 @@ class GraphState(BaseModel):
     mens_rating: int = 0
     anima_rating: int = 0
 
-    # The single action: which attribute it rolls, and the roll itself.
+    # The single action: which attribute it rolls, its target, and the roll.
     attribute: Channel | None = None
+    target_entity: str = ""  # name of the entity the action is directed at
     roll_result: RollResult | None = None
+
+    # ── Effect-on-target ─────────────────────────────────────────────────
+    # apply_effect fills the target's clock (carried inside scene_entities) and
+    # names a target it defeated this turn; the coordinator persists/removes it.
+    defeated_target: str = ""
 
     # ── Threats ──────────────────────────────────────────────────────────
     # Per-source classify branches (Send fan-out) append here; gather_threats

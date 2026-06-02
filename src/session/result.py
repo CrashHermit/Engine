@@ -42,6 +42,14 @@ class CharacterLost:
 
 
 @dataclass(frozen=True)
+class TargetDefeated:
+    """The action filled a target entity's clock; it is defeated and removed
+    from the scene. Carries the entity name for display."""
+
+    name: str
+
+
+@dataclass(frozen=True)
 class TurnError:
     """A turn failed; submit() is total and yields this instead of raising."""
 
@@ -54,5 +62,6 @@ TurnEvent = (
     | ResistanceOffer
     | TraumaGained
     | CharacterLost
+    | TargetDefeated
     | TurnError
 )

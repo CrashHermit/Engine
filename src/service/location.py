@@ -1,6 +1,8 @@
 from arcadedb_embedded.graph import Vertex
 import logging
 
+from src.core.mechanic.effect import capacity_for_danger
+from src.core.mechanic.harm import WoundPool
 from src.core.model.entity import Danger
 from src.core.model.location import EntityData, LocationData, LocationState
 from src.core.model.threat import Channel
@@ -64,12 +66,33 @@ class LocationService:
         channels = frozenset(
             Channel(c) for c in (s.strip() for s in channels_csv.split(",")) if c
         )
-        danger_raw = entity.get(name="danger") or Danger.STANDARD.value
+        danger = Danger(entity.get(name="danger") or Danger.STANDARD.value)
+        capacity = entity.get(name="wound_capacity") or capacity_for_danger(danger)
+        filled = entity.get(name="wound_filled") or 0
         return EntityData(
             id=entity.get(name="id") or "",
             name=entity.get(name="name") or "",
             description=entity.get(name="description") or "",
             scene_position=entity.get(name="scene_position") or "",
-            danger=Danger(danger_raw),
+            danger=danger,
             threat_channels=channels,
+            wound=WoundPool(capacity=capacity, filled=filled),
         )
+
+    def persist_entity_wounds(self, entities: list[EntityData]) -> None:
+        """Write each entity's clock fill back to its vertex (post-turn)."""
+        with self._base.transaction():
+            for e in entities:
+                if not e.id:
+                    continue
+                vertex = self._locations.get_entity(e.id)
+                if vertex is not None:
+                    self._locations.set_entity_wounds(vertex, e.wound.filled)
+
+    def remove_entity(self, entity_id: str) -> None:
+        """Remove a defeated entity from the world."""
+        self._logger.info("remove_entity id=%s", entity_id)
+        with self._base.transaction():
+            vertex = self._locations.get_entity(entity_id)
+            if vertex is not None:
+                self._locations.remove_entity(vertex)

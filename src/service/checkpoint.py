@@ -6,10 +6,12 @@ from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
 from src.core.model.entity import Danger
 from src.core.mechanic.dice import RollResult, RollTier
+from src.core.mechanic.harm import WoundPool, WoundThresholds
 from src.core.mechanic.magnitude import Magnitude
 from src.core.mechanic.scaling import Outcome, Position
 from src.core.model.message import Message
 from src.core.model.location import EntityData
+from src.core.model.part import Status
 from src.core.model.resist import FinalScaffold, HeldScaffold, ResistAction
 from src.core.model.threat import Channel, Threat, ThreatType
 
@@ -34,6 +36,9 @@ _ALLOWED_CHECKPOINT_TYPES: tuple[type, ...] = (
     EntityData,
     Danger,
     Threat,
+    WoundPool,
+    WoundThresholds,
+    Status,
 )
 
 
