@@ -1,10 +1,12 @@
 # Blades in the Dark — Resolution Integration Design
 
 > **Status:** Living design doc. The decisions in §3 are locked; §8 is the open agenda.
-> **Branch:** `claude/bitd-integration-design-ujx7Z`
-> **Scope:** Replacing the current "decompose intent into an action list" step with a
-> proper Blades-in-the-Dark (BitD) action-resolution loop, decomposed into small
-> DSPy modules suited to smaller models.
+> Decisions **#34–#40** and **§11** record the NPC / multi-threat / effect-on-target /
+> de-threat layer built on top of the player-side spine — they supersede the single-threat
+> parts of §4–§5 and decisions #15/#18/#31.
+> **Scope:** A faithful Blades-in-the-Dark (BitD) action-resolution loop, decomposed into
+> small DSPy modules suited to smaller models — covering both the player-side resolution
+> spine (§1–§7) and NPCs as threat sources *and* targets with a general de-threat model (§11).
 
 ---
 
@@ -92,6 +94,13 @@ Relevant existing facts that shape the design:
 | 23 | **"Character lost" endgame = new character, same world, continuity.** At 4 trauma the old `CharacterData` is flagged `retired/lost` and persists in the world (available as NPC or memory). The TUI transitions to the character-creation flow; the run continues in the same world with the replacement. World state (location, entities) carries over. No data is destroyed. | Matches BitD's legacy-game ethos; costs only a status flag + a TUI transition. The replacement flow (dot-allocation UI) is already partially built. Clean slate (option B) loses narrative continuity; silent removal (option C) loses the NPC echo. |
 | 22 | **Trauma conditions = structured tag + freeform display label.** Each trauma condition carries a typed `TraumaCategory` enum tag (for classifier reasoning) and a narrator-generated freeform label (what the player sees). Taxonomy is content-mode-aware — a clean set now, adult set added when adult mechanics land. Conditions accumulate alongside vices as a scar-record. | Freeform alone can't support future mechanical hooks; a full fixed list is too rigid for adult content extensibility. The hybrid gives classifiers a clean type while keeping the surface feel organic. |
 | 21 | **Effects are applied at the integration boundary, not inside graph nodes.** Graph nodes stay **pure** — they read `GraphState` and emit *intended* effects (the resolved roll, harm to apply, a stress delta) back into state; they never touch repositories or services. After `ainvoke`, the **`GameCoordinator`** (`src/session/coordinator.py`) applies those effects via services (which own the transactions over the repos). The coordinator is the Textual-free integration boundary: it owns turn orchestration + all graph-shape translation and exposes a typed async event stream to the TUI, so the TUI only displays. The Phase-0 mechanics core returns plain data precisely so a service can persist it. *(Effect persistence itself is not yet wired — the coordinator currently relocates the existing turn loop; a later PR slots `apply_turn_effects` into `submit()`.)* | Matches the locked layering (`ServiceContainer`: screens/nodes talk to services, **never repos**) and the engine's current shape (graph built once, `GraphState` rebuilt per turn, no DB session injected into nodes). Keeps nodes **unit-testable offline** (no DB/LLM), keeps services the **single write path**, and avoids coupling the graph to a live ArcadeDB session. **Rejected:** injecting `ServiceContainer` into nodes — preserves the rule but couples the graph to the DB and hurts node testability. |
+| 34 | **NPCs are first-class entities, decoupled from location, carrying a structured spine — danger, not HP.** `EntityData` (`core/model/location.py`) holds `kind` (`EntityKind` = CREATURE / OBJECT), `danger` (`Danger` = LOW/STANDARD/ELITE/DEADLY), `threat_channels` (affinity), plus live de-threat state. Entities live as `ENTITY` vertices placed by a `CONTAINS` edge (own `EntityRepository` seam); `LocationService` projects them into `GraphState.scene_entities`. Only a CREATURE is a foe (targetable, defeat clock, active threat source); an OBJECT is scenery (can still threaten environmentally, never "defeated"). | Fiction-first Blades NPCs, not D&D stat blocks. `danger` is a structural ceiling (→ magnitude cap **and** clock capacity); affinity anchors the threat channel. Decoupling from location gives the future spawner a clean seam. See §11. |
+| 35 | **Threats are multiple & per-source, enumerated by dynamic `Send` fan-out. Supersedes #15/#18/#31's single shared threat.** Candidate sources = every ACTIVE scene entity **+ `environment`**; one `classify_threat` branch per source (via `Send`) decides *threat-or-none* and emits a `Threat {source, type, channel, magnitude, position}`; `gather_threats` collects them into `threats`. Magnitude is **capped per-source by `danger`** (`threat_envelope`), channel **snapped into the source's affinity**, position derived from danger. The **single action roll** scales every threat (`dice_scale`). | A scene threatens you from several directions at once (Deep Cuts); the ceiling must be *per-source*, never a scene max. The three separate threat classifiers (#15/#18) collapse into one per-source classifier run in parallel. |
+| 36 | **Sequential per-threat resistance + hybrid narration. Extends #6/#33.** Each landed threat is resisted in turn: one **cohesive held setup** passage, then per threat `resist_offer (interrupt) → resist_push_parser → resist_roll → resolution_narrator`, driven by a stable `resist_queue` (threat ids) + `resist_cursor` — implemented as a **graph cycle**, not a single node, for replay-safety. A distinct `resolution_narrator` (2nd `NarratorNode`) writes the per-threat resolution line; mid-sequence permadeath halts the cycle. Push is folded to resist on this surface (resist/endure only — see #37 for action-level push). | Stress revealed between rolls makes each resist an informed gamble; a stable id queue means resisting a threat to 0 can't shift the cursor. Hybrid = cohesive setup + granular per-resist feedback. |
+| 37 | **Effect-on-target: one roll, two axes (the half deferred at the start).** The same action tier that scales threats *back at the player* also scales the player's **effect on the target** (`apply_effect`, after `dice_scale`). The `Effect` enum is wired: `tier → effect` (crit GREAT / clean STANDARD / partial LIMITED / bad none) shifted one step by **potency** (attribute pool vs target danger). Effect fills the target's clock. **Push-for-effect returns, action-level:** detected from action intent in `attribute_selector`, `apply_effect` spends a flat stress for **+1 segment**, only when the action already landed (a miss can't be pushed). | Closes the loop opened at the very start — NPCs as *targets*, not just threat sources — and gives the long-deferred push something to spend on. Mirrors the threat axis exactly. |
+| 38 | **De-threat = break any one threat condition (pillar), not "kill". `ThreatPillar` = EXISTS · CAPABLE · AWARE · IN_REACH · WILLING** (Able + Engaged + Willing). The action targets one pillar (`attribute_selector`); `apply_effect` fills that pillar's clock; breaking **EXISTS → GONE** (removed), any other pillar **→ SUSPENDED** (out of scene, not dead). A structural `resolution_outcome` tells the narrator how to frame it (kill / disarm / sneak-past / drive-off / cow) so prose can't recast a rout as a kill. Suspended creatures stop generating threats. | Enumerate the *conditions a threat needs* (closed, exhaustive) instead of *methods to win* (open-ended). One mechanism covers kill, disarm, stealth, flight, intimidation, persuasion. Blades-true (generic obstacle clocks), not an HP sim. |
+| 39 | **Durability: soft de-threats revert; a turn-start `reengage` check brings foes back.** On suspend, a creature records `returns_when` (per-pillar default). A `reengage` node at turn start (covers mundane + roll paths; no LLM call when nothing is suspended) has an LLM judge whether the player's latest action satisfies `returns_when`; if so the creature reactivates, the broken pillar's clock **resets** (it rallied / re-noticed), it rejoins the fan-out, and the narrator frames the return (`TargetReturned`). **EXISTS is permanent.** | "Neutralized ≠ removed." A cowed foe rallies, a snuck-past guard turns round — the living-scene behavior a stealth/social game needs. |
+| 40 | **Per-creature pillar profiles + immunities; clocks tuned so weak foes drop in one hit.** Capacity by danger: **LOW 1 / STANDARD 3 / ELITE 6 / DEADLY 10** (effect lands 1–3, so LOW one-shots, DEADLY is a real clock). An authored `pillar_profile {pillar → capacity}` overrides uniform: a listed pillar uses its capacity, an **omitted pillar is IMMUNE** (capacity 0 → no-op + feedback). No profile → uniform from danger. Persisted as a `pillar_profile` JSON column; live state (`status`, `broken_pillar`, per-pillar `clocks`, `returns_when`) as a `resolution` JSON column. | Source of tactical variety — the golem you can't reason with, the coward with a tiny will-clock — without an HP-grind feel. Weak foes resolve in one Blades-style exchange; clocks are reserved for foes that earn a struggle. |
 
 ### Resolution model — Deep Cuts cherry-pick (#15–18)
 
@@ -122,6 +131,13 @@ the classifiers own type / magnitude / channel; the narrator owns all fiction.**
 ---
 
 ## 4. Target graph topology
+
+> **Superseded by §11 (decisions #34–#40).** The single-threat topology below is
+> the original design. As built, the framing fan-out is a **per-source `Send`
+> fan-out of `classify_threat`** (not three fixed threat classifiers), a
+> `reengage` node runs at turn start, `apply_effect` lands effect on the target
+> after `dice_scale`, and the resist step is a **sequential per-threat cycle**.
+> See §11.9 for the current diagram.
 
 Replace the single `action_generator` node with the resolution subgraph:
 
@@ -193,6 +209,12 @@ RESOLUTION (Deep Cuts cherry-pick):
 ---
 
 ## 5. DSPy module inventory (1 signature + 1 node each)
+
+> **Partly superseded by §11.10.** `threat-type` / `threat-magnitude` /
+> `threat-channel` were **removed** and replaced by a single per-source
+> `classify_threat`; `attribute_selector` now also emits `target` + `pillar` +
+> `push`; `apply_effect`, `gather_threats`, `reengage`, and a second
+> `resolution_narrator` were added. See §11.10 for the delta.
 
 | Module | Task | Output |
 |--------|------|--------|
@@ -514,3 +536,145 @@ suite exists**; persistence is ArcadeDB via a services→repos layer; the TUI re
 - **Reducer/fan-out concurrency** — the Phase-2 fan-out is the first place concurrent writes
   hit `GraphState`; get disjoint keys / reducers right here.
 - **Model routing / DSPy optimization** — a parallel track that can lag the spine entirely.
+
+---
+
+## 11. NPCs, multi-threat resolution & de-threat (as built — current iteration)
+
+This iteration built the **other half** of the resolution loop. §4–§7 describe a
+single-threat, player-side turn (one threat scaled by the roll, resisted once).
+As built, the engine now also models **NPCs as in-world entities** that are both
+**threat sources** (multi-threat) and **targets** (effect-on-target), and a
+general **de-threat** model for removing them by *any* means. This section is the
+authoritative current description; it supersedes the single-threat parts of §4
+(topology), §5 (inventory), and decisions #15/#18/#31, and extends #6/#33.
+Locked decisions: **#34–#40**.
+
+### 11.1 Entities — NPCs & props (#34)
+`EntityData` (`core/model/location.py`): `name`, `description`, `scene_position`,
+`kind` (`EntityKind` CREATURE/OBJECT), `danger` (`Danger` LOW/STANDARD/ELITE/DEADLY),
+`threat_channels` (affinity), plus live state (§11.7). Stored as `ENTITY` vertices,
+placed by a `CONTAINS` edge; `EntityRepository` is the decoupled persistence seam;
+`LocationService` projects rows into `GraphState.scene_entities`. Only **CREATURE**s
+are foes (targetable, carry a defeat clock, act as active threat sources); **OBJECT**s
+are scenery (may threaten environmentally; never "defeated", no clock). `danger` is the
+single structural knob → both the **magnitude cap** (threats) and the **clock capacity**
+(effect). The prototype dungeon (`worldgen/stages/dungeon.py`) authors the spider as a
+real ELITE creature; everything else is an OBJECT.
+
+### 11.2 Multi-threat enumeration (#35)
+Per turn the candidate threat sources are **every ACTIVE scene entity + `environment`**.
+A LangGraph **`Send` fan-out** runs one `classify_threat` branch per source (each Send
+carries a full `GraphState` copy — Send does **not** coerce a dict into the pydantic
+schema, so a bare dict would break `LoggedNode`/attribute access). Each branch decides
+*threat-or-none* and, if it threatens, emits one `Threat {source, type, channel,
+magnitude, position, id}` into `pending_threats` (an `operator.add` channel);
+`gather_threats` copies them into the plain `threats` list. Anchoring is belt-and-
+suspenders: **magnitude is clamped to the source's `danger`** (`threat_envelope`),
+**channel snapped into the source's affinity**, position derived from danger. The
+**single action roll** (`dice_scale`) then scales *every* threat from the one tier.
+
+### 11.3 Sequential per-threat resistance + hybrid narration (#36)
+The significance gate routes on **any landed threat ≥ Minor** → `held_planner` (a
+**cohesive** setup scaffold over all landed threats) → `narrator` (setup prose). Then a
+**graph cycle** resolves threats one at a time:
+`resist_offer (interrupt) → resist_push_parser → resist_roll → resolution_narrator →
+(more landed? → resist_offer : turn_close)`, driven by a stable `resist_queue` (threat
+ids, captured at held time) + `resist_cursor`. A **distinct `resolution_narrator`**
+(second `NarratorNode`) writes each per-threat resolution line; stress threads across the
+cycle (OR-accumulated trauma/permadeath); mid-sequence permadeath halts. Push is folded
+to resist on this surface (resist/endure only). The avoided path (nothing landed) →
+`final_planner → narrator → turn_close`.
+
+### 11.4 Effect-on-target — one roll, two axes (#37)
+After `dice_scale`, `apply_effect` lands the player's effect on the action's target. The
+`Effect` enum is wired: `effect_from_tier` (crit GREAT / clean STANDARD / partial LIMITED
+/ bad none) shifted one step by **potency** (`attribute pool` vs target `danger`; a miss
+stays a miss). Effect (1–3 segments) fills the **targeted pillar's** clock. The threat
+axis (back at the player) and the effect axis (onto the target) are driven by the *same*
+tier — a partial hits it *and* it hits you.
+
+### 11.5 De-threat pillar model (#38)
+A creature is a threat only while **Able + Engaged + Willing**. `ThreatPillar` enumerates
+the five conditions: **EXISTS, CAPABLE** (Able) · **AWARE, IN_REACH** (Engaged) ·
+**WILLING**. `attribute_selector` classifies which pillar the action attacks;
+`apply_effect` fills that pillar's clock. Breaking **EXISTS → GONE** (removed); breaking
+any other pillar **→ SUSPENDED** (out of scene, alive). A structural `resolution_outcome`
+string instructs the narrator on framing (kill / disarm / sneak-past / drive-off / cow),
+so prose can't recast a rout as a kill. Per-pillar clocks are **independent** (yelling
+doesn't undo wounds). Suspended creatures are skipped by the threat fan-out.
+
+### 11.6 Durability — suspended foes return (#39)
+On suspend a creature records `returns_when` (per-pillar default in `effect.returns_when_for`).
+A `reengage` node at **turn start** (before `roll_gate`, so it covers mundane and roll
+turns; returns immediately with **no LLM call** when nothing is suspended) asks an LLM,
+per suspended creature, whether the player's latest action satisfies its `returns_when`.
+If so it reactivates, **resets the broken pillar's clock** (rallied / re-noticed), rejoins
+the fan-out, and is narrated returning (`TargetReturned`). **EXISTS is permanent.**
+
+### 11.7 Profiles & immunities (#40)
+Capacity by danger (tuned for one-hit weak foes): **LOW 1 · STANDARD 3 · ELITE 6 ·
+DEADLY 10**. An authored `pillar_profile {pillar → capacity}` is authoritative: a listed
+pillar uses its capacity; an **omitted pillar is IMMUNE** (`pillar_capacity` returns 0 →
+`apply_effect` no-ops with player feedback). No profile → uniform from danger
+(backward-compatible). This is the source of tactical variety (mindless thing immune to
+WILLING/AWARE; coward with a tiny WILLING clock).
+
+### 11.8 Push-for-effect (action-level) (#37)
+Re-enabled now that pillars give it a target. `attribute_selector` emits `push` when the
+action is all-out; `apply_effect` adds **+1 segment** for a **flat stress cost**
+(`push.PUSH_FOR_EFFECT_STRESS`), charged through the normal economy (can convert to
+trauma), and **only when the action already landed effect** (a miss isn't charged). Not a
+per-threat resist option — it's an action-level choice on the effect axis.
+
+### 11.9 Graph topology (as built)
+```
+START → reengage → roll_gate
+  ├─(no roll)─► mundane ─► narrator ─► turn_close ─► END
+  └─(roll)──► segmenter ─► attribute_selector
+                                │  Send: one classify_threat per ACTIVE entity + "environment"
+                                ▼
+                          classify_threat ×N ─► gather_threats ─► dice_scale ─► apply_effect ─► significance
+                                                                                       ├─ none landed ─► final_planner ─► narrator ─► turn_close ─► END
+                                                                                       └─ ≥ Minor ─────► held_planner ─► narrator(setup)
+                                                                                                                              │
+                                          ┌──────── resist cycle (resist_queue + cursor) ───────────────────────────────────┘
+                                          ▼
+                              resist_offer (interrupt) ─► resist_push_parser ─► resist_roll ─► resolution_narrator
+                                          ▲                                                          │
+                                          └──────────────── more landed & not lost ◄────────────────┤
+                                                                                  done/lost ─► turn_close ─► END
+```
+
+### 11.10 Module inventory delta (vs §5)
+- **Added:** `classify_threat` (per-source threat-or-none + type/magnitude/channel),
+  `gather_threats` (fan-in), `apply_effect` (effect-on-target + push), `reengage`
+  (durability), `resolution_narrator` (2nd `NarratorNode` for per-threat lines).
+- **Extended:** `attribute_selector` now outputs `attribute` + `target` + `pillar` + `push`.
+  `held_planner` is list-aware (a cohesive `consequences` block); `final_planner` is now
+  only the avoided path.
+- **Removed:** `threat_type` / `threat_channel` / `threat_magnitude` nodes + signatures
+  (folded into `classify_threat`); a dead `candidate_sources` helper.
+- **New signatures:** `threat_classifier`, `reengage`.
+
+### 11.11 Persistence & checkpoint
+`ENTITY` vertex props: `kind`, `danger`, `threat_channels` (CSV), `resolution` (JSON:
+`status`, `broken_pillar`, per-pillar `clocks`, `returns_when`), `pillar_profile` (JSON:
+`pillar → capacity`). Capacity derives from danger when unprofiled. `LocationService`
+(de)serializes both blobs; the `GameCoordinator` persists resolution state post-turn,
+removes GONE entities, refreshes the scene, and emits `TargetDefeated` / `TargetSuspended`
+/ `TargetReturned`. The de-threat state rides inside `scene_entities` across the resist
+resume, so the checkpoint allowlist (`service/checkpoint.py`) includes `EntityData`,
+`Danger`, `EntityKind`, `EntityStatus`, `ThreatPillar`, `Threat`, `Channel`.
+
+### 11.12 Open / deferred for this layer
+- **`reengage`** keys off the player's raw input message, not within-turn fiction (enough
+  for "I corner it"; revisit if returns feel under/over-eager).
+- **push** is a flat stress cost regardless of tier, and push intent is inferred from
+  phrasing (watch for false positives that surprise the player with stress).
+- **LLM-generated NPCs at worldgen** — only the hand-authored prototype exists; a worldgen
+  stage that generates entities (kind/danger/affinity/profile) from the world fiction is the
+  next natural step.
+- **Effect-on-target vs harm/body (§7):** NPC clocks are abstract per-pillar tracks; they do
+  **not** use the player's per-part `WoundPool`. The two damage models are intentionally
+  asymmetric (protagonist anatomy vs adversary clock).
