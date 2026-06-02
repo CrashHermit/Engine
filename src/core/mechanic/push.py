@@ -15,6 +15,11 @@ the highest die of the push roll:
 from src.core.mechanic.dice import RollTier
 from src.core.mechanic.magnitude import clamp_magnitude
 
+# Push for effect (action-level): spend a flat stress cost to land one extra
+# effect segment on the target's pillar clock. Blades-standard flat 2.
+PUSH_FOR_EFFECT_STRESS: int = 2
+PUSH_FOR_EFFECT_SEGMENTS: int = 1
+
 PUSH_COST: dict[RollTier, int] = {
     RollTier.CRIT: 0,
     RollTier.CLEAN: 1,

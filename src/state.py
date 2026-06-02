@@ -40,6 +40,7 @@ class GraphState(BaseModel):
     attribute: Channel | None = None
     target_entity: str = ""  # name of the entity the action is directed at
     target_pillar: ThreatPillar | None = None  # which condition the action attacks
+    push_for_effect: bool = False  # spend stress for +1 effect segment on the target
     roll_result: RollResult | None = None
 
     # ── Effect-on-target ─────────────────────────────────────────────────

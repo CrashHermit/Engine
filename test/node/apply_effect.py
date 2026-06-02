@@ -90,6 +90,25 @@ async def test_miss_lands_no_effect():
 
 
 @pytest.mark.asyncio
+async def test_push_for_effect_adds_segment_and_charges_stress():
+    # STANDARD cap 3; CLEAN = 2, +1 push = 3 -> fills -> defeated. Stress +2.
+    state = _state(_spider(), RollTier.CLEAN)
+    state.push_for_effect = True
+    result = await ApplyEffectNode()(state)
+    assert result["scene_entities"][0].clocks[ThreatPillar.EXISTS] == 3
+    assert result["defeated_target"] == "Spider"
+    assert result["stress"] == 2
+
+
+@pytest.mark.asyncio
+async def test_push_on_a_miss_costs_nothing():
+    # A miss can't be pushed — no effect, no stress charged.
+    state = _state(_spider(), RollTier.BAD)
+    state.push_for_effect = True
+    assert await ApplyEffectNode()(state) == {}
+
+
+@pytest.mark.asyncio
 async def test_immune_pillar_is_a_no_op_with_feedback():
     # Golem with a profile that omits WILLING -> immune to intimidation.
     golem = EntityData(

@@ -58,3 +58,11 @@ class AttributeSelectorSignature(Signature):
     pillar: ThreatPillar = OutputField(
         description="Which condition of the target the action attacks (default exists)"
     )
+    push: bool = OutputField(
+        description=(
+            "True only if the player is clearly PUSHING THEMSELVES — going "
+            "all-out, throwing everything in, taking extra risk/exertion for a "
+            "harder hit (e.g. 'I put everything into one savage blow'). A normal "
+            "action is false. This costs stress for extra effect."
+        )
+    )
