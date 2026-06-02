@@ -1,7 +1,9 @@
 from arcadedb_embedded.graph import Vertex
 import logging
 
+from src.core.model.entity import Danger
 from src.core.model.location import EntityData, LocationData, LocationState
+from src.core.model.threat import Channel
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
 from src.database.repository.location import LocationRepository
@@ -58,8 +60,16 @@ class LocationService:
         )
 
     def _to_entity_data(self, entity: Vertex) -> EntityData:
+        channels_csv = entity.get(name="threat_channels") or ""
+        channels = frozenset(
+            Channel(c) for c in (s.strip() for s in channels_csv.split(",")) if c
+        )
+        danger_raw = entity.get(name="danger") or Danger.STANDARD.value
         return EntityData(
+            id=entity.get(name="id") or "",
             name=entity.get(name="name") or "",
             description=entity.get(name="description") or "",
             scene_position=entity.get(name="scene_position") or "",
+            danger=Danger(danger_raw),
+            threat_channels=channels,
         )

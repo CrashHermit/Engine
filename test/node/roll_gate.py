@@ -30,4 +30,10 @@ async def test_roll_gate_returns_needs_roll(human_text, gate_output, expected):
     fake_prediction = Prediction(needs_roll=gate_output)
     with patch.object(node._program, "aforward", new=AsyncMock(return_value=fake_prediction)):
         result = await node(_state(human_text))
-    assert result == {"needs_roll": expected}
+    assert result["needs_roll"] == expected
+    # On the no-roll (mundane) path the node also carries the player's message
+    # forward as the lead_up for narration; on the roll path it does not.
+    if expected:
+        assert "lead_up" not in result
+    else:
+        assert result["lead_up"] == human_text

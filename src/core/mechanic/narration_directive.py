@@ -38,7 +38,7 @@ def final_directive(scaffold: FinalScaffold, resist_action: ResistAction) -> str
     base += f"End on this beat: {scaffold.closing_beat}."
     return base
 
-def resolution_directive(consequence: FinalScaffold, action: ResistAction, flavor: str) -> str:
+def resolution_directive(consequence: str, action: ResistAction, flavor: str) -> str:
     if action == ResistAction.ENDURE:
         return (
             "In one or two sentences, continuing from the prior prose and matching "
