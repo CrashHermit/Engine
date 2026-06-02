@@ -26,22 +26,24 @@ def _route_by_roll_gate(state: GraphState) -> str:
 
 def _fan_out_threats(state: GraphState) -> list[Send]:
     """One classify branch per candidate source: every entity present, plus the
-    environment. Each Send carries its own source/entity payload (Send replaces
-    the branch's input state, so the shared context is passed explicitly)."""
-    base = {
-        "contested_beat": state.contested_beat,
-        "character_description": state.character_description,
-        "location_description": state.location_description,
-        "attribute": state.attribute,
-        "corpus_rating": state.corpus_rating,
-        "mens_rating": state.mens_rating,
-        "anima_rating": state.anima_rating,
-    }
+    environment. Each Send carries a full GraphState copy with only its own
+    source/entity set — LangGraph does NOT coerce a Send payload into the
+    pydantic state schema, so passing a dict would hand the branch a bare dict
+    (breaking LoggedNode.model_dump and the node's attribute access). model_copy
+    keeps the branch typed and preserves the full turn context."""
     sends = [
-        Send("classify_threat", {**base, "classify_source": e.name, "classify_entity": e})
+        Send(
+            "classify_threat",
+            state.model_copy(update={"classify_source": e.name, "classify_entity": e}),
+        )
         for e in state.scene_entities
     ]
-    sends.append(Send("classify_threat", {**base, "classify_source": "environment", "classify_entity": None}))
+    sends.append(
+        Send(
+            "classify_threat",
+            state.model_copy(update={"classify_source": "environment", "classify_entity": None}),
+        )
+    )
     return sends
 
 
