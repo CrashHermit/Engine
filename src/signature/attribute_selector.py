@@ -1,5 +1,6 @@
 from dspy import InputField, OutputField, Signature
 
+from src.core.model.entity import ThreatPillar
 from src.core.model.threat import Channel
 
 
@@ -24,6 +25,18 @@ class AttributeSelectorSignature(Signature):
     Also identify the target: the entity the action is directed at (the foe
     being struck, the lock being forced). Return its exact name from the listed
     entities, or an empty string if the action targets no specific entity.
+
+    Finally, identify which *pillar* of the target's threat the action attacks —
+    the condition the player is trying to remove (any one neutralises a foe):
+
+    - exists: destroy/kill it (cut it down, crush it, blow it up).
+    - capable: take away its means (disarm, cripple, restrain, blind).
+    - aware: drop out of its awareness (sneak, hide, distract, deceive).
+    - in_reach: break contact (flee, slip past, bar the door, gain distance).
+    - willing: break its will (intimidate, demoralize, persuade, bribe, befriend).
+
+    Pick the pillar the action is *trying* to affect. Default to exists for a
+    plain attack; use exists too when no specific target.
     """
 
     character_description: str = InputField(default="")
@@ -40,5 +53,16 @@ class AttributeSelectorSignature(Signature):
         description=(
             "Exact name of the entity the action is directed at, or empty "
             "string if none (movement, perception, environment)."
+        )
+    )
+    pillar: ThreatPillar = OutputField(
+        description="Which condition of the target the action attacks (default exists)"
+    )
+    push: bool = OutputField(
+        description=(
+            "True only if the player is clearly PUSHING THEMSELVES — going "
+            "all-out, throwing everything in, taking extra risk/exertion for a "
+            "harder hit (e.g. 'I put everything into one savage blow'). A normal "
+            "action is false. This costs stress for extra effect."
         )
     )

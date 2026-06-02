@@ -16,6 +16,9 @@ class EntityGen:
     kind: str = "object"  # "creature" | "object"
     danger: str = "standard"
     threat_channels: str = ""  # CSV, e.g. "corpus,mens"
+    # Authored per-pillar clock capacities (pillar -> capacity). Empty = uniform
+    # from danger; a pillar omitted from a non-empty profile is immune.
+    pillar_profile: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass

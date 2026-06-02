@@ -18,6 +18,7 @@ class DungeonStage:
                         kind=entity.get("kind", "object"),
                         danger=entity.get("danger", "standard"),
                         threat_channels=entity.get("threat_channels", ""),
+                        pillar_profile=entity.get("pillar_profile", {}),
                     )
                     for entity in node["entities"]
                 ],
@@ -77,11 +78,20 @@ _HEX_NODES = [
                 "name": "Large Aggressive Spider (Ready to Strike)",
                 "description": "A large aggressive spider, about the size of a man's torso, is crawling along the wall. Ready to strike and attack at any moment.",
                 "scene_position": "crawling along the wall",
-                # A real NPC: a dangerous creature (ELITE clock, ~2-3 exchanges)
-                # that threatens the body with bite and venom.
+                # A real NPC: a dangerous creature that threatens the body with
+                # bite and venom. Profile makes it tactically textured: hard to
+                # kill outright (exists 6) but a frightened beast you can drive
+                # off (in_reach 2) or scare (willing 4) far faster than slay.
                 "kind": "creature",
                 "danger": "elite",
                 "threat_channels": "corpus",
+                "pillar_profile": {
+                    "exists": 6,
+                    "capable": 4,
+                    "aware": 3,
+                    "in_reach": 2,
+                    "willing": 4,
+                },
             }
         ],
     },

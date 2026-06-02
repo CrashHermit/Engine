@@ -2,6 +2,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Send
 
+from src.core.model.entity import EntityStatus
 from src.graph.logged_node import LoggedNode
 from src.node.apply_effect import ApplyEffectNode
 from src.node.attribute_selector import AttributeSelectorNode
@@ -12,6 +13,7 @@ from src.node.gather_threats import GatherThreatsNode
 from src.node.held_planner import HeldPlannerNode
 from src.node.mundane import MundaneNode
 from src.node.narrator import NarratorNode
+from src.node.reengage import ReengageNode
 from src.node.resist_offer import ResistOfferNode
 from src.node.resist_push_parser import ResistPushParserNode
 from src.node.resist_roll import ResistRollNode
@@ -32,12 +34,14 @@ def _fan_out_threats(state: GraphState) -> list[Send]:
     pydantic state schema, so passing a dict would hand the branch a bare dict
     (breaking LoggedNode.model_dump and the node's attribute access). model_copy
     keeps the branch typed and preserves the full turn context."""
+    # Suspended/gone creatures (a pillar broken) no longer threaten — skip them.
     sends = [
         Send(
             "classify_threat",
             state.model_copy(update={"classify_source": e.name, "classify_entity": e}),
         )
         for e in state.scene_entities
+        if e.status == EntityStatus.ACTIVE
     ]
     sends.append(
         Send(
@@ -78,6 +82,7 @@ class ResolutionGraphBuilder:
         self.workflow: StateGraph = StateGraph(GraphState)
 
     def build(self) -> CompiledStateGraph:
+        self.workflow.add_node("reengage", LoggedNode("reengage", ReengageNode()))
         self.workflow.add_node("roll_gate", LoggedNode("roll_gate", RollGateNode()))
         self.workflow.add_node("mundane", LoggedNode("mundane", MundaneNode()))
         self.workflow.add_node("segmenter", LoggedNode("segmenter", SegmenterNode()))
@@ -102,7 +107,10 @@ class ResolutionGraphBuilder:
         self.workflow.add_node("turn_close", LoggedNode("turn_close", TurnCloseNode()))
 
         # ── edges ──────────────────────────────────────────────────────────
-        self.workflow.add_edge(START, "roll_gate")
+        # Turn start: suspended foes may re-engage before anything else (covers
+        # both the mundane and roll paths). No-op (no LLM call) when none are suspended.
+        self.workflow.add_edge(START, "reengage")
+        self.workflow.add_edge("reengage", "roll_gate")
         self.workflow.add_conditional_edges("roll_gate", _route_by_roll_gate)
         self.workflow.add_edge("mundane", "narrator")
 

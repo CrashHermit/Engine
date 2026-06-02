@@ -43,8 +43,23 @@ class CharacterLost:
 
 @dataclass(frozen=True)
 class TargetDefeated:
-    """The action filled a target entity's clock; it is defeated and removed
+    """The action broke the target's EXISTS pillar; it is destroyed and removed
     from the scene. Carries the entity name for display."""
+
+    name: str
+
+
+@dataclass(frozen=True)
+class TargetSuspended:
+    """The action broke a non-lethal pillar (will, awareness, reach, capability);
+    the target is out of the scene but not destroyed. Carries the entity name."""
+
+    name: str
+
+
+@dataclass(frozen=True)
+class TargetReturned:
+    """A suspended creature re-engaged this turn (its broken pillar reverted)."""
 
     name: str
 
@@ -63,5 +78,7 @@ TurnEvent = (
     | TraumaGained
     | CharacterLost
     | TargetDefeated
+    | TargetSuspended
+    | TargetReturned
     | TurnError
 )

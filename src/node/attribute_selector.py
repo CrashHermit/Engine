@@ -21,4 +21,6 @@ class AttributeSelectorNode:
         return {
             "attribute": prediction.attribute,
             "target_entity": (prediction.target or "").strip(),
+            "target_pillar": prediction.pillar,
+            "push_for_effect": bool(prediction.push),
         }

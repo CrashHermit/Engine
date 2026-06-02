@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 
 from src.core.mechanic.dice import RollResult
 from src.core.mechanic.magnitude import Magnitude
-from src.core.model.entity import Danger  # noqa: F401  (kept for callers)
+from src.core.model.entity import Danger, ThreatPillar  # noqa: F401  (Danger kept for callers)
 from src.core.model.location import EntityData
 from src.core.model.message import Message
 from src.core.model.resist import FinalScaffold, HeldScaffold, ResistAction
@@ -36,15 +36,24 @@ class GraphState(BaseModel):
     mens_rating: int = 0
     anima_rating: int = 0
 
-    # The single action: which attribute it rolls, its target, and the roll.
+    # The single action: which attribute it rolls, its target/pillar, and roll.
     attribute: Channel | None = None
     target_entity: str = ""  # name of the entity the action is directed at
+    target_pillar: ThreatPillar | None = None  # which condition the action attacks
+    push_for_effect: bool = False  # spend stress for +1 effect segment on the target
     roll_result: RollResult | None = None
 
     # ── Effect-on-target ─────────────────────────────────────────────────
-    # apply_effect fills the target's clock (carried inside scene_entities) and
-    # names a target it defeated this turn; the coordinator persists/removes it.
+    # apply_effect fills the targeted pillar's clock (carried inside
+    # scene_entities). Breaking EXISTS names a defeated_target (removed); any
+    # other pillar names a suspended_target (out of the scene, may return).
+    # resolution_outcome tells the narrator how to frame the result.
     defeated_target: str = ""
+    suspended_target: str = ""
+    resolution_outcome: str = ""
+    # Suspended creatures that re-engaged this turn (durability / Phase 2).
+    returned_targets: list[str] = Field(default_factory=list)
+    reengagement_note: str = ""
 
     # ── Threats ──────────────────────────────────────────────────────────
     # Per-source classify branches (Send fan-out) append here; gather_threats

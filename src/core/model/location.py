@@ -1,7 +1,6 @@
 from dataclasses import dataclass, field
 
-from src.core.mechanic.harm import WoundPool
-from src.core.model.entity import Danger, EntityKind
+from src.core.model.entity import Danger, EntityKind, EntityStatus, ThreatPillar
 from src.core.model.threat import Channel
 
 
@@ -18,10 +17,19 @@ class EntityData:
     danger: Danger = Danger.STANDARD
     threat_channels: frozenset[Channel] = field(default_factory=frozenset)
     id: str = ""
-    # Effect-on-target clock: the player's action fills it; full = defeated.
-    # Capacity is set from danger by the service (this default is a placeholder
-    # for in-memory construction).
-    wound: WoundPool = field(default_factory=WoundPool)
+    # Per-creature pillar profile (authored): pillar -> clock capacity. Empty =
+    # unauthored (uniform from danger). A pillar omitted from a non-empty profile
+    # is IMMUNE (can't be broken that way). Static config, not live state.
+    pillar_profile: dict[ThreatPillar, int] = field(default_factory=dict)
+    # De-threat resolution state. Each pillar the player attacks accrues its own
+    # clock (filled segments); capacity comes from danger (Phase 1, uniform).
+    # Filling a pillar breaks it: EXISTS -> GONE, others -> SUSPENDED.
+    clocks: dict[ThreatPillar, int] = field(default_factory=dict)
+    status: EntityStatus = EntityStatus.ACTIVE
+    broken_pillar: ThreatPillar | None = None
+    # When suspended: the fiction under which this creature re-engages (read by
+    # the reengagement check). Empty while active.
+    returns_when: str = ""
 
 
 @dataclass

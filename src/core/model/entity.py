@@ -21,3 +21,29 @@ class EntityKind(StrEnum):
     CREATURE = "creature"
     OBJECT = "object"
 
+
+class ThreatPillar(StrEnum):
+    """The conditions a creature needs to be a threat (Able + Engaged + Willing).
+    Breaking any one neutralises it. The player's action targets one pillar; its
+    clock tracks progress toward removing that condition.
+
+    ABLE:     EXISTS (it is) · CAPABLE (it has the means)
+    ENGAGED:  AWARE (it knows you) · IN_REACH (it can affect you)
+    WILLING:  it wants to act
+    """
+
+    EXISTS = "exists"
+    CAPABLE = "capable"
+    AWARE = "aware"
+    IN_REACH = "in_reach"
+    WILLING = "willing"
+
+
+class EntityStatus(StrEnum):
+    """A creature's standing in the scene. SUSPENDED creatures (a pillar broken,
+    but not gone) stop generating threats; GONE creatures are removed."""
+
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    GONE = "gone"
+
