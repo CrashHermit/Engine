@@ -2,7 +2,7 @@ import pytest
 
 from src.core.mechanic.scaling import Outcome, Position
 from src.core.model.threat import Channel, Threat, ThreatType
-from src.graph.resolution_graph import _route_by_significance
+from src.graph.routers import route_by_significance
 from src.state import GraphState
 
 
@@ -30,8 +30,8 @@ def _state_with(landed: int, *, avoided: bool = False) -> GraphState:
     ],
 )
 def test_route_by_significance(landed: int, avoided: bool, expected: str):
-    assert _route_by_significance(_state_with(landed, avoided=avoided)) == expected
+    assert route_by_significance(_state_with(landed, avoided=avoided)) == expected
 
 
 def test_route_by_significance_handles_no_threats():
-    assert _route_by_significance(GraphState()) == "final_planner"
+    assert route_by_significance(GraphState()) == "final_planner"
