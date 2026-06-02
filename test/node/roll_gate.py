@@ -3,7 +3,7 @@ from unittest.mock import patch, AsyncMock
 from dspy.primitives.prediction import Prediction
 
 from src.core.model.message import Message
-from src.node.roll_gate import RollGateNode
+from src.node.frame.roll_gate import RollGateNode
 from src.state import GraphState
 
 

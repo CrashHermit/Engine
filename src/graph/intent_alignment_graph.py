@@ -2,10 +2,10 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
 from src.graph.logged_node import LoggedNode
-from src.node.intent_alignment_router import IntentAlignmentRouterNode
-from src.node.intent_clarification import IntentClarificationNode
-from src.node.intent_question_generator import IntentQuestionGeneratorNode
-from src.node.intent_synthesizer import IntentSynthesizerNode
+from src.node.intent.alignment_router import IntentAlignmentRouterNode
+from src.node.intent.clarification import IntentClarificationNode
+from src.node.intent.question_generator import IntentQuestionGeneratorNode
+from src.node.intent.synthesizer import IntentSynthesizerNode
 from src.state import GraphState
 
 

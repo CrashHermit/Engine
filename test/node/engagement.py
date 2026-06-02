@@ -12,7 +12,7 @@ from src.core.model.entity import (
 )
 from src.core.model.location import EntityData
 from src.core.model.message import Message
-from src.node.engagement import EngagementNode
+from src.node.frame.engagement import EngagementNode
 from src.state import GraphState
 
 

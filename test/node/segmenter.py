@@ -3,7 +3,7 @@ from unittest.mock import patch, AsyncMock
 from dspy.primitives.prediction import Prediction
 
 from src.core.model.message import Message
-from src.node.segmenter import SegmenterNode
+from src.node.frame.segmenter import SegmenterNode
 from src.state import GraphState
 
 

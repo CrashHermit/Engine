@@ -4,8 +4,8 @@ from src.core.mechanic.magnitude import Magnitude
 from src.core.mechanic.scaling import Position
 from src.core.model.message import Message
 from src.core.model.threat import Channel, Threat, ThreatType
-from src.node.ambush import AmbushNode
-from src.node.ambush_scale import AmbushScaleNode
+from src.node.threat.ambush import AmbushNode
+from src.node.threat.ambush_scale import AmbushScaleNode
 from src.state import GraphState
 
 

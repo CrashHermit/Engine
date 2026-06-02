@@ -4,24 +4,24 @@ from langgraph.types import Send
 
 from src.core.model.entity import EntityKind, EntityStance, EntityStatus
 from src.graph.logged_node import LoggedNode
-from src.node.ambush import AmbushNode
-from src.node.ambush_scale import AmbushScaleNode
-from src.node.apply_effect import ApplyEffectNode
-from src.node.attribute_selector import AttributeSelectorNode
-from src.node.classify_threat import ClassifyThreatNode
-from src.node.dice_scale import DiceScaleNode
-from src.node.final_planner import FinalPlannerNode
-from src.node.gather_threats import GatherThreatsNode
-from src.node.held_planner import HeldPlannerNode
-from src.node.mundane import MundaneNode
-from src.node.narrator import NarratorNode
-from src.node.engagement import EngagementNode
-from src.node.resist_offer import ResistOfferNode
-from src.node.resist_push_parser import ResistPushParserNode
-from src.node.resist_roll import ResistRollNode
-from src.node.roll_gate import RollGateNode
-from src.node.segmenter import SegmenterNode
-from src.node.turn_close import TurnCloseNode
+from src.node.frame.attribute_selector import AttributeSelectorNode
+from src.node.frame.engagement import EngagementNode
+from src.node.frame.mundane import MundaneNode
+from src.node.frame.roll_gate import RollGateNode
+from src.node.frame.segmenter import SegmenterNode
+from src.node.threat.ambush import AmbushNode
+from src.node.threat.ambush_scale import AmbushScaleNode
+from src.node.threat.classify import ClassifyThreatNode
+from src.node.threat.dice_scale import DiceScaleNode
+from src.node.threat.gather import GatherThreatsNode
+from src.node.effect.apply_effect import ApplyEffectNode
+from src.node.resolve.final_planner import FinalPlannerNode
+from src.node.resolve.held_planner import HeldPlannerNode
+from src.node.resolve.narrator import NarratorNode
+from src.node.resolve.turn_close import TurnCloseNode
+from src.node.resist.offer import ResistOfferNode
+from src.node.resist.push_parser import ResistPushParserNode
+from src.node.resist.roll import ResistRollNode
 from src.state import GraphState
 
 

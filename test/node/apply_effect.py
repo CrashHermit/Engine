@@ -4,7 +4,7 @@ from src.core.mechanic.dice import RollResult, RollTier
 from src.core.model.entity import Danger, EntityKind, EntityStatus, ThreatPillar
 from src.core.model.location import EntityData
 from src.core.model.threat import Channel
-from src.node.apply_effect import ApplyEffectNode
+from src.node.effect.apply_effect import ApplyEffectNode
 from src.state import GraphState
 
 
