@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 from src.core.mechanic.harm import WoundPool
-from src.core.model.entity import Danger
+from src.core.model.entity import Danger, EntityKind
 from src.core.model.threat import Channel
 
 
@@ -10,6 +10,9 @@ class EntityData:
     name: str
     description: str
     scene_position: str
+    # Creature vs inert prop. Defaults to OBJECT so only entities explicitly
+    # tagged as creatures are foes (can be targeted/defeated).
+    kind: EntityKind = EntityKind.OBJECT
     # Structural spine fed to the threat classifier + magnitude cap. Defaulted
     # so existing call sites need not change.
     danger: Danger = Danger.STANDARD

@@ -15,6 +15,9 @@ class DungeonStage:
                         name=entity["name"],
                         description=entity["description"],
                         scene_position=entity["scene_position"],
+                        kind=entity.get("kind", "object"),
+                        danger=entity.get("danger", "standard"),
+                        threat_channels=entity.get("threat_channels", ""),
                     )
                     for entity in node["entities"]
                 ],
@@ -74,6 +77,11 @@ _HEX_NODES = [
                 "name": "Large Aggressive Spider (Ready to Strike)",
                 "description": "A large aggressive spider, about the size of a man's torso, is crawling along the wall. Ready to strike and attack at any moment.",
                 "scene_position": "crawling along the wall",
+                # A real NPC: a dangerous creature (ELITE clock, ~2-3 exchanges)
+                # that threatens the body with bite and venom.
+                "kind": "creature",
+                "danger": "elite",
+                "threat_channels": "corpus",
             }
         ],
     },

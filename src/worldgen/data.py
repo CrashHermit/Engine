@@ -13,8 +13,9 @@ class EntityGen:
     name: str
     description: str
     scene_position: str
+    kind: str = "object"  # "creature" | "object"
     danger: str = "standard"
-    threat_channels: str = ""
+    threat_channels: str = ""  # CSV, e.g. "corpus,mens"
 
 
 @dataclass

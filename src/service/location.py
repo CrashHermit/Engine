@@ -3,7 +3,7 @@ import logging
 
 from src.core.mechanic.effect import capacity_for_danger
 from src.core.mechanic.harm import WoundPool
-from src.core.model.entity import Danger
+from src.core.model.entity import Danger, EntityKind
 from src.core.model.location import EntityData, LocationData, LocationState
 from src.core.model.threat import Channel
 from src.database.repository.base import BaseRepository
@@ -67,6 +67,7 @@ class LocationService:
             Channel(c) for c in (s.strip() for s in channels_csv.split(",")) if c
         )
         danger = Danger(entity.get(name="danger") or Danger.STANDARD.value)
+        kind = EntityKind(entity.get(name="kind") or EntityKind.OBJECT.value)
         capacity = entity.get(name="wound_capacity") or capacity_for_danger(danger)
         filled = entity.get(name="wound_filled") or 0
         return EntityData(
@@ -74,6 +75,7 @@ class LocationService:
             name=entity.get(name="name") or "",
             description=entity.get(name="description") or "",
             scene_position=entity.get(name="scene_position") or "",
+            kind=kind,
             danger=danger,
             threat_channels=channels,
             wound=WoundPool(capacity=capacity, filled=filled),

@@ -16,16 +16,22 @@ class EntityRepository:
         name: str,
         description: str,
         scene_position: str = "",
+        kind: str = "object",
         danger: str = "standard",
         threat_channels: str = "",
+        wound_capacity: int = 0,
+        wound_filled: int = 0,
     ) -> Vertex:
         return self._base.create_vertex(
             type_name=VertexType.ENTITY,
             name=name,
             description=description,
             scene_position=scene_position,
+            kind=kind,
             danger=danger,
             threat_channels=threat_channels,
+            wound_capacity=wound_capacity,
+            wound_filled=wound_filled,
         )
 
     def get_entity(self, id: str) -> Vertex | None:

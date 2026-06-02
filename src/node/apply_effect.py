@@ -7,6 +7,7 @@ from src.core.mechanic.effect import (
     potency_shift,
 )
 from src.core.mechanic.harm import apply_wounds
+from src.core.model.entity import EntityKind
 from src.core.model.location import EntityData
 from src.core.model.threat import Channel
 from src.state import GraphState
@@ -21,7 +22,8 @@ class ApplyEffectNode:
 
     async def __call__(self, state: GraphState) -> dict:
         target = self._find_target(state)
-        if target is None or state.roll_result is None:
+        # Only living foes take clock damage; props can't be "defeated".
+        if target is None or target.kind != EntityKind.CREATURE or state.roll_result is None:
             return {}
 
         pool = self._pool_for_attribute(state)

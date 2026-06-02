@@ -2,7 +2,7 @@ import pytest
 
 from src.core.mechanic.dice import RollResult, RollTier
 from src.core.mechanic.harm import WoundPool
-from src.core.model.entity import Danger
+from src.core.model.entity import Danger, EntityKind
 from src.core.model.location import EntityData
 from src.core.model.threat import Channel
 from src.node.apply_effect import ApplyEffectNode
@@ -14,6 +14,7 @@ def _spider(filled: int = 0, capacity: int = 6) -> EntityData:
         name="Spider",
         description="big",
         scene_position="wall",
+        kind=EntityKind.CREATURE,
         id="sp1",
         danger=Danger.STANDARD,
         threat_channels=frozenset({Channel.CORPUS}),
@@ -61,3 +62,24 @@ async def test_no_target_is_noop():
 async def test_loose_name_match():
     result = await ApplyEffectNode()(_state(0, RollTier.CLEAN, target="the spider"))
     assert result["scene_entities"][0].wound.filled == 2
+
+
+@pytest.mark.asyncio
+async def test_object_target_takes_no_clock_damage():
+    # A prop can be "attacked" but never defeated — no clock fill.
+    lantern = EntityData(
+        name="Dead Lantern",
+        description="rusted",
+        scene_position="ceiling",
+        kind=EntityKind.OBJECT,
+        id="ln1",
+        wound=WoundPool(capacity=0, filled=0),
+    )
+    state = GraphState(
+        scene_entities=[lantern],
+        target_entity="Dead Lantern",
+        attribute=Channel.CORPUS,
+        corpus_rating=2,
+        roll_result=RollResult(dice=(6,), outcome_die=6, tier=RollTier.CLEAN, zero_pool=False),
+    )
+    assert await ApplyEffectNode()(state) == {}
