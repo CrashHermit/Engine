@@ -4,12 +4,14 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
+from src.core.model.entity import Danger
 from src.core.mechanic.dice import RollResult, RollTier
 from src.core.mechanic.magnitude import Magnitude
 from src.core.mechanic.scaling import Outcome, Position
 from src.core.model.message import Message
+from src.core.model.location import EntityData
 from src.core.model.resist import FinalScaffold, HeldScaffold, ResistAction
-from src.core.model.threat import Channel, ThreatType
+from src.core.model.threat import Channel, Threat, ThreatType
 
 # Custom types that ride inside GraphState and so get persisted in the
 # checkpoint. LangGraph's msgpack serializer warns (and a future version will
@@ -29,6 +31,9 @@ _ALLOWED_CHECKPOINT_TYPES: tuple[type, ...] = (
     HeldScaffold,
     FinalScaffold,
     ResistAction,
+    EntityData,
+    Danger,
+    Threat,
 )
 
 
