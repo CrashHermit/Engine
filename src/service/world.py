@@ -29,23 +29,14 @@ class WorldService:
         self,
         name: str,
         description: str,
-        seed: int,
         size: int,
-        biome: str,
-        temperature: float,
-        precipitation: float,
-        elevation: float,
+
     ) -> None:
-        self._logger.info("create_world name=%s seed=%s size=%s", name, seed, size)
+        self._logger.info("create_world name=%s", name)
         world_data: WorldData = WorldData(
             name=name,
             description=description,
-            seed=seed,
             size=size,
-            biome=biome,
-            temperature=temperature,
-            precipitation=precipitation,
-            elevation=elevation,
         )
         world_data = WorldgenPipeline().run(data=world_data)
 
@@ -61,12 +52,7 @@ class WorldService:
             world = world_repo.create_world(
                 name=name,
                 description=description,
-                seed=seed,
                 size=size,
-                biome=biome,
-                temperature=temperature,
-                precipitation=precipitation,
-                elevation=elevation,
             )
             tile_repo.create_tiles(world_data.tiles)
 

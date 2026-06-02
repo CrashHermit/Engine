@@ -36,11 +36,6 @@ class DungeonData:
 class WorldData:
     name: str
     description: str
-    seed: int
     size: int
-    biome: str
-    temperature: float
-    precipitation: float
-    elevation: float
     tiles: dict[tuple[int, int], TileData] = field(default_factory=dict)
     dungeon: DungeonData | None = None

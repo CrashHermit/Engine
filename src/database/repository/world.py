@@ -22,21 +22,11 @@ class WorldRepository:
         self,
         name: str,
         description: str,
-        seed: int,
         size: int,
-        biome: str,
-        temperature: float,
-        precipitation: float,
-        elevation: float,
     ) -> Vertex:
         return self._base.create_vertex(
             type_name=VertexType.WORLD,
             name=name,
             description=description,
-            seed=seed,
             size=size,
-            biome=biome,
-            temperature=temperature,
-            precipitation=precipitation,
-            elevation=elevation,
         )

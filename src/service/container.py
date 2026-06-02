@@ -1,8 +1,6 @@
-from typing import TYPE_CHECKING
-
 import arcadedb_embedded
 import logging
-
+from arcadedb_embedded.core import Database
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
 from src.database.repository.location import LocationRepository
@@ -12,10 +10,6 @@ from src.service.character import CharacterService
 from src.service.graph import GraphService
 from src.service.location import LocationService
 from src.service.message import MessageService
-
-if TYPE_CHECKING:
-    from src.core.model.database import Database
-
 
 class ServiceContainer:
     """Holds every in-session service for a single open world database.
