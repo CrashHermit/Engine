@@ -14,13 +14,18 @@ class NarratorNode:
     async def __call__(self, state: GraphState) -> dict:
         history = "\n".join(m.format() for m in state.message_history)
         entities = "\n".join(state.entities_at_location) if state.entities_at_location else ""
+        directive = state.narration_directive or ""
+        # The effect-on-target outcome (kill / disarm / rout / evade …) is a
+        # structural instruction so prose can't recast a rout as a kill.
+        if state.resolution_outcome:
+            directive = f"{directive}\n\nResolution of the action on its target: {state.resolution_outcome}"
         prediction: Prediction = await self._program.aforward(
             character_description=state.character_description,
             location_description=state.location_description,
             entities_at_location=entities,
             message_history=history,
             contested_beat=state.contested_beat or "",
-            narration_directive=state.narration_directive or "",
+            narration_directive=directive,
             anchors=state.anchors or "",
             prior_prose=state.prior_prose or "",
         )

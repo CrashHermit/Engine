@@ -2,6 +2,7 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Send
 
+from src.core.model.entity import EntityStatus
 from src.graph.logged_node import LoggedNode
 from src.node.apply_effect import ApplyEffectNode
 from src.node.attribute_selector import AttributeSelectorNode
@@ -32,12 +33,14 @@ def _fan_out_threats(state: GraphState) -> list[Send]:
     pydantic state schema, so passing a dict would hand the branch a bare dict
     (breaking LoggedNode.model_dump and the node's attribute access). model_copy
     keeps the branch typed and preserves the full turn context."""
+    # Suspended/gone creatures (a pillar broken) no longer threaten — skip them.
     sends = [
         Send(
             "classify_threat",
             state.model_copy(update={"classify_source": e.name, "classify_entity": e}),
         )
         for e in state.scene_entities
+        if e.status == EntityStatus.ACTIVE
     ]
     sends.append(
         Send(

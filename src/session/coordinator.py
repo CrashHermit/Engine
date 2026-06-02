@@ -11,6 +11,7 @@ from src.session.result import (
     Narration,
     ResistanceOffer,
     TargetDefeated,
+    TargetSuspended,
     TraumaGained,
     TurnError,
     TurnEvent,
@@ -190,13 +191,13 @@ class GameCoordinator:
         return events
 
     def _persist_entities(self, result: dict) -> list[TurnEvent]:
-        """Write back any target-clock changes, remove a defeated entity, and
-        refresh the cached location state so the next turn sees it."""
+        """Write back de-threat resolution state, remove a destroyed entity,
+        surface defeat/suspension, and refresh the cached location state."""
         scene_entities = result.get("scene_entities") or []
         if not scene_entities:
             return []
 
-        self._services.location.persist_entity_wounds(scene_entities)
+        self._services.location.persist_entity_state(scene_entities)
 
         events: list[TurnEvent] = []
         defeated_name = result.get("defeated_target") or ""
@@ -207,6 +208,10 @@ class GameCoordinator:
             if defeated_id:
                 self._services.location.remove_entity(defeated_id)
             events.append(TargetDefeated(defeated_name))
+
+        suspended_name = result.get("suspended_target") or ""
+        if suspended_name:
+            events.append(TargetSuspended(suspended_name))
 
         # Refresh so subsequent turns reflect updated clocks / removals.
         refreshed = self._services.location.get_state_for_character(self._character.id)

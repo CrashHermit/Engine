@@ -43,8 +43,7 @@ class LocationRepository:
         kind: str = "object",
         danger: str = "standard",
         threat_channels: str = "",
-        wound_capacity: int = 0,
-        wound_filled: int = 0,
+        resolution: str = "",
     ) -> Vertex:
         entity = self._base.create_vertex(
             type_name=VertexType.ENTITY,
@@ -54,8 +53,7 @@ class LocationRepository:
             kind=kind,
             danger=danger,
             threat_channels=threat_channels,
-            wound_capacity=wound_capacity,
-            wound_filled=wound_filled,
+            resolution=resolution,
         )
         self._base.create_edge(type_name=EdgeType.CONTAINS, source=location, target=entity)
         return entity
@@ -66,8 +64,8 @@ class LocationRepository:
     def get_entity(self, id: str) -> Vertex | None:
         return self._base.get_vertex(type_name=VertexType.ENTITY, id=id)
 
-    def set_entity_wounds(self, entity: Vertex, filled: int) -> None:
-        self._base.update_vertex(entity, wound_filled=filled)
+    def set_entity_resolution(self, entity: Vertex, resolution: str) -> None:
+        self._base.update_vertex(entity, resolution=resolution)
 
     def remove_entity(self, entity: Vertex) -> None:
         self._base.delete_vertex(entity)

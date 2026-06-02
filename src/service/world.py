@@ -2,9 +2,7 @@ from arcadedb_embedded.core import Database
 from arcadedb_embedded.graph import Vertex
 import logging
 
-from src.core.mechanic.effect import capacity_for_danger
 from src.core.model.database import EdgeType
-from src.core.model.entity import Danger, EntityKind
 from src.database.connection import DatabaseConnection
 from src.database.repository.base import BaseRepository
 from src.database.repository.location import LocationRepository
@@ -82,7 +80,6 @@ class WorldService:
 
         for node, loc in zip(nodes, dungeon.locations, strict=True):
             for entity in loc.entities:
-                is_creature = entity.kind == EntityKind.CREATURE.value
                 location_repo.create_entity(
                     location=node,
                     name=entity.name,
@@ -91,9 +88,9 @@ class WorldService:
                     kind=entity.kind,
                     danger=entity.danger,
                     threat_channels=entity.threat_channels,
-                    # Only creatures carry a defeat clock; props get none.
-                    wound_capacity=capacity_for_danger(Danger(entity.danger)) if is_creature else 0,
-                    wound_filled=0,
+                    # Empty resolution => ACTIVE, no clocks; capacity derives
+                    # from danger at runtime.
+                    resolution="",
                 )
 
         for node, loc in zip(nodes, dungeon.locations, strict=True):

@@ -31,9 +31,9 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "scene_position": arcadedb.PropertyType.STRING,
     "danger": arcadedb.PropertyType.STRING,
     "threat_channels": arcadedb.PropertyType.STRING,
-    "wound_capacity": arcadedb.PropertyType.INTEGER,
-    "wound_filled": arcadedb.PropertyType.INTEGER,
     "kind": arcadedb.PropertyType.STRING,
+    # Live de-threat state (status / broken pillar / per-pillar clocks) as JSON.
+    "resolution": arcadedb.PropertyType.STRING,
 }
 
 BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated_at"]
@@ -77,8 +77,7 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
         "kind",
         "danger",
         "threat_channels",
-        "wound_capacity",
-        "wound_filled",
+        "resolution",
     ],
 }
 

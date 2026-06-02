@@ -3,41 +3,57 @@ from dataclasses import replace
 from src.core.mechanic.effect import (
     effect_from_tier,
     effect_segments,
-    is_defeated,
+    outcome_clause,
+    pillar_capacity,
     potency_shift,
 )
-from src.core.mechanic.harm import apply_wounds
-from src.core.model.entity import EntityKind
+from src.core.model.entity import EntityKind, EntityStatus, ThreatPillar
 from src.core.model.location import EntityData
 from src.core.model.threat import Channel
 from src.state import GraphState
 
 
 class ApplyEffectNode:
-    """The effect-on-target half of the roll. Finds the action's target among
-    the scene entities, scales the player's effect from the same action tier
-    (shifted by potency), and fills the target's clock. Pure state mutation —
-    persistence (and removing a defeated entity) happens post-turn in the
-    coordinator, per the side-effect boundary."""
+    """The effect-on-target half of the roll. Finds the action's target and the
+    pillar the action attacks, scales effect from the same action tier (shifted
+    by potency), and fills that pillar's clock. Breaking a pillar neutralises the
+    creature — EXISTS removes it (GONE), any other pillar suspends it. Pure state
+    mutation; persistence / removal happens post-turn in the coordinator."""
 
     async def __call__(self, state: GraphState) -> dict:
         target = self._find_target(state)
-        # Only living foes take clock damage; props can't be "defeated".
+        # Only living foes can be de-threated; props can't be "defeated".
         if target is None or target.kind != EntityKind.CREATURE or state.roll_result is None:
             return {}
 
+        pillar = state.target_pillar or ThreatPillar.EXISTS
+        capacity = pillar_capacity(target.danger, pillar)
+        if capacity <= 0:  # immune to this pillar (Phase 3 profiles)
+            return {"resolution_outcome": f"The {target.name} is immune to this approach — it has no effect."}
+
         pool = self._pool_for_attribute(state)
-        effect = potency_shift(effect_from_tier(state.roll_result.tier), pool, target.danger)
-        segments = effect_segments(effect)
+        segments = effect_segments(potency_shift(effect_from_tier(state.roll_result.tier), pool, target.danger))
         if segments <= 0:
             return {}
 
-        result = apply_wounds(target.wound, segments)
-        updated = replace(target, wound=result.pool)
-        scene = [updated if e.id == target.id else e for e in state.scene_entities]
-        out: dict = {"scene_entities": scene}
-        if is_defeated(result.pool):
-            out["defeated_target"] = target.name
+        filled = min(capacity, target.clocks.get(pillar, 0) + segments)
+        clocks = {**target.clocks, pillar: filled}
+
+        out: dict = {}
+        status = target.status
+        broken_pillar = target.broken_pillar
+        if filled >= capacity:
+            broken_pillar = pillar
+            out["resolution_outcome"] = outcome_clause(pillar, target.name)
+            if pillar == ThreatPillar.EXISTS:
+                status = EntityStatus.GONE
+                out["defeated_target"] = target.name
+            else:
+                status = EntityStatus.SUSPENDED
+                out["suspended_target"] = target.name
+
+        updated = replace(target, clocks=clocks, status=status, broken_pillar=broken_pillar)
+        out["scene_entities"] = [updated if e.id == target.id else e for e in state.scene_entities]
         return out
 
     def _find_target(self, state: GraphState) -> EntityData | None:

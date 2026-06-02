@@ -1,9 +1,8 @@
 from arcadedb_embedded.graph import Vertex
+import json
 import logging
 
-from src.core.mechanic.effect import capacity_for_danger
-from src.core.mechanic.harm import WoundPool
-from src.core.model.entity import Danger, EntityKind
+from src.core.model.entity import Danger, EntityKind, EntityStatus, ThreatPillar
 from src.core.model.location import EntityData, LocationData, LocationState
 from src.core.model.threat import Channel
 from src.database.repository.base import BaseRepository
@@ -68,8 +67,7 @@ class LocationService:
         )
         danger = Danger(entity.get(name="danger") or Danger.STANDARD.value)
         kind = EntityKind(entity.get(name="kind") or EntityKind.OBJECT.value)
-        capacity = entity.get(name="wound_capacity") or capacity_for_danger(danger)
-        filled = entity.get(name="wound_filled") or 0
+        status, broken_pillar, clocks = _resolution_from_json(entity.get(name="resolution"))
         return EntityData(
             id=entity.get(name="id") or "",
             name=entity.get(name="name") or "",
@@ -78,18 +76,20 @@ class LocationService:
             kind=kind,
             danger=danger,
             threat_channels=channels,
-            wound=WoundPool(capacity=capacity, filled=filled),
+            status=status,
+            broken_pillar=broken_pillar,
+            clocks=clocks,
         )
 
-    def persist_entity_wounds(self, entities: list[EntityData]) -> None:
-        """Write each entity's clock fill back to its vertex (post-turn)."""
+    def persist_entity_state(self, entities: list[EntityData]) -> None:
+        """Write each entity's de-threat resolution state back to its vertex."""
         with self._base.transaction():
             for e in entities:
                 if not e.id:
                     continue
                 vertex = self._locations.get_entity(e.id)
                 if vertex is not None:
-                    self._locations.set_entity_wounds(vertex, e.wound.filled)
+                    self._locations.set_entity_resolution(vertex, _resolution_to_json(e))
 
     def remove_entity(self, entity_id: str) -> None:
         """Remove a defeated entity from the world."""
@@ -98,3 +98,26 @@ class LocationService:
             vertex = self._locations.get_entity(entity_id)
             if vertex is not None:
                 self._locations.remove_entity(vertex)
+
+
+def _resolution_to_json(entity: EntityData) -> str:
+    return json.dumps(
+        {
+            "status": entity.status.value,
+            "broken_pillar": entity.broken_pillar.value if entity.broken_pillar else None,
+            "clocks": {p.value: f for p, f in entity.clocks.items()},
+        }
+    )
+
+
+def _resolution_from_json(
+    raw: str | None,
+) -> tuple[EntityStatus, ThreatPillar | None, dict[ThreatPillar, int]]:
+    if not raw:
+        return EntityStatus.ACTIVE, None, {}
+    data = json.loads(raw)
+    status = EntityStatus(data.get("status") or EntityStatus.ACTIVE.value)
+    broken = data.get("broken_pillar")
+    broken_pillar = ThreatPillar(broken) if broken else None
+    clocks = {ThreatPillar(p): int(f) for p, f in (data.get("clocks") or {}).items()}
+    return status, broken_pillar, clocks
