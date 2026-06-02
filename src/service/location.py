@@ -2,7 +2,14 @@ from arcadedb_embedded.graph import Vertex
 import json
 import logging
 
-from src.core.model.entity import Danger, EntityKind, EntityStatus, ThreatPillar
+from src.core.model.entity import (
+    Danger,
+    Disposition,
+    EntityKind,
+    EntityStance,
+    EntityStatus,
+    ThreatPillar,
+)
 from src.core.model.location import EntityData, LocationData, LocationState
 from src.core.model.threat import Channel
 from src.database.repository.base import BaseRepository
@@ -67,7 +74,7 @@ class LocationService:
         )
         danger = Danger(entity.get(name="danger") or Danger.STANDARD.value)
         kind = EntityKind(entity.get(name="kind") or EntityKind.OBJECT.value)
-        status, broken_pillar, clocks, returns_when = _resolution_from_json(
+        status, broken_pillar, clocks, returns_when, stance = _resolution_from_json(
             entity.get(name="resolution")
         )
         return EntityData(
@@ -82,6 +89,8 @@ class LocationService:
             broken_pillar=broken_pillar,
             clocks=clocks,
             returns_when=returns_when,
+            stance=stance,
+            disposition=Disposition(entity.get(name="disposition") or Disposition.NEUTRAL.value),
             pillar_profile=_profile_from_json(entity.get(name="pillar_profile")),
         )
 
@@ -111,21 +120,23 @@ def _resolution_to_json(entity: EntityData) -> str:
             "broken_pillar": entity.broken_pillar.value if entity.broken_pillar else None,
             "clocks": {p.value: f for p, f in entity.clocks.items()},
             "returns_when": entity.returns_when,
+            "stance": entity.stance.value,
         }
     )
 
 
 def _resolution_from_json(
     raw: str | None,
-) -> tuple[EntityStatus, ThreatPillar | None, dict[ThreatPillar, int], str]:
+) -> tuple[EntityStatus, ThreatPillar | None, dict[ThreatPillar, int], str, EntityStance]:
     if not raw:
-        return EntityStatus.ACTIVE, None, {}, ""
+        return EntityStatus.ACTIVE, None, {}, "", EntityStance.UNAWARE
     data = json.loads(raw)
     status = EntityStatus(data.get("status") or EntityStatus.ACTIVE.value)
     broken = data.get("broken_pillar")
     broken_pillar = ThreatPillar(broken) if broken else None
     clocks = {ThreatPillar(p): int(f) for p, f in (data.get("clocks") or {}).items()}
-    return status, broken_pillar, clocks, data.get("returns_when") or ""
+    stance = EntityStance(data.get("stance") or EntityStance.UNAWARE.value)
+    return status, broken_pillar, clocks, data.get("returns_when") or "", stance
 
 
 def _profile_from_json(raw: str | None) -> dict[ThreatPillar, int]:

@@ -19,6 +19,8 @@ class EntityGen:
     # Authored per-pillar clock capacities (pillar -> capacity). Empty = uniform
     # from danger; a pillar omitted from a non-empty profile is immune.
     pillar_profile: dict[str, int] = field(default_factory=dict)
+    # Static aggro nature (predatory/territorial/guardian/skittish/neutral/friendly).
+    disposition: str = "neutral"
 
 
 @dataclass

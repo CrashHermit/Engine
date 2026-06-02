@@ -36,6 +36,8 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "resolution": arcadedb.PropertyType.STRING,
     # Authored per-pillar clock capacities (pillar -> capacity) as JSON.
     "pillar_profile": arcadedb.PropertyType.STRING,
+    # Static aggro nature; current stance lives in the resolution JSON.
+    "disposition": arcadedb.PropertyType.STRING,
 }
 
 BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated_at"]
@@ -81,6 +83,7 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
         "threat_channels",
         "resolution",
         "pillar_profile",
+        "disposition",
     ],
 }
 

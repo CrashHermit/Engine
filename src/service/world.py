@@ -93,6 +93,7 @@ class WorldService:
                     # from the profile (or danger when unauthored).
                     resolution="",
                     pillar_profile=json.dumps(entity.pillar_profile) if entity.pillar_profile else "",
+                    disposition=entity.disposition,
                 )
 
         for node, loc in zip(nodes, dungeon.locations, strict=True):

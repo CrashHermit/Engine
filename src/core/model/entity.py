@@ -47,3 +47,26 @@ class EntityStatus(StrEnum):
     SUSPENDED = "suspended"
     GONE = "gone"
 
+
+class Disposition(StrEnum):
+    """A creature's static nature — how it tends to react to the player. Feeds
+    the engagement check's escalation judgment. NEUTRAL/FRIENDLY never turn
+    hostile on their own."""
+
+    PREDATORY = "predatory"  # hunts; strikes when it notices prey
+    TERRITORIAL = "territorial"  # attacks when its space is encroached
+    GUARDIAN = "guardian"  # defends a charge/place; warns then strikes
+    SKITTISH = "skittish"  # flees/avoids rather than fights
+    NEUTRAL = "neutral"  # indifferent; won't initiate
+    FRIENDLY = "friendly"  # well-disposed; won't initiate
+
+
+class EntityStance(StrEnum):
+    """A creature's current engagement posture toward the player (the aggro
+    axis, orthogonal to EntityStatus). Only a HOSTILE creature generates
+    threats. UNAWARE -> WARY -> HOSTILE is the escalation ladder."""
+
+    UNAWARE = "unaware"  # hasn't noticed / dormant
+    WARY = "wary"  # noticed, tense, not yet committed
+    HOSTILE = "hostile"  # actively threatening
+

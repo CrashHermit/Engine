@@ -4,7 +4,14 @@ from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite.aio import AsyncSqliteSaver
 
-from src.core.model.entity import Danger, EntityKind, EntityStatus, ThreatPillar
+from src.core.model.entity import (
+    Danger,
+    Disposition,
+    EntityKind,
+    EntityStance,
+    EntityStatus,
+    ThreatPillar,
+)
 from src.core.mechanic.dice import RollResult, RollTier
 from src.core.mechanic.magnitude import Magnitude
 from src.core.mechanic.scaling import Outcome, Position
@@ -35,6 +42,8 @@ _ALLOWED_CHECKPOINT_TYPES: tuple[type, ...] = (
     Danger,
     EntityKind,
     EntityStatus,
+    Disposition,
+    EntityStance,
     ThreatPillar,
     Threat,
 )

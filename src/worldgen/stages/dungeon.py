@@ -19,6 +19,7 @@ class DungeonStage:
                         danger=entity.get("danger", "standard"),
                         threat_channels=entity.get("threat_channels", ""),
                         pillar_profile=entity.get("pillar_profile", {}),
+                        disposition=entity.get("disposition", "neutral"),
                     )
                     for entity in node["entities"]
                 ],
@@ -92,6 +93,9 @@ _HEX_NODES = [
                     "in_reach": 2,
                     "willing": 4,
                 },
+                # Lurks unaware in its alcove; the engagement check turns it
+                # hostile when the player gets close.
+                "disposition": "predatory",
             }
         ],
     },

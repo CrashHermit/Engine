@@ -1,6 +1,13 @@
 from dataclasses import dataclass, field
 
-from src.core.model.entity import Danger, EntityKind, EntityStatus, ThreatPillar
+from src.core.model.entity import (
+    Danger,
+    Disposition,
+    EntityKind,
+    EntityStance,
+    EntityStatus,
+    ThreatPillar,
+)
 from src.core.model.threat import Channel
 
 
@@ -28,8 +35,12 @@ class EntityData:
     status: EntityStatus = EntityStatus.ACTIVE
     broken_pillar: ThreatPillar | None = None
     # When suspended: the fiction under which this creature re-engages (read by
-    # the reengagement check). Empty while active.
+    # the engagement check). Empty while active.
     returns_when: str = ""
+    # Aggro axis (orthogonal to status): static nature + current posture. A
+    # creature threatens only while HOSTILE; the engagement check escalates it.
+    disposition: Disposition = Disposition.NEUTRAL
+    stance: EntityStance = EntityStance.UNAWARE
 
 
 @dataclass
