@@ -58,6 +58,13 @@ class TargetSuspended:
 
 
 @dataclass(frozen=True)
+class TargetReturned:
+    """A suspended creature re-engaged this turn (its broken pillar reverted)."""
+
+    name: str
+
+
+@dataclass(frozen=True)
 class TurnError:
     """A turn failed; submit() is total and yields this instead of raising."""
 
@@ -72,5 +79,6 @@ TurnEvent = (
     | CharacterLost
     | TargetDefeated
     | TargetSuspended
+    | TargetReturned
     | TurnError
 )

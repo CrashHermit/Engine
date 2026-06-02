@@ -6,6 +6,7 @@ from src.core.mechanic.effect import (
     outcome_clause,
     pillar_capacity,
     potency_shift,
+    returns_when_for,
 )
 from src.core.model.entity import EntityKind, EntityStatus, ThreatPillar
 from src.core.model.location import EntityData
@@ -42,6 +43,7 @@ class ApplyEffectNode:
         out: dict = {}
         status = target.status
         broken_pillar = target.broken_pillar
+        returns_when = target.returns_when
         if filled >= capacity:
             broken_pillar = pillar
             out["resolution_outcome"] = outcome_clause(pillar, target.name)
@@ -50,9 +52,12 @@ class ApplyEffectNode:
                 out["defeated_target"] = target.name
             else:
                 status = EntityStatus.SUSPENDED
+                returns_when = returns_when_for(pillar)
                 out["suspended_target"] = target.name
 
-        updated = replace(target, clocks=clocks, status=status, broken_pillar=broken_pillar)
+        updated = replace(
+            target, clocks=clocks, status=status, broken_pillar=broken_pillar, returns_when=returns_when
+        )
         out["scene_entities"] = [updated if e.id == target.id else e for e in state.scene_entities]
         return out
 

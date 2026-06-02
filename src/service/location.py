@@ -67,7 +67,9 @@ class LocationService:
         )
         danger = Danger(entity.get(name="danger") or Danger.STANDARD.value)
         kind = EntityKind(entity.get(name="kind") or EntityKind.OBJECT.value)
-        status, broken_pillar, clocks = _resolution_from_json(entity.get(name="resolution"))
+        status, broken_pillar, clocks, returns_when = _resolution_from_json(
+            entity.get(name="resolution")
+        )
         return EntityData(
             id=entity.get(name="id") or "",
             name=entity.get(name="name") or "",
@@ -79,6 +81,7 @@ class LocationService:
             status=status,
             broken_pillar=broken_pillar,
             clocks=clocks,
+            returns_when=returns_when,
         )
 
     def persist_entity_state(self, entities: list[EntityData]) -> None:
@@ -106,18 +109,19 @@ def _resolution_to_json(entity: EntityData) -> str:
             "status": entity.status.value,
             "broken_pillar": entity.broken_pillar.value if entity.broken_pillar else None,
             "clocks": {p.value: f for p, f in entity.clocks.items()},
+            "returns_when": entity.returns_when,
         }
     )
 
 
 def _resolution_from_json(
     raw: str | None,
-) -> tuple[EntityStatus, ThreatPillar | None, dict[ThreatPillar, int]]:
+) -> tuple[EntityStatus, ThreatPillar | None, dict[ThreatPillar, int], str]:
     if not raw:
-        return EntityStatus.ACTIVE, None, {}
+        return EntityStatus.ACTIVE, None, {}, ""
     data = json.loads(raw)
     status = EntityStatus(data.get("status") or EntityStatus.ACTIVE.value)
     broken = data.get("broken_pillar")
     broken_pillar = ThreatPillar(broken) if broken else None
     clocks = {ThreatPillar(p): int(f) for p, f in (data.get("clocks") or {}).items()}
-    return status, broken_pillar, clocks
+    return status, broken_pillar, clocks, data.get("returns_when") or ""

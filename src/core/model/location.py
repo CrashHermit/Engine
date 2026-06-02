@@ -23,6 +23,9 @@ class EntityData:
     clocks: dict[ThreatPillar, int] = field(default_factory=dict)
     status: EntityStatus = EntityStatus.ACTIVE
     broken_pillar: ThreatPillar | None = None
+    # When suspended: the fiction under which this creature re-engages (read by
+    # the reengagement check). Empty while active.
+    returns_when: str = ""
 
 
 @dataclass

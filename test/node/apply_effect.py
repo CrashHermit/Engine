@@ -69,6 +69,7 @@ async def test_breaking_willing_suspends_not_kills():
     spider = result["scene_entities"][0]
     assert spider.status == EntityStatus.SUSPENDED
     assert spider.broken_pillar == ThreatPillar.WILLING
+    assert spider.returns_when  # a return condition was recorded for Phase 2
     assert result["suspended_target"] == "Spider"
     assert "defeated_target" not in result
 

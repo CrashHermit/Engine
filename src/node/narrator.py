@@ -15,6 +15,10 @@ class NarratorNode:
         history = "\n".join(m.format() for m in state.message_history)
         entities = "\n".join(state.entities_at_location) if state.entities_at_location else ""
         directive = state.narration_directive or ""
+        # A suspended foe coming back this turn is narrated first (it re-enters
+        # the scene), then the action's effect outcome.
+        if state.reengagement_note:
+            directive = f"{directive}\n\nA neutralized foe returns: {state.reengagement_note}"
         # The effect-on-target outcome (kill / disarm / rout / evade …) is a
         # structural instruction so prose can't recast a rout as a kill.
         if state.resolution_outcome:

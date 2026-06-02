@@ -50,6 +50,9 @@ class GraphState(BaseModel):
     defeated_target: str = ""
     suspended_target: str = ""
     resolution_outcome: str = ""
+    # Suspended creatures that re-engaged this turn (durability / Phase 2).
+    returned_targets: list[str] = Field(default_factory=list)
+    reengagement_note: str = ""
 
     # ── Threats ──────────────────────────────────────────────────────────
     # Per-source classify branches (Send fan-out) append here; gather_threats

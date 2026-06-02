@@ -11,6 +11,7 @@ from src.session.result import (
     Narration,
     ResistanceOffer,
     TargetDefeated,
+    TargetReturned,
     TargetSuspended,
     TraumaGained,
     TurnError,
@@ -200,6 +201,9 @@ class GameCoordinator:
         self._services.location.persist_entity_state(scene_entities)
 
         events: list[TurnEvent] = []
+        for returned_name in result.get("returned_targets") or []:
+            events.append(TargetReturned(returned_name))
+
         defeated_name = result.get("defeated_target") or ""
         if defeated_name:
             defeated_id = next(

@@ -17,6 +17,7 @@ from src.session.result import (
     Narration,
     ResistanceOffer,
     TargetDefeated,
+    TargetReturned,
     TargetSuspended,
     TraumaGained,
     TurnError,
@@ -123,5 +124,7 @@ class GameScreen(Screen):
                 log.write(f"[bold #6ec06e]Defeated:[/bold #6ec06e] {escape(name)} is down.")
             case TargetSuspended(name):
                 log.write(f"[bold #6ec06e]Neutralized:[/bold #6ec06e] {escape(name)} is out of the fight.")
+            case TargetReturned(name):
+                log.write(f"[bold #d98c5f]Returned:[/bold #d98c5f] {escape(name)} is back in the fight.")
             case TurnError(message):
                 log.write(f"[bold red]Error:[/bold red] {escape(message)}")

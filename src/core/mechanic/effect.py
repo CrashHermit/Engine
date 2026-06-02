@@ -102,3 +102,17 @@ _PILLAR_OUTCOME: dict[ThreatPillar, str] = {
 
 def outcome_clause(pillar: ThreatPillar, name: str) -> str:
     return f"The {name} {_PILLAR_OUTCOME[pillar]}."
+
+
+# Default condition under which a broken pillar reverts and the foe re-engages.
+# EXISTS is permanent (the creature is gone), so it has no return.
+_PILLAR_RETURNS_WHEN: dict[ThreatPillar, str] = {
+    ThreatPillar.CAPABLE: "it recovers, is freed, or finds another means to act",
+    ThreatPillar.AWARE: "you make noise, move into its view, or it searches and finds you",
+    ThreatPillar.IN_REACH: "you re-enter its space, it pursues you, or you are cornered",
+    ThreatPillar.WILLING: "you show weakness, it is cornered with no escape, or reinforcements embolden it",
+}
+
+
+def returns_when_for(pillar: ThreatPillar) -> str:
+    return _PILLAR_RETURNS_WHEN.get(pillar, "")
