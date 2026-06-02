@@ -81,7 +81,9 @@ class ResolutionGraphBuilder:
         self._node("dice_scale", DiceScaleNode())
 
         self.workflow.add_conditional_edges("ambush", fan_out_ambush, ["classify_threat"])
-        self.workflow.add_conditional_edges("ambush_scale", route_by_significance)
+        self.workflow.add_conditional_edges(
+            "ambush_scale", route_by_significance, ["held_planner", "final_planner"]
+        )
         self.workflow.add_edge("classify_threat", "gather_threats")
         self.workflow.add_conditional_edges(
             "gather_threats", route_after_gather, ["dice_scale", "ambush_scale"]
@@ -92,7 +94,9 @@ class ResolutionGraphBuilder:
         """The other axis of the same roll: land the player's effect on the target
         (fill the targeted pillar), then decide the held/avoided path."""
         self._node("apply_effect", ApplyEffectNode())
-        self.workflow.add_conditional_edges("apply_effect", route_by_significance)
+        self.workflow.add_conditional_edges(
+            "apply_effect", route_by_significance, ["held_planner", "final_planner"]
+        )
 
     def _add_resolve(self) -> None:
         """Narrate the beat: a cohesive held setup (something landed) or the
@@ -105,8 +109,12 @@ class ResolutionGraphBuilder:
 
         self.workflow.add_edge("held_planner", "narrator")
         self.workflow.add_edge("final_planner", "narrator")
-        self.workflow.add_conditional_edges("narrator", route_after_narrator)
-        self.workflow.add_conditional_edges("resolution_narrator", route_after_resolution)
+        self.workflow.add_conditional_edges(
+            "narrator", route_after_narrator, ["resist_offer", "turn_close"]
+        )
+        self.workflow.add_conditional_edges(
+            "resolution_narrator", route_after_resolution, ["resist_offer", "turn_close"]
+        )
         self.workflow.add_edge("turn_close", END)
 
     def _add_resist(self) -> None:
