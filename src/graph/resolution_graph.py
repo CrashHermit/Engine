@@ -33,74 +33,89 @@ from src.state import GraphState
 
 
 class ResolutionGraphBuilder:
+    """Wires the resolution pipeline as five phase blocks. Each `_add_*` method
+    registers its phase's nodes and the edges leaving them; control-flow lives in
+    graph/routers.py. The turn flows: frame → (threat → effect) → resolve ⇄ resist."""
+
     def __init__(self) -> None:
         self.workflow: StateGraph = StateGraph(GraphState)
 
     def build(self) -> CompiledStateGraph:
-        self.workflow.add_node("engagement", LoggedNode("engagement", EngagementNode()))
-        self.workflow.add_node("roll_gate", LoggedNode("roll_gate", RollGateNode()))
-        self.workflow.add_node("mundane", LoggedNode("mundane", MundaneNode()))
-        self.workflow.add_node("ambush", LoggedNode("ambush", AmbushNode()))
-        self.workflow.add_node("ambush_scale", LoggedNode("ambush_scale", AmbushScaleNode()))
-        self.workflow.add_node("segmenter", LoggedNode("segmenter", SegmenterNode()))
-        self.workflow.add_node(
-            "attribute_selector", LoggedNode("attribute_selector", AttributeSelectorNode())
-        )
-        self.workflow.add_node("classify_threat", LoggedNode("classify_threat", ClassifyThreatNode()))
-        self.workflow.add_node("gather_threats", LoggedNode("gather_threats", GatherThreatsNode()))
-        self.workflow.add_node("dice_scale", LoggedNode("dice_scale", DiceScaleNode()))
-        self.workflow.add_node("apply_effect", LoggedNode("apply_effect", ApplyEffectNode()))
-        self.workflow.add_node("held_planner", LoggedNode("held_planner", HeldPlannerNode()))
-        self.workflow.add_node("final_planner", LoggedNode("final_planner", FinalPlannerNode()))
-        self.workflow.add_node("narrator", LoggedNode("narrator", NarratorNode()))
-        self.workflow.add_node(
-            "resolution_narrator", LoggedNode("resolution_narrator", NarratorNode())
-        )
-        self.workflow.add_node("resist_offer", LoggedNode("resist_offer", ResistOfferNode()))
-        self.workflow.add_node(
-            "resist_push_parser", LoggedNode("resist_push_parser", ResistPushParserNode())
-        )
-        self.workflow.add_node("resist_roll", LoggedNode("resist_roll", ResistRollNode()))
-        self.workflow.add_node("turn_close", LoggedNode("turn_close", TurnCloseNode()))
-
-        # ── edges ──────────────────────────────────────────────────────────
+        self._add_frame()
+        self._add_threat()
+        self._add_effect()
+        self._add_resolve()
+        self._add_resist()
         # Turn start: the engagement check sets each creature's posture (aggro +
         # re-engage) before anything else — covers both mundane and roll paths.
-        # No-op (no LLM call) when there are no non-hostile creatures.
         self.workflow.add_edge(START, "engagement")
+        return self.workflow.compile()
+
+    def _node(self, name: str, node: object) -> None:
+        self.workflow.add_node(name, LoggedNode(name, node))
+
+    def _add_frame(self) -> None:
+        """Scope the turn: wake creatures (engagement), gate the roll, and either
+        route to mundane narration, the ambush path, or scope the contested beat."""
+        self._node("engagement", EngagementNode())
+        self._node("roll_gate", RollGateNode())
+        self._node("mundane", MundaneNode())
+        self._node("segmenter", SegmenterNode())
+        self._node("attribute_selector", AttributeSelectorNode())
+
         self.workflow.add_edge("engagement", "roll_gate")
         self.workflow.add_conditional_edges(
             "roll_gate", route_by_roll_gate, ["segmenter", "ambush", "mundane"]
         )
         self.workflow.add_edge("mundane", "narrator")
-
-        # World-acts (ambush) path: hostile creatures strike on a non-contested
-        # turn — fan out over them, then land their threats at full magnitude.
-        self.workflow.add_conditional_edges("ambush", fan_out_ambush, ["classify_threat"])
-        self.workflow.add_conditional_edges("ambush_scale", route_by_significance)
-
-        # Roll path: segmenter → attribute_selector → per-source fan-out → gather
         self.workflow.add_edge("segmenter", "attribute_selector")
         self.workflow.add_conditional_edges("attribute_selector", fan_out_threats, ["classify_threat"])
+
+    def _add_threat(self) -> None:
+        """Enumerate threats per source (player-action fan-out or world-acts
+        ambush), gather them, and scale: by the roll (dice_scale) or full (ambush)."""
+        self._node("ambush", AmbushNode())
+        self._node("ambush_scale", AmbushScaleNode())
+        self._node("classify_threat", ClassifyThreatNode())
+        self._node("gather_threats", GatherThreatsNode())
+        self._node("dice_scale", DiceScaleNode())
+
+        self.workflow.add_conditional_edges("ambush", fan_out_ambush, ["classify_threat"])
+        self.workflow.add_conditional_edges("ambush_scale", route_by_significance)
         self.workflow.add_edge("classify_threat", "gather_threats")
-        # Gather fans in for both paths; split on whether the player acted.
         self.workflow.add_conditional_edges(
             "gather_threats", route_after_gather, ["dice_scale", "ambush_scale"]
         )
-        # One roll, two axes: scale threats (dice_scale) then land effect on the
-        # target (apply_effect) before deciding the held/resist path.
         self.workflow.add_edge("dice_scale", "apply_effect")
+
+    def _add_effect(self) -> None:
+        """The other axis of the same roll: land the player's effect on the target
+        (fill the targeted pillar), then decide the held/avoided path."""
+        self._node("apply_effect", ApplyEffectNode())
         self.workflow.add_conditional_edges("apply_effect", route_by_significance)
+
+    def _add_resolve(self) -> None:
+        """Narrate the beat: a cohesive held setup (something landed) or the
+        avoided final beat, then route to the resist cycle or close the turn."""
+        self._node("held_planner", HeldPlannerNode())
+        self._node("final_planner", FinalPlannerNode())
+        self._node("narrator", NarratorNode())
+        self._node("resolution_narrator", NarratorNode())
+        self._node("turn_close", TurnCloseNode())
 
         self.workflow.add_edge("held_planner", "narrator")
         self.workflow.add_edge("final_planner", "narrator")
         self.workflow.add_conditional_edges("narrator", route_after_narrator)
+        self.workflow.add_conditional_edges("resolution_narrator", route_after_resolution)
+        self.workflow.add_edge("turn_close", END)
 
-        # Resist cycle: offer → parse → roll → resolution line → loop or close
+    def _add_resist(self) -> None:
+        """Per-threat resist cycle: offer → parse → roll → resolution line, then
+        loop to the next landed threat or close (drives resolution_narrator)."""
+        self._node("resist_offer", ResistOfferNode())
+        self._node("resist_push_parser", ResistPushParserNode())
+        self._node("resist_roll", ResistRollNode())
+
         self.workflow.add_edge("resist_offer", "resist_push_parser")
         self.workflow.add_edge("resist_push_parser", "resist_roll")
         self.workflow.add_edge("resist_roll", "resolution_narrator")
-        self.workflow.add_conditional_edges("resolution_narrator", route_after_resolution)
-
-        self.workflow.add_edge("turn_close", END)
-        return self.workflow.compile()
