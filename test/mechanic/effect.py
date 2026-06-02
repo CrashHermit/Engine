@@ -6,8 +6,10 @@ from src.core.mechanic.effect import (
     effect_from_tier,
     effect_segments,
     is_defeated,
+    pillar_capacity,
     potency_shift,
 )
+from src.core.model.entity import ThreatPillar
 from src.core.mechanic.harm import WoundPool
 from src.core.model.entity import Danger
 from src.core.model.resolution import Effect
@@ -64,6 +66,18 @@ def test_is_defeated():
     assert is_defeated(WoundPool(capacity=6, filled=6))
     assert is_defeated(WoundPool(capacity=6, filled=7))
     assert not is_defeated(WoundPool(capacity=6, filled=5))
+
+
+def test_pillar_capacity_unauthored_is_uniform_from_danger():
+    assert pillar_capacity(Danger.ELITE, ThreatPillar.EXISTS) == capacity_for_danger(Danger.ELITE)
+    assert pillar_capacity(Danger.ELITE, ThreatPillar.WILLING, {}) == capacity_for_danger(Danger.ELITE)
+
+
+def test_pillar_capacity_authored_profile_and_immunity():
+    profile = {ThreatPillar.EXISTS: 6, ThreatPillar.IN_REACH: 2}
+    assert pillar_capacity(Danger.ELITE, ThreatPillar.IN_REACH, profile) == 2
+    # a pillar the profile omits is immune (capacity 0)
+    assert pillar_capacity(Danger.ELITE, ThreatPillar.WILLING, profile) == 0
 
 
 @pytest.mark.parametrize(

@@ -17,6 +17,10 @@ class EntityData:
     danger: Danger = Danger.STANDARD
     threat_channels: frozenset[Channel] = field(default_factory=frozenset)
     id: str = ""
+    # Per-creature pillar profile (authored): pillar -> clock capacity. Empty =
+    # unauthored (uniform from danger). A pillar omitted from a non-empty profile
+    # is IMMUNE (can't be broken that way). Static config, not live state.
+    pillar_profile: dict[ThreatPillar, int] = field(default_factory=dict)
     # De-threat resolution state. Each pillar the player attacks accrues its own
     # clock (filled segments); capacity comes from danger (Phase 1, uniform).
     # Filling a pillar breaks it: EXISTS -> GONE, others -> SUSPENDED.

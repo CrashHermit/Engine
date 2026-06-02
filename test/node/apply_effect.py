@@ -90,6 +90,34 @@ async def test_miss_lands_no_effect():
 
 
 @pytest.mark.asyncio
+async def test_immune_pillar_is_a_no_op_with_feedback():
+    # Golem with a profile that omits WILLING -> immune to intimidation.
+    golem = EntityData(
+        name="Golem", description="stone", scene_position="hall", kind=EntityKind.CREATURE,
+        id="g", danger=Danger.DEADLY, pillar_profile={ThreatPillar.EXISTS: 10},
+    )
+    state = _state(golem, RollTier.CLEAN, pillar=ThreatPillar.WILLING, target="Golem")
+    state.attribute = Channel.ANIMA
+    state.anima_rating = 3
+    result = await ApplyEffectNode()(state)
+    assert "scene_entities" not in result  # no clock change
+    assert "immune" in result["resolution_outcome"].lower()
+
+
+@pytest.mark.asyncio
+async def test_profile_capacity_overrides_uniform():
+    # in_reach capacity 2 -> a CLEAN (2 seg) break drives it off in one move.
+    spider = _spider(danger=Danger.ELITE)
+    spider.pillar_profile = {ThreatPillar.EXISTS: 6, ThreatPillar.IN_REACH: 2}
+    result = await ApplyEffectNode()(
+        _state(spider, RollTier.CLEAN, pillar=ThreatPillar.IN_REACH, pool=3)
+    )
+    out = result["scene_entities"][0]
+    assert out.status == EntityStatus.SUSPENDED
+    assert out.broken_pillar == ThreatPillar.IN_REACH
+
+
+@pytest.mark.asyncio
 async def test_object_target_takes_no_clock_damage():
     lantern = EntityData(
         name="Dead Lantern", description="rusted", scene_position="ceiling",

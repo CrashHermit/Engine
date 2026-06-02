@@ -82,6 +82,7 @@ class LocationService:
             broken_pillar=broken_pillar,
             clocks=clocks,
             returns_when=returns_when,
+            pillar_profile=_profile_from_json(entity.get(name="pillar_profile")),
         )
 
     def persist_entity_state(self, entities: list[EntityData]) -> None:
@@ -125,3 +126,9 @@ def _resolution_from_json(
     broken_pillar = ThreatPillar(broken) if broken else None
     clocks = {ThreatPillar(p): int(f) for p, f in (data.get("clocks") or {}).items()}
     return status, broken_pillar, clocks, data.get("returns_when") or ""
+
+
+def _profile_from_json(raw: str | None) -> dict[ThreatPillar, int]:
+    if not raw:
+        return {}
+    return {ThreatPillar(p): int(c) for p, c in json.loads(raw).items()}

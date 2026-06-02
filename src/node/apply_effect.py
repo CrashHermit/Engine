@@ -28,9 +28,14 @@ class ApplyEffectNode:
             return {}
 
         pillar = state.target_pillar or ThreatPillar.EXISTS
-        capacity = pillar_capacity(target.danger, pillar)
-        if capacity <= 0:  # immune to this pillar (Phase 3 profiles)
-            return {"resolution_outcome": f"The {target.name} is immune to this approach — it has no effect."}
+        capacity = pillar_capacity(target.danger, pillar, target.pillar_profile)
+        if capacity <= 0:  # immune to this pillar (profile omits it)
+            return {
+                "resolution_outcome": (
+                    f"The {target.name} cannot be affected this way (immune to this approach) — "
+                    "the attempt has no effect; make that clear to the player."
+                )
+            }
 
         pool = self._pool_for_attribute(state)
         segments = effect_segments(potency_shift(effect_from_tier(state.roll_result.tier), pool, target.danger))

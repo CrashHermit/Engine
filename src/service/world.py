@@ -1,5 +1,6 @@
 from arcadedb_embedded.core import Database
 from arcadedb_embedded.graph import Vertex
+import json
 import logging
 
 from src.core.model.database import EdgeType
@@ -89,8 +90,9 @@ class WorldService:
                     danger=entity.danger,
                     threat_channels=entity.threat_channels,
                     # Empty resolution => ACTIVE, no clocks; capacity derives
-                    # from danger at runtime.
+                    # from the profile (or danger when unauthored).
                     resolution="",
+                    pillar_profile=json.dumps(entity.pillar_profile) if entity.pillar_profile else "",
                 )
 
         for node, loc in zip(nodes, dungeon.locations, strict=True):

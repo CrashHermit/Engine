@@ -82,10 +82,20 @@ def is_defeated(clock: WoundPool) -> bool:
     return clock.filled >= clock.capacity
 
 
-def pillar_capacity(danger: Danger, pillar: ThreatPillar) -> int:
-    """Clock size for breaking a given pillar. Phase 1: uniform from danger
-    (every condition equally hard for the tier). Phase 3 replaces this with a
-    per-creature profile so foes get weaknesses and immunities (capacity 0)."""
+def pillar_capacity(
+    danger: Danger,
+    pillar: ThreatPillar,
+    profile: dict[ThreatPillar, int] | None = None,
+) -> int:
+    """Clock size for breaking a given pillar.
+
+    No profile (unauthored creature) -> uniform from danger (every condition
+    equally hard for the tier). An authored profile is authoritative: a listed
+    pillar uses its capacity; a pillar the profile omits is IMMUNE (capacity 0
+    -> can't be broken that way), which is how a golem resists WILLING or a
+    mindless thing resists AWARE."""
+    if profile:
+        return profile.get(pillar, 0)
     return capacity_for_danger(danger)
 
 

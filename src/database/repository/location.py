@@ -44,6 +44,7 @@ class LocationRepository:
         danger: str = "standard",
         threat_channels: str = "",
         resolution: str = "",
+        pillar_profile: str = "",
     ) -> Vertex:
         entity = self._base.create_vertex(
             type_name=VertexType.ENTITY,
@@ -54,6 +55,7 @@ class LocationRepository:
             danger=danger,
             threat_channels=threat_channels,
             resolution=resolution,
+            pillar_profile=pillar_profile,
         )
         self._base.create_edge(type_name=EdgeType.CONTAINS, source=location, target=entity)
         return entity
