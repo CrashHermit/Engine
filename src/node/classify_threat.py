@@ -1,17 +1,17 @@
-from core.mechanic.magnitude import Magnitude
-from core.mechanic.threat_envelope import magnitude_cap_for
-from core.mechanic.threat_envelope import snap_channel
-from core.model.entity import Danger
-from core.model.threat import Threat
+from src.core.mechanic.magnitude import Magnitude
+from src.core.mechanic.threat_envelope import magnitude_cap_for
+from src.core.mechanic.threat_envelope import snap_channel
+from src.core.model.entity import Danger
+from src.core.model.threat import Threat
 
-from core.model.location import EntityData
-from core.mechanic.threat_envelope import position_for
+from src.core.model.location import EntityData
+from src.core.mechanic.threat_envelope import position_for
 
 from dspy import Predict, Prediction
 
-from signature.threat_classifier import ThreatClassifierSignature
+from src.signature.threat_classifier import ThreatClassifierSignature
 from src.lm import lm
-from state import GraphState
+from src.state import GraphState
 
 
 class ClassifyThreatNode:
