@@ -397,6 +397,17 @@ Tackle these next, against this saved foundation:
       benefit (positional advantage, information, an unexpected opening, etc.). No classifier;
       the narrator owns it entirely. Safe to be generous — benefits are additive, not a gate
       or consequence.
+- [ ] **LLM-generated NPCs at worldgen** — deferred. The entity/de-threat layer (§11,
+      decisions #34–#40) is built and proven against a **hand-authored** prototype (the ELITE
+      spider in `worldgen/stages/dungeon.py`); everything else is an OBJECT. The next natural
+      step is a worldgen stage that **generates creatures from the world fiction** — emitting
+      each entity's `kind`, `danger`, `threat_channels` (affinity), and a `pillar_profile`
+      (capacities + immunities, #40) so generated foes get real weaknesses/strengths rather
+      than uniform-from-danger clocks. Design questions when we return: deriving a coherent
+      profile from a creature's description (a golem → WILLING/AWARE immune; a beast → cheap
+      IN_REACH/WILLING), keeping danger and profile mutually consistent, and whether profiles
+      are authored by a classifier or templated from a creature archetype. Doesn't block the
+      current spine; the persistence columns (`resolution`, `pillar_profile`) already exist.
 - [ ] **Character creation flow** — how the ~4 dots get assigned (UI already has
       `value_stepper` / `pip_selector` widgets and a `create_character` modal). Also owns
       **part generation** (decision #27 sub-node): blocked on the full description system
