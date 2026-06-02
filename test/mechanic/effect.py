@@ -5,13 +5,10 @@ from src.core.mechanic.effect import (
     capacity_for_danger,
     effect_from_tier,
     effect_segments,
-    is_defeated,
     pillar_capacity,
     potency_shift,
 )
-from src.core.model.entity import ThreatPillar
-from src.core.mechanic.harm import WoundPool
-from src.core.model.entity import Danger
+from src.core.model.entity import Danger, ThreatPillar
 from src.core.model.resolution import Effect
 
 
@@ -60,12 +57,6 @@ def test_effect_segments():
         effect_segments(Effect.LIMITED),
         effect_segments(None),
     ) == (3, 2, 1, 0)
-
-
-def test_is_defeated():
-    assert is_defeated(WoundPool(capacity=6, filled=6))
-    assert is_defeated(WoundPool(capacity=6, filled=7))
-    assert not is_defeated(WoundPool(capacity=6, filled=5))
 
 
 def test_pillar_capacity_unauthored_is_uniform_from_danger():

@@ -2,9 +2,10 @@
 Effect-on-target (the mirror of threat-on-player).
 
 One action roll drives two axes. Threats coming *back* at the player are scaled
-in scaling.py; the effect the player lands *on* a target is scaled here. An
-entity carries a single clock (a WoundPool sized by its danger); the player's
-effect fills it, and the entity is defeated when it is full.
+in scaling.py; the effect the player lands *on* a target is scaled here. A
+creature carries a per-pillar clock (an int per ThreatPillar, capacity sized by
+its danger); the player's effect fills the targeted pillar, and breaking any
+pillar neutralises the creature (see node/effect/apply_effect.py).
 
 Effect is the action tier shifted one step by potency — the rolled attribute
 pool against the target's danger — so a rat and a dragon don't take the same hit
@@ -12,7 +13,6 @@ from the same roll. A miss (BAD tier) lands nothing regardless of potency.
 """
 
 from src.core.mechanic.dice import RollTier
-from src.core.mechanic.harm import WoundPool
 from src.core.model.entity import Danger, ThreatPillar
 from src.core.model.resolution import Effect
 
@@ -50,10 +50,6 @@ def capacity_for_danger(danger: Danger) -> int:
     return CAPACITY_BY_DANGER[danger]
 
 
-def new_clock_for(danger: Danger) -> WoundPool:
-    return WoundPool(capacity=capacity_for_danger(danger), filled=0)
-
-
 def effect_from_tier(tier: RollTier) -> Effect | None:
     return _TIER_EFFECT[tier]
 
@@ -74,12 +70,6 @@ def potency_shift(effect: Effect | None, pool: int, danger: Danger | None) -> Ef
 
 def effect_segments(effect: Effect | None) -> int:
     return _EFFECT_SEGMENTS[effect]
-
-
-def is_defeated(clock: WoundPool) -> bool:
-    """An entity is defeated when its clock is full. (Distinct from WoundPool's
-    body-part Status ladder, which is meaningless for an abstract NPC clock.)"""
-    return clock.filled >= clock.capacity
 
 
 def pillar_capacity(

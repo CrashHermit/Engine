@@ -22,7 +22,6 @@ class GraphState(BaseModel):
     needs_roll: bool | None = None
     lead_up: str | None = None
     contested_beat: str | None = None
-    deferred_tail: str | None = None
 
     location_name: str = ""
     location_description: str = ""

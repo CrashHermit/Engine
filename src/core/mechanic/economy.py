@@ -53,6 +53,9 @@ def add_stress(
 
 
 def clear_vice(stress: int, vice_roll: int) -> ViceResult:
+    # DEFERRED / NOT YET WIRED: the vice/relief path (intent router + vice
+    # matcher) is unbuilt, so this has no callers yet. Kept as specced
+    # scaffolding (decisions #12/#14); wire it when the vice path ships.
     if vice_roll < 0:
         raise ValueError("vice_roll must be non-negative")
 
