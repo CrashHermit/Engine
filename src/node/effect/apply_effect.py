@@ -12,7 +12,6 @@ from src.core.mechanic.effect import (
 from src.core.mechanic.push import PUSH_FOR_EFFECT_SEGMENTS, PUSH_FOR_EFFECT_STRESS
 from src.core.model.entity import EntityKind, EntityStatus, ThreatPillar
 from src.core.model.location import EntityData
-from src.core.model.threat import Channel
 from src.state import GraphState
 
 
@@ -39,7 +38,7 @@ class ApplyEffectNode:
                 )
             }
 
-        pool = self._pool_for_attribute(state)
+        pool = state.pool_for(state.attribute)
         segments = effect_segments(potency_shift(effect_from_tier(state.roll_result.tier), pool, target.danger))
         if segments <= 0:
             return {}
@@ -104,15 +103,3 @@ class ApplyEffectNode:
             if name in e.name.lower() or e.name.lower() in name:
                 return e
         return None
-
-    @staticmethod
-    def _pool_for_attribute(state: GraphState) -> int:
-        match state.attribute:
-            case Channel.CORPUS:
-                return state.corpus_rating
-            case Channel.MENS:
-                return state.mens_rating
-            case Channel.ANIMA:
-                return state.anima_rating
-            case _:
-                return 0

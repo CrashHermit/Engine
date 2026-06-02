@@ -31,9 +31,9 @@ class GraphState(BaseModel):
 
     character_name: str = ""
     character_description: str = ""
-    corpus_rating: int = 0
-    mens_rating: int = 0
-    anima_rating: int = 0
+    # Attribute dice pools keyed by channel (corpus/mens/anima). Seeded by the
+    # coordinator; read via pool_for().
+    ratings: dict[Channel, int] = Field(default_factory=dict)
 
     # The single action: which attribute it rolls, its target/pillar, and roll.
     attribute: Channel | None = None
@@ -90,6 +90,10 @@ class GraphState(BaseModel):
     character_lost: bool = False
 
     # ── Derived helpers ──────────────────────────────────────────────────
+    def pool_for(self, channel: Channel | None) -> int:
+        """Dice pool for an attribute channel (0 if unknown)."""
+        return self.ratings.get(channel, 0) if channel is not None else 0
+
     @property
     def landed_threats(self) -> list[Threat]:
         return [

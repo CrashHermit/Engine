@@ -6,6 +6,7 @@ import pytest
 from src.core.model.character import CharacterData
 from src.core.model.location import EntityData, LocationData, LocationState
 from src.core.model.message import Message
+from src.core.model.threat import Channel
 from src.session.coordinator import GameCoordinator
 from src.session.result import ClarifyingQuestion, Narration, ResistanceOffer, TurnError
 
@@ -124,9 +125,9 @@ async def test_submit_seeds_attribute_ratings_into_graph_state():
     [e async for e in coord.submit("strike")]
 
     sent_state = coord._services.graph_service.ainvoke.await_args.args[0]
-    assert sent_state.corpus_rating == 2
-    assert sent_state.mens_rating == 1
-    assert sent_state.anima_rating == 1
+    assert sent_state.pool_for(Channel.CORPUS) == 2
+    assert sent_state.pool_for(Channel.MENS) == 1
+    assert sent_state.pool_for(Channel.ANIMA) == 1
 
 
 @pytest.mark.asyncio

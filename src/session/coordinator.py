@@ -4,6 +4,7 @@ from collections.abc import AsyncIterator
 from src.core.model.character import CharacterData
 from src.core.model.location import LocationState
 from src.core.model.message import Message
+from src.core.model.threat import Channel
 from src.service.container import ServiceContainer
 from src.session.result import (
     CharacterLost,
@@ -244,7 +245,9 @@ class GameCoordinator:
             scene_entities=list(entities),  # structured spine for enumeration + caps
             stress=self._character.stress,
             trauma=self._character.trauma,
-            corpus_rating=self._character.corpus,
-            mens_rating=self._character.mens,
-            anima_rating=self._character.anima,
+            ratings={
+                Channel.CORPUS: self._character.corpus,
+                Channel.MENS: self._character.mens,
+                Channel.ANIMA: self._character.anima,
+            },
         )

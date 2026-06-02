@@ -7,7 +7,7 @@ from src.core.mechanic.narration_directive import resolution_directive
 from src.core.mechanic.push import improve_magnitude, push_cost
 from src.core.mechanic.threat_envelope import describe_threat
 from src.core.model.resist import ResistAction
-from src.core.model.threat import Channel, Threat
+from src.core.model.threat import Threat
 from src.state import GraphState
 
 
@@ -46,7 +46,7 @@ class ResistRollNode:
             )
             return updates
 
-        roll = roll_pool(self._pool_for_channel(threat.channel, state), rng=self._rng)
+        roll = roll_pool(state.pool_for(threat.channel), rng=self._rng)
         cost = push_cost(roll.tier)
         stress_result = add_stress(state.stress, state.trauma, cost)
         updates.update(
@@ -68,15 +68,3 @@ class ResistRollNode:
             new_threat = replace(new_threat, outcome=replace(threat.outcome, landed_magnitude=new_mag))
         updates["threats"] = _replace_threat(state.threats, new_threat)
         return updates
-
-    @staticmethod
-    def _pool_for_channel(channel: Channel, state: GraphState) -> int:
-        match channel:
-            case Channel.CORPUS:
-                return state.corpus_rating
-            case Channel.MENS:
-                return state.mens_rating
-            case Channel.ANIMA:
-                return state.anima_rating
-            case _:
-                return 0

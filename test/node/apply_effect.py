@@ -34,7 +34,7 @@ def _state(
         target_entity=target,
         target_pillar=pillar,
         attribute=Channel.CORPUS,
-        corpus_rating=pool,
+        ratings={Channel.CORPUS: pool},
         roll_result=RollResult(dice=(6,), outcome_die=6, tier=tier, zero_pool=False),
     )
 
@@ -64,7 +64,7 @@ async def test_breaking_willing_suspends_not_kills():
     # fill the WILLING pillar instead -> SUSPENDED, no defeat (non-lethal)
     s = _state(_spider({ThreatPillar.WILLING: 1}), RollTier.CLEAN, pillar=ThreatPillar.WILLING)
     s.attribute = Channel.ANIMA
-    s.anima_rating = 2
+    s.ratings = {Channel.ANIMA: 2}
     result = await ApplyEffectNode()(s)
     spider = result["scene_entities"][0]
     assert spider.status == EntityStatus.SUSPENDED
@@ -117,7 +117,7 @@ async def test_immune_pillar_is_a_no_op_with_feedback():
     )
     state = _state(golem, RollTier.CLEAN, pillar=ThreatPillar.WILLING, target="Golem")
     state.attribute = Channel.ANIMA
-    state.anima_rating = 3
+    state.ratings = {Channel.ANIMA: 3}
     result = await ApplyEffectNode()(state)
     assert "scene_entities" not in result  # no clock change
     assert "immune" in result["resolution_outcome"].lower()
@@ -144,7 +144,7 @@ async def test_object_target_takes_no_clock_damage():
     )
     state = GraphState(
         scene_entities=[lantern], target_entity="Dead Lantern", target_pillar=ThreatPillar.EXISTS,
-        attribute=Channel.CORPUS, corpus_rating=2,
+        attribute=Channel.CORPUS, ratings={Channel.CORPUS: 2},
         roll_result=RollResult(dice=(6,), outcome_die=6, tier=RollTier.CLEAN, zero_pool=False),
     )
     assert await ApplyEffectNode()(state) == {}
