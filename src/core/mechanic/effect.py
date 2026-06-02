@@ -16,10 +16,14 @@ from src.core.mechanic.harm import WoundPool
 from src.core.model.entity import Danger
 from src.core.model.resolution import Effect
 
+# Clock capacity by danger. Tuned so weak foes are taken out in a single solid
+# exchange (Blades: a lone guard just goes down) while dangerous foes become a
+# real multi-exchange clock. Effect lands 1-3 segments, so LOW one-shots on any
+# hit, STANDARD takes ~two, and DEADLY is a genuine struggle.
 CAPACITY_BY_DANGER: dict[Danger, int] = {
-    Danger.LOW: 4,
-    Danger.STANDARD: 6,
-    Danger.ELITE: 8,
+    Danger.LOW: 1,
+    Danger.STANDARD: 3,
+    Danger.ELITE: 6,
     Danger.DEADLY: 10,
 }
 

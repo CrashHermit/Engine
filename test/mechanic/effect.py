@@ -15,7 +15,7 @@ from src.core.model.resolution import Effect
 
 @pytest.mark.parametrize(
     "danger,expected",
-    [(Danger.LOW, 4), (Danger.STANDARD, 6), (Danger.ELITE, 8), (Danger.DEADLY, 10)],
+    [(Danger.LOW, 1), (Danger.STANDARD, 3), (Danger.ELITE, 6), (Danger.DEADLY, 10)],
 )
 def test_capacity_for_danger(danger, expected):
     assert capacity_for_danger(danger) == expected
@@ -64,3 +64,19 @@ def test_is_defeated():
     assert is_defeated(WoundPool(capacity=6, filled=6))
     assert is_defeated(WoundPool(capacity=6, filled=7))
     assert not is_defeated(WoundPool(capacity=6, filled=5))
+
+
+@pytest.mark.parametrize(
+    "danger,tier,one_shot",
+    [
+        (Danger.LOW, RollTier.PARTIAL, True),     # weak foe drops on any hit
+        (Danger.LOW, RollTier.CLEAN, True),
+        (Danger.STANDARD, RollTier.CLEAN, False),  # takes more than one standard hit
+        (Danger.DEADLY, RollTier.CRIT, False),     # a real multi-exchange clock
+    ],
+)
+def test_weak_foes_one_shot_tough_foes_do_not(danger, tier, one_shot):
+    # neutral potency (pool == danger rank) so only the tuning is under test
+    pool = {Danger.LOW: 1, Danger.STANDARD: 2, Danger.ELITE: 3, Danger.DEADLY: 4}[danger]
+    segments = effect_segments(potency_shift(effect_from_tier(tier), pool, danger))
+    assert (segments >= capacity_for_danger(danger)) == one_shot
