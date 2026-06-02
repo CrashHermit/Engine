@@ -61,6 +61,9 @@ class GraphState(BaseModel):
     # copies into `threats` (plain, overwritten by dice_scale / resist).
     pending_threats: Annotated[list[Threat], operator.add] = Field(default_factory=list)
     threats: list[Threat] = Field(default_factory=list)
+    # World-acts turn: a hostile creature strikes on a non-contested turn. No
+    # player action roll — threats land at full magnitude; the player resists.
+    is_ambush: bool = False
     # Transient per-branch carriers for the Send fan-out (set per invocation).
     classify_source: str = ""
     classify_entity: EntityData | None = None

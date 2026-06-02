@@ -4,6 +4,8 @@ from langgraph.types import Send
 
 from src.core.model.entity import EntityKind, EntityStance, EntityStatus
 from src.graph.logged_node import LoggedNode
+from src.node.ambush import AmbushNode
+from src.node.ambush_scale import AmbushScaleNode
 from src.node.apply_effect import ApplyEffectNode
 from src.node.attribute_selector import AttributeSelectorNode
 from src.node.classify_threat import ClassifyThreatNode
@@ -23,8 +25,43 @@ from src.node.turn_close import TurnCloseNode
 from src.state import GraphState
 
 
+def _has_active_hostile(state: GraphState) -> bool:
+    return any(
+        e.status == EntityStatus.ACTIVE
+        and e.kind == EntityKind.CREATURE
+        and e.stance == EntityStance.HOSTILE
+        for e in state.scene_entities
+    )
+
+
 def _route_by_roll_gate(state: GraphState) -> str:
-    return "segmenter" if state.needs_roll else "mundane"
+    # Contested → roll path. Otherwise, if a hostile creature is present it acts
+    # (world-acts ambush); only a truly quiet scene gets the plain mundane path.
+    if state.needs_roll:
+        return "segmenter"
+    return "ambush" if _has_active_hostile(state) else "mundane"
+
+
+def _fan_out_ambush(state: GraphState) -> list[Send]:
+    """World-acts fan-out: one classify branch per ACTIVE hostile creature (the
+    things actually striking). No environment — nothing the player did provoked
+    it; the creatures act on their own."""
+    return [
+        Send(
+            "classify_threat",
+            state.model_copy(update={"classify_source": e.name, "classify_entity": e}),
+        )
+        for e in state.scene_entities
+        if e.status == EntityStatus.ACTIVE
+        and e.kind == EntityKind.CREATURE
+        and e.stance == EntityStance.HOSTILE
+    ]
+
+
+def _route_after_gather(state: GraphState) -> str:
+    # World-acts threats land at full (ambush_scale); a player action scales
+    # them by the roll (dice_scale).
+    return "ambush_scale" if state.is_ambush else "dice_scale"
 
 
 def _fan_out_threats(state: GraphState) -> list[Send]:
@@ -87,6 +124,8 @@ class ResolutionGraphBuilder:
         self.workflow.add_node("engagement", LoggedNode("engagement", EngagementNode()))
         self.workflow.add_node("roll_gate", LoggedNode("roll_gate", RollGateNode()))
         self.workflow.add_node("mundane", LoggedNode("mundane", MundaneNode()))
+        self.workflow.add_node("ambush", LoggedNode("ambush", AmbushNode()))
+        self.workflow.add_node("ambush_scale", LoggedNode("ambush_scale", AmbushScaleNode()))
         self.workflow.add_node("segmenter", LoggedNode("segmenter", SegmenterNode()))
         self.workflow.add_node(
             "attribute_selector", LoggedNode("attribute_selector", AttributeSelectorNode())
@@ -114,14 +153,24 @@ class ResolutionGraphBuilder:
         # No-op (no LLM call) when there are no non-hostile creatures.
         self.workflow.add_edge(START, "engagement")
         self.workflow.add_edge("engagement", "roll_gate")
-        self.workflow.add_conditional_edges("roll_gate", _route_by_roll_gate)
+        self.workflow.add_conditional_edges(
+            "roll_gate", _route_by_roll_gate, ["segmenter", "ambush", "mundane"]
+        )
         self.workflow.add_edge("mundane", "narrator")
+
+        # World-acts (ambush) path: hostile creatures strike on a non-contested
+        # turn — fan out over them, then land their threats at full magnitude.
+        self.workflow.add_conditional_edges("ambush", _fan_out_ambush, ["classify_threat"])
+        self.workflow.add_conditional_edges("ambush_scale", _route_by_significance)
 
         # Roll path: segmenter → attribute_selector → per-source fan-out → gather
         self.workflow.add_edge("segmenter", "attribute_selector")
         self.workflow.add_conditional_edges("attribute_selector", _fan_out_threats, ["classify_threat"])
         self.workflow.add_edge("classify_threat", "gather_threats")
-        self.workflow.add_edge("gather_threats", "dice_scale")
+        # Gather fans in for both paths; split on whether the player acted.
+        self.workflow.add_conditional_edges(
+            "gather_threats", _route_after_gather, ["dice_scale", "ambush_scale"]
+        )
         # One roll, two axes: scale threats (dice_scale) then land effect on the
         # target (apply_effect) before deciding the held/resist path.
         self.workflow.add_edge("dice_scale", "apply_effect")
