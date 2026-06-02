@@ -9,5 +9,5 @@ class Message(BaseModel):
     name: str = ""
 
     def format(self) -> str:
-        speaker = self.name if self.name else self.role
+        speaker: str = self.name if self.name else self.role
         return f"{speaker}: {self.content}"
