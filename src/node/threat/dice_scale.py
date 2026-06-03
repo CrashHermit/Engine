@@ -7,23 +7,32 @@ from src.state import GraphState
 
 
 class DiceScaleNode:
-    """One action roll; every threat is scaled from that single tier, each by
-    its own position."""
+    """Decoupled offense and defense. The action roll (on the action's
+    attribute) is the offense — it feeds apply_effect downstream to land effect
+    on the target. Each threat then gets its OWN independent defense roll on its
+    own channel; that per-threat tier — not the shared action tier — scales the
+    threat. A great action roll buys zero protection from an unrelated threat,
+    and several threats no longer land at the same tier off one roll."""
 
     def __init__(self, *, rng: Random | None = None) -> None:
         self._rng: Random | None = rng
 
     async def __call__(self, state: GraphState) -> dict:
-        roll_result: RollResult = roll_pool(state.pool_for(state.attribute), rng=self._rng)
-        scaled = [
-            replace(
-                t,
-                outcome=scale_threat(
-                    base_magnitude=int(t.magnitude),
-                    tier=roll_result.tier,
-                    position=t.position,
-                ),
+        # Offense: the action roll. Consumed by apply_effect (effect on target).
+        action_roll: RollResult = roll_pool(state.pool_for(state.attribute), rng=self._rng)
+        # Defense: one independent roll per threat, on the threat's own channel.
+        scaled = []
+        for t in state.threats:
+            defense: RollResult = roll_pool(state.pool_for(t.channel), rng=self._rng)
+            scaled.append(
+                replace(
+                    t,
+                    defense_roll=defense,
+                    outcome=scale_threat(
+                        base_magnitude=int(t.magnitude),
+                        tier=defense.tier,
+                        position=t.position,
+                    ),
+                )
             )
-            for t in state.threats
-        ]
-        return {"roll_result": roll_result, "threats": scaled}
+        return {"roll_result": action_roll, "threats": scaled}
