@@ -72,19 +72,21 @@ def fan_out_threats(state: GraphState) -> list[Send]:
     sends.append(
         Send(
             "classify_threat",
-            state.model_copy(update={"classify_source": "environment", "classify_entity": None}),
+            state.model_copy(
+                update={"classify_source": "environment", "classify_entity": None}
+            ),
         )
     )
     return sends
 
 
-FRAME_BRANCHES = ("approach", "pillar", "push", "target")
+FRAME_BRANCHES = ("approach", "pillar", "push", "target", "duration")
 
 
 def fan_out_frame_and_threats(state: GraphState) -> list[Send]:
     """Off the segmenter, fan the whole roll prep out in parallel: the four
-    discrete framing classifiers (approach/pillar/push/target — each reads the
-    same contested beat) plus one classify branch per candidate threat source.
+    discrete framing classifiers (approach/pillar/push/target/duration — each
+    reads the same contested beat) plus one classify branch per candidate source.
     Both arms rejoin at gather_threats — same superstep — so framing overlaps
     the threat enumeration instead of running before it, and the downstream roll
     fires once. Each Send carries a full typed state copy (see fan_out_threats on

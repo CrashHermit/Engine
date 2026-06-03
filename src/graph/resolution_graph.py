@@ -13,6 +13,7 @@ from src.graph.routers import (
     route_by_significance,
 )
 from src.node.frame.approach import ApproachNode
+from src.node.frame.duration import DurationNode
 from src.node.frame.engagement import EngagementNode
 from src.node.frame.mundane import MundaneNode
 from src.node.frame.pillar import PillarNode
@@ -65,19 +66,20 @@ class ResolutionGraphBuilder:
         self._node("roll_gate", RollGateNode())
         self._node("mundane", MundaneNode())
         self._node("segmenter", SegmenterNode())
-        # The action read, split into four discrete classifiers that run in
+        # The action read, split into discrete classifiers that run in
         # parallel (with each other and with the threat enumeration).
         self._node("approach", ApproachNode())
         self._node("pillar", PillarNode())
         self._node("push", PushNode())
         self._node("target", TargetNode())
+        self._node("duration", DurationNode())
 
         self.workflow.add_edge("engagement", "roll_gate")
         self.workflow.add_conditional_edges(
             "roll_gate", route_by_roll_gate, ["segmenter", "ambush", "mundane"]
         )
         self.workflow.add_edge("mundane", "narrator")
-        # Segmenter fans out to the four framing classifiers + the threat
+        # Segmenter fans out to the framing classifiers + the threat
         # branches at once. Both arms rejoin at gather_threats — same superstep
         # as the classify branches — so the roll (dice_scale, single-incoming
         # off gather) fires exactly once. Joining framing directly at dice_scale
@@ -101,7 +103,9 @@ class ResolutionGraphBuilder:
         self._node("gather_threats", GatherThreatsNode())
         self._node("dice_scale", DiceScaleNode())
 
-        self.workflow.add_conditional_edges("ambush", fan_out_ambush, ["classify_threat"])
+        self.workflow.add_conditional_edges(
+            "ambush", fan_out_ambush, ["classify_threat"]
+        )
         self.workflow.add_conditional_edges(
             "ambush_scale", route_by_significance, ["held_planner", "final_planner"]
         )
@@ -134,7 +138,9 @@ class ResolutionGraphBuilder:
             "narrator", route_after_narrator, ["resist_offer", "turn_close"]
         )
         self.workflow.add_conditional_edges(
-            "resolution_narrator", route_after_resolution, ["resist_offer", "turn_close"]
+            "resolution_narrator",
+            route_after_resolution,
+            ["resist_offer", "turn_close"],
         )
         self.workflow.add_edge("turn_close", END)
 
