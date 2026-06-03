@@ -3,19 +3,23 @@ from langgraph.graph.state import CompiledStateGraph
 
 from src.graph.logged_node import LoggedNode
 from src.graph.routers import (
+    FRAME_BRANCHES,
     fan_out_ambush,
-    fan_out_threats,
+    fan_out_frame_and_threats,
     route_after_gather,
     route_after_narrator,
     route_after_resolution,
     route_by_roll_gate,
     route_by_significance,
 )
-from src.node.frame.attribute_selector import AttributeSelectorNode
+from src.node.frame.approach import ApproachNode
 from src.node.frame.engagement import EngagementNode
 from src.node.frame.mundane import MundaneNode
+from src.node.frame.pillar import PillarNode
+from src.node.frame.push import PushNode
 from src.node.frame.roll_gate import RollGateNode
 from src.node.frame.segmenter import SegmenterNode
+from src.node.frame.target import TargetNode
 from src.node.threat.ambush import AmbushNode
 from src.node.threat.ambush_scale import AmbushScaleNode
 from src.node.threat.classify import ClassifyThreatNode
@@ -61,15 +65,32 @@ class ResolutionGraphBuilder:
         self._node("roll_gate", RollGateNode())
         self._node("mundane", MundaneNode())
         self._node("segmenter", SegmenterNode())
-        self._node("attribute_selector", AttributeSelectorNode())
+        # The action read, split into four discrete classifiers that run in
+        # parallel (with each other and with the threat enumeration).
+        self._node("approach", ApproachNode())
+        self._node("pillar", PillarNode())
+        self._node("push", PushNode())
+        self._node("target", TargetNode())
 
         self.workflow.add_edge("engagement", "roll_gate")
         self.workflow.add_conditional_edges(
             "roll_gate", route_by_roll_gate, ["segmenter", "ambush", "mundane"]
         )
         self.workflow.add_edge("mundane", "narrator")
-        self.workflow.add_edge("segmenter", "attribute_selector")
-        self.workflow.add_conditional_edges("attribute_selector", fan_out_threats, ["classify_threat"])
+        # Segmenter fans out to the four framing classifiers + the threat
+        # branches at once. Both arms rejoin at gather_threats — same superstep
+        # as the classify branches — so the roll (dice_scale, single-incoming
+        # off gather) fires exactly once. Joining framing directly at dice_scale
+        # would double-fire it: the framing arm (one hop) and the gather arm
+        # (two hops) land in different supersteps, and a LangGraph node re-runs
+        # whenever *any* incoming edge updates.
+        self.workflow.add_conditional_edges(
+            "segmenter",
+            fan_out_frame_and_threats,
+            [*FRAME_BRANCHES, "classify_threat"],
+        )
+        for branch in FRAME_BRANCHES:
+            self.workflow.add_edge(branch, "gather_threats")
 
     def _add_threat(self) -> None:
         """Enumerate threats per source (player-action fan-out or world-acts

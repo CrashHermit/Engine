@@ -78,6 +78,22 @@ def fan_out_threats(state: GraphState) -> list[Send]:
     return sends
 
 
+FRAME_BRANCHES = ("approach", "pillar", "push", "target")
+
+
+def fan_out_frame_and_threats(state: GraphState) -> list[Send]:
+    """Off the segmenter, fan the whole roll prep out in parallel: the four
+    discrete framing classifiers (approach/pillar/push/target — each reads the
+    same contested beat) plus one classify branch per candidate threat source.
+    Both arms rejoin at gather_threats — same superstep — so framing overlaps
+    the threat enumeration instead of running before it, and the downstream roll
+    fires once. Each Send carries a full typed state copy (see fan_out_threats on
+    why model_copy, not a bare dict)."""
+    sends = [Send(branch, state.model_copy()) for branch in FRAME_BRANCHES]
+    sends.extend(fan_out_threats(state))
+    return sends
+
+
 def route_by_significance(state: GraphState) -> str:
     return "held_planner" if state.landed_threats else "final_planner"
 
