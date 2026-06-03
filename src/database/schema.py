@@ -45,7 +45,15 @@ BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated
 VERTEX_SCHEMA: dict[VertexType, list[str]] = {
     VertexType.USER: [],
     VertexType.LOCATION: ["name", "description", "is_center"],
-    VertexType.PART: ["name", "length", "width", "height", "shape", "status", "description"],
+    VertexType.PART: [
+        "name",
+        "length",
+        "width",
+        "height",
+        "shape",
+        "status",
+        "description",
+    ],
     VertexType.OPENING: [],
     VertexType.SOURCE: [],
     VertexType.SINK: [],
@@ -73,6 +81,7 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
         "name",
         "description",
         "size",
+        "elapsed_ticks",
     ],
     VertexType.ENTITY: [
         "name",
@@ -125,10 +134,14 @@ class SchemaManager:
         schema: Schema = self.database.schema
         for vertex_type in VertexType:
             self._vertex(
-                schema=schema, name=vertex_type, properties=VERTEX_SCHEMA.get(vertex_type, [])
+                schema=schema,
+                name=vertex_type,
+                properties=VERTEX_SCHEMA.get(vertex_type, []),
             )
         for edge_type in EdgeType:
-            self._edge(schema=schema, name=edge_type, properties=EDGE_SCHEMA.get(edge_type, []))
+            self._edge(
+                schema=schema, name=edge_type, properties=EDGE_SCHEMA.get(edge_type, [])
+            )
         self._indexes(schema)
 
     def _vertex(self, schema: Schema, name: VertexType, properties: list[str]) -> None:
