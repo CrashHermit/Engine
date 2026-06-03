@@ -30,13 +30,19 @@ def _character(stress: int = 0, trauma: int = 0) -> CharacterData:
 
 def _location_state() -> LocationState:
     return LocationState(
-        location=LocationData(id="loc-1", name="Courtyard", description="a quiet stone yard"),
+        location=LocationData(
+            id="loc-1", name="Courtyard", description="a quiet stone yard"
+        ),
         neighbors=[],
-        entities=[EntityData(name="Guard", description="armed", scene_position="by the gate")],
+        entities=[
+            EntityData(name="Guard", description="armed", scene_position="by the gate")
+        ],
     )
 
 
-def _coordinator(*, character: CharacterData, result: dict) -> tuple[GameCoordinator, Mock]:
+def _coordinator(
+    *, character: CharacterData, result: dict
+) -> tuple[GameCoordinator, Mock]:
     run_ids = iter([f"run-{i}" for i in range(10)])
     graph = SimpleNamespace(
         new_run_id=lambda: next(run_ids),
@@ -53,6 +59,7 @@ def _coordinator(*, character: CharacterData, result: dict) -> tuple[GameCoordin
             move_character=lambda character_id, destination_id: _location_state(),
         ),
         character=SimpleNamespace(set_economy=set_economy),
+        time=SimpleNamespace(now=lambda: 0, advance=lambda delta: 0),
         world_name="world",
     )
     return GameCoordinator(character=character, services=services), set_economy
@@ -66,7 +73,12 @@ def _ai(content: str) -> Message:
 async def test_submit_seeds_stress_and_trauma_into_graph_state():
     coord, _ = _coordinator(
         character=_character(stress=4, trauma=1),
-        result={"ai_message": _ai("done"), "message_history": [], "stress": 4, "trauma": 1},
+        result={
+            "ai_message": _ai("done"),
+            "message_history": [],
+            "stress": 4,
+            "trauma": 1,
+        },
     )
     [e async for e in coord.submit("look around")]
 
@@ -80,7 +92,12 @@ async def test_submit_persists_changed_economy():
     character = _character(stress=0, trauma=0)
     coord, set_economy = _coordinator(
         character=character,
-        result={"ai_message": _ai("ouch"), "message_history": [], "stress": 7, "trauma": 0},
+        result={
+            "ai_message": _ai("ouch"),
+            "message_history": [],
+            "stress": 7,
+            "trauma": 0,
+        },
     )
     events = [e async for e in coord.submit("strike")]
 
@@ -93,7 +110,12 @@ async def test_submit_persists_changed_economy():
 async def test_submit_does_not_persist_when_economy_unchanged():
     coord, set_economy = _coordinator(
         character=_character(stress=3, trauma=0),
-        result={"ai_message": _ai("calm"), "message_history": [], "stress": 3, "trauma": 0},
+        result={
+            "ai_message": _ai("calm"),
+            "message_history": [],
+            "stress": 3,
+            "trauma": 0,
+        },
     )
     [e async for e in coord.submit("wait")]
 

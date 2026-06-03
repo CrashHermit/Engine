@@ -1,6 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator
 
+from src.core.mechanic.duration import TICKS, Span, Unit
 from src.core.model.character import CharacterData
 from src.core.model.location import LocationState
 from src.core.model.message import Message
@@ -110,7 +111,9 @@ class GameCoordinator:
 
     def move(self, destination_id: str) -> LocationState | None:
         """Move to a connected location and store the new state."""
-        state = self._services.location.move_character(self._character.id, destination_id)
+        state = self._services.location.move_character(
+            self._character.id, destination_id
+        )
         if state is not None:
             self._location_state = state
         return state
@@ -157,21 +160,33 @@ class GameCoordinator:
 
                 ai_msg = result.get("ai_message")
                 if ai_msg is not None:
-                    self._message_history = result.get("message_history", self._message_history)
+                    self._message_history = result.get(
+                        "message_history", self._message_history
+                    )
                     yield Narration(_message_content(ai_msg))
                 else:
                     yield Narration("")
 
                 # Action finished: persist the per-run economy and the target
-                # clocks, surface any trauma / permadeath / defeat, then rotate
-                # to a fresh thread.
+                # clocks, advance the world clock, surface any trauma /
+                # permadeath / defeat, then rotate to a fresh thread.
                 for event in self._persist_economy(result):
                     yield event
                 for event in self._persist_entities(result):
                     yield event
+                self._advance_world_clock(result)
                 self._run_id = graph_service.new_run_id()
             except Exception as e:
                 yield TurnError(str(e))
+
+    def _advance_world_clock(self, result: dict) -> None:
+        """Advance the world clock by the fictional time this beat spanned. The
+        duration classifier (not yet wired) sets `beat_span`; until then a
+        closed turn advances a single Round so the clock is live and the
+        round-trip exercised."""
+        beat_span: Span | None = result.get("beat_span")
+        delta = beat_span.ticks if beat_span is not None else TICKS[Unit.ROUND]
+        self._services.time.advance(delta)
 
     def _persist_economy(self, result: dict) -> list[TurnEvent]:
         """Write the turn's stress/trauma back onto the character (only when it
@@ -245,6 +260,7 @@ class GameCoordinator:
             scene_entities=list(entities),  # structured spine for enumeration + caps
             stress=self._character.stress,
             trauma=self._character.trauma,
+            elapsed_ticks=self._services.time.now(),
             ratings={
                 Channel.CORPUS: self._character.corpus,
                 Channel.MENS: self._character.mens,

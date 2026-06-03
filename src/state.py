@@ -4,6 +4,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 
 from src.core.mechanic.dice import RollResult
+from src.core.mechanic.duration import Span
 from src.core.mechanic.magnitude import Magnitude
 from src.core.model.action import ActionIntent
 from src.core.model.entity import Danger, ThreatPillar  # noqa: F401  (Danger kept for callers)
@@ -14,8 +15,12 @@ from src.core.model.threat import Channel, Threat
 
 
 class GraphState(BaseModel):
-    message_history: Annotated[list[Message], operator.add] = Field(default_factory=list)
-    intent_alignment_history: Annotated[list[Message], operator.add] = Field(default_factory=list)
+    message_history: Annotated[list[Message], operator.add] = Field(
+        default_factory=list
+    )
+    intent_alignment_history: Annotated[list[Message], operator.add] = Field(
+        default_factory=list
+    )
     human_message: Message | None = None
     ai_message: Message | None = None
     question: str | None = None
@@ -42,6 +47,13 @@ class GraphState(BaseModel):
     target_pillar: ThreatPillar | None = None  # which condition the action attacks
     push_for_effect: bool = False  # spend stress for +1 effect segment on the target
     roll_result: RollResult | None = None
+
+    # ── World clock ──────────────────────────────────────────────────────
+    # Seeded from the world clock (TimeService.now) at turn start; how much
+    # fictional time this beat spans (set by the duration classifier when wired
+    # — until then the coordinator advances a default Round per closed turn).
+    elapsed_ticks: int = 0
+    beat_span: Span | None = None
 
     # ── Effect-on-target ─────────────────────────────────────────────────
     # apply_effect fills the targeted pillar's clock (carried inside
@@ -73,7 +85,7 @@ class GraphState(BaseModel):
     # held time so resisting one to magnitude 0 can't shift the cursor.
     resist_queue: list[str] = Field(default_factory=list)
     resist_cursor: int = 0
-    resist_response: str | None = None       # transient: latest player reply
+    resist_response: str | None = None  # transient: latest player reply
     resist_action: ResistAction | None = None  # transient: parsed this iteration
     resist_flavor: str | None = None
 
