@@ -23,12 +23,13 @@ class ApplyEffectNode:
     mutation; persistence / removal happens post-turn in the coordinator."""
 
     async def __call__(self, state: GraphState) -> dict:
-        target = self._find_target(state)
+        intent = state.action_intent
+        target = self._find_target(intent.target, state.scene_entities)
         # Only living foes can be de-threated; props can't be "defeated".
         if target is None or target.kind != EntityKind.CREATURE or state.roll_result is None:
             return {}
 
-        pillar = state.target_pillar or ThreatPillar.EXISTS
+        pillar = intent.pillar
         capacity = pillar_capacity(target.danger, pillar, target.pillar_profile)
         if capacity <= 0:  # immune to this pillar (profile omits it)
             return {
@@ -38,7 +39,7 @@ class ApplyEffectNode:
                 )
             }
 
-        pool = state.pool_for(state.attribute)
+        pool = state.pool_for(intent.attribute)
         segments = effect_segments(potency_shift(effect_from_tier(state.roll_result.tier), pool, target.danger))
         if segments <= 0:
             return {}
@@ -48,7 +49,7 @@ class ApplyEffectNode:
         # Only when the action already landed effect — a miss can't be pushed,
         # and the player isn't charged for nothing.
         pushed = False
-        if state.push_for_effect:
+        if intent.push:
             segments += PUSH_FOR_EFFECT_SEGMENTS
             stress_result = add_stress(state.stress, state.trauma, PUSH_FOR_EFFECT_STRESS)
             out.update(
@@ -91,15 +92,15 @@ class ApplyEffectNode:
         out["scene_entities"] = [updated if e.id == target.id else e for e in state.scene_entities]
         return out
 
-    def _find_target(self, state: GraphState) -> EntityData | None:
-        name = (state.target_entity or "").strip().lower()
+    def _find_target(self, target: str, entities: list[EntityData]) -> EntityData | None:
+        name = target.strip().lower()
         if not name:
             return None
-        for e in state.scene_entities:
+        for e in entities:
             if e.name.lower() == name:
                 return e
         # Fall back to a loose match so minor LLM rephrasings still land.
-        for e in state.scene_entities:
+        for e in entities:
             if name in e.name.lower() or e.name.lower() in name:
                 return e
         return None

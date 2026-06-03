@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 
 from src.core.mechanic.dice import RollResult
 from src.core.mechanic.magnitude import Magnitude
+from src.core.model.action import ActionIntent
 from src.core.model.entity import Danger, ThreatPillar  # noqa: F401  (Danger kept for callers)
 from src.core.model.location import EntityData
 from src.core.model.message import Message
@@ -90,6 +91,16 @@ class GraphState(BaseModel):
     character_lost: bool = False
 
     # ── Derived helpers ──────────────────────────────────────────────────
+    @property
+    def action_intent(self) -> ActionIntent:
+        """The single action as one cohesive value (view over the flat fields)."""
+        return ActionIntent(
+            attribute=self.attribute,
+            target=self.target_entity,
+            pillar=self.target_pillar or ThreatPillar.EXISTS,
+            push=self.push_for_effect,
+        )
+
     def pool_for(self, channel: Channel | None) -> int:
         """Dice pool for an attribute channel (0 if unknown)."""
         return self.ratings.get(channel, 0) if channel is not None else 0
