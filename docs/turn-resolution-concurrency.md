@@ -70,6 +70,50 @@ So `operator.add` on `pending_threats` (and the message histories) is the *only*
 commutative reducer, and it is used for parallel **append**, not as a
 general-purpose concurrent-mutation strategy.
 
+## Mutation inventory
+
+Every state write, classified. Verified against the node code; current as of
+this commit. The point of the table is that the **parallel** rows are *only*
+disjoint-set or commutative-add, and every order-sensitive read-modify-write is
+**serial**.
+
+### Parallel writes (segmenter superstep) — safe by construction
+
+| Field(s) | Writer(s) | Kind |
+|---|---|---|
+| `attribute`, `target_pillar`, `push_for_effect`, `target_entity`, `beat_span` | framing fan-out (`approach`/`pillar`/`push`/`target`/`duration`) | disjoint blind-set — each a distinct key |
+| `pending_threats` | `classify_threat` ×N | commutative append (`operator.add` reducer) |
+
+### Serial read-modify-write — order matters, so it is sequenced (never fanned out)
+
+| Field(s) | Writer(s) | Why it is an RMW |
+|---|---|---|
+| `stress`, `trauma` | `apply_effect`, `resist_roll` | `add_stress(state.stress, …)` reads then accumulates |
+| `scene_entities` | `engagement`, `apply_effect` | clock fill + status/posture rewrite over the current list |
+| `threats` | `gather` → `dice_scale` → `resist_roll` | whole-list rewrite, each reads the prior |
+| `resist_cursor` | `held_planner` (init 0), `resist_roll` (+1) | increment |
+| `trauma_gained`, `character_lost` | `apply_effect`, `resist_roll` | OR-accumulated — monotonic *and* commutative (defensive; serial anyway) |
+
+All other fields are serial single-writer blind-sets (`contested_beat`,
+`needs_roll`, `roll_result`, `resolution_outcome`, the planner scaffolds, the
+resist transients, the narration fields, etc.). `message_history` and
+`intent_alignment_history` carry `operator.add` reducers but are written by one
+node per run — the reducer is for append semantics, not concurrency.
+
+### Two RMW hotspots to never parallelize
+
+1. **The clock-fill clamp** — `apply_effect.py`,
+   `filled = min(capacity, target.clocks.get(pillar, 0) + segments)`. This is a
+   *saturating add*: near the cap the result depends on order, so it is **not**
+   commutative. It is correct today only because it is serial (one writer,
+   reading current truth). If effect application ever fans out (e.g. several
+   simultaneous attackers filling one clock), this clamp must become
+   accumulate-raw-then-clamp-once, not per-writer `min`.
+2. **Stress accumulation** — `add_stress` is the same shape. Multiple concurrent
+   stress sources would need commutative accumulation; today they are serial.
+
+These two are the concrete instances of the general rule below.
+
 ## Invariants to preserve
 
 1. **Order-sensitive logic lives after a join, never inside a fan-out.** If a
