@@ -1,5 +1,7 @@
 import asyncio
 from collections.abc import AsyncIterator
+from core.model.character import CharacterData
+from service.container import ServiceContainer
 
 from src.core.mechanic.duration import TICKS, Span, Unit
 from src.core.model.character import CharacterData
@@ -83,8 +85,8 @@ class GameCoordinator:
     graph turn loop. Talks to services only; never to Textual or repositories."""
 
     def __init__(self, *, character: CharacterData, services: ServiceContainer) -> None:
-        self._character = character
-        self._services = services
+        self._character: CharacterData = character
+        self._services: ServiceContainer = services
         self._location_state: LocationState | None = None
         self._message_history: list[Message] = []
         # One thread per in-progress action. Reused while clarifying intent,
