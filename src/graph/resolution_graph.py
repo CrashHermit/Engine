@@ -85,7 +85,10 @@ class ResolutionGraphBuilder:
         # off gather) fires exactly once. Joining framing directly at dice_scale
         # would double-fire it: the framing arm (one hop) and the gather arm
         # (two hops) land in different supersteps, and a LangGraph node re-runs
-        # whenever *any* incoming edge updates.
+        # whenever *any* incoming edge updates. This superstep alignment is
+        # load-bearing — changing either arm's hop count can silently re-break
+        # the once-only roll. The branch independence contract lives on
+        # fan_out_frame_and_threats in graph/routers.py.
         self.workflow.add_conditional_edges(
             "segmenter",
             fan_out_frame_and_threats,
