@@ -3,10 +3,12 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from dspy.primitives.prediction import Prediction
 
+from src.core.mechanic.duration import Span, Unit
 from src.core.model.entity import EntityKind, ThreatPillar
 from src.core.model.location import EntityData
 from src.core.model.threat import Channel
 from src.node.frame.approach import ApproachNode
+from src.node.frame.duration import DurationNode
 from src.node.frame.pillar import PillarNode
 from src.node.frame.push import PushNode
 from src.node.frame.target import TargetNode
@@ -15,7 +17,11 @@ from src.state import GraphState
 
 def _entity(name: str) -> EntityData:
     return EntityData(
-        name=name, description="d", scene_position="here", kind=EntityKind.CREATURE, id=name.lower()
+        name=name,
+        description="d",
+        scene_position="here",
+        kind=EntityKind.CREATURE,
+        id=name.lower(),
     )
 
 
@@ -32,22 +38,53 @@ def _state(*, entities: list[EntityData] | None = None) -> GraphState:
 @pytest.mark.asyncio
 async def test_approach_maps_attribute():
     node = ApproachNode()
-    with patch.object(node._program, "aforward", new=AsyncMock(return_value=Prediction(attribute=Channel.MENS))):
+    with patch.object(
+        node._program,
+        "aforward",
+        new=AsyncMock(return_value=Prediction(attribute=Channel.MENS)),
+    ):
         assert await node(_state()) == {"attribute": Channel.MENS}
 
 
 @pytest.mark.asyncio
 async def test_pillar_maps_target_pillar():
     node = PillarNode()
-    with patch.object(node._program, "aforward", new=AsyncMock(return_value=Prediction(pillar=ThreatPillar.WILLING))):
+    with patch.object(
+        node._program,
+        "aforward",
+        new=AsyncMock(return_value=Prediction(pillar=ThreatPillar.WILLING)),
+    ):
         assert await node(_state()) == {"target_pillar": ThreatPillar.WILLING}
 
 
 @pytest.mark.asyncio
 async def test_push_coerces_to_bool():
     node = PushNode()
-    with patch.object(node._program, "aforward", new=AsyncMock(return_value=Prediction(push=True))):
+    with patch.object(
+        node._program, "aforward", new=AsyncMock(return_value=Prediction(push=True))
+    ):
         assert await node(_state()) == {"push_for_effect": True}
+
+
+@pytest.mark.asyncio
+async def test_duration_maps_unit_to_a_single_rung_span():
+    node = DurationNode()
+    with patch.object(
+        node._program,
+        "aforward",
+        new=AsyncMock(return_value=Prediction(unit=Unit.ROUND)),
+    ):
+        assert await node(_state()) == {"beat_span": Span(Unit.ROUND)}
+
+
+@pytest.mark.asyncio
+async def test_duration_coerces_a_plain_string_unit():
+    # DSPy may hand back the enum's string value; the node coerces to Unit.
+    node = DurationNode()
+    with patch.object(
+        node._program, "aforward", new=AsyncMock(return_value=Prediction(unit="night"))
+    ):
+        assert await node(_state()) == {"beat_span": Span(Unit.NIGHT)}
 
 
 # ── target: code-derive 0–1 entities, LLM only on 2+ ────────────────────────

@@ -10,6 +10,8 @@ from src.service.character import CharacterService
 from src.service.graph import GraphService
 from src.service.location import LocationService
 from src.service.message import MessageService
+from src.service.time import TimeService
+
 
 class ServiceContainer:
     """Holds every in-session service for a single open world database.
@@ -41,4 +43,5 @@ class ServiceContainer:
         self.character: CharacterService = CharacterService(base, characters, worlds)
         self.location: LocationService = LocationService(base, locations, characters)
         self.message: MessageService = MessageService(base, messages)
+        self.time: TimeService = TimeService(worlds)
         self._logger.info("service container ready world=%s", world_name)

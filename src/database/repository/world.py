@@ -29,4 +29,30 @@ class WorldRepository:
             name=name,
             description=description,
             size=size,
+            elapsed_ticks=0,
         )
+
+    # ── World clock (decision: the tick count is a scalar on the singleton
+    # WORLD vertex, owned here; behaviour lives in TimeService) ──────────────
+    def _world(self) -> Vertex | None:
+        worlds = self._base.list_vertices(VertexType.WORLD)
+        return worlds[0] if worlds else None
+
+    def get_elapsed_ticks(self) -> int:
+        world = self._world()
+        if world is None:
+            return 0
+        return int(world.get(name="elapsed_ticks") or 0)
+
+    def advance_elapsed_ticks(self, delta: int) -> int:
+        """Add `delta` ticks to the world clock and return the new total. A
+        non-positive delta is a no-op (the clock is monotonic)."""
+        world = self._world()
+        if world is None:
+            return 0
+        current = int(world.get(name="elapsed_ticks") or 0)
+        if delta <= 0:
+            return current
+        new_total = current + delta
+        self._base.update_vertex(world, elapsed_ticks=new_total)
+        return new_total

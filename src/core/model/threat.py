@@ -35,11 +35,12 @@ class ThreatMagnitudeLevel(StrEnum):
 
 @dataclass
 class Threat:
-    """One landed (or candidate) consequence from a single source. The action
-    rolls once; every Threat is scaled from that one tier via scale_threat,
-    keeping its own channel (which attribute resists it), capped magnitude, and
-    position. outcome/resist_* fill in as it moves through dice_scale and the
-    resist cycle."""
+    """One landed (or candidate) consequence from a single source. Offense and
+    defense are decoupled: the action roll lands the player's effect on the
+    target, while every Threat gets its OWN independent defense roll on its own
+    channel (which attribute resists it) — that per-threat tier scales it via
+    scale_threat. defense_roll/outcome/resist_* fill in as it moves through
+    dice_scale and the resist cycle."""
 
     source: str  # entity name, or "environment"
     type: ThreatType
@@ -47,6 +48,7 @@ class Threat:
     magnitude: Magnitude  # already capped by source danger
     position: Position
     id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    defense_roll: RollResult | None = None  # this threat's own channel roll
     outcome: Outcome | None = None
     resist_action: ResistAction | None = None
     resist_flavor: str = ""

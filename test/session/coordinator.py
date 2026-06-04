@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
+from src.core.mechanic.duration import TICKS, Span, Unit
 from src.core.model.character import CharacterData
 from src.core.model.location import EntityData, LocationData, LocationState
 from src.core.model.message import Message
@@ -29,9 +30,13 @@ def _character() -> CharacterData:
 
 def _location_state() -> LocationState:
     return LocationState(
-        location=LocationData(id="loc-1", name="Courtyard", description="a quiet stone yard"),
+        location=LocationData(
+            id="loc-1", name="Courtyard", description="a quiet stone yard"
+        ),
         neighbors=[LocationData(id="loc-2", name="Hall", description="a long hall")],
-        entities=[EntityData(name="Guard", description="armed", scene_position="by the gate")],
+        entities=[
+            EntityData(name="Guard", description="armed", scene_position="by the gate")
+        ],
     )
 
 
@@ -46,10 +51,30 @@ def _fake_graph_service(*, paused: bool, result: dict) -> SimpleNamespace:
     )
 
 
-def _fake_services(graph_service: SimpleNamespace, location: SimpleNamespace) -> SimpleNamespace:
+class _FakeClock:
+    """In-memory stand-in for TimeService: now() reads, advance() accumulates."""
+
+    def __init__(self) -> None:
+        self.ticks = 0
+        self.advances: list[int] = []
+
+    def now(self) -> int:
+        return self.ticks
+
+    def advance(self, delta: int) -> int:
+        self.advances.append(delta)
+        if delta > 0:
+            self.ticks += delta
+        return self.ticks
+
+
+def _fake_services(
+    graph_service: SimpleNamespace, location: SimpleNamespace
+) -> SimpleNamespace:
     return SimpleNamespace(
         graph_service=graph_service,
         location=location,
+        time=_FakeClock(),
         world_name="world",
     )
 
@@ -133,7 +158,9 @@ async def test_submit_seeds_attribute_ratings_into_graph_state():
 @pytest.mark.asyncio
 async def test_submit_yields_turn_error_when_invoke_raises():
     coord = _coordinator(result={})
-    coord._services.graph_service.ainvoke = AsyncMock(side_effect=RuntimeError("graph boom"))
+    coord._services.graph_service.ainvoke = AsyncMock(
+        side_effect=RuntimeError("graph boom")
+    )
 
     events = [e async for e in coord.submit("do a thing")]
 
@@ -150,6 +177,43 @@ async def test_submit_resumes_when_paused():
     coord._services.graph_service.resume.assert_awaited_once()
     coord._services.graph_service.ainvoke.assert_not_awaited()
     assert events == [Narration("Resolved.")]
+
+
+@pytest.mark.asyncio
+async def test_submit_seeds_world_clock_into_graph_state():
+    result = {"ai_message": _ai("done"), "message_history": []}
+    coord = _coordinator(result=result)
+    coord._services.time.ticks = 4800  # mid-game world clock
+
+    [e async for e in coord.submit("strike")]
+
+    sent_state = coord._services.graph_service.ainvoke.await_args.args[0]
+    assert sent_state.elapsed_ticks == 4800
+
+
+@pytest.mark.asyncio
+async def test_completed_turn_advances_world_clock_by_beat_span():
+    span = Span(Unit.WEEK, 2)
+    result = {
+        "ai_message": _ai("time passes"),
+        "message_history": [],
+        "beat_span": span,
+    }
+    coord = _coordinator(result=result)
+
+    [e async for e in coord.submit("lie low a while")]
+
+    assert coord._services.time.advances == [span.ticks]
+
+
+@pytest.mark.asyncio
+async def test_completed_turn_without_beat_span_advances_one_round():
+    result = {"ai_message": _ai("a quick strike"), "message_history": []}
+    coord = _coordinator(result=result)
+
+    [e async for e in coord.submit("strike")]
+
+    assert coord._services.time.advances == [TICKS[Unit.ROUND]]
 
 
 def test_enter_stores_and_returns_location():
