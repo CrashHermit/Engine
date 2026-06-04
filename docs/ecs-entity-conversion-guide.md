@@ -1,254 +1,303 @@
-# ECS Conversion Guide — "Everything Is an Entity"
+# ECS Conversion Guide — "Everything Is an Entity", Values as Relationships
 
 > **Audience:** you, doing the coding. Shapes, contracts, file-by-file changes,
 > and ordering — not finished code.
 > **Supersedes:** the storage assumptions in `docs/ecs-implementation-guide.md`
-> (that doc's render/`DescribeSystem` half still applies, but it now reads from
-> the hydrated component graph below, not flat `EntityData` fields).
-> **Prereq reading:** `docs/representation-ecs-design.md` (D1–D15).
+> (its render/`DescribeSystem` half still applies, but reads the hydrated graph
+> below). **Prereq:** `docs/representation-ecs-design.md` (D1–D15).
 
 ---
 
 ## 0. The decisions this guide implements
 
-These were locked in conversation and are **not yet in the design doc** — they
-amend it, so they're restated here to survive compaction:
+Locked in conversation, amending the design doc (restated so they survive
+compaction):
 
-1. **Everything is an entity.** One node role. There is no separate "component",
-   "leaf", or "attribute" vertex class. Every node is an `ENTITY` vertex; a
-   "component" is just an entity attached to another entity by an **owning** edge.
-   *(This reverses the earlier "leaves now, promotable" call and drops the
-   character `CORPUS → HAS_ATTRIBUTE → ATTRIBUTE{value}` nested-attribute pattern.)*
-2. **Values are properties on the entity node.** `Danger{level: standard}` is an
-   entity with a `level` property. Not flecs-extreme (values aren't themselves
-   relationships).
-3. **Multiplicity via keyed component entities.** Many components of the same
-   type = many attached entities, disambiguated by a key property. The old
-   `clocks: dict[pillar,int]` becomes N `Clock` entities, each `{pillar, filled}`.
-   No blob-on-a-vertex.
-4. **Hydration recurses the owned tree fully.** Owning edges form a shallow tree
-   (no depth cap, no cycle handling needed). The walk follows **owning** edges
-   and stops at **reference** edges (load the target's id, don't chase it). Today
-   there are *no* reference edges, so this is "recurse everything"; the rule is
-   reserved for the first sideways edge (a curse from a witch, a shared item).
+1. **Everything is an entity.** One node role for domain things and their
+   components: every such node is an `ENTITY` vertex; a "component" is just an
+   entity attached to another entity by an **owning** edge (`HAS_COMPONENT`).
+2. **Values are relationships (three tiers).** A component does **not** store its
+   value as a property. It points at a separate **value node** via an edge —
+   `Entity → Component → Value`. This generalizes your existing character
+   `CORPUS → HAS_ATTRIBUTE → ATTRIBUTE{value}` pattern to everything.
+3. **Hybrid value nodes — interned enums, owned scalars.**
+   - **Enum values are interned (shared):** each enum member exists once in the
+     whole DB; every component with that value points at the same node. Mutation
+     re-points the edge; the shared node is never edited and never cascade-deleted.
+     Payoff: *"all hostile entities"* = the in-edges of the `HOSTILE` node.
+   - **Numeric values are owned (per-component):** the existing `ATTRIBUTE{value:int}`
+     node, cascade-deleted with its owner. (Interning integers is pointless.)
+   - **Freeform text** (appearance prose, scene position) stays a **property on
+     the component node** — no share or query benefit, so no value node. *(If you
+     want strict uniformity, make it an owned text node instead; noted in §2.)*
+4. **Hydration recurses owning edges; value edges are the boundary.** This is the
+   first live instance of the owning-vs-reference rule we reserved: `HAS_COMPONENT`
+   and `HAS_ATTRIBUTE` are **owning** (recurse + cascade); `HAS_VALUE` is a
+   **reference** to a shared node (read the target, never recurse into or delete
+   it). The owned tree is shallow → recurse fully, no depth cap.
 5. **No legacy.** Solo project, no production data → **no migration**. Drop and
-   re-seed the DB. Make bold changes.
+   re-seed the DB.
 
-Carried over from earlier (unchanged, not this slice): coarse **PUT/DROP** delta
-grain, **proposal → resolver** LLM-write path, **serial turn-ordered** mutation
-(`docs/turn-resolution-concurrency.md`).
+Carried over, not this slice: coarse **PUT/DROP** delta grain, **proposal →
+resolver** LLM-write path, **serial turn-ordered** mutation.
 
 ---
 
 ## 1. Target model
 
+A scene with a hostile Wolf (standard danger, mid-fight on its EXISTS clock) and
+a wary Guard:
+
 ```
-Goblin            ENTITY {name: "goblin", kind: creature}
- ├─HAS_COMPONENT─ ENTITY {ctype: danger,       level: standard}
- ├─HAS_COMPONENT─ ENTITY {ctype: disposition,  nature: predatory}
- ├─HAS_COMPONENT─ ENTITY {ctype: stance,       posture: hostile}
- ├─HAS_COMPONENT─ ENTITY {ctype: status,       state: active, broken_pillar: -, returns_when: ""}
- ├─HAS_COMPONENT─ ENTITY {ctype: position,     text: "cave mouth"}
- ├─HAS_COMPONENT─ ENTITY {ctype: threat_channel, channel: corpus}
- ├─HAS_COMPONENT─ ENTITY {ctype: clock,        pillar: exists,  filled: 2}   ← keyed multi-instance
- ├─HAS_COMPONENT─ ENTITY {ctype: clock,        pillar: capable, filled: 1}
- └─HAS_COMPONENT─ ENTITY {ctype: pillar_cap,   pillar: aware,   capacity: 4} (authored profile)
+Wolf   ENTITY{kind: creature, name: "wolf"}
+ ├HAS_COMPONENT→ ENTITY{ctype: stance}  ─HAS_VALUE──▶ VALUE{kind:stance,  member:hostile}  ◀┐ shared
+ ├HAS_COMPONENT→ ENTITY{ctype: danger}  ─HAS_VALUE──▶ VALUE{kind:danger,  member:standard}  │
+ ├HAS_COMPONENT→ ENTITY{ctype: appearance, text:"a lean grey wolf"}        (text = property) │
+ └HAS_COMPONENT→ ENTITY{ctype: clock}                                                        │
+                    ├HAS_VALUE──▶ VALUE{kind:pillar, member:exists}   (interned key)         │
+                    └HAS_ATTRIBUTE→ ATTRIBUTE{value: 2}               (owned scalar: filled) │
+                                                                                             │
+Guard  ENTITY{kind: creature, name:"guard"}                                                 │
+ ├HAS_COMPONENT→ ENTITY{ctype: stance}  ─HAS_VALUE──▶ VALUE{kind:stance, member:wary}        │
+ └HAS_COMPONENT→ ENTITY{ctype: danger}  ─HAS_VALUE──▶ VALUE{kind:danger, member:standard} ───┘ (Wolf shares)
 ```
 
-- **One vertex type:** `ENTITY` for the root *and* every component.
-- **One owning edge:** `HAS_COMPONENT` (new). It is the only edge the hydrator
-  recurses. `CONTAINS` (location → entity) stays as placement.
-- **Discriminator:** every component carries `ctype` (a `ComponentType` value).
-  The root carries `kind` (creature/object) and `name`.
-- **A "scene entity" vs a "component"** is told apart by its incoming edge: a
-  scene entity has a `CONTAINS` in-edge from a LOCATION; a component has a
-  `HAS_COMPONENT` in-edge from another entity. (Both share `VertexType.ENTITY`,
-  so do **not** use `list_vertices(ENTITY)` to enumerate scene entities — it now
-  returns components too. Enumerate via the location's `CONTAINS` out-edges, as
-  `list_entities_at` already does.)
+- **Three vertex families:** `ENTITY` (roots **and** components — the "everything
+  is an entity" part), `VALUE` (interned, shared enum members), `ATTRIBUTE`
+  (owned numeric values — existing type, reused).
+- **Edges:** `HAS_COMPONENT` (new, owning), `HAS_VALUE` (new, reference→shared),
+  `HAS_ATTRIBUTE` (existing, owning→scalar).
+- **`VALUE` is unique on `(kind, member)`** — that uniqueness *is* the interning.
+- **Scene entity vs component vs value:** a scene entity has a `CONTAINS` in-edge
+  from a LOCATION; a component has a `HAS_COMPONENT` in-edge. (Both are
+  `VertexType.ENTITY`, so never enumerate scene entities with
+  `list_vertices(ENTITY)` — go through the location's `CONTAINS` edges.)
 
 ---
 
-## 2. EntityData → component decomposition
+## 2. Value taxonomy — the rule for "where does this datum live?"
 
-The current flat `EntityData` (`core/model/location.py`) maps like this:
+Three buckets; every field falls into exactly one:
 
-| EntityData field | Becomes | Notes |
+| Bucket | Storage | Edge | Lifecycle | Mutation | Query |
+|---|---|---|---|---|---|
+| **Enum** (stance, danger, status, disposition, channel, pillar) | interned `VALUE{kind, member}` | `HAS_VALUE` | shared, never deleted | **re-point** the edge | reverse-traverse the value node |
+| **Scalar** (clock filled, pillar capacity) | owned `ATTRIBUTE{value:int}` | `HAS_ATTRIBUTE` | cascades with owner | update `value` in place | n/a (per-entity) |
+| **Text** (appearance, scene position, returns_when) | property on the component node | — | dies with the component | overwrite property | n/a |
+
+A component may hold **several** interned enum values (distinguished by the value
+node's `kind`) plus **at most one** owned scalar. Example: a `clock` has a
+`pillar` enum (`HAS_VALUE → kind:pillar`) **and** a `filled` scalar
+(`HAS_ATTRIBUTE`).
+
+---
+
+## 3. EntityData → component decomposition
+
+| EntityData field | component (`ctype`) | value bucket |
 |---|---|---|
-| `name`, `kind` | **root** entity props | identity stays on the root |
-| `description` | `ctype=appearance {text}` | authored flavor → component |
-| `scene_position` | `ctype=position {text}` | |
-| `danger` | `ctype=danger {level}` | one per entity |
-| `disposition` | `ctype=disposition {nature}` | one per entity |
-| `stance` | `ctype=stance {posture}` | one per entity |
-| `status`, `broken_pillar`, `returns_when` | `ctype=status {state, broken_pillar, returns_when}` | one per entity |
-| `clocks: dict[pillar,int]` | N × `ctype=clock {pillar, filled}` | **keyed multi-instance** |
-| `pillar_profile: dict[pillar,int]` | N × `ctype=pillar_cap {pillar, capacity}` | authored capacities |
-| `threat_channels: frozenset` | N × `ctype=threat_channel {channel}` | set membership = N leaves |
+| `name`, `kind` | **root** props | — |
+| `description` | `appearance` | text (component prop) |
+| `scene_position` | `position` | text (component prop) |
+| `danger` | `danger` | enum `VALUE{kind:danger}` |
+| `disposition` | `disposition` | enum `VALUE{kind:disposition}` |
+| `stance` | `stance` | enum `VALUE{kind:stance}` |
+| `status` | `status` | enum `VALUE{kind:status}` (state) + optional enum `VALUE{kind:pillar}` (broken_pillar) + text (returns_when) |
+| `clocks[pillar]=n` | `clock` × N | enum `VALUE{kind:pillar}` + scalar `ATTRIBUTE{value:n}` |
+| `pillar_profile[pillar]=c` | `pillar_cap` × N | enum `VALUE{kind:pillar}` + scalar `ATTRIBUTE{value:c}` |
+| `threat_channels` | `threat_channel` × N | enum `VALUE{kind:channel}` |
 
-> Note `capacity` for a *live* clock is not stored — it's computed from
-> `danger` + `pillar_cap` at read time (`pillar_capacity()` in
-> `core/mechanic/effect.py`), exactly as today. Only authored caps persist.
+> Live clock *capacity* is still computed (`pillar_capacity()` in
+> `core/mechanic/effect.py`); only authored `pillar_cap` persists.
 
 ---
 
-## 3. Step 1 — model layer
+## 4. Step 1 — model layer
 
 **`src/core/model/database.py`**
-- Add `EdgeType.HAS_COMPONENT = "HAS_COMPONENT"`.
-- (Keep `ENTITY`; drop the `# PROTOTYPE` comment once this lands.)
+- `VertexType`: add `VALUE = "VALUE"`. (Keep `ENTITY`, `ATTRIBUTE`.)
+- `EdgeType`: add `HAS_COMPONENT`, `HAS_VALUE`. (`HAS_ATTRIBUTE` exists.)
 
 **`src/core/model/component.py`** (new, pure)
 ```python
 from enum import StrEnum
 
 class ComponentType(StrEnum):
-    APPEARANCE     = "appearance"
-    POSITION       = "position"
-    DANGER         = "danger"
-    DISPOSITION    = "disposition"
-    STANCE         = "stance"
-    STATUS         = "status"
-    CLOCK          = "clock"
-    PILLAR_CAP     = "pillar_cap"
-    THREAT_CHANNEL = "threat_channel"
+    APPEARANCE = "appearance"; POSITION = "position"
+    DANGER = "danger"; DISPOSITION = "disposition"
+    STANCE = "stance"; STATUS = "status"
+    CLOCK = "clock"; PILLAR_CAP = "pillar_cap"; THREAT_CHANNEL = "threat_channel"
+
+class ValueKind(StrEnum):           # the `kind` discriminator on VALUE nodes
+    STANCE = "stance"; DANGER = "danger"; STATUS = "status"
+    DISPOSITION = "disposition"; CHANNEL = "channel"; PILLAR = "pillar"
 ```
 
-**Decision — keep `EntityData` as a hydrated *projection* for now.** Don't
-rewrite the ~8 consumers (`apply_effect`, `engagement`, `routers`, threat
-classify, scaling, …) that read `e.danger`/`e.clocks`/`e.stance` in this slice.
-Instead, the service rebuilds `EntityData` from the component graph (§5). The
-canonical truth becomes the graph; `EntityData` is an ergonomic read view.
-Collapsing it into a generic component-accessor is an explicit later slice (§9).
-This keeps the storage conversion self-contained and green.
-
----
-
-## 4. Step 2 — schema (`src/database/schema.py`)
-
-- **`PROPERTY_TYPES`** — add the component property names: `ctype` (STRING),
-  `level`, `posture`, `state`, `broken_pillar`, `returns_when`, `pillar`,
-  `channel`, `nature`, `text` (STRING); `filled`, `capacity` (INTEGER). (`kind`,
-  `name` already exist.)
-- **`VERTEX_SCHEMA[VertexType.ENTITY]`** — replace the flat list with the union
-  of root + component props: `["name", "kind", "ctype", "level", "posture",
-  "state", "broken_pillar", "returns_when", "pillar", "channel", "nature",
-  "text", "filled", "capacity"]`. Remove the old `danger`, `threat_channels`,
-  `resolution`, `pillar_profile`, `disposition`, `scene_position`.
-  *(ArcadeDB tolerates undeclared properties, but declare the union so the types
-  and the `id` index are honest.)*
-- **`EDGE_SCHEMA`** — add `EdgeType.HAS_COMPONENT: []`.
-
-> Since there's no migration (decision 5), the simplest path: delete the DB file
-> and let `SchemaManager.ensure()` rebuild, then re-seed via worldgen.
-
----
-
-## 5. Step 3 — entity repository (`src/database/repository/entity.py`)
-
-This is the heart of the conversion. Model the verbs on the existing
-`CharacterRepository.add_node`/`add_attribute` pattern.
-
+**Hydration shape** (`EntityNode` — generic, in `core/model` or the repo):
 ```python
-def add_component(self, owner: Vertex, ctype: ComponentType, **props) -> Vertex:
-    """Create a component ENTITY and attach it to `owner` (owning edge)."""
-    comp = self._base.create_vertex(VertexType.ENTITY, ctype=ctype, **props)
+@dataclass
+class EntityNode:
+    id: str
+    kind: str                       # root only
+    name: str                       # root only
+    components: list["Component"]
+
+@dataclass
+class Component:
+    ctype: str
+    enums: dict[str, str]           # value-kind -> member  (from HAS_VALUE)
+    scalar: int | None              # from HAS_ATTRIBUTE
+    text: str                       # component-node property
+```
+
+**Decision (unchanged):** keep `EntityData` as a hydrated **projection** for now;
+the service rebuilds it from `EntityNode` (§7). Don't rewrite the ~8 consumers
+this slice. Collapsing the DTO is a later slice (§11).
+
+---
+
+## 5. Step 2 — schema (`src/database/schema.py`)
+
+- **`PROPERTY_TYPES`** — add `ctype` (STRING), `kind` (STRING), `member` (STRING),
+  `text` (STRING). **Do not** reuse `value` for the enum member — `value` is
+  already `INTEGER` (for `ATTRIBUTE`); the enum member is a separate `member`
+  STRING property, which also lets `(kind, member)` be the interning key.
+- **`VERTEX_SCHEMA`**:
+  - `ENTITY`: `["name", "kind", "ctype", "text"]` — drop all old flat props
+    (`danger`, `threat_channels`, `resolution`, `pillar_profile`, `disposition`,
+    `scene_position`).
+  - `VALUE`: `["kind", "member"]`.
+  - `ATTRIBUTE`: `["value"]` (unchanged).
+- **`EDGE_SCHEMA`** — add `HAS_COMPONENT: []`, `HAS_VALUE: []`.
+- **`_indexes`** — add a **unique composite index on `VALUE (kind, member)`**.
+  This enforces interning and powers the lookup-or-create.
+
+No migration: delete the DB file, let `SchemaManager.ensure()` rebuild, re-seed.
+
+---
+
+## 6. Step 3 — entity repository (`src/database/repository/entity.py`)
+
+The heart. Verbs model on `CharacterRepository.add_node`/`add_attribute`.
+
+**Interning (the shared-enum primitive):**
+```python
+def intern_value(self, kind: ValueKind, member: str) -> Vertex:
+    found = self._base.lookup_value(kind, member)     # via the (kind,member) index
+    return found or self._base.create_vertex(VertexType.VALUE, kind=kind, member=member)
+```
+(Add `lookup_value` to `BaseRepository` using
+`lookup_by_key(VALUE, keys=["kind","member"], values=[kind, member])`.)
+
+**Compose:**
+```python
+def add_component(self, owner, ctype) -> Vertex:
+    comp = self._base.create_vertex(VertexType.ENTITY, ctype=ctype)
     self._base.create_edge(EdgeType.HAS_COMPONENT, source=owner, target=comp)
     return comp
 
-def components(self, owner: Vertex, ctype: ComponentType | None = None) -> list[Vertex]:
-    """Direct component children, optionally filtered by ctype."""
-    comps = [e.get_in() for e in owner.get_out_edges(EdgeType.HAS_COMPONENT)]
-    return [c for c in comps if ctype is None or c.get("ctype") == ctype]
+def set_enum(self, comp, kind, member):      # re-point: at most one edge per kind
+    for e in comp.get_out_edges(EdgeType.HAS_VALUE):
+        if e.get_in().get("kind") == kind: self._base.delete_edge(e)   # drop old
+    self._base.create_edge(EdgeType.HAS_VALUE, comp, self.intern_value(kind, member))
+
+def set_scalar(self, comp, n: int):          # owned ATTRIBUTE, update or create
+    edges = comp.get_out_edges(EdgeType.HAS_ATTRIBUTE)
+    if edges: self._base.update_vertex(edges[0].get_in(), value=n)
+    else:
+        attr = self._base.create_vertex(VertexType.ATTRIBUTE, value=n)
+        self._base.create_edge(EdgeType.HAS_ATTRIBUTE, comp, attr)
 ```
 
-- **`create_entity(name, kind, components: list[...])`** — create the root
-  ENTITY `{name, kind}`, then `add_component(...)` for each. (Replace the current
-  flat signature; delete the dead `wound_capacity`/`wound_filled` params that
-  aren't even in the schema.)
-- **Hydration loader** — `load(root: Vertex) -> EntityNode` recursing
-  `HAS_COMPONENT`:
-  ```python
-  @dataclass
-  class EntityNode:
-      id: str
-      props: dict[str, object]          # incl. ctype / kind / name
-      components: list["EntityNode"]
-  ```
-  Recurse owning edges only (today that's all of them — a tree, so no visited-set
-  needed yet; add one when the first reference edge appears, per decision 4).
-- **Cascade delete** — walk `HAS_COMPONENT` recursively and delete the whole
-  owned subtree, mirroring `CharacterRepository.delete_character`'s `_OWNED_EDGES`
-  cascade. Never follow `CONTAINS` (the location isn't owned).
-- **Query-by-component (the payoff)** — e.g. "scene entities with a filled
-  Capable clock" becomes a traversal over `CONTAINS` → `HAS_COMPONENT` rather
-  than a JSON parse. Add helpers as consumers need them.
+**`create_entity(name, kind, spec)`** — create the root `ENTITY{name, kind}`,
+then per component: `add_component`, `set_enum`/`set_scalar`, set `text`. (Delete
+the dead flat signature with `wound_capacity`/`wound_filled`.)
+
+**Hydrate** — `load(root) -> EntityNode`, walking **owning** edges only:
+- `HAS_COMPONENT` → each component; on it, read `ctype`/`text`, collect
+  `HAS_VALUE` targets into `enums[kind]=member`, read `HAS_ATTRIBUTE` → `scalar`.
+- **Never recurse `HAS_VALUE`** (boundary to shared node). Tree is shallow; no
+  visited-set needed yet.
+
+**Cascade delete** — recurse `HAS_COMPONENT`; for each component delete its
+owned `ATTRIBUTE` (via `HAS_ATTRIBUTE`) and the component vertex; **drop
+`HAS_VALUE` edges but never the `VALUE` nodes** (shared). Never follow `CONTAINS`.
+
+**Query-by-enum (the payoff):**
+```python
+def with_enum(self, kind, member) -> list[Vertex]:   # -> root entities
+    v = self._base.lookup_value(kind, member)
+    if v is None: return []
+    comps = [e.get_out() for e in v.get_in_edges(EdgeType.HAS_VALUE)]
+    return [c.get_in_edges(EdgeType.HAS_COMPONENT)[0].get_out() for c in comps]
+```
 
 ---
 
-## 6. Step 4 — location service (`src/service/location.py`)
+## 7. Step 4 — location service (`src/service/location.py`)
 
-- **`_to_entity_data(root)`** — rebuild `EntityData` from the hydrated component
-  graph instead of parsing JSON. Read `danger` from the `danger` component,
-  collect `clock` components into `clocks: dict`, read `status`/`stance`, etc.
-- **`persist_entity_state(entities)`** — instead of writing a `resolution` JSON
-  blob, **upsert components** (this is where PUT/DROP first appears concretely):
-  for each entity, set the `filled` on each `clock` component (creating it if the
-  player just attacked a new pillar), and set `state`/`broken_pillar`/`stance` on
-  the `status`/`stance` components. Removal of a defeated entity stays
-  `remove_entity` (now cascading via §5).
-- **Delete** `_resolution_to_json`, `_resolution_from_json`, `_profile_from_json`
-  — the JSON blob is gone.
+- **`_to_entity_data(root)`** — build from `load(root)`: read the `danger`/`stance`
+  components' `enums`, collect `clock` components into `clocks={pillar: filled}`,
+  `pillar_cap` into `pillar_profile`, `threat_channel` into the set, `appearance`/
+  `position` text, `status` into state/broken_pillar/returns_when.
+- **`persist_entity_state(entities)`** — replace the JSON write with component
+  upserts (the PUT seam): `set_scalar` each `clock`'s filled (creating the clock
+  component if a new pillar was attacked), `set_enum` the `status`/`stance`. This
+  is where coarse PUT/DROP lands later.
+- **Delete** `_resolution_to_json`, `_resolution_from_json`, `_profile_from_json`.
 
 ---
 
-## 7. Step 5 — spawn / worldgen (`src/service/world.py`)
+## 8. Step 5 — spawn / worldgen (`src/service/world.py`)
 
-Wherever entities are created (around `world.py:87`, `description=entity.description`),
-compose components via `create_entity(name, kind, components=[...])` instead of
-passing flat props. This is the authoring entry point for the new model.
-
----
-
-## 8. Tests
-
-Pure-ish, DB-backed where needed:
-1. **Round-trip** — `create_entity` with danger/stance/two clocks → `load` →
-   `_to_entity_data` reproduces the original `EntityData`.
-2. **Keyed multi-instance** — two `clock` components with different `pillar`
-   keys both survive and rehydrate into the `clocks` dict.
-3. **Mutate-and-persist** — fill a clock via `persist_entity_state`, reload,
-   assert the `filled` moved (guards the PUT path).
-4. **Cascade delete** — deleting a root removes all its component vertices; a
-   `CONTAINS`-linked location is untouched.
-5. **Enumeration** — `list_entities_at(location)` returns only the 1 scene
-   entity, not its N components (the shared-`VertexType` trap from §1).
-
-`uv run pytest` + `ruff check` green before each commit.
+Where entities are created (~`world.py:87`), compose via `create_entity(name,
+kind, spec=[...])` instead of flat props. Authoring entry point for the model.
 
 ---
 
-## 9. Commit sequence
+## 9. Tests
 
-1. Model layer — `ComponentType`, `HAS_COMPONENT` edge, `EntityNode`. *(ships alone)*
-2. Schema — ENTITY property union + `HAS_COMPONENT`; drop the old flat props.
-3. Entity repo — `add_component` / `components` / `create_entity` / `load` / cascade.
-4. Location service — hydrate from components, persist via component upsert,
-   delete the JSON helpers. *(the cross-cutting commit)*
-5. Worldgen — compose components on spawn; drop & re-seed the DB.
+1. **Round-trip** — `create_entity` (danger, stance, two clocks) → `load` →
+   `_to_entity_data` reproduces the `EntityData`.
+2. **Interning** — two entities set to `stance=hostile` share **one** `VALUE`
+   node (assert identity / one VALUE row).
+3. **Re-point** — change an entity's stance; assert its `HAS_VALUE` now targets
+   the new member, the old shared node still exists, and *other* entities on the
+   old member are unaffected.
+4. **Reverse query** — `with_enum(stance, hostile)` returns exactly the hostile
+   roots.
+5. **Cascade** — deleting a root removes its components + owned `ATTRIBUTE`s but
+   **not** the shared `VALUE` nodes; `CONTAINS` location untouched.
+6. **Keyed multi-instance** — two `clock` components, different `pillar`, both
+   rehydrate into `clocks`.
+7. **Enumeration trap** — `list_entities_at(location)` returns the 1 scene
+   entity, not its components/values.
+
+`uv run pytest` + `ruff check` green per commit.
 
 ---
 
-## 10. Deferred to later slices (named, not now)
+## 10. Commit sequence
 
-- **Collapse `EntityData` into a generic component-accessor** — once consumers
-  are migrated, the projection DTO can go; nodes read components directly.
-- **Characters onto the same registry** — apply this exact model to
-  `CharacterRepository`, retiring the `CORPUS → ATTRIBUTE` two-hop (decision: no
-  legacy, so do it when characters are next touched).
-- **PUT/DROP delta edges + `TURN` history (D12–D14)** — the component upsert in
-  §6 is the seam; later it emits `CHANGED` edges off a `TURN` vertex.
-- **`DescribeSystem` from components** — the render half (other guide) now reads
-  the hydrated `EntityNode`/`EntityData` instead of flat fields.
-- **Reference edges** — the first sideways edge (curse, shared item) activates
-  the owning-vs-reference boundary in the hydrator (decision 4).
+1. Model — `ComponentType`/`ValueKind`, `VALUE` type, `HAS_COMPONENT`/`HAS_VALUE`
+   edges, `EntityNode`/`Component`.
+2. Schema — vertex/edge schema, `(kind,member)` unique index; drop flat props.
+3. Base repo — `lookup_value`.
+4. Entity repo — `intern_value` / `add_component` / `set_enum` / `set_scalar` /
+   `create_entity` / `load` / cascade / `with_enum`.
+5. Location service — hydrate + persist via components; delete JSON helpers.
+6. Worldgen — compose on spawn; drop & re-seed DB. *(cross-cutting)*
+
+---
+
+## 11. Deferred (named, not now)
+
+- **Collapse `EntityData`** into a generic component accessor once consumers migrate.
+- **Characters onto the same model** — retire `CORPUS → ATTRIBUTE` for the
+  uniform `Entity → Component → Value` shape (the interned-enum design is new;
+  scalars already match `ATTRIBUTE`).
+- **PUT/DROP delta edges + `TURN` history (D12–D14)** — the §7 upsert is the seam.
+- **`DescribeSystem` from components** — render reads `EntityNode` (other guide).
+- **More reference edges** — `HAS_VALUE` is the first; curses/shared items add more,
+  all governed by the same owning-vs-reference boundary (decision 4).
+```
