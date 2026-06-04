@@ -84,13 +84,24 @@ FRAME_BRANCHES = ("approach", "pillar", "push", "target", "duration")
 
 
 def fan_out_frame_and_threats(state: GraphState) -> list[Send]:
-    """Off the segmenter, fan the whole roll prep out in parallel: the four
+    """Off the segmenter, fan the whole roll prep out in parallel: the five
     discrete framing classifiers (approach/pillar/push/target/duration — each
     reads the same contested beat) plus one classify branch per candidate source.
     Both arms rejoin at gather_threats — same superstep — so framing overlaps
     the threat enumeration instead of running before it, and the downstream roll
     fires once. Each Send carries a full typed state copy (see fan_out_threats on
-    why model_copy, not a bare dict)."""
+    why model_copy, not a bare dict).
+
+    CONTRACT — the two arms run concurrently, so they must stay independent:
+    every branch may only read shared read-only inputs (contested_beat, the
+    character/location/scene context) plus its own Send payload, and may only
+    write a field no other concurrent branch writes. Today that holds: the
+    framing classifiers write five disjoint keys (attribute / target_pillar /
+    push_for_effect / target_entity / beat_span) and the threat branches write
+    only pending_threats (operator.add — commutative append). Do NOT add a read
+    of one arm's output into the other arm: disjoint-key writes never raise, so
+    LangGraph will not catch the race for you. Anything order-sensitive belongs
+    AFTER the gather_threats join, not in the fan-out."""
     sends = [Send(branch, state.model_copy()) for branch in FRAME_BRANCHES]
     sends.extend(fan_out_threats(state))
     return sends
