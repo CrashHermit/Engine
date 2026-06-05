@@ -316,7 +316,60 @@ duplicated here — cross-reference by decision number instead.
 
 ---
 
-## 11. Error handling
+## 11. Aesthetics
+
+Style (§§1–10) is *what* the code does and how it's organized; aesthetics is how
+it **looks on the page**. The mechanical layer is enforced by Ruff (§14); the
+taste-driven choices below are not fully tool-checkable and are upheld by
+convention.
+
+### Enforced by Ruff (mechanical)
+
+- **Line length 88.** Drives all wrapping; the dominant factor in code silhouette.
+- **Double quotes**, sorted imports (stdlib → third-party → `src`), modern syntax
+  (`str | None`, `list[str]`), no unused imports, trailing commas where the
+  formatter adds them.
+- Run `ruff format` + `ruff check` — see §14.
+
+### Vertical rhythm
+
+- Short functions stay **tight** — no blank lines inside the body.
+- In longer functions, a **single** blank line separates logical phases
+  (validate → compute → return; build → persist → map). **Never more than one**
+  blank line inside a body.
+- Module level keeps the formatter's two-blank-line spacing between top-level
+  defs and one between methods.
+
+### Section dividers
+
+Use a **plain single-line** comment, one blank line above, for in-file sections:
+
+```python
+    # Reads
+
+    def list_characters(self) -> list[CharacterData]:
+        ...
+
+    # Writes
+```
+
+Do **not** use full-width `####…` hash bars — they shout and don't scale to small
+files.
+
+### Docstring voice
+
+- **Imperative mood**, ending in a period: `"Own a single play session."`,
+  `"Read the contested beat → which attribute it rolls."`, `"Return the value of
+  the first interrupt, if any."` — not `"Owns…"`, `"Reads…"`, or a bare noun
+  phrase. Enforced for detectable cases by Ruff's `D401`.
+- Multi-line docstrings put **one blank line** between the summary and the body
+  (`D205`).
+- Docstrings are **not required** everywhere (`D1xx` is disabled) — write them
+  where §10 says to, and when present they follow the shape above.
+
+---
+
+## 12. Error handling
 
 - **`ValueError`** for invalid inputs and missing entities in domain code.
 - No broad `except Exception` in services or mechanics.
@@ -325,7 +378,7 @@ duplicated here — cross-reference by decision number instead.
 
 ---
 
-## 12. Testing
+## 13. Testing
 
 - **Framework:** pytest (dev dependency).
 - **Layout:** `tests/` mirrors `src/` (e.g. `tests/core/mechanic/test_dice.py`).
@@ -345,9 +398,9 @@ uv run pytest
 
 ---
 
-## 13. Tooling
+## 14. Tooling
 
-Configured in `pyproject.toml`. Dev dependencies install with:
+Configured in `pyproject.toml` (`[tool.ruff]`). Dev dependencies install with:
 
 ```powershell
 uv sync --group dev
@@ -355,18 +408,31 @@ uv sync --group dev
 
 | Task | Command |
 |------|---------|
+| Format | `uv run ruff format src test` |
+| Lint | `uv run ruff check src test` |
+| Lint + autofix | `uv run ruff check --fix src test` |
 | Test | `uv run pytest` |
 
-Style conventions at a glance:
+CI runs `ruff format --check` and `ruff check` on every push/PR; nothing
+non-conforming merges. A Claude Code SessionStart hook formats web/agent sessions
+so branches arrive conforming.
 
-- Line length: **100**
+Conventions at a glance:
+
+- Line length: **88**
 - Quote style: **double**
 - First-party package: **`src`**
 - Target: **Python 3.13**
+- Lint families: `E, W, F, I, UP, Q, COM, TID, N, D` (docstrings imperative;
+  `D1xx` off — see §11)
+
+The big-bang reformat commit is recorded in `.git-blame-ignore-revs`; configure
+git once with `git config blame.ignoreRevsFile .git-blame-ignore-revs` so it
+doesn't pollute `git blame`.
 
 ---
 
-## 14. Related documents
+## 15. Related documents
 
 | Document | Scope |
 |----------|-------|
