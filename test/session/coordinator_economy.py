@@ -83,8 +83,8 @@ async def test_submit_seeds_stress_and_trauma_into_graph_state():
     [e async for e in coord.submit("look around")]
 
     sent_state = coord._services.graph_service.ainvoke.await_args.args[0]
-    assert sent_state.stress == 4
-    assert sent_state.trauma == 1
+    assert sent_state["stress"] == 4
+    assert sent_state["trauma"] == 1
 
 
 @pytest.mark.asyncio

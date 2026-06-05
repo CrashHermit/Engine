@@ -8,7 +8,7 @@ from src.core.mechanic.push import improve_magnitude, push_cost
 from src.core.mechanic.threat_envelope import describe_threat
 from src.core.model.resist import ResistAction
 from src.core.model.threat import Threat
-from src.state import GraphState
+from src.state import GraphState, current_threat, pool_for
 
 
 def _replace_threat(threats: list[Threat], updated: Threat) -> list[Threat]:
@@ -26,12 +26,12 @@ class ResistRollNode:
         self._rng: Random | None = rng
 
     async def __call__(self, state: GraphState) -> dict:
-        threat = state.current_threat
-        action = state.resist_action or ResistAction.ENDURE
-        flavor = state.resist_flavor or ""
+        threat = current_threat(state)
+        action = state.get("resist_action") or ResistAction.ENDURE
+        flavor = state.get("resist_flavor") or ""
 
         updates: dict = {
-            "resist_cursor": state.resist_cursor + 1,
+            "resist_cursor": state.get("resist_cursor", 0) + 1,
             "narration_directive": resolution_directive(
                 describe_threat(threat), action, flavor
             ),
@@ -41,19 +41,19 @@ class ResistRollNode:
 
         if action == ResistAction.ENDURE:
             updates["threats"] = _replace_threat(
-                state.threats,
+                state.get("threats", []),
                 replace(threat, resist_action=action, resist_flavor=flavor, resisted=False),
             )
             return updates
 
-        roll = roll_pool(state.pool_for(threat.channel), rng=self._rng)
+        roll = roll_pool(pool_for(state, threat.channel), rng=self._rng)
         cost = push_cost(roll.tier)
-        stress_result = add_stress(state.stress, state.trauma, cost)
+        stress_result = add_stress(state.get("stress", 0), state.get("trauma", 0), cost)
         updates.update(
             stress=stress_result.stress,
             trauma=stress_result.trauma,
-            trauma_gained=state.trauma_gained or stress_result.trauma_gained,
-            character_lost=state.character_lost or stress_result.lost,
+            trauma_gained=state.get("trauma_gained", False) or stress_result.trauma_gained,
+            character_lost=state.get("character_lost", False) or stress_result.lost,
         )
 
         new_threat = replace(
@@ -66,5 +66,5 @@ class ResistRollNode:
         if threat.outcome is not None:
             new_mag = improve_magnitude(threat.outcome.landed_magnitude)
             new_threat = replace(new_threat, outcome=replace(threat.outcome, landed_magnitude=new_mag))
-        updates["threats"] = _replace_threat(state.threats, new_threat)
+        updates["threats"] = _replace_threat(state.get("threats", []), new_threat)
         return updates

@@ -58,8 +58,8 @@ class ClassifyThreatNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entity: EntityData | None = state.classify_entity
-        source: str = state.classify_source or "environment"
+        entity: EntityData | None = state.get("classify_entity")
+        source: str = state.get("classify_source", "") or "environment"
         danger: Danger | None = entity.danger if entity is not None else None
         affinity = entity.threat_channels if entity is not None else frozenset()
 
@@ -67,9 +67,9 @@ class ClassifyThreatNode:
             source=source,
             danger=danger.value if danger is not None else "environment",
             affinity=",".join(c.value for c in sorted(affinity)),
-            character_description=state.character_description,
-            location_description=state.location_description,
-            contested_beat=state.contested_beat or "",
+            character_description=state.get("character_description", ""),
+            location_description=state.get("location_description", ""),
+            contested_beat=state.get("contested_beat", "") or "",
         )
         if not prediction.threatens:
             return {}

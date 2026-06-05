@@ -47,4 +47,4 @@ class IntentAlignmentGraphBuilder:
 
 
 def route_by_intent_alignment_router(state: GraphState) -> bool:
-    return bool(state.is_intent_alignment_achieved)
+    return bool(state.get("is_intent_alignment_achieved"))

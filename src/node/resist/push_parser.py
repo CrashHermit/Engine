@@ -3,7 +3,7 @@ from dspy import InputField, OutputField, Predict, Prediction, Signature
 from src.core.mechanic.threat_envelope import describe_threat
 from src.core.model.resist import ResistAction
 from src.lm import lm
-from src.state import GraphState
+from src.state import GraphState, current_threat
 
 
 class ResistPushParserSignature(Signature):
@@ -43,10 +43,10 @@ class ResistPushParserNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        consequence = describe_threat(state.current_threat)
+        consequence = describe_threat(current_threat(state))
         prediction: Prediction = await self._program.aforward(
             consequence=consequence,
-            player_response=state.resist_response or "",
+            player_response=state.get("resist_response") or "",
         )
         # Push is retained mechanically but dropped from the offer surface
         # (no effect-on-target to spend it on yet) — fold it into resist.

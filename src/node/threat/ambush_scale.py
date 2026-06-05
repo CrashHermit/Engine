@@ -21,6 +21,6 @@ class AmbushScaleNode:
                     crit=False,
                 ),
             )
-            for t in state.threats
+            for t in state.get("threats", [])
         ]
         return {"threats": landed}

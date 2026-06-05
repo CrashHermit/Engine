@@ -63,8 +63,8 @@ async def test_breaking_exists_destroys_and_defeats():
 async def test_breaking_willing_suspends_not_kills():
     # fill the WILLING pillar instead -> SUSPENDED, no defeat (non-lethal)
     s = _state(_spider({ThreatPillar.WILLING: 1}), RollTier.CLEAN, pillar=ThreatPillar.WILLING)
-    s.attribute = Channel.ANIMA
-    s.ratings = {Channel.ANIMA: 2}
+    s["attribute"] = Channel.ANIMA
+    s["ratings"] = {Channel.ANIMA: 2}
     result = await ApplyEffectNode()(s)
     spider = result["scene_entities"][0]
     assert spider.status == EntityStatus.SUSPENDED
@@ -93,7 +93,7 @@ async def test_miss_lands_no_effect():
 async def test_push_for_effect_adds_segment_and_charges_stress():
     # STANDARD cap 3; CLEAN = 2, +1 push = 3 -> fills -> defeated. Stress +2.
     state = _state(_spider(), RollTier.CLEAN)
-    state.push_for_effect = True
+    state["push_for_effect"] = True
     result = await ApplyEffectNode()(state)
     assert result["scene_entities"][0].clocks[ThreatPillar.EXISTS] == 3
     assert result["defeated_target"] == "Spider"
@@ -104,7 +104,7 @@ async def test_push_for_effect_adds_segment_and_charges_stress():
 async def test_push_on_a_miss_costs_nothing():
     # A miss can't be pushed — no effect, no stress charged.
     state = _state(_spider(), RollTier.BAD)
-    state.push_for_effect = True
+    state["push_for_effect"] = True
     assert await ApplyEffectNode()(state) == {}
 
 
@@ -116,8 +116,8 @@ async def test_immune_pillar_is_a_no_op_with_feedback():
         id="g", danger=Danger.DEADLY, pillar_profile={ThreatPillar.EXISTS: 10},
     )
     state = _state(golem, RollTier.CLEAN, pillar=ThreatPillar.WILLING, target="Golem")
-    state.attribute = Channel.ANIMA
-    state.ratings = {Channel.ANIMA: 3}
+    state["attribute"] = Channel.ANIMA
+    state["ratings"] = {Channel.ANIMA: 3}
     result = await ApplyEffectNode()(state)
     assert "scene_entities" not in result  # no clock change
     assert "immune" in result["resolution_outcome"].lower()

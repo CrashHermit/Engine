@@ -41,19 +41,19 @@ class IntentAlignmentRouterNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict[str, bool]:
-        message_history: str = "\n".join(m.format() for m in state.message_history)
+        message_history: str = "\n".join(m.format() for m in state.get("message_history", []))
         intent_alignment_history: str = "\n".join(
-            m.format() for m in state.intent_alignment_history
+            m.format() for m in state.get("intent_alignment_history", [])
         )
-        entities: str = "\n".join(state.entities_at_location) if state.entities_at_location else ""
+        entities: str = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
         prediction: Prediction = await self._program.aforward(
-            character_name=state.character_name,
-            character_description=state.character_description,
-            location_name=state.location_name,
-            location_description=state.location_description,
+            character_name=state.get("character_name", ""),
+            character_description=state.get("character_description", ""),
+            location_name=state.get("location_name", ""),
+            location_description=state.get("location_description", ""),
             entities_at_location=entities,
             message_history=message_history,
-            human_message=state.human_message.content,
+            human_message=state.get("human_message").content,
             intent_alignment_history=intent_alignment_history,
         )
         return {

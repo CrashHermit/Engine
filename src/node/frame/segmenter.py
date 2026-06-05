@@ -51,14 +51,14 @@ class SegmenterNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        history: str = "\n".join(m.format() for m in state.message_history)
-        entities: str = "\n".join(state.entities_at_location) if state.entities_at_location else ""
+        history: str = "\n".join(m.format() for m in state.get("message_history", []))
+        entities: str = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
         prediction: Prediction = await self._program.aforward(
-            character_description=state.character_description,
-            location_description=state.location_description,
+            character_description=state.get("character_description", ""),
+            location_description=state.get("location_description", ""),
             entities_at_location=entities,
             message_history=history,
-            human_message=state.human_message.content,
+            human_message=state.get("human_message").content,
         )
         return {
             "lead_up": prediction.lead_up.strip(),
