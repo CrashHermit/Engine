@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.mechanic.narration_directive import final_directive
@@ -7,9 +9,9 @@ from src.state import GraphState
 
 
 class FinalPlannerSignature(Signature):
-    """
-    A consequence is resolving. Produce a structured scaffold for the final
-    narrator prose.
+    """A consequence is resolving.
+
+    Produce a structured scaffold for the final narrator prose.
 
     - resolutions: list of "dimension: outcome" strings that collapse any
       ambiguities held open in the prior narration (e.g. "depth: shallow —
@@ -31,11 +33,16 @@ class FinalPlannerSignature(Signature):
     threat_type: str = InputField(default="")
     threat_channel: str = InputField(default="")
     landed_magnitude: str = InputField(
-        description="Final severity after any resistance: NONE, MINOR, STANDARD, SEVERE, or FATAL"
+        description=(
+            "Final severity after any resistance:"
+            " NONE, MINOR, STANDARD, SEVERE, or FATAL"
+        )
     )
     held_ambiguities: str = InputField(
         default="",
-        description="Dimensions left open in the held narration; empty if no held phase",
+        description=(
+            "Dimensions left open in the held narration; empty if no held phase"
+        ),
     )
     resist_action: str = InputField(
         default="endure",
@@ -52,15 +59,22 @@ class FinalPlannerSignature(Signature):
 
 
 class FinalPlannerNode:
-    """Reached only when nothing landed (clean/crit, or every threat reduced to
-    0 at scale time). Narrates the avoided beat."""
+    """Narrate the avoided beat when nothing landed.
+
+    Reached only when nothing landed (clean/crit, or every threat reduced to
+    0 at scale time).
+    """
 
     def __init__(self) -> None:
         self._program: Predict = Predict(signature=FinalPlannerSignature)
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entities = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
+        entities = (
+            "\n".join(state.get("entities_at_location", []))
+            if state.get("entities_at_location", [])
+            else ""
+        )
         first = state.get("threats", [])[0] if state.get("threats", []) else None
 
         prediction: Prediction = await self._program.aforward(

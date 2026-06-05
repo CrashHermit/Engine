@@ -12,6 +12,8 @@ pool against the target's danger — so a rat and a dragon don't take the same h
 from the same roll. A miss (BAD tier) lands nothing regardless of potency.
 """
 
+from __future__ import annotations
+
 from src.core.mechanic.dice import RollTier
 from src.core.model.entity import Danger, ThreatPillar
 from src.core.model.resolution import Effect
@@ -42,8 +44,18 @@ _DANGER_RANK: dict[Danger, int] = {
 }
 
 # Ordinal ladder for the one-step potency shift; index 0 is "no effect".
-_EFFECT_LADDER: tuple[Effect | None, ...] = (None, Effect.LIMITED, Effect.STANDARD, Effect.GREAT)
-_EFFECT_SEGMENTS: dict[Effect | None, int] = {None: 0, Effect.LIMITED: 1, Effect.STANDARD: 2, Effect.GREAT: 3}
+_EFFECT_LADDER: tuple[Effect | None, ...] = (
+    None,
+    Effect.LIMITED,
+    Effect.STANDARD,
+    Effect.GREAT,
+)
+_EFFECT_SEGMENTS: dict[Effect | None, int] = {
+    None: 0,
+    Effect.LIMITED: 1,
+    Effect.STANDARD: 2,
+    Effect.GREAT: 3,
+}
 
 
 def capacity_for_danger(danger: Danger) -> int:
@@ -54,7 +66,9 @@ def effect_from_tier(tier: RollTier) -> Effect | None:
     return _TIER_EFFECT[tier]
 
 
-def potency_shift(effect: Effect | None, pool: int, danger: Danger | None) -> Effect | None:
+def potency_shift(
+    effect: Effect | None, pool: int, danger: Danger | None
+) -> Effect | None:
     """Shift the effect one step by potency. A miss stays a miss."""
     if effect is None:
         return None
@@ -83,7 +97,8 @@ def pillar_capacity(
     equally hard for the tier). An authored profile is authoritative: a listed
     pillar uses its capacity; a pillar the profile omits is IMMUNE (capacity 0
     -> can't be broken that way), which is how a golem resists WILLING or a
-    mindless thing resists AWARE."""
+    mindless thing resists AWARE.
+    """
     if profile:
         return profile.get(pillar, 0)
     return capacity_for_danger(danger)
@@ -93,10 +108,21 @@ def pillar_capacity(
 # silently turn a rout into a kill.
 _PILLAR_OUTCOME: dict[ThreatPillar, str] = {
     ThreatPillar.EXISTS: "is destroyed — frame this as a kill/end, not a mere wound",
-    ThreatPillar.CAPABLE: "is disabled (disarmed, crippled, restrained) and can no longer act against you",
-    ThreatPillar.AWARE: "loses track of you — frame this as slipping out of its awareness, it is unharmed",
-    ThreatPillar.IN_REACH: "can no longer reach you — frame this as breaking away / being cut off, it is unharmed",
-    ThreatPillar.WILLING: "loses its nerve — frame this as backing down, fleeing, or surrendering, NOT dying",
+    ThreatPillar.CAPABLE: (
+        "is disabled (disarmed, crippled, restrained) and can no longer act against you"
+    ),
+    ThreatPillar.AWARE: (
+        "loses track of you — frame this as slipping out of its awareness, "
+        "it is unharmed"
+    ),
+    ThreatPillar.IN_REACH: (
+        "can no longer reach you — frame this as breaking away / being cut off, it is "
+        "unharmed"
+    ),
+    ThreatPillar.WILLING: (
+        "loses its nerve — frame this as backing down, fleeing, or surrendering, "
+        "NOT dying"
+    ),
 }
 
 
@@ -108,9 +134,16 @@ def outcome_clause(pillar: ThreatPillar, name: str) -> str:
 # EXISTS is permanent (the creature is gone), so it has no return.
 _PILLAR_RETURNS_WHEN: dict[ThreatPillar, str] = {
     ThreatPillar.CAPABLE: "it recovers, is freed, or finds another means to act",
-    ThreatPillar.AWARE: "you make noise, move into its view, or it searches and finds you",
-    ThreatPillar.IN_REACH: "you re-enter its space, it pursues you, or you are cornered",
-    ThreatPillar.WILLING: "you show weakness, it is cornered with no escape, or reinforcements embolden it",
+    ThreatPillar.AWARE: (
+        "you make noise, move into its view, or it searches and finds you"
+    ),
+    ThreatPillar.IN_REACH: (
+        "you re-enter its space, it pursues you, or you are cornered"
+    ),
+    ThreatPillar.WILLING: (
+        "you show weakness, it is cornered with no escape, or reinforcements "
+        "embolden it"
+    ),
 }
 
 

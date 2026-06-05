@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.model.entity import ThreatPillar
@@ -6,10 +8,10 @@ from src.state import GraphState
 
 
 class PillarSignature(Signature):
-    """
-    Given the contested beat the player is about to roll, identify which *pillar*
-    of the target's threat the action attacks — the condition the player is
-    trying to remove (any one neutralises a foe):
+    """Identify which pillar of the target's threat the contested action attacks.
+
+    The pillar is the condition the player is trying to remove (any one
+    neutralises a foe):
 
     - exists: destroy/kill it (cut it down, crush it, blow it up).
     - capable: take away its means (disarm, cripple, restrain, blind).
@@ -37,14 +39,19 @@ class PillarNode:
     """Reads the contested beat → which pillar the action attacks. One judgment.
 
     Read from the verb, so it needs no resolved target and can run in parallel
-    with the target classifier."""
+    with the target classifier.
+    """
 
     def __init__(self) -> None:
         self._program: Predict = Predict(signature=PillarSignature)
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entities = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
+        entities = (
+            "\n".join(state.get("entities_at_location", []))
+            if state.get("entities_at_location", [])
+            else ""
+        )
         prediction: Prediction = await self._program.aforward(
             character_description=state.get("character_description", ""),
             location_description=state.get("location_description", ""),

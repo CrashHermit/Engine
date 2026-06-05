@@ -1,7 +1,10 @@
-from arcadedb_embedded.core import Database
-from arcadedb_embedded.graph import Vertex
+from __future__ import annotations
+
 import json
 import logging
+
+from arcadedb_embedded.core import Database
+from arcadedb_embedded.graph import Vertex
 
 from src.core.model.database import EdgeType
 from src.database.connection import DatabaseConnection
@@ -15,10 +18,12 @@ from src.worldgen.pipeline import WorldgenPipeline
 
 
 class WorldService:
-    """Bootstrap service: creates a brand-new world database, runs worldgen, and
-    persists the generated world. Unlike in-session services it owns database and
-    schema creation, so it is constructed from the DatabaseConnection directly
-    rather than from a ServiceContainer."""
+    """Bootstrap a new world: create the database, run worldgen, and persist.
+
+    Unlike in-session services it owns database and schema creation, so it is
+    constructed from the DatabaseConnection directly rather than from a
+    ServiceContainer.
+    """
 
     def __init__(self, connection: DatabaseConnection) -> None:
         self._logger = logging.getLogger("engine.service.world")
@@ -29,7 +34,6 @@ class WorldService:
         name: str,
         description: str,
         size: int,
-
     ) -> None:
         self._logger.info("create_world name=%s", name)
         world_data: WorldData = WorldData(
@@ -57,7 +61,9 @@ class WorldService:
 
             start = self._seed_dungeon(location_repo, world_data.dungeon)
             if start is not None:
-                base.create_edge(type_name=EdgeType.HAS_START, source=world, target=start)
+                base.create_edge(
+                    type_name=EdgeType.HAS_START, source=world, target=start
+                )
         self._logger.info("create_world complete name=%s", name)
 
     def _seed_dungeon(
@@ -92,7 +98,9 @@ class WorldService:
                     # Empty resolution => ACTIVE, no clocks; capacity derives
                     # from the profile (or danger when unauthored).
                     resolution="",
-                    pillar_profile=json.dumps(entity.pillar_profile) if entity.pillar_profile else "",
+                    pillar_profile=json.dumps(entity.pillar_profile)
+                    if entity.pillar_profile
+                    else "",
                     disposition=entity.disposition,
                 )
 

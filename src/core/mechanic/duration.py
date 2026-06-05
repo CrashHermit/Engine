@@ -25,6 +25,8 @@ cap (preserving resolution), stepping up only when the count would overflow.
 This module is pure: no randomness, no I/O.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import StrEnum
 from math import log
@@ -77,8 +79,10 @@ _FINE: tuple[Unit, ...] = tuple(u for u in _ASCENDING if u not in COARSE)
 
 @dataclass(frozen=True)
 class Span:
-    """A fictional duration as `count` of `unit`. Validated to the scale gate:
-    fine units must have count 1; coarse units allow 1..MAX_COUNT."""
+    """A fictional duration as `count` of `unit`. Validated to the scale gate.
+
+    Fine units must have count 1; coarse units allow 1..MAX_COUNT.
+    """
 
     unit: Unit
     count: int = 1
@@ -121,9 +125,11 @@ def span_from_ticks(ticks: int) -> Span:
 
 
 def normalize(unit: Unit, count: int) -> Span:
-    """Lenient factory: accept any `(unit, count)` — including a fine unit given
-    a count, or a coarse count past the cap — and return the canonical Span for
-    the same tick total (applying the step-up rule)."""
+    """Lenient factory: accept any `(unit, count)` and return the canonical Span.
+
+    Accepts a fine unit given a count, or a coarse count past the cap —
+    applies the step-up rule to reach the same tick total.
+    """
     if count < 1:
         raise ValueError(f"count must be >= 1, got {count}")
     return span_from_ticks(count * TICKS[unit])

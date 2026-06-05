@@ -6,6 +6,8 @@ inferred from imperative `add_conditional_edges` calls. These are pure functions
 of `GraphState`; the builder in `resolution_graph.py` only wires them.
 """
 
+from __future__ import annotations
+
 from langgraph.types import Send
 
 from src.core.model.entity import EntityKind, EntityStance, EntityStatus
@@ -30,9 +32,11 @@ def route_by_roll_gate(state: GraphState) -> str:
 
 
 def fan_out_ambush(state: GraphState) -> list[Send]:
-    """World-acts fan-out: one classify branch per ACTIVE hostile creature (the
-    things actually striking). No environment — nothing the player did provoked
-    it; the creatures act on their own."""
+    """Fan out world-acts: one classify branch per ACTIVE hostile creature.
+
+    These are the things actually striking. No environment — nothing the
+    player did provoked it; the creatures act on their own.
+    """
     return [
         Send(
             "classify_threat",
@@ -52,10 +56,12 @@ def route_after_gather(state: GraphState) -> str:
 
 
 def fan_out_threats(state: GraphState) -> list[Send]:
-    """One classify branch per candidate source: every entity present, plus the
-    environment. GraphState is a TypedDict, so each Send carries a shallow copy
-    of the state dict (``{**state, ...}``) with only its own source/entity
-    overridden — the native channel payload, preserving the full turn context."""
+    """Fan out one classify branch per candidate source (every entity plus environment).
+
+    GraphState is a TypedDict, so each Send carries a shallow copy of the
+    state dict (``{**state, ...}``) with only its own source/entity
+    overridden — the native channel payload, preserving the full turn context.
+    """
     # Only ACTIVE sources threaten; a CREATURE must also be HOSTILE (the aggro
     # gate). Objects threaten environmentally regardless of stance.
     sends = [
@@ -80,13 +86,14 @@ FRAME_BRANCHES = ("approach", "pillar", "push", "target", "duration")
 
 
 def fan_out_frame_and_threats(state: GraphState) -> list[Send]:
-    """Off the segmenter, fan the whole roll prep out in parallel: the five
-    discrete framing classifiers (approach/pillar/push/target/duration — each
-    reads the same contested beat) plus one classify branch per candidate source.
-    Both arms rejoin at gather_threats — same superstep — so framing overlaps
-    the threat enumeration instead of running before it, and the downstream roll
-    fires once. Each Send carries a shallow copy of the state dict (see
-    fan_out_threats).
+    """Fan the whole roll prep out in parallel off the segmenter.
+
+    The five discrete framing classifiers (approach/pillar/push/target/duration
+    — each reads the same contested beat) plus one classify branch per candidate
+    source. Both arms rejoin at gather_threats — same superstep — so framing
+    overlaps the threat enumeration instead of running before it, and the
+    downstream roll fires once. Each Send carries a shallow copy of the state
+    dict (see fan_out_threats).
 
     CONTRACT — the two arms run concurrently, so they must stay independent:
     every branch may only read shared read-only inputs (contested_beat, the
@@ -97,7 +104,8 @@ def fan_out_frame_and_threats(state: GraphState) -> list[Send]:
     only pending_threats (operator.add — commutative append). Do NOT add a read
     of one arm's output into the other arm: disjoint-key writes never raise, so
     LangGraph will not catch the race for you. Anything order-sensitive belongs
-    AFTER the gather_threats join, not in the fan-out."""
+    AFTER the gather_threats join, not in the fan-out.
+    """
     sends = [Send(branch, dict(state)) for branch in FRAME_BRANCHES]
     sends.extend(fan_out_threats(state))
     return sends

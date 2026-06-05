@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 
 from langgraph.checkpoint.base import BaseCheckpointSaver
@@ -9,9 +11,11 @@ from src.service.graph import GraphService
 
 
 class WorldSessionFactory:
-    """Long-lived factory that opens a world database and wires up a fresh
-    ServiceContainer for that session. Holds the stable DatabaseConnection so
-    callers only need to supply a world name."""
+    """Open a world database and wire up a fresh ServiceContainer for the session.
+
+    Holds the stable DatabaseConnection so callers only need to supply a
+    world name.
+    """
 
     def __init__(
         self,

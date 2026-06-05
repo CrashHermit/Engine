@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from src.core.mechanic.narration_directive import mundane_directive
 from src.state import GraphState
 

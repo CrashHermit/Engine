@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, VerticalScroll
@@ -8,7 +10,7 @@ from src.service.world import WorldService
 
 
 class CreateWorldModal(ModalScreen[dict[str, str] | None]):
-    """Form for creating a new world (new ArcadeDB database)."""
+    """Provide a form for creating a new world (new ArcadeDB database)."""
 
     BINDINGS: list[BindingType] = [
         Binding(key="escape", action="dismiss_cancel", description="Cancel")

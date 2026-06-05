@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import replace
 
 from src.core.mechanic.economy import add_stress
@@ -16,17 +18,24 @@ from src.state import GraphState, action_intent, pool_for
 
 
 class ApplyEffectNode:
-    """The effect-on-target half of the roll. Finds the action's target and the
-    pillar the action attacks, scales effect from the same action tier (shifted
-    by potency), and fills that pillar's clock. Breaking a pillar neutralises the
-    creature — EXISTS removes it (GONE), any other pillar suspends it. Pure state
-    mutation; persistence / removal happens post-turn in the coordinator."""
+    """Apply the effect-on-target half of the roll.
+
+    Finds the action's target and the pillar the action attacks, scales effect
+    from the same action tier (shifted by potency), and fills that pillar's
+    clock. Breaking a pillar neutralises the creature — EXISTS removes it
+    (GONE), any other pillar suspends it. Pure state mutation; persistence /
+    removal happens post-turn in the coordinator.
+    """
 
     async def __call__(self, state: GraphState) -> dict:
         intent = action_intent(state)
         target = self._find_target(intent.target, state.get("scene_entities", []))
         # Only living foes can be de-threated; props can't be "defeated".
-        if target is None or target.kind != EntityKind.CREATURE or state.get("roll_result") is None:
+        if (
+            target is None
+            or target.kind != EntityKind.CREATURE
+            or state.get("roll_result") is None
+        ):
             return {}
 
         pillar = intent.pillar
@@ -34,13 +43,18 @@ class ApplyEffectNode:
         if capacity <= 0:  # immune to this pillar (profile omits it)
             return {
                 "resolution_outcome": (
-                    f"The {target.name} cannot be affected this way (immune to this approach) — "
+                    f"The {target.name} cannot be affected this way "
+                    "(immune to this approach) — "
                     "the attempt has no effect; make that clear to the player."
                 )
             }
 
         pool = pool_for(state, intent.attribute)
-        segments = effect_segments(potency_shift(effect_from_tier(state.get("roll_result").tier), pool, target.danger))
+        segments = effect_segments(
+            potency_shift(
+                effect_from_tier(state.get("roll_result").tier), pool, target.danger
+            )
+        )
         if segments <= 0:
             return {}
 
@@ -51,11 +65,14 @@ class ApplyEffectNode:
         pushed = False
         if intent.push:
             segments += PUSH_FOR_EFFECT_SEGMENTS
-            stress_result = add_stress(state.get("stress", 0), state.get("trauma", 0), PUSH_FOR_EFFECT_STRESS)
+            stress_result = add_stress(
+                state.get("stress", 0), state.get("trauma", 0), PUSH_FOR_EFFECT_STRESS
+            )
             out.update(
                 stress=stress_result.stress,
                 trauma=stress_result.trauma,
-                trauma_gained=state.get("trauma_gained", False) or stress_result.trauma_gained,
+                trauma_gained=state.get("trauma_gained", False)
+                or stress_result.trauma_gained,
                 character_lost=state.get("character_lost", False) or stress_result.lost,
             )
             pushed = True
@@ -87,12 +104,20 @@ class ApplyEffectNode:
             out["resolution_outcome"] = outcome
 
         updated = replace(
-            target, clocks=clocks, status=status, broken_pillar=broken_pillar, returns_when=returns_when
+            target,
+            clocks=clocks,
+            status=status,
+            broken_pillar=broken_pillar,
+            returns_when=returns_when,
         )
-        out["scene_entities"] = [updated if e.id == target.id else e for e in state.get("scene_entities", [])]
+        out["scene_entities"] = [
+            updated if e.id == target.id else e for e in state.get("scene_entities", [])
+        ]
         return out
 
-    def _find_target(self, target: str, entities: list[EntityData]) -> EntityData | None:
+    def _find_target(
+        self, target: str, entities: list[EntityData]
+    ) -> EntityData | None:
         name = target.strip().lower()
         if not name:
             return None

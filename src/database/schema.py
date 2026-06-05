@@ -1,12 +1,10 @@
-from typing import TYPE_CHECKING
+from __future__ import annotations
 
 import arcadedb_embedded as arcadedb
+from arcadedb_embedded.core import Database
 from arcadedb_embedded.schema import Schema
 
 from src.core.model.database import EdgeType, VertexType
-
-if TYPE_CHECKING:
-    from arcadedb_embedded.core import Database
 
 PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "id": arcadedb.PropertyType.STRING,

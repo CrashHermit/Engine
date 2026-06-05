@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from src.core.mechanic.dice import RollResult, RollTier
@@ -8,7 +10,9 @@ from src.node.effect.apply_effect import ApplyEffectNode
 from src.state import GraphState
 
 
-def _spider(clocks: dict[ThreatPillar, int] | None = None, danger: Danger = Danger.STANDARD) -> EntityData:
+def _spider(
+    clocks: dict[ThreatPillar, int] | None = None, danger: Danger = Danger.STANDARD
+) -> EntityData:
     return EntityData(
         name="Spider",
         description="big",
@@ -52,7 +56,9 @@ async def test_fills_targeted_pillar_clock():
 @pytest.mark.asyncio
 async def test_breaking_exists_destroys_and_defeats():
     # already 1/3 on EXISTS; CLEAN (2) fills it -> GONE + defeated_target
-    result = await ApplyEffectNode()(_state(_spider({ThreatPillar.EXISTS: 1}), RollTier.CLEAN))
+    result = await ApplyEffectNode()(
+        _state(_spider({ThreatPillar.EXISTS: 1}), RollTier.CLEAN)
+    )
     spider = result["scene_entities"][0]
     assert spider.status == EntityStatus.GONE
     assert result["defeated_target"] == "Spider"
@@ -62,7 +68,9 @@ async def test_breaking_exists_destroys_and_defeats():
 @pytest.mark.asyncio
 async def test_breaking_willing_suspends_not_kills():
     # fill the WILLING pillar instead -> SUSPENDED, no defeat (non-lethal)
-    s = _state(_spider({ThreatPillar.WILLING: 1}), RollTier.CLEAN, pillar=ThreatPillar.WILLING)
+    s = _state(
+        _spider({ThreatPillar.WILLING: 1}), RollTier.CLEAN, pillar=ThreatPillar.WILLING
+    )
     s["attribute"] = Channel.ANIMA
     s["ratings"] = {Channel.ANIMA: 2}
     result = await ApplyEffectNode()(s)
@@ -78,7 +86,9 @@ async def test_breaking_willing_suspends_not_kills():
 async def test_pillars_are_independent_clocks():
     # progress on EXISTS does not advance WILLING
     spider = _spider({ThreatPillar.EXISTS: 2})
-    result = await ApplyEffectNode()(_state(spider, RollTier.PARTIAL, pillar=ThreatPillar.WILLING, pool=2))
+    result = await ApplyEffectNode()(
+        _state(spider, RollTier.PARTIAL, pillar=ThreatPillar.WILLING, pool=2)
+    )
     out = result["scene_entities"][0]
     assert out.clocks[ThreatPillar.EXISTS] == 2  # untouched
     assert out.clocks[ThreatPillar.WILLING] == 1  # PARTIAL = 1 segment
@@ -112,8 +122,13 @@ async def test_push_on_a_miss_costs_nothing():
 async def test_immune_pillar_is_a_no_op_with_feedback():
     # Golem with a profile that omits WILLING -> immune to intimidation.
     golem = EntityData(
-        name="Golem", description="stone", scene_position="hall", kind=EntityKind.CREATURE,
-        id="g", danger=Danger.DEADLY, pillar_profile={ThreatPillar.EXISTS: 10},
+        name="Golem",
+        description="stone",
+        scene_position="hall",
+        kind=EntityKind.CREATURE,
+        id="g",
+        danger=Danger.DEADLY,
+        pillar_profile={ThreatPillar.EXISTS: 10},
     )
     state = _state(golem, RollTier.CLEAN, pillar=ThreatPillar.WILLING, target="Golem")
     state["attribute"] = Channel.ANIMA
@@ -139,12 +154,20 @@ async def test_profile_capacity_overrides_uniform():
 @pytest.mark.asyncio
 async def test_object_target_takes_no_clock_damage():
     lantern = EntityData(
-        name="Dead Lantern", description="rusted", scene_position="ceiling",
-        kind=EntityKind.OBJECT, id="ln1",
+        name="Dead Lantern",
+        description="rusted",
+        scene_position="ceiling",
+        kind=EntityKind.OBJECT,
+        id="ln1",
     )
     state = GraphState(
-        scene_entities=[lantern], target_entity="Dead Lantern", target_pillar=ThreatPillar.EXISTS,
-        attribute=Channel.CORPUS, ratings={Channel.CORPUS: 2},
-        roll_result=RollResult(dice=(6,), outcome_die=6, tier=RollTier.CLEAN, zero_pool=False),
+        scene_entities=[lantern],
+        target_entity="Dead Lantern",
+        target_pillar=ThreatPillar.EXISTS,
+        attribute=Channel.CORPUS,
+        ratings={Channel.CORPUS: 2},
+        roll_result=RollResult(
+            dice=(6,), outcome_die=6, tier=RollTier.CLEAN, zero_pool=False
+        ),
     )
     assert await ApplyEffectNode()(state) == {}

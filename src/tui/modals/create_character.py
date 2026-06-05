@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical, VerticalScroll
@@ -12,7 +14,7 @@ _ATTR_IDS: tuple[str, str, str] = ("step-corpus", "step-mens", "step-anima")
 
 
 class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
-    """Form for creating a new character with attribute pool and personality ratings."""
+    """Build a character-creation form with attribute pool and personality ratings."""
 
     BINDINGS: list[BindingType] = [
         Binding(key="escape", action="dismiss_cancel", description="Cancel")
@@ -33,26 +35,49 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
 
             with Vertical(id="char-attributes-section"):
                 yield Label(
-                    content=f"Attributes  (distribute {_POOL_TOTAL} points)", id="attr-label"
+                    content=f"Attributes  (distribute {_POOL_TOTAL} points)",
+                    id="attr-label",
                 )
                 yield Static(content=f"Remaining: {_POOL_TOTAL}", id="pool-display")
-                yield ValueStepper(label="Corpus", min_val=0, max_val=4, value=0, id="step-corpus")
-                yield ValueStepper(label="Mens", min_val=0, max_val=4, value=0, id="step-mens")
-                yield ValueStepper(label="Anima", min_val=0, max_val=4, value=0, id="step-anima")
+                yield ValueStepper(
+                    label="Corpus", min_val=0, max_val=4, value=0, id="step-corpus"
+                )
+                yield ValueStepper(
+                    label="Mens", min_val=0, max_val=4, value=0, id="step-mens"
+                )
+                yield ValueStepper(
+                    label="Anima", min_val=0, max_val=4, value=0, id="step-anima"
+                )
 
             with Vertical(id="char-personality-section"):
                 yield Label(content="Personality  (rate each 1–5)", id="trait-label")
                 yield ValueStepper(
-                    label="Extraversion", min_val=1, max_val=_TRAIT_MAX, value=1, id="step-extra"
+                    label="Extraversion",
+                    min_val=1,
+                    max_val=_TRAIT_MAX,
+                    value=1,
+                    id="step-extra",
                 )
                 yield ValueStepper(
-                    label="Openness", min_val=1, max_val=_TRAIT_MAX, value=1, id="step-open"
+                    label="Openness",
+                    min_val=1,
+                    max_val=_TRAIT_MAX,
+                    value=1,
+                    id="step-open",
                 )
                 yield ValueStepper(
-                    label="Agreeableness", min_val=1, max_val=_TRAIT_MAX, value=1, id="step-agree"
+                    label="Agreeableness",
+                    min_val=1,
+                    max_val=_TRAIT_MAX,
+                    value=1,
+                    id="step-agree",
                 )
                 yield ValueStepper(
-                    label="Neuroticism", min_val=1, max_val=_TRAIT_MAX, value=1, id="step-neuro"
+                    label="Neuroticism",
+                    min_val=1,
+                    max_val=_TRAIT_MAX,
+                    value=1,
+                    id="step-neuro",
                 )
                 yield ValueStepper(
                     label="Conscientiousness",
@@ -65,7 +90,11 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
             with Vertical(id="char-body-section"):
                 yield Label(content="Body Parts", id="body-label")
                 yield ValueStepper(
-                    label="Manipulator", min_val=0, max_val=4, value=0, id="step-manipulator"
+                    label="Manipulator",
+                    min_val=0,
+                    max_val=4,
+                    value=0,
+                    id="step-manipulator",
                 )
                 yield ValueStepper(
                     label="Movement", min_val=0, max_val=4, value=0, id="step-movement"
@@ -81,13 +110,17 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
     def on_value_stepper_changed(self, event: ValueStepper.Changed) -> None:
         if self._updating or event.stepper.id not in _ATTR_IDS:
             return
-        total: int = sum(self.query_one(f"#{pid}", ValueStepper).value for pid in _ATTR_IDS)
+        total: int = sum(
+            self.query_one(f"#{pid}", ValueStepper).value for pid in _ATTR_IDS
+        )
         if total > _POOL_TOTAL:
             self._updating = True
             event.stepper.value -= 1
             self._updating = False
             total: int = _POOL_TOTAL
-        self.query_one("#pool-display", Static).update(content=f"Remaining: {_POOL_TOTAL - total}")
+        self.query_one("#pool-display", Static).update(
+            content=f"Remaining: {_POOL_TOTAL - total}"
+        )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-cancel":
@@ -99,7 +132,9 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
             self.dismiss(
                 result={
                     "name": name,
-                    "description": self.query_one("#char-description", TextArea).text.strip(),
+                    "description": self.query_one(
+                        "#char-description", TextArea
+                    ).text.strip(),
                     "corpus": self.query_one("#step-corpus", ValueStepper).value,
                     "mens": self.query_one("#step-mens", ValueStepper).value,
                     "anima": self.query_one("#step-anima", ValueStepper).value,
@@ -107,7 +142,9 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
                     "openness": self.query_one("#step-open", ValueStepper).value,
                     "agreeableness": self.query_one("#step-agree", ValueStepper).value,
                     "neuroticism": self.query_one("#step-neuro", ValueStepper).value,
-                    "conscientiousness": self.query_one("#step-consc", ValueStepper).value,
+                    "conscientiousness": self.query_one(
+                        "#step-consc", ValueStepper
+                    ).value,
                 }
             )
 

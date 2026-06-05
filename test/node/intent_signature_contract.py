@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import dspy
 import pytest
 
@@ -32,9 +34,11 @@ def _state() -> GraphState:
     ],
 )
 async def test_intent_node_passes_only_declared_inputs(node_cls, output):
-    """Every kwarg a node hands to aforward must be a declared signature input —
-    otherwise DSPy silently drops the data (the character_name/location_name
-    mismatch this guards against)."""
+    """Verify every kwarg a node hands to aforward is a declared signature input.
+
+    Otherwise DSPy silently drops the data (the character_name/location_name
+    mismatch this guards against).
+    """
     node = node_cls()
     captured: dict = {}
 

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.lm import lm
@@ -5,29 +7,41 @@ from src.state import GraphState
 
 
 class IntentAlignmentRouterSignature(Signature):
-    """
-    You are an intent alignment router. Determine whether the player's message
-    expresses clear, actionable intent given the current context and any prior
-    intent alignment exchanges. Return true only when you have enough information
-    to act. Return false if the intent is ambiguous, physically impossible for
-    this character, contradicts the current context, or references an entity
-    that does not exist in the current location.
+    """You are an intent alignment router.
+
+    Determine whether the player's message expresses clear, actionable intent
+    given the current context and any prior intent alignment exchanges. Return
+    true only when you have enough information to act. Return false if the
+    intent is ambiguous, physically impossible for this character, contradicts
+    the current context, or references an entity that does not exist in the
+    current location.
     """
 
-    character_name: str = InputField(default="", description="The player character's name")
+    character_name: str = InputField(
+        default="", description="The player character's name"
+    )
     character_description: str = InputField(
         default="", description="A description of the player character"
     )
-    location_name: str = InputField(default="", description="The name of the current location")
+    location_name: str = InputField(
+        default="", description="The name of the current location"
+    )
     location_description: str = InputField(
         default="", description="A description of the current location"
     )
     entities_at_location: str = InputField(
         default="",
-        description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'",
+        description=(
+            "Entities present in the current location, each formatted as"
+            " 'Name: description. Location: scene_position'"
+        ),
     )
-    message_history: str = InputField(default="", description="The conversation history so far")
-    human_message: str = InputField(description="The player's current message or action")
+    message_history: str = InputField(
+        default="", description="The conversation history so far"
+    )
+    human_message: str = InputField(
+        description="The player's current message or action"
+    )
     intent_alignment_history: str = InputField(
         default="", description="The prior clarification Q&A for this action"
     )
@@ -43,11 +57,17 @@ class IntentAlignmentRouterNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict[str, bool]:
-        message_history: str = "\n".join(m.format() for m in state.get("message_history", []))
+        message_history: str = "\n".join(
+            m.format() for m in state.get("message_history", [])
+        )
         intent_alignment_history: str = "\n".join(
             m.format() for m in state.get("intent_alignment_history", [])
         )
-        entities: str = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
+        entities: str = (
+            "\n".join(state.get("entities_at_location", []))
+            if state.get("entities_at_location", [])
+            else ""
+        )
         prediction: Prediction = await self._program.aforward(
             character_name=state.get("character_name", ""),
             character_description=state.get("character_description", ""),
