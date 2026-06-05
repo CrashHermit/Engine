@@ -16,10 +16,10 @@ class IntentClarificationNode:
     """
 
     async def __call__(self, state: GraphState) -> dict:
-        answer: str = interrupt({"question": state.question})
+        answer: str = interrupt({"question": state.get("question")})
         answer_message = Message(
             role="human",
             content=answer,
-            name=state.human_message.name if state.human_message else "",
+            name=state.get("human_message").name if state.get("human_message") else "",
         )
         return {"intent_alignment_history": [answer_message]}

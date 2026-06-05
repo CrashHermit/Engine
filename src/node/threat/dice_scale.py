@@ -3,7 +3,7 @@ from random import Random
 
 from src.core.mechanic.dice import RollResult, roll_pool
 from src.core.mechanic.scaling import scale_threat
-from src.state import GraphState
+from src.state import GraphState, pool_for
 
 
 class DiceScaleNode:
@@ -19,11 +19,11 @@ class DiceScaleNode:
 
     async def __call__(self, state: GraphState) -> dict:
         # Offense: the action roll. Consumed by apply_effect (effect on target).
-        action_roll: RollResult = roll_pool(state.pool_for(state.attribute), rng=self._rng)
+        action_roll: RollResult = roll_pool(pool_for(state, state.get("attribute")), rng=self._rng)
         # Defense: one independent roll per threat, on the threat's own channel.
         scaled = []
-        for t in state.threats:
-            defense: RollResult = roll_pool(state.pool_for(t.channel), rng=self._rng)
+        for t in state.get("threats", []):
+            defense: RollResult = roll_pool(pool_for(state, t.channel), rng=self._rng)
             scaled.append(
                 replace(
                     t,

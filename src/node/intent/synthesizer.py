@@ -14,9 +14,11 @@ class IntentSynthesizerSignature(Signature):
     Incorporate all resolved details from the clarification exchanges.
     """
 
+    character_name: str = InputField(default="", description="The player character's name")
     character_description: str = InputField(
         default="", description="A description of the player character"
     )
+    location_name: str = InputField(default="", description="The name of the current location")
     location_description: str = InputField(
         default="", description="A description of the current location"
     )
@@ -37,25 +39,25 @@ class IntentSynthesizerNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        if not state.intent_alignment_history:
-            return {"human_message": state.human_message}
+        if not state.get("intent_alignment_history", []):
+            return {"human_message": state.get("human_message")}
 
-        message_history: str = "\n".join(m.format() for m in state.message_history)
+        message_history: str = "\n".join(m.format() for m in state.get("message_history", []))
         intent_alignment_history: str = "\n".join(
-            m.format() for m in state.intent_alignment_history
+            m.format() for m in state.get("intent_alignment_history", [])
         )
         prediction: Prediction = await self._program.aforward(
-            character_name=state.character_name,
-            character_description=state.character_description,
-            location_name=state.location_name,
-            location_description=state.location_description,
+            character_name=state.get("character_name", ""),
+            character_description=state.get("character_description", ""),
+            location_name=state.get("location_name", ""),
+            location_description=state.get("location_description", ""),
             message_history=message_history,
-            human_message=state.human_message.content,
+            human_message=state.get("human_message").content,
             intent_alignment_history=intent_alignment_history,
         )
         synthesized = Message(
             role="human",
             content=prediction.synthesized_message,
-            name=state.human_message.name,
+            name=state.get("human_message").name,
         )
         return {"human_message": synthesized}

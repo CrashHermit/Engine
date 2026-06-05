@@ -53,7 +53,7 @@ def test_ambush_fan_out_covers_only_hostile_creatures():
     state = GraphState(scene_entities=[
         _creature(EntityStance.HOSTILE), _creature(EntityStance.UNAWARE), _object(),
     ])
-    sources = [s.arg.classify_source for s in fan_out_ambush(state)]
+    sources = [s.arg["classify_source"] for s in fan_out_ambush(state)]
     assert sources == ["Spider"]  # the hostile one only; no environment, no object
 
 

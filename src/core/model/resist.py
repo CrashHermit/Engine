@@ -1,6 +1,5 @@
+from dataclasses import dataclass
 from enum import StrEnum
-
-from pydantic import BaseModel, ConfigDict
 
 
 class ResistAction(StrEnum):
@@ -9,9 +8,8 @@ class ResistAction(StrEnum):
     ENDURE = "endure"
 
 
-class HeldScaffold(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
+@dataclass(frozen=True)
+class HeldScaffold:
     impact_focus: str
     sensory_anchors: tuple[str, ...]
     ambiguity_wedge: tuple[str, ...]
@@ -19,9 +17,8 @@ class HeldScaffold(BaseModel):
     resist_options_text: str
 
 
-class FinalScaffold(BaseModel):
-    model_config = ConfigDict(frozen=True)
-
+@dataclass(frozen=True)
+class FinalScaffold:
     resolutions: tuple[str, ...]
     new_anchors: tuple[str, ...]
     closing_beat: str

@@ -12,7 +12,7 @@ from src.core.mechanic.effect import (
 from src.core.mechanic.push import PUSH_FOR_EFFECT_SEGMENTS, PUSH_FOR_EFFECT_STRESS
 from src.core.model.entity import EntityKind, EntityStatus, ThreatPillar
 from src.core.model.location import EntityData
-from src.state import GraphState
+from src.state import GraphState, action_intent, pool_for
 
 
 class ApplyEffectNode:
@@ -23,10 +23,10 @@ class ApplyEffectNode:
     mutation; persistence / removal happens post-turn in the coordinator."""
 
     async def __call__(self, state: GraphState) -> dict:
-        intent = state.action_intent
-        target = self._find_target(intent.target, state.scene_entities)
+        intent = action_intent(state)
+        target = self._find_target(intent.target, state.get("scene_entities", []))
         # Only living foes can be de-threated; props can't be "defeated".
-        if target is None or target.kind != EntityKind.CREATURE or state.roll_result is None:
+        if target is None or target.kind != EntityKind.CREATURE or state.get("roll_result") is None:
             return {}
 
         pillar = intent.pillar
@@ -39,8 +39,8 @@ class ApplyEffectNode:
                 )
             }
 
-        pool = state.pool_for(intent.attribute)
-        segments = effect_segments(potency_shift(effect_from_tier(state.roll_result.tier), pool, target.danger))
+        pool = pool_for(state, intent.attribute)
+        segments = effect_segments(potency_shift(effect_from_tier(state.get("roll_result").tier), pool, target.danger))
         if segments <= 0:
             return {}
 
@@ -51,12 +51,12 @@ class ApplyEffectNode:
         pushed = False
         if intent.push:
             segments += PUSH_FOR_EFFECT_SEGMENTS
-            stress_result = add_stress(state.stress, state.trauma, PUSH_FOR_EFFECT_STRESS)
+            stress_result = add_stress(state.get("stress", 0), state.get("trauma", 0), PUSH_FOR_EFFECT_STRESS)
             out.update(
                 stress=stress_result.stress,
                 trauma=stress_result.trauma,
-                trauma_gained=state.trauma_gained or stress_result.trauma_gained,
-                character_lost=state.character_lost or stress_result.lost,
+                trauma_gained=state.get("trauma_gained", False) or stress_result.trauma_gained,
+                character_lost=state.get("character_lost", False) or stress_result.lost,
             )
             pushed = True
 
@@ -89,7 +89,7 @@ class ApplyEffectNode:
         updated = replace(
             target, clocks=clocks, status=status, broken_pillar=broken_pillar, returns_when=returns_when
         )
-        out["scene_entities"] = [updated if e.id == target.id else e for e in state.scene_entities]
+        out["scene_entities"] = [updated if e.id == target.id else e for e in state.get("scene_entities", [])]
         return out
 
     def _find_target(self, target: str, entities: list[EntityData]) -> EntityData | None:

@@ -6,4 +6,4 @@ class GatherThreatsNode:
     resist cycle overwrite."""
 
     async def __call__(self, state: GraphState) -> dict:
-        return {"threats": list(state.pending_threats)}
+        return {"threats": list(state.get("pending_threats", []))}

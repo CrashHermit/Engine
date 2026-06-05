@@ -6,7 +6,7 @@ from src.core.model.message import Message
 from src.core.model.threat import Channel, Threat, ThreatType
 from src.node.threat.ambush import AmbushNode
 from src.node.threat.ambush_scale import AmbushScaleNode
-from src.state import GraphState
+from src.state import GraphState, landed_threats
 
 
 @pytest.mark.asyncio
@@ -35,7 +35,7 @@ async def test_ambush_scale_lands_threats_at_full():
     assert [o.landed_magnitude for o in outcomes] == [Magnitude.SEVERE, Magnitude.MINOR]
     assert all(not o.avoided and not o.crit for o in outcomes)
     # all landed (>= MINOR) → feed the resist cycle
-    assert len(GraphState(threats=result["threats"]).landed_threats) == 2
+    assert len(landed_threats(GraphState(threats=result["threats"]))) == 2
 
 
 @pytest.mark.asyncio

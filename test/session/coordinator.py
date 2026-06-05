@@ -10,6 +10,7 @@ from src.core.model.message import Message
 from src.core.model.threat import Channel
 from src.session.coordinator import GameCoordinator
 from src.session.result import ClarifyingQuestion, Narration, ResistanceOffer, TurnError
+from src.state import pool_for
 
 
 def _character() -> CharacterData:
@@ -150,9 +151,9 @@ async def test_submit_seeds_attribute_ratings_into_graph_state():
     [e async for e in coord.submit("strike")]
 
     sent_state = coord._services.graph_service.ainvoke.await_args.args[0]
-    assert sent_state.pool_for(Channel.CORPUS) == 2
-    assert sent_state.pool_for(Channel.MENS) == 1
-    assert sent_state.pool_for(Channel.ANIMA) == 1
+    assert pool_for(sent_state, Channel.CORPUS) == 2
+    assert pool_for(sent_state, Channel.MENS) == 1
+    assert pool_for(sent_state, Channel.ANIMA) == 1
 
 
 @pytest.mark.asyncio
@@ -188,7 +189,7 @@ async def test_submit_seeds_world_clock_into_graph_state():
     [e async for e in coord.submit("strike")]
 
     sent_state = coord._services.graph_service.ainvoke.await_args.args[0]
-    assert sent_state.elapsed_ticks == 4800
+    assert sent_state["elapsed_ticks"] == 4800
 
 
 @pytest.mark.asyncio

@@ -40,15 +40,15 @@ class TargetNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        candidates = state.scene_entities
+        candidates = state.get("scene_entities", [])
         if len(candidates) <= 1:
             return {"target_entity": candidates[0].name if candidates else ""}
 
-        entities = "\n".join(state.entities_at_location) if state.entities_at_location else ""
+        entities = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
         prediction: Prediction = await self._program.aforward(
-            character_description=state.character_description,
-            location_description=state.location_description,
+            character_description=state.get("character_description", ""),
+            location_description=state.get("location_description", ""),
             entities_at_location=entities,
-            contested_beat=state.contested_beat,
+            contested_beat=state.get("contested_beat", ""),
         )
         return {"target_entity": (prediction.target or "").strip()}

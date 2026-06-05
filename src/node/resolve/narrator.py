@@ -43,26 +43,28 @@ class NarratorNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        history = "\n".join(m.format() for m in state.message_history)
-        entities = "\n".join(state.entities_at_location) if state.entities_at_location else ""
-        directive = state.narration_directive or ""
+        history = "\n".join(m.format() for m in state.get("message_history", []))
+        entities = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
+        directive = state.get("narration_directive") or ""
         # A creature changing posture this turn (noticing, turning hostile, or a
         # neutralized foe re-engaging) is narrated first, then the effect outcome.
-        if state.engagement_note:
-            directive = f"{directive}\n\nCreature posture change this turn: {state.engagement_note}"
+        engagement_note = state.get("engagement_note", "")
+        if engagement_note:
+            directive = f"{directive}\n\nCreature posture change this turn: {engagement_note}"
         # The effect-on-target outcome (kill / disarm / rout / evade …) is a
         # structural instruction so prose can't recast a rout as a kill.
-        if state.resolution_outcome:
-            directive = f"{directive}\n\nResolution of the action on its target: {state.resolution_outcome}"
+        resolution_outcome = state.get("resolution_outcome", "")
+        if resolution_outcome:
+            directive = f"{directive}\n\nResolution of the action on its target: {resolution_outcome}"
         prediction: Prediction = await self._program.aforward(
-            character_description=state.character_description,
-            location_description=state.location_description,
+            character_description=state.get("character_description", ""),
+            location_description=state.get("location_description", ""),
             entities_at_location=entities,
             message_history=history,
-            contested_beat=state.contested_beat or "",
+            contested_beat=state.get("contested_beat", "") or "",
             narration_directive=directive,
-            anchors=state.anchors or "",
-            prior_prose=state.prior_prose or "",
+            anchors=state.get("anchors") or "",
+            prior_prose=state.get("prior_prose") or "",
         )
         text = prediction.ai_message.strip()
         ai_message = Message(role="ai", content=text, name="Narrator")
