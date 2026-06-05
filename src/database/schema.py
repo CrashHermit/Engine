@@ -38,6 +38,7 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "pillar_profile": arcadedb.PropertyType.STRING,
     # Static aggro nature; current stance lives in the resolution JSON.
     "disposition": arcadedb.PropertyType.STRING,
+    "elapsed_ticks": arcadedb.PropertyType.INTEGER,
 }
 
 BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated_at"]

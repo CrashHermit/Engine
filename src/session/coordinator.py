@@ -1,8 +1,5 @@
 import asyncio
 from collections.abc import AsyncIterator
-from core.model.character import CharacterData
-from service.container import ServiceContainer
-
 from src.core.mechanic.duration import TICKS, Span, Unit
 from src.core.model.character import CharacterData
 from src.core.model.location import LocationState
