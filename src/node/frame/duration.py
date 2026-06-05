@@ -53,8 +53,7 @@ class DurationSignature(Signature):
 class DurationNode:
     """Read the contested beat and determine how much fictional time it spans.
 
-    Returns a single ladder rung (count 1). The world clock advances by this
-    at turn close.
+    Returns a single ladder rung. The world clock advances by this at turn close.
     """
 
     def __init__(self) -> None:
