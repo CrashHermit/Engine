@@ -26,9 +26,6 @@ class FinalPlannerSignature(Signature):
       the player endured.
     """
 
-    character_description: str = InputField(default="")
-    location_description: str = InputField(default="")
-    entities_at_location: str = InputField(default="")
     contested_beat: str = InputField(description="The action that was rolled")
     threat_type: str = InputField(default="")
     threat_channel: str = InputField(default="")
@@ -70,17 +67,9 @@ class FinalPlannerNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entities = (
-            "\n".join(state.get("entities_at_location", []))
-            if state.get("entities_at_location", [])
-            else ""
-        )
         first = state.get("threats", [])[0] if state.get("threats", []) else None
 
         prediction: Prediction = await self._program.aforward(
-            character_description=state.get("character_description", ""),
-            location_description=state.get("location_description", ""),
-            entities_at_location=entities,
             contested_beat=state.get("contested_beat", "") or "",
             threat_type=first.type.value if first else "",
             threat_channel=first.channel.value if first else "",

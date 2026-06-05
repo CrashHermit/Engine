@@ -23,21 +23,12 @@ class IntentQuestionGeneratorSignature(Signature):
     character_name: str = InputField(
         default="", description="The player character's name"
     )
-    character_description: str = InputField(
-        default="", description="A description of the player character"
-    )
     location_name: str = InputField(
         default="", description="The name of the current location"
     )
-    location_description: str = InputField(
-        default="", description="A description of the current location"
-    )
-    entities_at_location: str = InputField(
+    entity_names: str = InputField(
         default="",
-        description=(
-            "Entities present in the current location, each formatted as"
-            " 'Name: description. Location: scene_position'"
-        ),
+        description="Names of entities present in the current location, one per line",
     )
     message_history: str = InputField(
         default="", description="The conversation history so far"
@@ -66,17 +57,13 @@ class IntentQuestionGeneratorNode:
         intent_alignment_history: str = "\n".join(
             m.format() for m in state.get("intent_alignment_history", [])
         )
-        entities: str = (
-            "\n".join(state.get("entities_at_location", []))
-            if state.get("entities_at_location", [])
-            else ""
+        entity_names = "\n".join(
+            e.name for e in state.get("scene_entities", [])
         )
         prediction: Prediction = await self._program.aforward(
             character_name=state.get("character_name", ""),
-            character_description=state.get("character_description", ""),
             location_name=state.get("location_name", ""),
-            location_description=state.get("location_description", ""),
-            entities_at_location=entities,
+            entity_names=entity_names,
             message_history=message_history,
             human_message=state.get("human_message").content,
             intent_alignment_history=intent_alignment_history,

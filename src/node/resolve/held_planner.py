@@ -27,9 +27,6 @@ class HeldPlannerSignature(Signature):
       one at a time downstream); keep it a short line of in-fiction options.
     """
 
-    character_description: str = InputField(default="")
-    location_description: str = InputField(default="")
-    entities_at_location: str = InputField(default="")
     contested_beat: str = InputField(
         description="The single contested action that was rolled"
     )
@@ -51,11 +48,6 @@ class HeldPlannerNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entities = (
-            "\n".join(state.get("entities_at_location", []))
-            if state.get("entities_at_location", [])
-            else ""
-        )
         landed = landed_threats(state)
         consequences = "\n".join(
             f"{Magnitude(t.outcome.landed_magnitude).name} {t.type.value} "
@@ -64,9 +56,6 @@ class HeldPlannerNode:
         )
 
         prediction: Prediction = await self._program.aforward(
-            character_description=state.get("character_description", ""),
-            location_description=state.get("location_description", ""),
-            entities_at_location=entities,
             contested_beat=state.get("contested_beat", "") or "",
             consequences=consequences,
         )

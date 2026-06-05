@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from dspy.primitives.prediction import Prediction
 
-from src.core.mechanic.duration import Span, Unit
+from src.core.mechanic.duration import Duration, Unit
 from src.core.model.entity import EntityKind, ThreatPillar
 from src.core.model.location import EntityData
 from src.core.model.threat import Channel
@@ -30,9 +30,7 @@ def _entity(name: str) -> EntityData:
 def _state(*, entities: list[EntityData] | None = None) -> GraphState:
     return GraphState(
         contested_beat="I strike the foe",
-        character_description="a scout",
         scene_entities=entities or [],
-        entities_at_location=[e.name for e in (entities or [])],
     )
 
 
@@ -74,9 +72,9 @@ async def test_duration_maps_unit_to_a_single_rung_span():
     with patch.object(
         node._program,
         "aforward",
-        new=AsyncMock(return_value=Prediction(unit=Unit.ROUND)),
+        new=AsyncMock(return_value=Prediction(unit=Unit.SIX_SECONDS)),
     ):
-        assert await node(_state()) == {"beat_span": Span(Unit.ROUND)}
+        assert await node(_state()) == {"beat_span": Duration(Unit.SIX_SECONDS)}
 
 
 @pytest.mark.asyncio
@@ -84,9 +82,11 @@ async def test_duration_coerces_a_plain_string_unit():
     # DSPy may hand back the enum's string value; the node coerces to Unit.
     node = DurationNode()
     with patch.object(
-        node._program, "aforward", new=AsyncMock(return_value=Prediction(unit="night"))
+        node._program,
+        "aforward",
+        new=AsyncMock(return_value=Prediction(unit="eight_hours")),
     ):
-        assert await node(_state()) == {"beat_span": Span(Unit.NIGHT)}
+        assert await node(_state()) == {"beat_span": Duration(Unit.EIGHT_HOURS)}
 
 
 # ── target: code-derive 0–1 entities, LLM only on 2+ ────────────────────────

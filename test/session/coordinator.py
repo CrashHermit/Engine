@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from src.core.mechanic.duration import TICKS, Span, Unit
+from src.core.mechanic.duration import TICKS, Duration, Unit
 from src.core.model.character import CharacterData
 from src.core.model.location import EntityData, LocationData, LocationState
 from src.core.model.message import Message
@@ -196,7 +196,7 @@ async def test_submit_seeds_world_clock_into_graph_state():
 
 @pytest.mark.asyncio
 async def test_completed_turn_advances_world_clock_by_beat_span():
-    span = Span(Unit.WEEK, 2)
+    span = Duration(Unit.TWO_WEEKS)
     result = {
         "ai_message": _ai("time passes"),
         "message_history": [],
@@ -216,7 +216,7 @@ async def test_completed_turn_without_beat_span_advances_one_round():
 
     [e async for e in coord.submit("strike")]
 
-    assert coord._services.time.advances == [TICKS[Unit.ROUND]]
+    assert coord._services.time.advances == [TICKS[Unit.SIX_SECONDS]]
 
 
 def test_enter_stores_and_returns_location():

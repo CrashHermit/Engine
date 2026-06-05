@@ -45,8 +45,6 @@ class ThreatClassifierSignature(Signature):
     affinity: str = InputField(
         default="", description="Comma-separated channels this source favours"
     )
-    character_description: str = InputField(default="")
-    location_description: str = InputField(default="")
     contested_beat: str = InputField(
         description="The single contested action that needs a roll"
     )
@@ -76,8 +74,6 @@ class ClassifyThreatNode:
             source=source,
             danger=danger.value if danger is not None else "environment",
             affinity=",".join(c.value for c in sorted(affinity)),
-            character_description=state.get("character_description", ""),
-            location_description=state.get("location_description", ""),
             contested_beat=state.get("contested_beat", "") or "",
         )
         if not prediction.threatens:

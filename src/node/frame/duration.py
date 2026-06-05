@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
-from src.core.mechanic.duration import Span, Unit
+from src.core.mechanic.duration import Duration, Unit
 from src.lm import lm
 from src.state import GraphState
 
@@ -11,36 +11,42 @@ class DurationSignature(Signature):
     """You estimate how much *in-world time* the contested beat represents.
 
     The fictional duration that passes while this single action plays out.
-    Pick the one rung on the ladder whose span best fits; you are not measuring
-    seconds, you are choosing the closest bucket.
+    Pick the one ladder rung whose span best fits — you are not measuring
+    seconds, you are choosing the closest bucket. Return the rung's exact
+    unit name (snake_case).
 
-    - ROUND (~6s): a single decisive action or exchange — one strike, one leap,
-      one quick line.
-    - MOMENT (~30s): a brief flurry or quick back-and-forth.
-    - MINUTE (~90s): a sustained effort or a short exchange of words.
-    - SPELL (~5 min): searching a room, a real conversation, picking a lock.
-    - STRETCH (~15 min): a thorough task, a tense negotiation.
-    - HOUR: an hour of focused work.
-    - WATCH (~4h): a guard shift, crossing a district, a long vigil.
-    - NIGHT (~8h): sleeping, resting, a downtime block.
-    - DAY: a full day passes.
-    - WEEK / MONTH / YEAR: long spans — only when the fiction clearly skips
-      ahead by that much.
+    Short rungs (most contested beats land here):
+    - six_seconds (~6s): a quick reaction or combat round — one strike, leap,
+      or line.
+    - thirty_seconds (~30s): a brief physical exchange or quick back-and-forth.
+    - one_minute (~1 min): a quick search, lockpick, or short effort.
+    - five_minutes (~5 min): bandaging, a short rest, picking a lock under
+      pressure.
+    - ten_minutes (~10 min): a focused conversation, ritual, or room search.
+    - fifteen_minutes (~15 min): a thorough task or tense negotiation.
+    - thirty_minutes (~30 min): a half-hour of work or a short meal.
+    - one_hour: standard travel, study, or focused work.
+    - two_hours: a long meeting, movie-length vigil, or extended effort.
+    - four_hours: a guard watch, crossing a district, half a workday.
+    - eight_hours: a full workday, night's sleep, or downtime block.
+    - twelve_hours: dawn to dusk, half a day.
 
-    Most contested beats are short (ROUND to STRETCH). Pick a long rung only
-    when the action itself spans that time ("I spend the night on watch",
-    "I lie low until the heat dies down").
+    Long rungs — only when the fiction clearly skips ahead by that much
+    ("I spend the night on watch", "I lie low until the heat dies down"):
+    - one_day, three_days, one_week, two_weeks, three_weeks, one_month,
+      three_months, six_months, one_year.
+
+    Default short. Pick a long rung only when the action itself spans it.
     """
 
-    character_description: str = InputField(default="")
-    location_description: str = InputField(default="")
-    entities_at_location: str = InputField(default="")
     contested_beat: str = InputField(
         description="The single contested action that needs a roll"
     )
 
     unit: Unit = OutputField(
-        description="The ladder rung whose span best fits this beat"
+        description=(
+            "Exact ladder rung name (snake_case) whose span best fits this beat"
+        )
     )
 
 
@@ -56,15 +62,7 @@ class DurationNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entities = (
-            "\n".join(state.get("entities_at_location", []))
-            if state.get("entities_at_location", [])
-            else ""
-        )
         prediction: Prediction = await self._program.aforward(
-            character_description=state.get("character_description", ""),
-            location_description=state.get("location_description", ""),
-            entities_at_location=entities,
             contested_beat=state.get("contested_beat", ""),
         )
-        return {"beat_span": Span(Unit(prediction.unit))}
+        return {"beat_span": Duration(Unit(prediction.unit))}

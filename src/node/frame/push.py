@@ -16,7 +16,6 @@ class PushSignature(Signature):
     only flag it when the player clearly reaches for more.
     """
 
-    character_description: str = InputField(default="")
     contested_beat: str = InputField(
         description="The single contested action that needs a roll"
     )
@@ -37,7 +36,6 @@ class PushNode:
 
     async def __call__(self, state: GraphState) -> dict:
         prediction: Prediction = await self._program.aforward(
-            character_description=state.get("character_description", ""),
             contested_beat=state.get("contested_beat", ""),
         )
         return {"push_for_effect": bool(prediction.push)}

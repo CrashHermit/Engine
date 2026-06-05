@@ -23,9 +23,6 @@ class PillarSignature(Signature):
     to exists for a plain attack, or when the action targets no specific foe.
     """
 
-    character_description: str = InputField(default="")
-    location_description: str = InputField(default="")
-    entities_at_location: str = InputField(default="")
     contested_beat: str = InputField(
         description="The single contested action that needs a roll"
     )
@@ -47,15 +44,7 @@ class PillarNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entities = (
-            "\n".join(state.get("entities_at_location", []))
-            if state.get("entities_at_location", [])
-            else ""
-        )
         prediction: Prediction = await self._program.aforward(
-            character_description=state.get("character_description", ""),
-            location_description=state.get("location_description", ""),
-            entities_at_location=entities,
             contested_beat=state.get("contested_beat", ""),
         )
         return {"target_pillar": prediction.pillar}

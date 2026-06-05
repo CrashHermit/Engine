@@ -30,11 +30,8 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "danger": arcadedb.PropertyType.STRING,
     "threat_channels": arcadedb.PropertyType.STRING,
     "kind": arcadedb.PropertyType.STRING,
-    # Live de-threat state (status / broken pillar / per-pillar clocks) as JSON.
     "resolution": arcadedb.PropertyType.STRING,
-    # Authored per-pillar clock capacities (pillar -> capacity) as JSON.
     "pillar_profile": arcadedb.PropertyType.STRING,
-    # Static aggro nature; current stance lives in the resolution JSON.
     "disposition": arcadedb.PropertyType.STRING,
     "elapsed_ticks": arcadedb.PropertyType.INTEGER,
 }

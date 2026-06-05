@@ -4,7 +4,7 @@ import operator
 from typing import Annotated, TypedDict
 
 from src.core.mechanic.dice import RollResult
-from src.core.mechanic.duration import Span
+from src.core.mechanic.duration import Duration
 from src.core.mechanic.magnitude import Magnitude
 from src.core.model.action import ActionIntent
 from src.core.model.entity import ThreatPillar
@@ -35,13 +35,9 @@ class GraphState(TypedDict, total=False):
     contested_beat: str | None
 
     location_name: str
-    location_description: str
-    # Rendered strings for prompts AND the structured spine for enumeration/caps.
-    entities_at_location: list[str]
     scene_entities: list[EntityData]
 
     character_name: str
-    character_description: str
     # Attribute dice pools keyed by channel (corpus/mens/anima). Seeded by the
     # coordinator; read via pool_for().
     ratings: dict[Channel, int]
@@ -56,9 +52,9 @@ class GraphState(TypedDict, total=False):
     # ── World clock ──────────────────────────────────────────────────────
     # Seeded from the world clock (TimeService.now) at turn start; how much
     # fictional time this beat spans (set by the duration classifier when wired
-    # — until then the coordinator advances a default Round per closed turn).
+    # — until then the coordinator advances a default six_seconds per closed turn).
     elapsed_ticks: int
-    beat_span: Span | None
+    beat_span: Duration | None
 
     # ── Effect-on-target ─────────────────────────────────────────────────
     # apply_effect fills the targeted pillar's clock (carried inside

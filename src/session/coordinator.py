@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
-from src.core.mechanic.duration import TICKS, Span, Unit
+from src.core.mechanic.duration import TICKS, Duration, Unit
 from src.core.model.character import CharacterData
 from src.core.model.location import LocationState
 from src.core.model.message import Message
@@ -186,12 +186,11 @@ class GameCoordinator:
     def _advance_world_clock(self, result: dict) -> None:
         """Advance the world clock by the fictional time this beat spanned.
 
-        The duration classifier (not yet wired) sets `beat_span`; until then a
-        closed turn advances a single Round so the clock is live and the
-        round-trip exercised.
+        The duration classifier sets `beat_span`; when absent a closed turn
+        advances a single six_seconds rung so the clock stays live.
         """
-        beat_span: Span | None = result.get("beat_span")
-        delta = beat_span.ticks if beat_span is not None else TICKS[Unit.ROUND]
+        beat_span: Duration | None = result.get("beat_span")
+        delta = beat_span.ticks if beat_span is not None else TICKS[Unit.SIX_SECONDS]
         self._services.time.advance(delta)
 
     def _persist_economy(self, result: dict) -> list[TurnEvent]:
@@ -254,9 +253,6 @@ class GameCoordinator:
     def _build_graph_state(self, text: str) -> GraphState:
         state = self._location_state
         entities = state.entities if state is not None else []
-        entities_at_location = [
-            f"{e.name}: {e.description}. Location: {e.scene_position}" for e in entities
-        ]
         return GraphState(
             message_history=self._message_history,
             intent_alignment_history=[],
@@ -265,11 +261,8 @@ class GameCoordinator:
             question=None,
             is_intent_alignment_achieved=None,
             character_name=self._character.name or "",
-            character_description=self._character.description or "",
             location_name=state.location.name if state else "",
-            location_description=state.location.description if state else "",
-            entities_at_location=entities_at_location,
-            scene_entities=list(entities),  # structured spine for enumeration + caps
+            scene_entities=list(entities),
             stress=self._character.stress,
             trauma=self._character.trauma,
             elapsed_ticks=self._services.time.now(),

@@ -34,8 +34,7 @@ def test_framing_sends_carry_full_state():
     state = GraphState(contested_beat="I strike", scene_entities=[_hostile("Spider")])
     frame_sends = fan_out_frame_and_threats(state)[: len(FRAME_BRANCHES)]
     # Each framing branch gets a full state copy (a plain dict — the native
-    # TypedDict channel payload), so the node can read contested_beat /
-    # character_description off it.
+    # TypedDict channel payload), so the node can read contested_beat off it.
     for s in frame_sends:
         assert isinstance(s.arg, dict)
         assert s.arg["contested_beat"] == "I strike"

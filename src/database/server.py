@@ -14,7 +14,7 @@ class Server:
         self,
         root_path: str = "data",
         root_password: str | None = None,
-        http_port: int = 2480,
+        http_port: int = 2481,
     ) -> None:
         self._root_path: str = root_path
         self._root_password: str | None = root_password or os.getenv(

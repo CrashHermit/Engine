@@ -29,107 +29,65 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from math import log
 
 TICK_SECONDS: int = 6
-MAX_COUNT: int = 9  # count cap on coarse units before a step-up
-
 
 class Unit(StrEnum):
-    ROUND = "round"
-    MOMENT = "moment"
-    MINUTE = "minute"
-    SPELL = "spell"
-    STRETCH = "stretch"
-    HOUR = "hour"
-    WATCH = "watch"
-    NIGHT = "night"
-    DAY = "day"
-    WEEK = "week"
-    MONTH = "month"
-    YEAR = "year"
+    SIX_SECONDS = "six_seconds"           # 1 tick (A quick reaction / combat round)
+    THIRTY_SECONDS = "thirty_seconds"     # 5 ticks (A brief physical exchange)
+    ONE_MINUTE = "one_minute"             # 10 ticks (A quick search / lockpick)
+    FIVE_MINUTES = "five_minutes"         # 50 ticks (Bandaging, short rest)
+    TEN_MINUTES = "ten_minutes"           # 100 ticks (A focused conversation / ritual)
+    FIFTEEN_MINUTES = "fifteen_minutes"   # 150 ticks (A quarter-hour / thorough room search)
+    THIRTY_MINUTES = "thirty_minutes"     # 300 ticks (A half-hour / short meal)
+    ONE_HOUR = "one_hour"                 # 600 ticks (Standard travel / study)
+    TWO_HOURS = "two_hours"               # 1200 ticks (Watching a movie / long meeting)
+    FOUR_HOURS = "four_hours"             # 2400 ticks (A half workday / guard watch)
+    EIGHT_HOURS = "eight_hours"           # 4800 ticks (A full workday / night's sleep)
+    TWELVE_HOURS = "twelve_hours"         # 7200 ticks (Half a day / dawn to dusk)
+    ONE_DAY = "one_day"                   # 14400 ticks (24 hours)
+    THREE_DAYS = "three_days"             # 43200 ticks ("A few days" / weekend trip)
+    ONE_WEEK = "one_week"                 # 100800 ticks (7 days)
+    TWO_WEEKS = "two_weeks"               # 201600 ticks (A fortnight)
+    THREE_WEEKS = "three_weeks"           # 302400 ticks (21 days)
+    ONE_MONTH = "one_month"               # 432000 ticks (30 days)
+    THREE_MONTHS = "three_months"         # 1296000 ticks (A season / quarter year)
+    SIX_MONTHS = "six_months"             # 2592000 ticks (Half a year)
+    ONE_YEAR = "one_year"                 # 5256000 ticks (365 days)
 
-
-# Ladder in ascending tick order. Every value is an exact 6s conversion of its
-# fictional span (90s -> 15, 5min -> 50, 24h -> 14400, ...), so the names carry
-# no fabricated precision.
 TICKS: dict[Unit, int] = {
-    Unit.ROUND: 1,  # 6 s
-    Unit.MOMENT: 5,  # ~30 s
-    Unit.MINUTE: 15,  # ~90 s
-    Unit.SPELL: 50,  # ~5 min
-    Unit.STRETCH: 150,  # ~15 min
-    Unit.HOUR: 600,  # 1 h
-    Unit.WATCH: 2_400,  # ~4 h
-    Unit.NIGHT: 4_800,  # ~8 h
-    Unit.DAY: 14_400,  # 24 h
-    Unit.WEEK: 100_800,  # 7 d
-    Unit.MONTH: 432_000,  # ~30 d
-    Unit.YEAR: 5_256_000,  # 365 d
+    Unit.SIX_SECONDS: 1,
+    Unit.THIRTY_SECONDS: 5,
+    Unit.ONE_MINUTE: 10,
+    Unit.FIVE_MINUTES: 50,
+    Unit.TEN_MINUTES: 100,
+    Unit.FIFTEEN_MINUTES: 150,
+    Unit.THIRTY_MINUTES: 300,
+    Unit.ONE_HOUR: 600,
+    Unit.TWO_HOURS: 1200,
+    Unit.FOUR_HOURS: 2400,
+    Unit.EIGHT_HOURS: 4800,
+    Unit.TWELVE_HOURS: 7200,
+    Unit.ONE_DAY: 14400,
+    Unit.THREE_DAYS: 43200,
+    Unit.ONE_WEEK: 100800,
+    Unit.TWO_WEEKS: 201600,
+    Unit.THREE_WEEKS: 302400,
+    Unit.ONE_MONTH: 432000,
+    Unit.THREE_MONTHS: 1296000,
+    Unit.SIX_MONTHS: 2592000,
+    Unit.ONE_YEAR: 5256000,
 }
-
-# Units that may carry a count > 1. Everything below is single-pick (count 1).
-COARSE: frozenset[Unit] = frozenset({Unit.DAY, Unit.WEEK, Unit.MONTH, Unit.YEAR})
-
-# Cached ascending views used by the canonicaliser.
-_ASCENDING: tuple[Unit, ...] = tuple(sorted(TICKS, key=TICKS.__getitem__))
-_COARSE_ASCENDING: tuple[Unit, ...] = tuple(u for u in _ASCENDING if u in COARSE)
-_FINE: tuple[Unit, ...] = tuple(u for u in _ASCENDING if u not in COARSE)
 
 
 @dataclass(frozen=True)
-class Span:
-    """A fictional duration as `count` of `unit`. Validated to the scale gate.
-
-    Fine units must have count 1; coarse units allow 1..MAX_COUNT.
-    """
-
+class Duration:
     unit: Unit
-    count: int = 1
-
-    def __post_init__(self) -> None:
-        if self.count < 1:
-            raise ValueError(f"count must be >= 1, got {self.count}")
-        if self.unit not in COARSE and self.count != 1:
-            raise ValueError(
-                f"fine unit {self.unit} must have count 1, got {self.count}"
-            )
-        if self.count > MAX_COUNT:
-            raise ValueError(f"count must be <= {MAX_COUNT}, got {self.count}")
 
     @property
     def ticks(self) -> int:
-        return self.count * TICKS[self.unit]
+        return TICKS[self.unit]
 
-
-def span_from_ticks(ticks: int) -> Span:
-    """Project a tick total onto the canonical ladder position.
-
-    Coarse range: the *smallest* coarse unit whose rounded count fits the cap —
-    smallest-first preserves resolution (3 weeks stays Week x3 rather than
-    collapsing to Month x1), and we step up only when the count would overflow.
-    Fine range: the nearest rung in log space (honest for a geometric ladder),
-    always at count 1.
-    """
-    ticks = max(1, round(ticks))
-
-    if round(ticks / TICKS[Unit.DAY]) >= 1:
-        for unit in _COARSE_ASCENDING:
-            count = round(ticks / TICKS[unit])
-            if 1 <= count <= MAX_COUNT:
-                return Span(unit, count)
-        return Span(Unit.YEAR, MAX_COUNT)  # ceiling: clamp the largest unit
-
-    nearest = min(_FINE, key=lambda u: abs(log(ticks) - log(TICKS[u])))
-    return Span(nearest, 1)
-
-
-def normalize(unit: Unit, count: int) -> Span:
-    """Lenient factory: accept any `(unit, count)` and return the canonical Span.
-
-    Accepts a fine unit given a count, or a coarse count past the cap —
-    applies the step-up rule to reach the same tick total.
-    """
-    if count < 1:
-        raise ValueError(f"count must be >= 1, got {count}")
-    return span_from_ticks(count * TICKS[unit])
+    @property
+    def string(self) -> str:
+        return f"{self.unit}"

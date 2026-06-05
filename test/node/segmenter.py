@@ -13,8 +13,6 @@ from src.state import GraphState
 def _state(human_text: str) -> GraphState:
     return GraphState(
         human_message=Message(role="human", content=human_text, name="player"),
-        character_description="a wary scout",
-        location_description="a quiet stone corridor",
         needs_roll=True,
     )
 

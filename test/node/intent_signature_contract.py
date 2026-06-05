@@ -16,10 +16,7 @@ def _state() -> GraphState:
         human_message=Message(role="human", content="open the door", name="Vale"),
         intent_alignment_history=[Message(role="ai", content="which door?", name="IA")],
         character_name="Vale",
-        character_description="a scout",
         location_name="Courtyard",
-        location_description="a quiet yard",
-        entities_at_location=["Door: oak. Location: north"],
         message_history=[],
     )
 

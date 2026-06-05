@@ -15,9 +15,10 @@ class TargetSignature(Signature):
     perception, environment).
     """
 
-    character_description: str = InputField(default="")
-    location_description: str = InputField(default="")
-    entities_at_location: str = InputField(default="")
+    entity_names: str = InputField(
+        default="",
+        description="Names of entities present, one per line",
+    )
     contested_beat: str = InputField(
         description="The single contested action that needs a roll"
     )
@@ -48,15 +49,9 @@ class TargetNode:
         if len(candidates) <= 1:
             return {"target_entity": candidates[0].name if candidates else ""}
 
-        entities = (
-            "\n".join(state.get("entities_at_location", []))
-            if state.get("entities_at_location", [])
-            else ""
-        )
+        entity_names = "\n".join(e.name for e in candidates)
         prediction: Prediction = await self._program.aforward(
-            character_description=state.get("character_description", ""),
-            location_description=state.get("location_description", ""),
-            entities_at_location=entities,
+            entity_names=entity_names,
             contested_beat=state.get("contested_beat", ""),
         )
         return {"target_entity": (prediction.target or "").strip()}

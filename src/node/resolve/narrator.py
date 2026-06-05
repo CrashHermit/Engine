@@ -20,9 +20,6 @@ class NarratorSignature(Signature):
     Maintain the voice and rhythm of any prior_prose in context.
     """
 
-    character_description: str = InputField(default="")
-    location_description: str = InputField(default="")
-    entities_at_location: str = InputField(default="")
     message_history: str = InputField(default="")
 
     contested_beat: str = InputField(default="")
@@ -46,11 +43,6 @@ class NarratorNode:
 
     async def __call__(self, state: GraphState) -> dict:
         history = "\n".join(m.format() for m in state.get("message_history", []))
-        entities = (
-            "\n".join(state.get("entities_at_location", []))
-            if state.get("entities_at_location", [])
-            else ""
-        )
         directive = state.get("narration_directive") or ""
         # A creature changing posture this turn (noticing, turning hostile, or a
         # neutralized foe re-engaging) is narrated first, then the effect outcome.
@@ -68,9 +60,6 @@ class NarratorNode:
                 f" {resolution_outcome}"
             )
         prediction: Prediction = await self._program.aforward(
-            character_description=state.get("character_description", ""),
-            location_description=state.get("location_description", ""),
-            entities_at_location=entities,
             message_history=history,
             contested_beat=state.get("contested_beat", "") or "",
             narration_directive=directive,
