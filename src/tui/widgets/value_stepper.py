@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from textual import events
@@ -10,12 +12,15 @@ from textual.widgets import Label, Static
 
 
 class ValueStepper(Widget):
-    """Label + [-] value [+] row. Styles live in theme.tcss (custom $da-* vars)."""
+    """Render a label + [-] value [+] row.
+
+    Styles live in theme.tcss (custom $da-* vars).
+    """
 
     value: reactive[int] = reactive(0)
 
     class Changed(Message):
-        def __init__(self, stepper: "ValueStepper", new_value: int) -> None:
+        def __init__(self, stepper: ValueStepper, new_value: int) -> None:
             super().__init__()
             self.stepper: ValueStepper = stepper
             self.new_value: int = new_value
@@ -41,7 +46,9 @@ class ValueStepper(Widget):
         with Horizontal(classes="stepper-controls"):
             yield Static(content="-", id="btn-dec", classes="stepper-button")
             yield Static(
-                content=str(self._initial_value), id="stepper-value", classes="stepper-value"
+                content=str(self._initial_value),
+                id="stepper-value",
+                classes="stepper-value",
             )
             yield Static(content="+", id="btn-inc", classes="stepper-button")
 

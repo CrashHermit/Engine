@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.reactive import reactive
@@ -6,13 +8,15 @@ from textual.widgets import Button, ContentSwitcher, Label, RichLog
 
 
 class LeftPanel(Widget):
-    """Switchable left panel: Scene log or Character info."""
+    """Render a switchable left panel: Scene log or Character info."""
 
     current_view: reactive[str] = reactive("scene")
 
     def compose(self) -> ComposeResult:
         with ContentSwitcher(initial="scene", id="left-switcher"):
-            yield RichLog(id="scene", min_width=0, wrap=True, markup=True, highlight=True)
+            yield RichLog(
+                id="scene", min_width=0, wrap=True, markup=True, highlight=True
+            )
             with Vertical(id="character"):
                 yield Label("—", id="info-char-name")
                 yield Label("—", id="info-location")
@@ -22,7 +26,9 @@ class LeftPanel(Widget):
 
     def watch_current_view(self, view: str) -> None:
         self.query_one("#left-switcher", ContentSwitcher).current = view
-        self.query_one("#btn-scene", Button).variant = "primary" if view == "scene" else "default"
+        self.query_one("#btn-scene", Button).variant = (
+            "primary" if view == "scene" else "default"
+        )
         self.query_one("#btn-character", Button).variant = (
             "primary" if view == "character" else "default"
         )
@@ -40,9 +46,14 @@ class LeftPanel(Widget):
             lines = "\n".join(f"  · {e}" for e in entities)
             entity_lines = f"\n\n[dim]Entities:[/dim]\n[dim]{lines}[/dim]"
         self.query_one("#scene", RichLog).write(
-            f"\n[bold #c9a84c]{name}[/bold #c9a84c]\n\n{description}{entity_lines}\n\n[dim]{exits}[/dim]"
+            f"\n[bold #c9a84c]{name}[/bold #c9a84c]\n\n"
+            f"{description}{entity_lines}\n\n[dim]{exits}[/dim]"
         )
 
     def update_info(self, character_name: str, location_name: str) -> None:
-        self.query_one("#info-char-name", Label).update(f"[bold]Character:[/bold] {character_name}")
-        self.query_one("#info-location", Label).update(f"[bold]Location:[/bold] {location_name}")
+        self.query_one("#info-char-name", Label).update(
+            f"[bold]Character:[/bold] {character_name}"
+        )
+        self.query_one("#info-location", Label).update(
+            f"[bold]Location:[/bold] {location_name}"
+        )

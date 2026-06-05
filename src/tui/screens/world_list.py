@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical
@@ -38,7 +40,9 @@ class WorldListScreen(Screen):
         self._refresh_world_list()
 
     def _selected_world_name(self) -> str | None:
-        item: ListItem | None = self.query_one("#world-list", ListView).highlighted_child
+        item: ListItem | None = self.query_one(
+            "#world-list", ListView
+        ).highlighted_child
         if item is None:
             return None
         return str(item.query_one(Label).content)
@@ -57,21 +61,28 @@ class WorldListScreen(Screen):
         if event.button.id == "btn-back":
             self.app.pop_screen()
         elif event.button.id == "btn-new":
-            self.app.push_screen(CreateWorldModal(), callback=self._on_create_world_dismissed)
+            self.app.push_screen(
+                CreateWorldModal(), callback=self._on_create_world_dismissed
+            )
         elif event.button.id == "btn-enter":
             world_name: str | None = self._selected_world_name()
             if world_name:
                 if self.app.bootstrap.factory is None:
                     self.app.notify(
-                        message="Session still starting up, try again.", severity="warning"
+                        message="Session still starting up, try again.",
+                        severity="warning",
                     )
                     return
                 try:
                     services = self.app.bootstrap.factory.open(world_name)
                 except Exception as e:
-                    self.app.notify(message=f"Failed to open world: {e}", severity="error")
+                    self.app.notify(
+                        message=f"Failed to open world: {e}", severity="error"
+                    )
                     return
-                self.app.push_screen(WorldDetailScreen(world_name=world_name, services=services))
+                self.app.push_screen(
+                    WorldDetailScreen(world_name=world_name, services=services)
+                )
         elif event.button.id == "btn-delete":
             world_name: str | None = self._selected_world_name()
             if world_name is None:
@@ -83,7 +94,9 @@ class WorldListScreen(Screen):
                 ),
             )
 
-    def _on_delete_world_confirmed(self, world_name: str, confirmed: bool | None) -> None:
+    def _on_delete_world_confirmed(
+        self, world_name: str, confirmed: bool | None
+    ) -> None:
         if not confirmed:
             return
         try:

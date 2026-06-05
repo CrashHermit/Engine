@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from arcadedb_embedded.graph import Edge, Vertex
+
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
 
@@ -10,7 +13,9 @@ class LocationRepository:
     def get_location(self, id: str) -> Vertex | None:
         return self._base.get_vertex(type_name=VertexType.LOCATION, id=id)
 
-    def create_location(self, name: str, description: str, is_center: bool = False) -> Vertex:
+    def create_location(
+        self, name: str, description: str, is_center: bool = False
+    ) -> Vertex:
         return self._base.create_vertex(
             type_name=VertexType.LOCATION,
             name=name,
@@ -59,7 +64,9 @@ class LocationRepository:
             pillar_profile=pillar_profile,
             disposition=disposition,
         )
-        self._base.create_edge(type_name=EdgeType.CONTAINS, source=location, target=entity)
+        self._base.create_edge(
+            type_name=EdgeType.CONTAINS, source=location, target=entity
+        )
         return entity
 
     def get_entities(self, location: Vertex) -> list[Vertex]:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import Horizontal, Vertical
@@ -6,7 +8,7 @@ from textual.widgets import Button, Label
 
 
 class ConfirmModal(ModalScreen[bool]):
-    """Generic yes/no confirmation dialog."""
+    """Display a generic yes/no confirmation dialog."""
 
     BINDINGS: list[BindingType] = [
         Binding(key="escape", action="dismiss_cancel", description="Cancel"),
@@ -30,7 +32,9 @@ class ConfirmModal(ModalScreen[bool]):
             yield Label(content=self._message, id="confirm-message")
             with Horizontal(id="modal-actions"):
                 yield Button(label="Cancel", id="btn-cancel", variant="default")
-                yield Button(label=self._confirm_label, id="btn-confirm", variant="error")
+                yield Button(
+                    label=self._confirm_label, id="btn-confirm", variant="error"
+                )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-cancel":
@@ -48,6 +52,7 @@ class ConfirmDeleteWorldModal(ConfirmModal):
         super().__init__(
             title="Delete World?",
             message=(
-                f'Are you sure you want to delete the world "{world_name}"? This cannot be undone.'
+                f'Are you sure you want to delete the world "{world_name}"?'
+                " This cannot be undone."
             ),
         )

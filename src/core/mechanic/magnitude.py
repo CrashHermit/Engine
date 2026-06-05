@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from enum import IntEnum
 
 MIN_MAGNITUDE: int = 0

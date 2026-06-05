@@ -15,6 +15,8 @@ This module is pure: `roll_pool` injects randomness via an optional `rng`, and
 with no randomness at all.
 """
 
+from __future__ import annotations
+
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import StrEnum

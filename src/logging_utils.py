@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import logging
 import os
+from collections.abc import Mapping
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from collections.abc import Mapping
 from typing import Any
 
 
@@ -16,7 +18,9 @@ def configure_logging() -> None:
     """
     level_name = os.getenv("ENGINE_LOG_LEVEL", "INFO").upper()
     level = getattr(logging, level_name, logging.INFO)
-    third_party_level_name = os.getenv("ENGINE_LOG_THIRD_PARTY_LEVEL", "WARNING").upper()
+    third_party_level_name = os.getenv(
+        "ENGINE_LOG_THIRD_PARTY_LEVEL", "WARNING"
+    ).upper()
     third_party_level = getattr(logging, third_party_level_name, logging.WARNING)
     log_file = Path(os.getenv("ENGINE_LOG_FILE", "logs/engine.log"))
     log_file.parent.mkdir(parents=True, exist_ok=True)

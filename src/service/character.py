@@ -1,5 +1,8 @@
-from arcadedb_embedded.graph import Vertex
+from __future__ import annotations
+
 import logging
+
+from arcadedb_embedded.graph import Vertex
 
 from src.core.mechanic.economy import DEFAULT_ECONOMY_CONFIG
 from src.core.model.character import CharacterData
@@ -37,9 +40,7 @@ class CharacterService:
         self._characters = characters
         self._worlds = worlds
 
-    ############################################################################
     # Reads
-    ############################################################################
 
     def list_characters(self) -> list[CharacterData]:
         data = [self._to_data(v) for v in self._characters.list_characters()]
@@ -50,9 +51,7 @@ class CharacterService:
         vertex = self._characters.get_character(character_id)
         return self._to_data(vertex) if vertex is not None else None
 
-    ############################################################################
     # Writes
-    ############################################################################
 
     def create_character(
         self,
@@ -82,7 +81,9 @@ class CharacterService:
         }
 
         with self._base.transaction():
-            character = self._characters.create_character(name=name, description=description)
+            character = self._characters.create_character(
+                name=name, description=description
+            )
 
             for vertex_type, edge_type in _ATTRIBUTES:
                 node = self._characters.add_node(character, vertex_type, edge_type)
@@ -107,7 +108,9 @@ class CharacterService:
 
     def set_economy(self, character_id: str, *, stress: int, trauma: int) -> None:
         """Persist the per-run economy (stress / trauma) back onto the character."""
-        self._logger.debug("set_economy id=%s stress=%s trauma=%s", character_id, stress, trauma)
+        self._logger.debug(
+            "set_economy id=%s stress=%s trauma=%s", character_id, stress, trauma
+        )
         character = self._require(character_id)
         with self._base.transaction():
             self._characters.set_stress(character, stress)
@@ -119,9 +122,7 @@ class CharacterService:
         with self._base.transaction():
             self._characters.delete_character(character)
 
-    ############################################################################
     # Internals
-    ############################################################################
 
     def _require(self, character_id: str) -> Vertex:
         character = self._characters.get_character(character_id)
@@ -135,13 +136,27 @@ class CharacterService:
             id=character.get(name="id"),
             name=character.get(name="name") or "",
             description=character.get(name="description") or "",
-            corpus=self._characters.get_attribute_value(self._characters.get_corpus(character)),
-            mens=self._characters.get_attribute_value(self._characters.get_mens(character)),
-            anima=self._characters.get_attribute_value(self._characters.get_anima(character)),
-            extraversion=self._characters.get_trait_value(personality, EdgeType.HAS_EXTRAVERSION),
-            openness=self._characters.get_trait_value(personality, EdgeType.HAS_OPENNESS),
-            agreeableness=self._characters.get_trait_value(personality, EdgeType.HAS_AGREEABLENESS),
-            neuroticism=self._characters.get_trait_value(personality, EdgeType.HAS_NEUROTICISM),
+            corpus=self._characters.get_attribute_value(
+                self._characters.get_corpus(character)
+            ),
+            mens=self._characters.get_attribute_value(
+                self._characters.get_mens(character)
+            ),
+            anima=self._characters.get_attribute_value(
+                self._characters.get_anima(character)
+            ),
+            extraversion=self._characters.get_trait_value(
+                personality, EdgeType.HAS_EXTRAVERSION
+            ),
+            openness=self._characters.get_trait_value(
+                personality, EdgeType.HAS_OPENNESS
+            ),
+            agreeableness=self._characters.get_trait_value(
+                personality, EdgeType.HAS_AGREEABLENESS
+            ),
+            neuroticism=self._characters.get_trait_value(
+                personality, EdgeType.HAS_NEUROTICISM
+            ),
             conscientiousness=self._characters.get_trait_value(
                 personality, EdgeType.HAS_CONSCIENTIOUSNESS
             ),

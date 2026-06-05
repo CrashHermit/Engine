@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from arcadedb_embedded.graph import Vertex
 
 from src.core.model.database import EdgeType, VertexType
@@ -5,8 +7,11 @@ from src.database.repository.base import BaseRepository
 
 
 class EntityRepository:
-    """Vertex-native entity persistence, decoupled from location. Placement is a
-    CONTAINS edge (location → entity); the future spawner reuses this seam."""
+    """Provide vertex-native entity persistence, decoupled from location.
+
+    Placement is a CONTAINS edge (location → entity); the future spawner
+    reuses this seam.
+    """
 
     def __init__(self, base: BaseRepository) -> None:
         self._base: BaseRepository = base
@@ -41,7 +46,9 @@ class EntityRepository:
         return self._base.list_vertices(type_name=VertexType.ENTITY)
 
     def place_entity(self, entity: Vertex, location: Vertex) -> None:
-        self._base.create_edge(type_name=EdgeType.CONTAINS, source=location, target=entity)
+        self._base.create_edge(
+            type_name=EdgeType.CONTAINS, source=location, target=entity
+        )
 
     def move_entity(self, entity: Vertex, to_location: Vertex) -> None:
         for edge in entity.get_in_edges(EdgeType.CONTAINS):

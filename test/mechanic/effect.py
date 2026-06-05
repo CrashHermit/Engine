@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from src.core.mechanic.dice import RollTier
@@ -60,8 +62,12 @@ def test_effect_segments():
 
 
 def test_pillar_capacity_unauthored_is_uniform_from_danger():
-    assert pillar_capacity(Danger.ELITE, ThreatPillar.EXISTS) == capacity_for_danger(Danger.ELITE)
-    assert pillar_capacity(Danger.ELITE, ThreatPillar.WILLING, {}) == capacity_for_danger(Danger.ELITE)
+    assert pillar_capacity(Danger.ELITE, ThreatPillar.EXISTS) == capacity_for_danger(
+        Danger.ELITE
+    )
+    assert pillar_capacity(
+        Danger.ELITE, ThreatPillar.WILLING, {}
+    ) == capacity_for_danger(Danger.ELITE)
 
 
 def test_pillar_capacity_authored_profile_and_immunity():
@@ -74,14 +80,16 @@ def test_pillar_capacity_authored_profile_and_immunity():
 @pytest.mark.parametrize(
     "danger,tier,one_shot",
     [
-        (Danger.LOW, RollTier.PARTIAL, True),     # weak foe drops on any hit
+        (Danger.LOW, RollTier.PARTIAL, True),  # weak foe drops on any hit
         (Danger.LOW, RollTier.CLEAN, True),
         (Danger.STANDARD, RollTier.CLEAN, False),  # takes more than one standard hit
-        (Danger.DEADLY, RollTier.CRIT, False),     # a real multi-exchange clock
+        (Danger.DEADLY, RollTier.CRIT, False),  # a real multi-exchange clock
     ],
 )
 def test_weak_foes_one_shot_tough_foes_do_not(danger, tier, one_shot):
     # neutral potency (pool == danger rank) so only the tuning is under test
-    pool = {Danger.LOW: 1, Danger.STANDARD: 2, Danger.ELITE: 3, Danger.DEADLY: 4}[danger]
+    pool = {Danger.LOW: 1, Danger.STANDARD: 2, Danger.ELITE: 3, Danger.DEADLY: 4}[
+        danger
+    ]
     segments = effect_segments(potency_shift(effect_from_tier(tier), pool, danger))
     assert (segments >= capacity_for_danger(danger)) == one_shot

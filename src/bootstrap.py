@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 
 from src.database.connection import DatabaseConnection
@@ -33,7 +35,8 @@ class AppBootstrap:
     async def start_session(self) -> WorldSessionFactory:
         """Start the checkpointer and build the world session factory.
 
-        Must run after `start_server`; the checkpointer start is async."""
+        Must run after `start_server`; the checkpointer start is async.
+        """
         await self.checkpoint.start()
         self.factory = WorldSessionFactory(
             self.connection,

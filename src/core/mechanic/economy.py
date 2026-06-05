@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 DEFAULT_STRESS_MAX: int = 9
@@ -29,7 +31,10 @@ class ViceResult:
 
 
 def add_stress(
-    stress: int, trauma: int, amount: int, config: EconomyConfig = DEFAULT_ECONOMY_CONFIG
+    stress: int,
+    trauma: int,
+    amount: int,
+    config: EconomyConfig = DEFAULT_ECONOMY_CONFIG,
 ) -> StressResult:
     if amount < 0:
         raise ValueError("amount must be non-negative")

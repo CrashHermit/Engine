@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import pytest
 
 from src.core.mechanic.magnitude import Magnitude
@@ -11,7 +13,9 @@ from src.state import GraphState, landed_threats
 
 @pytest.mark.asyncio
 async def test_ambush_node_marks_turn_and_seeds_beat():
-    state = GraphState(human_message=Message(role="human", content="I study the old map", name=""))
+    state = GraphState(
+        human_message=Message(role="human", content="I study the old map", name="")
+    )
     result = await AmbushNode()(state)
     assert result["is_ambush"] is True
     assert result["contested_beat"] == "I study the old map"

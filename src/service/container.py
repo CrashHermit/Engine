@@ -1,6 +1,10 @@
-import arcadedb_embedded
+from __future__ import annotations
+
 import logging
+
+import arcadedb_embedded
 from arcadedb_embedded.core import Database
+
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
 from src.database.repository.location import LocationRepository
@@ -14,7 +18,8 @@ from src.service.time import TimeService
 
 
 class ServiceContainer:
-    """Holds every in-session service for a single open world database.
+    """Hold every in-session service for a single open world database.
+
     Built once when a world is opened (see WorldSessionFactory) and handed to
     TUI screens (and other integration code). Callers talk to services — never
     to repositories directly.

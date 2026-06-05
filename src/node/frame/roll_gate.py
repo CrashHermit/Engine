@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.lm import lm
@@ -5,10 +7,10 @@ from src.state import GraphState
 
 
 class RollGateSignature(Signature):
-    """
-    You are a roll gate. Decide whether the player's intent for this beat needs
-    a dice roll. A roll is needed only when the action carries BOTH danger and
-    uncertainty:
+    """You are a roll gate.
+
+    Decide whether the player's intent for this beat needs a dice roll. A roll
+    is needed only when the action carries BOTH danger and uncertainty:
 
     - Danger: failure or partial success would meaningfully cost the character
       (harm, complication, lost opportunity, position degradation).
@@ -31,13 +33,21 @@ class RollGateSignature(Signature):
     )
     entities_at_location: str = InputField(
         default="",
-        description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'",
+        description=(
+            "Entities present in the current location, each formatted as"
+            " 'Name: description. Location: scene_position'"
+        ),
     )
-    message_history: str = InputField(default="", description="The conversation history so far")
+    message_history: str = InputField(
+        default="", description="The conversation history so far"
+    )
     human_message: str = InputField(description="The player's intended action")
 
     needs_roll: bool = OutputField(
-        description="Whether the beat needs a dice roll (true only when danger AND uncertainty are present)"
+        description=(
+            "Whether the beat needs a dice roll"
+            " (true only when danger AND uncertainty are present)"
+        )
     )
 
 
@@ -49,7 +59,9 @@ class RollGateNode:
     async def __call__(self, state: GraphState) -> dict:
         history: str = "\n".join(m.format() for m in state.get("message_history", []))
         entities: str = (
-            "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
+            "\n".join(state.get("entities_at_location", []))
+            if state.get("entities_at_location", [])
+            else ""
         )
         prediction: Prediction = await self._program.aforward(
             character_description=state.get("character_description", ""),

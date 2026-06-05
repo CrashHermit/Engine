@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from arcadedb_embedded.graph import Vertex
 
 from src.core.model.database import EdgeType, VertexType
@@ -45,8 +47,10 @@ class WorldRepository:
         return int(world.get(name="elapsed_ticks") or 0)
 
     def advance_elapsed_ticks(self, delta: int) -> int:
-        """Add `delta` ticks to the world clock and return the new total. A
-        non-positive delta is a no-op (the clock is monotonic)."""
+        """Add `delta` ticks to the world clock and return the new total.
+
+        A non-positive delta is a no-op (the clock is monotonic).
+        """
         world = self._world()
         if world is None:
             return 0

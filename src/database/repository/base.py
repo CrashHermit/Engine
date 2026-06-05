@@ -1,5 +1,7 @@
-import uuid
+from __future__ import annotations
+
 import logging
+import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -34,16 +36,16 @@ class BaseRepository:
     def _current_time(self) -> datetime:
         return self._now if self._now is not None else datetime.now(tz=UTC)
 
-    ############################################################################
     # Vertex operations
-    ############################################################################
 
     def create_vertex(self, type_name: VertexType, **properties: Any) -> Vertex:
         now = self._current_time()
         properties.setdefault("id", str(uuid.uuid4()))
         properties.setdefault("created_at", now)
         properties.setdefault("updated_at", now)
-        self._logger.debug("create vertex type=%s keys=%s", type_name, list(properties.keys()))
+        self._logger.debug(
+            "create vertex type=%s keys=%s", type_name, list(properties.keys())
+        )
         with self.transaction():
             vertex: Vertex = self._database.new_vertex(type_name=type_name)
             for name, value in properties.items():
@@ -51,17 +53,23 @@ class BaseRepository:
             vertex.save()
         return vertex
 
-    def create_vertices(self, type_name: VertexType, items: list[dict[str, Any]]) -> list[Vertex]:
+    def create_vertices(
+        self, type_name: VertexType, items: list[dict[str, Any]]
+    ) -> list[Vertex]:
         with self.transaction():
             return [self.create_vertex(type_name=type_name, **item) for item in items]
 
     def get_vertex(self, type_name: VertexType, id: str) -> Vertex | None:
         self._logger.debug("get vertex type=%s id=%s", type_name, id)
-        return self._database.lookup_by_key(type_name=type_name, keys=["id"], values=[id])
+        return self._database.lookup_by_key(
+            type_name=type_name, keys=["id"], values=[id]
+        )
 
     def update_vertex(self, vertex: Vertex, **properties: Any) -> None:
         properties.setdefault("updated_at", self._current_time())
-        self._logger.debug("update vertex rid=%s keys=%s", vertex.get_rid(), list(properties.keys()))
+        self._logger.debug(
+            "update vertex rid=%s keys=%s", vertex.get_rid(), list(properties.keys())
+        )
         mutable: Vertex = vertex.modify()
         for name, value in properties.items():
             mutable.set(name=name, value=value)
@@ -77,9 +85,7 @@ class BaseRepository:
             value=self._current_time(),
         ).save()
 
-    ############################################################################
     # Edge operations
-    ############################################################################
 
     def create_edge(
         self,
@@ -102,7 +108,9 @@ class BaseRepository:
         with self.transaction():
             return source.new_edge(label=type_name, target=target, **properties)
 
-    def create_edges(self, type_name: EdgeType, items: list[dict[str, Any]]) -> list[Edge]:
+    def create_edges(
+        self, type_name: EdgeType, items: list[dict[str, Any]]
+    ) -> list[Edge]:
         with self.transaction():
             return [self.create_edge(type_name=type_name, **item) for item in items]
 
@@ -116,7 +124,9 @@ class BaseRepository:
 
     def update_edge(self, edge: Edge, **properties: Any) -> None:
         properties.setdefault("updated_at", self._current_time())
-        self._logger.debug("update edge rid=%s keys=%s", edge.get_rid(), list(properties.keys()))
+        self._logger.debug(
+            "update edge rid=%s keys=%s", edge.get_rid(), list(properties.keys())
+        )
         mutable: Edge = edge.modify()
         for name, value in properties.items():
             mutable.set(name=name, value=value)
@@ -132,9 +142,7 @@ class BaseRepository:
             value=self._current_time(),
         ).save()
 
-    ############################################################################
     # Query operations
-    ############################################################################
 
     def list_vertices(self, type_name: VertexType) -> list[Vertex]:
         self._logger.debug("list vertices type=%s", type_name)

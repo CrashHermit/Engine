@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from textual.app import ComposeResult
 from textual.binding import Binding, BindingType
 from textual.containers import CenterMiddle, VerticalGroup
@@ -9,7 +11,9 @@ from src.tui.screens.world_list import WorldListScreen
 
 
 class StartScreen(Screen):
-    BINDINGS: list[BindingType] = [Binding(key="escape", action="app.quit", description="Quit")]
+    BINDINGS: list[BindingType] = [
+        Binding(key="escape", action="app.quit", description="Quit")
+    ]
 
     def compose(self) -> ComposeResult:
         with CenterMiddle():

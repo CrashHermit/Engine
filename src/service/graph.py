@@ -1,8 +1,11 @@
-import uuid
+from __future__ import annotations
+
 import logging
+import uuid
+
 from langgraph.checkpoint.base import BaseCheckpointSaver
-from langgraph.types import Command, StateSnapshot
 from langgraph.graph.state import CompiledStateGraph
+from langgraph.types import Command, StateSnapshot
 
 from src.graph.main_graph import MainGraphBuilder
 from src.logging_utils import summarize_mapping
@@ -13,7 +16,9 @@ class GraphService:
     def __init__(self, checkpointer: BaseCheckpointSaver) -> None:
         self._logger = logging.getLogger("engine.service.graph")
         self.checkpointer = checkpointer
-        self.graph: CompiledStateGraph = MainGraphBuilder(checkpointer=checkpointer).build()
+        self.graph: CompiledStateGraph = MainGraphBuilder(
+            checkpointer=checkpointer
+        ).build()
         self._logger.info("graph service initialized")
 
     @staticmethod
@@ -26,7 +31,9 @@ class GraphService:
                 "thread_id": f"{world_name}:{character_id}:{run_id}",
             }
         }
-        self._logger.debug("thread config created: %s", summarize_mapping(config["configurable"]))
+        self._logger.debug(
+            "thread config created: %s", summarize_mapping(config["configurable"])
+        )
         return config
 
     async def ainvoke(self, input: GraphState | Command, *, config: dict) -> dict:
@@ -36,7 +43,10 @@ class GraphService:
             type(input).__name__,
         )
         result = await self.graph.ainvoke(input, config=config)
-        self._logger.debug("ainvoke result keys=%s", list(result.keys()) if isinstance(result, dict) else [])
+        self._logger.debug(
+            "ainvoke result keys=%s",
+            list(result.keys()) if isinstance(result, dict) else [],
+        )
         return result
 
     async def aget_state(self, *, config: dict) -> StateSnapshot:
