@@ -54,5 +54,6 @@ class WorldRepository:
         if delta <= 0:
             return current
         new_total = current + delta
-        self._base.update_vertex(world, elapsed_ticks=new_total)
+        with self._base.transaction():
+            self._base.update_vertex(world, elapsed_ticks=new_total)
         return new_total
