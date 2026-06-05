@@ -52,7 +52,7 @@ class EngagementNode:
     async def __call__(self, state: GraphState) -> dict:
         candidates = [
             e
-            for e in state.scene_entities
+            for e in state.get("scene_entities", [])
             if e.kind == EntityKind.CREATURE
             and e.status != EntityStatus.GONE
             and not (e.status == EntityStatus.ACTIVE and e.stance == EntityStance.HOSTILE)
@@ -60,8 +60,8 @@ class EngagementNode:
         if not candidates:
             return {}
 
-        player_action = state.human_message.content if state.human_message else ""
-        scene = list(state.scene_entities)
+        player_action = state.get("human_message").content if state.get("human_message") else ""
+        scene = list(state.get("scene_entities", []))
         returned: list[str] = []
         notes: list[str] = []
         changed = False
@@ -72,7 +72,7 @@ class EngagementNode:
                 nature=entity.disposition.value,
                 situation=self._situation(entity),
                 player_action=player_action,
-                recent_events=state.prior_prose or "",
+                recent_events=state.get("prior_prose") or "",
             )
             posture = prediction.posture
             updated = self._apply(entity, posture, returned, notes)

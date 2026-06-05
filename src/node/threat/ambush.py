@@ -8,5 +8,5 @@ class AmbushNode:
     and planners have context (the player studies the map → the spider drops)."""
 
     async def __call__(self, state: GraphState) -> dict:
-        beat = state.human_message.content if state.human_message else ""
+        beat = state.get("human_message").content if state.get("human_message") else ""
         return {"is_ambush": True, "contested_beat": beat}

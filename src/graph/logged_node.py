@@ -19,7 +19,7 @@ class LoggedNode:
         self._logger = logging.getLogger(f"engine.node.{name}")
 
     async def __call__(self, state: GraphState) -> dict[str, Any]:
-        self._logger.debug("input=%s", summarize_mapping(state.model_dump()))
+        self._logger.debug("input=%s", summarize_mapping(dict(state)))
         result = await self._node(state)
         if isinstance(result, Mapping):
             self._logger.debug("output=%s", summarize_mapping(dict(result)))

@@ -1,9 +1,9 @@
+from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import BaseModel
 
-
-class Message(BaseModel):
+@dataclass
+class Message:
     role: Literal["human", "ai", "system", "tool"]
     content: str
     name: str = ""

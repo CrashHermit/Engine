@@ -32,7 +32,7 @@ class PushNode:
 
     async def __call__(self, state: GraphState) -> dict:
         prediction: Prediction = await self._program.aforward(
-            character_description=state.character_description,
-            contested_beat=state.contested_beat,
+            character_description=state.get("character_description", ""),
+            contested_beat=state.get("contested_beat", ""),
         )
         return {"push_for_effect": bool(prediction.push)}

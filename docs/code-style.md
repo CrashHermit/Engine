@@ -111,9 +111,10 @@ LangGraph node names use **snake_case** strings that match the node class stem
 
 | Layer | Type |
 |-------|------|
-| Graph state | Pydantic `BaseModel` (`GraphState`) |
+| Graph state | `TypedDict` (`GraphState`); LangGraph channels, read via `.get(...)`. Derived views are free functions (`action_intent`, `pool_for`, `landed_threats`, `current_threat`). |
 | Service DTOs | `@dataclass` (mutable snapshots for display/persistence) |
 | Mechanic configs & results | `@dataclass(frozen=True)` |
+| Models carried in graph state | `@dataclass` (`Message`, `HeldScaffold`, `FinalScaffold`) — no Pydantic |
 | DB enums exposed to schema/LLM | `StrEnum` / `IntEnum` in `core/model/` |
 
 ### Imports
