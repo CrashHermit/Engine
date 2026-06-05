@@ -45,13 +45,18 @@ the native LangGraph shape:
   **interrupt + resume** completes through the real SQLite checkpointer — the
   exact chat path — with no `str` error.
 
+### 3. DSPy signature kwarg mismatch — FIXED
+`alignment_router`, `question_generator`, and `synthesizer` each passed
+`character_name=` and `location_name=` to `aforward(...)`, but neither field was
+declared on their `Signature`s — so DSPy silently dropped the data and the LLM
+never saw the character's name or location name. Declared both as `InputField`s
+on the three signatures (honouring the node's intent), and added
+`test/node/intent_signature_contract.py`, which drives each intent node with a
+kwarg-capturing stub and asserts every passed kwarg is a declared input. A sweep
+of all LLM nodes confirms no remaining mismatches.
+
 ## Open items (flagged, not changed)
 
-- **DSPy signature kwarg mismatch.** `alignment_router`, `question_generator`,
-  and `synthesizer` pass `character_name=` / `location_name=` to `aforward(...)`,
-  but neither field is declared on their `Signature`s. Harmless if DSPy ignores
-  unknown inputs; worth either declaring the fields or dropping the kwargs. Left
-  untouched because it touches prompt inputs (out of scope for this pass).
-- The original `'str'` traceback was never captured verbatim, so the fix above is
+- The original `'str'` traceback was never captured verbatim, so the state fix is
   the most-probable cause (the Pydantic-state + `Send`/checkpoint coercion path),
   now demonstrably eliminated. If it recurs, capture the exact traceback line.

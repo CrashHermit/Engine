@@ -14,9 +14,11 @@ class IntentAlignmentRouterSignature(Signature):
     that does not exist in the current location.
     """
 
+    character_name: str = InputField(default="", description="The player character's name")
     character_description: str = InputField(
         default="", description="A description of the player character"
     )
+    location_name: str = InputField(default="", description="The name of the current location")
     location_description: str = InputField(
         default="", description="A description of the current location"
     )

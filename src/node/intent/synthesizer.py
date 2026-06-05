@@ -14,9 +14,11 @@ class IntentSynthesizerSignature(Signature):
     Incorporate all resolved details from the clarification exchanges.
     """
 
+    character_name: str = InputField(default="", description="The player character's name")
     character_description: str = InputField(
         default="", description="A description of the player character"
     )
+    location_name: str = InputField(default="", description="The name of the current location")
     location_description: str = InputField(
         default="", description="A description of the current location"
     )
