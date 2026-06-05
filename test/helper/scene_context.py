@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from src.core.helper.scene_context import (
-    compose_location_prose,
-    compose_location_structured,
-    compose_location_yaml,
-    resolve_location_biome,
-)
+import pytest
+
+from src.core.helper.scene_context import SceneContextHelper
 from src.core.model.biome import Biome
 from src.core.model.climate import (
     ClimateData,
@@ -16,7 +13,7 @@ from src.core.model.climate import (
 )
 from src.core.model.environment import EnvironmentData
 from src.core.model.location import LocationData
-from src.core.model.terrain import Elevation, TerrainData, WaterForm
+from src.core.model.terrain import Elevation, Hydrology, TerrainData
 from src.core.model.weather import (
     Humidity,
     Precipitation as WeatherPrecipitation,
@@ -24,6 +21,11 @@ from src.core.model.weather import (
     WindDirection,
     WindSpeed,
 )
+
+
+@pytest.fixture
+def helper() -> SceneContextHelper:
+    return SceneContextHelper()
 
 
 def _sample_location() -> LocationData:
@@ -36,8 +38,7 @@ def _sample_location() -> LocationData:
             ),
             terrain=TerrainData(
                 elevation=Elevation.HIGHLAND,
-                water_form=WaterForm.NONE,
-                coastal=False,
+                hydrology=Hydrology.NONE,
             ),
         ),
         weather=WeatherData(
@@ -49,27 +50,27 @@ def _sample_location() -> LocationData:
     )
 
 
-def test_resolve_location_biome() -> None:
-    assert resolve_location_biome(_sample_location()) == Biome.MONTANE_FOREST
+def test_resolve_location_biome(helper: SceneContextHelper) -> None:
+    assert helper.resolve_location_biome(_sample_location()) == Biome.MONTANE_FOREST
 
 
-def test_compose_location_structured() -> None:
-    structured = compose_location_structured(_sample_location())
+def test_compose_location_structured(helper: SceneContextHelper) -> None:
+    structured = helper.compose_location_structured(_sample_location())
     assert structured["location_id"] == "north-trail"
     assert structured["biome"]["value"] == "montane_forest"
     assert structured["weather"]["wind_speed"]["value"] == "breezy"
 
 
-def test_compose_location_prose_includes_sections() -> None:
-    prose = compose_location_prose(_sample_location())
+def test_compose_location_prose_includes_sections(helper: SceneContextHelper) -> None:
+    prose = helper.compose_location_prose(_sample_location())
     assert "Location: north-trail" in prose
     assert "Biome:" in prose
     assert "Humidity:" in prose
     assert "Elevation:" in prose
 
 
-def test_compose_location_yaml() -> None:
-    yaml_text = compose_location_yaml(_sample_location())
+def test_compose_location_yaml(helper: SceneContextHelper) -> None:
+    yaml_text = helper.compose_location_yaml(_sample_location())
     assert "location_id: north-trail" in yaml_text
     assert "biome:" in yaml_text
     assert "weather:" in yaml_text

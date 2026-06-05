@@ -6,34 +6,26 @@ import pytest
 
 from src.core.model.biome import Biome, biome_from
 from src.core.model.climate import Precipitation, Temperature
-from src.core.model.terrain import (
-    Elevation,
-    Salinity,
-    WaterDepth,
-    WaterForm,
-    default_salinity,
-)
+from src.core.model.terrain import Elevation, Hydrology, WaterDepth
 
 
 @pytest.mark.parametrize(
-    ("water_form", "expected"),
+    ("hydrology", "expected"),
     [
-        (WaterForm.STREAM, Biome.BROOK),
-        (WaterForm.RIVER, Biome.RIVER),
-        (WaterForm.LAKE, Biome.LAKE),
-        (WaterForm.SEA, Biome.LITTORAL),
-        (WaterForm.OCEAN, Biome.OPEN_OCEAN),
+        (Hydrology.STREAM, Biome.BROOK),
+        (Hydrology.RIVER, Biome.RIVER),
+        (Hydrology.LAKE, Biome.LAKE),
+        (Hydrology.SEA, Biome.LITTORAL),
+        (Hydrology.OCEAN, Biome.OPEN_OCEAN),
     ],
 )
-def test_water_form_default_salinity_biome(
-    water_form: WaterForm, expected: Biome
-) -> None:
+def test_hydrology_grid_biome(hydrology: Hydrology, expected: Biome) -> None:
     assert (
         biome_from(
             temperature=Temperature.MILD,
             precipitation=Precipitation.SEASONAL,
             elevation=Elevation.LOWLAND,
-            water_form=water_form,
+            hydrology=hydrology,
             water_depth=WaterDepth.DEEP,
         )
         == expected
@@ -41,57 +33,65 @@ def test_water_form_default_salinity_biome(
 
 
 @pytest.mark.parametrize(
-    ("water_form", "expected"),
+    ("hydrology", "elevation", "expected"),
     [
-        (WaterForm.STREAM, Salinity.FRESH),
-        (WaterForm.RIVER, Salinity.FRESH),
-        (WaterForm.LAKE, Salinity.FRESH),
-        (WaterForm.SEA, Salinity.SALT),
-        (WaterForm.OCEAN, Salinity.SALT),
+        (Hydrology.BEACH, Elevation.LOWLAND, Biome.BEACH),
+        (Hydrology.BEACH, Elevation.ROLLING, Biome.BEACH),
+        (Hydrology.CLIFF, Elevation.LOWLAND, Biome.SEA_CLIFF),
+        (Hydrology.CLIFF, Elevation.HIGHLAND, Biome.SEA_CLIFF),
+        (Hydrology.CLIFF, Elevation.ALPINE, Biome.SEA_CLIFF),
+        (Hydrology.HEADLAND, Elevation.LOWLAND, Biome.HEADLAND),
+        (Hydrology.HEADLAND, Elevation.HIGHLAND, Biome.HEADLAND),
+        (Hydrology.TIDAL_FLAT, Elevation.LOWLAND, Biome.TIDAL_FLAT),
+        (Hydrology.TIDAL_FLAT, Elevation.BASIN, Biome.TIDAL_FLAT),
     ],
 )
-def test_default_salinity_for_water_form(
-    water_form: WaterForm, expected: Salinity
+def test_shore_hydrology_elevation_grid(
+    hydrology: Hydrology, elevation: Elevation, expected: Biome
 ) -> None:
-    assert default_salinity(water_form) == expected
+    assert (
+        biome_from(
+            temperature=Temperature.MILD,
+            precipitation=Precipitation.WET,
+            elevation=elevation,
+            hydrology=hydrology,
+        )
+        == expected
+    )
 
 
-def test_brackish_river_is_estuary() -> None:
+def test_cliff_over_ocean_at_highland_is_sea_cliff_not_montane_forest() -> None:
+    assert (
+        biome_from(
+            temperature=Temperature.MILD,
+            precipitation=Precipitation.WET,
+            elevation=Elevation.HIGHLAND,
+            hydrology=Hydrology.CLIFF,
+        )
+        == Biome.SEA_CLIFF
+    )
+
+
+def test_estuary_hydrology_is_estuary() -> None:
     assert (
         biome_from(
             temperature=Temperature.MILD,
             precipitation=Precipitation.WET,
             elevation=Elevation.LOWLAND,
-            water_form=WaterForm.RIVER,
-            salinity=Salinity.BRACKISH,
+            hydrology=Hydrology.ESTUARY,
             water_depth=WaterDepth.MODERATE,
         )
         == Biome.ESTUARY
     )
 
 
-def test_salt_river_is_estuary() -> None:
-    assert (
-        biome_from(
-            temperature=Temperature.WARM,
-            precipitation=Precipitation.WET,
-            elevation=Elevation.LOWLAND,
-            water_form=WaterForm.RIVER,
-            salinity=Salinity.SALT,
-            water_depth=WaterDepth.MODERATE,
-        )
-        == Biome.ESTUARY
-    )
-
-
-def test_fresh_ocean_is_inland_sea_lake() -> None:
+def test_inland_sea_is_lake() -> None:
     assert (
         biome_from(
             temperature=Temperature.MILD,
             precipitation=Precipitation.WET,
             elevation=Elevation.LOWLAND,
-            water_form=WaterForm.OCEAN,
-            salinity=Salinity.FRESH,
+            hydrology=Hydrology.INLAND_SEA,
             water_depth=WaterDepth.VERY_DEEP,
         )
         == Biome.LAKE
@@ -104,7 +104,7 @@ def test_frozen_river_is_ice_shelf() -> None:
             temperature=Temperature.FREEZING,
             precipitation=Precipitation.WET,
             elevation=Elevation.LOWLAND,
-            water_form=WaterForm.RIVER,
+            hydrology=Hydrology.RIVER,
             water_depth=WaterDepth.DEEP,
         )
         == Biome.ICE_SHELF
@@ -117,7 +117,7 @@ def test_frozen_sea_is_polar_sea() -> None:
             temperature=Temperature.FREEZING,
             precipitation=Precipitation.DRY,
             elevation=Elevation.LOWLAND,
-            water_form=WaterForm.SEA,
+            hydrology=Hydrology.SEA,
             water_depth=WaterDepth.DEEP,
         )
         == Biome.POLAR_SEA
@@ -130,7 +130,7 @@ def test_shallow_cool_wet_sea_is_kelp_forest() -> None:
             temperature=Temperature.COOL,
             precipitation=Precipitation.WET,
             elevation=Elevation.LOWLAND,
-            water_form=WaterForm.SEA,
+            hydrology=Hydrology.SEA,
             water_depth=WaterDepth.SHALLOW,
         )
         == Biome.KELP_FOREST
@@ -143,45 +143,33 @@ def test_shallow_warm_wet_sea_is_coral_reef() -> None:
             temperature=Temperature.WARM,
             precipitation=Precipitation.DELUGE,
             elevation=Elevation.LOWLAND,
-            water_form=WaterForm.SEA,
+            hydrology=Hydrology.SEA,
             water_depth=WaterDepth.SHALLOW,
         )
         == Biome.CORAL_REEF
     )
 
 
-def test_water_form_overrides_underground() -> None:
+def test_hydrology_overrides_underground() -> None:
     assert (
         biome_from(
             temperature=Temperature.MILD,
             precipitation=Precipitation.SEASONAL,
             elevation=Elevation.DEEP,
-            water_form=WaterForm.LAKE,
+            hydrology=Hydrology.LAKE,
             water_depth=WaterDepth.DEEP,
         )
         == Biome.LAKE
     )
 
 
-def test_coastal_on_lowland_wet_coast_flag() -> None:
+def test_inland_lowland_wet_is_not_shore_biome() -> None:
     assert (
         biome_from(
             temperature=Temperature.MILD,
             precipitation=Precipitation.WET,
             elevation=Elevation.LOWLAND,
-            coastal=True,
-        )
-        == Biome.COASTAL
-    )
-
-
-def test_coastal_requires_coast_flag() -> None:
-    assert (
-        biome_from(
-            temperature=Temperature.MILD,
-            precipitation=Precipitation.WET,
-            elevation=Elevation.LOWLAND,
-            coastal=False,
+            hydrology=Hydrology.NONE,
         )
         == Biome.TEMPERATE_RAINFOREST
     )

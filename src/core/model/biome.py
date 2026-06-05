@@ -5,13 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 
 from src.core.model.climate import Precipitation, Temperature
-from src.core.model.terrain import (
-    Elevation,
-    Salinity,
-    WaterDepth,
-    WaterForm,
-    resolve_salinity,
-)
+from src.core.model.terrain import Elevation, Hydrology, SHORE_HYDROLOGY, WaterDepth
 
 
 class Biome(StrEnum):
@@ -41,13 +35,16 @@ class Biome(StrEnum):
     BUSHVELD = "bushveld"
     MONSOON_FOREST = "monsoon_forest"
     RAINFOREST = "rainforest"
-    # ── Terrain overrides (elevation / coastal) ─────────────────────────────
-    COASTAL = "coastal"
+    # ── Shore grid (hydrology × elevation) ──────────────────────────────────
+    BEACH = "beach"
+    SEA_CLIFF = "sea_cliff"
+    HEADLAND = "headland"
+    TIDAL_FLAT = "tidal_flat"
     MOOR = "moor"
     MONTANE_FOREST = "montane_forest"
     ALPINE_TUNDRA = "alpine_tundra"
     GLACIER = "glacier"
-    # ── Aquatic overrides (water form × salinity) ───────────────────────────
+    # ── Aquatic overrides (hydrology grid) ──────────────────────────────────
     BROOK = "brook"
     RIVER = "river"
     LAKE = "lake"
@@ -93,7 +90,10 @@ BIOME: dict[Biome, str] = {
     Biome.BUSHVELD: "hot grass-shrub; seasonal rhythm",
     Biome.MONSOON_FOREST: "burst-green canopy; heavy wet season",
     Biome.RAINFOREST: "dense equatorial canopy; constant moisture",
-    Biome.COASTAL: "shore, salt spray, dunes, tidal flats",
+    Biome.BEACH: "sandy shore; dunes, surf line, tidal pools",
+    Biome.SEA_CLIFF: "sea cliff; drop to water, spray, wind-exposed rock",
+    Biome.HEADLAND: "rocky promontory; cape or point into open water",
+    Biome.TIDAL_FLAT: "tidal flat; mud, salt marsh edge, channels at low tide",
     Biome.MOOR: "open high wet heath; wind, peat, low growth",
     Biome.MONTANE_FOREST: "mountain woods; cooler, steeper",
     Biome.ALPINE_TUNDRA: "above treeline; rock, snow, hardy mats",
@@ -145,6 +145,31 @@ _SURFACE_BIOMES_TEMPERATURE_PRECIPITATION_GRID: dict[tuple[Temperature, Precipit
     (Temperature.HOT, Precipitation.DELUGE): Biome.RAINFOREST,
 }
 
+_AQUATIC_BIOMES_HYDROLOGY_GRID: dict[Hydrology, Biome] = {
+    Hydrology.STREAM: Biome.BROOK,
+    Hydrology.RIVER: Biome.RIVER,
+    Hydrology.LAKE: Biome.LAKE,
+    Hydrology.ESTUARY: Biome.ESTUARY,
+    Hydrology.INLAND_SEA: Biome.LAKE,
+    Hydrology.SEA: Biome.LITTORAL,
+    Hydrology.OCEAN: Biome.OPEN_OCEAN,
+}
+
+_SHORE_BIOMES_HYDROLOGY_ELEVATION_GRID: dict[tuple[Hydrology, Elevation], Biome] = {
+    (Hydrology.BEACH, Elevation.LOWLAND): Biome.BEACH,
+    (Hydrology.BEACH, Elevation.BASIN): Biome.BEACH,
+    (Hydrology.BEACH, Elevation.ROLLING): Biome.BEACH,
+    (Hydrology.CLIFF, Elevation.LOWLAND): Biome.SEA_CLIFF,
+    (Hydrology.CLIFF, Elevation.HIGHLAND): Biome.SEA_CLIFF,
+    (Hydrology.CLIFF, Elevation.ALPINE): Biome.SEA_CLIFF,
+    (Hydrology.CLIFF, Elevation.SUMMIT): Biome.SEA_CLIFF,
+    (Hydrology.HEADLAND, Elevation.LOWLAND): Biome.HEADLAND,
+    (Hydrology.HEADLAND, Elevation.ROLLING): Biome.HEADLAND,
+    (Hydrology.HEADLAND, Elevation.HIGHLAND): Biome.HEADLAND,
+    (Hydrology.TIDAL_FLAT, Elevation.LOWLAND): Biome.TIDAL_FLAT,
+    (Hydrology.TIDAL_FLAT, Elevation.BASIN): Biome.TIDAL_FLAT,
+}
+
 _SUBTERRANEAN_BIOMES_ELEVATION_GRID: dict[Elevation, Biome] = {
     Elevation.ABYSSAL: Biome.ABYSS,
     Elevation.BURIED: Biome.VAULT,
@@ -176,6 +201,13 @@ _WARM_TEMPS: frozenset[Temperature] = frozenset(
     {Temperature.WARM, Temperature.HOT}
 )
 _SHALLOW_DEPTH: frozenset[WaterDepth] = frozenset({WaterDepth.SHALLOW})
+_FRESHWATER_HYDROLOGY: frozenset[Hydrology] = frozenset(
+    {Hydrology.RIVER, Hydrology.LAKE, Hydrology.INLAND_SEA}
+)
+_SALT_HYDROLOGY: frozenset[Hydrology] = frozenset(
+    {Hydrology.SEA, Hydrology.OCEAN}
+)
+_DRY_LAND_HYDROLOGY: frozenset[Hydrology] = frozenset({Hydrology.NONE})
 _HIGH_ELEVATIONS: frozenset[Elevation] = frozenset(
     {Elevation.HIGHLAND, Elevation.ALPINE}
 )
@@ -190,16 +222,15 @@ def biome_from(
     temperature: Temperature,
     precipitation: Precipitation,
     elevation: Elevation,
-    water_form: WaterForm = WaterForm.NONE,
-    salinity: Salinity | None = None,
+    hydrology: Hydrology = Hydrology.NONE,
     water_depth: WaterDepth = WaterDepth.NONE,
-    coastal: bool = False,
 ) -> Biome:
     """Resolve the biome for a tile or location."""
-    if water_form != WaterForm.NONE:
-        return aquatic_override_biome(
-            water_form=water_form,
-            salinity=resolve_salinity(water_form, salinity),
+    if hydrology in SHORE_HYDROLOGY:
+        return get_shore_biome(hydrology, elevation)
+    if hydrology not in _DRY_LAND_HYDROLOGY:
+        return get_aquatic_biome(
+            hydrology,
             temperature=temperature,
             precipitation=precipitation,
             water_depth=water_depth,
@@ -210,45 +241,37 @@ def biome_from(
     return elevation_override_surface_biome(
         base,
         elevation=elevation,
-        coastal=coastal,
         temperature=temperature,
         precipitation=precipitation,
     )
 
 
-def aquatic_override_biome(
+def get_shore_biome(hydrology: Hydrology, elevation: Elevation) -> Biome:
+    """Resolve shore biome from hydrology × elevation grid."""
+    key = (hydrology, elevation)
+    if key in _SHORE_BIOMES_HYDROLOGY_ELEVATION_GRID:
+        return _SHORE_BIOMES_HYDROLOGY_ELEVATION_GRID[key]
+    fallback = (hydrology, Elevation.LOWLAND)
+    if fallback in _SHORE_BIOMES_HYDROLOGY_ELEVATION_GRID:
+        return _SHORE_BIOMES_HYDROLOGY_ELEVATION_GRID[fallback]
+    raise ValueError(f"unsupported shore hydrology and elevation: {key!r}")
+
+
+def get_aquatic_biome(
+    hydrology: Hydrology,
     *,
-    water_form: WaterForm,
-    salinity: Salinity,
     temperature: Temperature,
     precipitation: Precipitation,
     water_depth: WaterDepth,
 ) -> Biome:
-    """Apply aquatic overrides from water form and salinity, refined by climate."""
-    if salinity == Salinity.BRACKISH:
-        return Biome.ESTUARY
+    """Resolve aquatic biome from hydrology grid, refined by climate."""
+    if hydrology in _FRESHWATER_HYDROLOGY and temperature == Temperature.FREEZING:
+        return Biome.ICE_SHELF
 
-    if water_form == WaterForm.STREAM:
-        return Biome.BROOK
-
-    if water_form == WaterForm.RIVER:
-        if salinity == Salinity.SALT:
-            return Biome.ESTUARY
-        if temperature == Temperature.FREEZING:
-            return Biome.ICE_SHELF
-        return Biome.RIVER
-
-    if water_form == WaterForm.LAKE:
-        if temperature == Temperature.FREEZING and salinity == Salinity.FRESH:
-            return Biome.ICE_SHELF
-        return Biome.LAKE
-
-    if water_form in {WaterForm.SEA, WaterForm.OCEAN}:
-        if salinity == Salinity.FRESH:
-            return Biome.LAKE
+    if hydrology in _SALT_HYDROLOGY:
         if temperature == Temperature.FREEZING:
             return Biome.POLAR_SEA
-        if water_form == WaterForm.OCEAN:
+        if hydrology == Hydrology.OCEAN:
             return Biome.OPEN_OCEAN
         if (
             water_depth in _SHALLOW_DEPTH
@@ -264,18 +287,17 @@ def aquatic_override_biome(
             return Biome.CORAL_REEF
         return Biome.LITTORAL
 
-    raise ValueError(f"unsupported water form: {water_form!r}")
+    return _AQUATIC_BIOMES_HYDROLOGY_GRID[hydrology]
 
 
 def elevation_override_surface_biome(
     base: Biome,
     *,
     elevation: Elevation,
-    coastal: bool,
     temperature: Temperature,
     precipitation: Precipitation,
 ) -> Biome:
-    """Apply elevation and coastal overrides on top of the climate base biome."""
+    """Apply elevation overrides on top of the climate base biome."""
     if elevation == Elevation.SUMMIT and temperature == Temperature.FREEZING:
         return Biome.GLACIER
 
@@ -292,9 +314,6 @@ def elevation_override_surface_biome(
         and base not in _FOREST_BASES
     ):
         return Biome.MOOR
-
-    if coastal and elevation == Elevation.LOWLAND and precipitation in _WET_PRECIP:
-        return Biome.COASTAL
 
     return base
 
