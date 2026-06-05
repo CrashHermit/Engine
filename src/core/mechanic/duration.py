@@ -1,26 +1,10 @@
 """
 Discrete game time (1 tick = 6 seconds).
 
-All deterministic time in the engine is counted in integer **ticks**. Fictional
-durations are expressed as a `Span` — a `(unit, count)` pair drawn from a fixed
-ladder — which converts to an exact tick total. The ladder is geometric, so
-relative precision stays roughly constant across six orders of magnitude
-(seconds to years).
-
-The `count` is **scale-gated**, and that gate is the whole point:
-
-  * Fine units (Round … Night): `count` is always 1. You pick the rung. A count
-    here would demand sub-bucket precision the fiction never contains — the
-    "43 seconds" trap.
-  * Coarse units (Day, Week, Month, Year): `count` is 1–`MAX_COUNT`. This is
-    where a GM-determined long span lives ("about 3 weeks", "5 months"): a small
-    integer at coarse *relative* precision, which is a real judgement, not
-    fabricated precision. The counts also fill the wide geometric gaps between
-    the four coarse units, so the long tail needs no extra rungs.
-
-`normalize`/`span_from_ticks` canonicalise any tick total back onto the ladder,
-applying the step-up rule: keep the smallest coarse unit whose count fits the
-cap (preserving resolution), stepping up only when the count would overflow.
+All deterministic time in the engine is counted in integer ticks. Fictional
+durations are expressed as a `Duration` wrapping one of 21 fixed `Unit` rungs
+on a geometric ladder — from `SIX_SECONDS` (1 tick) to `ONE_YEAR` (5,256,000
+ticks). Each rung maps to an exact tick total via `TICKS`.
 
 This module is pure: no randomness, no I/O.
 """
