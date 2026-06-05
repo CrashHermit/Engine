@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from src.worldgen.data import TileData, WorldData
 
 # Hex torus: 3 outgoing directions per tile (east, north, northeast).

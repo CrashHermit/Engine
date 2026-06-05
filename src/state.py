@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import operator
 from typing import Annotated, TypedDict
 
@@ -13,12 +15,14 @@ from src.core.model.threat import Channel, Threat
 
 
 class GraphState(TypedDict, total=False):
-    """The turn blackboard. A LangGraph TypedDict: every key is a channel, so a
-    node reads with ``state.get(...)`` (unwritten channels are simply absent) and
-    writes by returning a partial dict. ``total=False`` mirrors that — no key is
-    guaranteed present until something sets it. The two ``*_history`` lists and
-    ``pending_threats`` are reducer channels (append on update); everything else
-    is last-value."""
+    """Hold the turn blackboard as a LangGraph TypedDict.
+
+    Every key is a channel, so a node reads with ``state.get(...)`` (unwritten
+    channels are simply absent) and writes by returning a partial dict.
+    ``total=False`` mirrors that — no key is guaranteed present until something
+    sets it. The two ``*_history`` lists and ``pending_threats`` are reducer
+    channels (append on update); everything else is last-value.
+    """
 
     message_history: Annotated[list[Message], operator.add]
     intent_alignment_history: Annotated[list[Message], operator.add]
@@ -106,7 +110,7 @@ class GraphState(TypedDict, total=False):
 
 # ── Derived helpers (free functions; a TypedDict carries no behavior) ─────
 def action_intent(state: GraphState) -> ActionIntent:
-    """The single action as one cohesive value (view over the flat fields)."""
+    """Return the single action as one cohesive value (view over the flat fields)."""
     return ActionIntent(
         attribute=state.get("attribute"),
         target=state.get("target_entity", ""),

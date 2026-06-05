@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -53,7 +55,7 @@ def _fake_graph_service(*, paused: bool, result: dict) -> SimpleNamespace:
 
 
 class _FakeClock:
-    """In-memory stand-in for TimeService: now() reads, advance() accumulates."""
+    """Stand in for TimeService in memory: now() reads, advance() accumulates."""
 
     def __init__(self) -> None:
         self.ticks = 0

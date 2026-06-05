@@ -1,5 +1,8 @@
-import pytest
+from __future__ import annotations
+
 from unittest.mock import AsyncMock, patch
+
+import pytest
 from dspy.primitives.prediction import Prediction
 
 from src.core.model.entity import (
@@ -40,12 +43,17 @@ def _creature(
 
 def _state(entity: EntityData, action: str) -> GraphState:
     return GraphState(
-        scene_entities=[entity], human_message=Message(role="human", content=action, name="")
+        scene_entities=[entity],
+        human_message=Message(role="human", content=action, name=""),
     )
 
 
 def _patch(node: EngagementNode, posture: EntityStance) -> object:
-    return patch.object(node._program, "aforward", new=AsyncMock(return_value=Prediction(posture=posture)))
+    return patch.object(
+        node._program,
+        "aforward",
+        new=AsyncMock(return_value=Prediction(posture=posture)),
+    )
 
 
 @pytest.mark.asyncio
@@ -85,7 +93,9 @@ async def test_unaware_stays_unaware_is_noop():
 @pytest.mark.asyncio
 async def test_suspended_foe_reengages_hostile_and_resets_clock():
     node = EngagementNode()
-    foe = _creature(EntityStance.HOSTILE, EntityStatus.SUSPENDED, pillar=ThreatPillar.WILLING)
+    foe = _creature(
+        EntityStance.HOSTILE, EntityStatus.SUSPENDED, pillar=ThreatPillar.WILLING
+    )
     with _patch(node, EntityStance.HOSTILE):
         result = await node(_state(foe, "I corner it"))
     entity = result["scene_entities"][0]
@@ -99,7 +109,9 @@ async def test_suspended_foe_reengages_hostile_and_resets_clock():
 @pytest.mark.asyncio
 async def test_suspended_foe_stays_withdrawn():
     node = EngagementNode()
-    foe = _creature(EntityStance.HOSTILE, EntityStatus.SUSPENDED, pillar=ThreatPillar.WILLING)
+    foe = _creature(
+        EntityStance.HOSTILE, EntityStatus.SUSPENDED, pillar=ThreatPillar.WILLING
+    )
     with _patch(node, EntityStance.UNAWARE):
         result = await node(_state(foe, "I keep my distance"))
     assert result == {}

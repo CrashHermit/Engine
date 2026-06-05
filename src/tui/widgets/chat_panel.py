@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from rich.markup import escape
@@ -9,7 +11,7 @@ from textual.widgets import Button, Input, RichLog
 
 
 class ChatPanel(Widget):
-    """Single chat panel."""
+    """Render a single chat panel."""
 
     class MessageSent(Message):
         def __init__(self, text: str) -> None:
@@ -22,7 +24,9 @@ class ChatPanel(Widget):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="chat-layout"):
-            yield RichLog(id="chat-log", min_width=0, wrap=True, markup=True, highlight=True)
+            yield RichLog(
+                id="chat-log", min_width=0, wrap=True, markup=True, highlight=True
+            )
             with Horizontal(id="input-bar"):
                 yield Input(placeholder="Type your message...", id="msg-input")
                 yield Button(label="Send", id="btn-send", variant="primary")
@@ -50,6 +54,9 @@ class ChatPanel(Widget):
         if not text:
             return
         log = self.query_one("#chat-log", RichLog)
-        log.write(f"[bold #a0bfdf]{escape(self._character_name)}:[/bold #a0bfdf] {escape(text)}")
+        log.write(
+            f"[bold #a0bfdf]{escape(self._character_name)}:[/bold #a0bfdf]"
+            f" {escape(text)}"
+        )
         input_widget.value = ""
         self.post_message(self.MessageSent(text))

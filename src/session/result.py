@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 # Typed turn events yielded by GameCoordinator.submit. Each carries plain
@@ -30,8 +32,11 @@ class ResistanceOffer:
 
 @dataclass(frozen=True)
 class TraumaGained:
-    """A stress overflow converted to trauma this turn. Carries the new trauma
-    total so the display can show progress toward the cap."""
+    """A stress overflow converted to trauma this turn.
+
+    Carries the new trauma total so the display can show progress toward the
+    cap.
+    """
 
     trauma: int
 
@@ -43,16 +48,20 @@ class CharacterLost:
 
 @dataclass(frozen=True)
 class TargetDefeated:
-    """The action broke the target's EXISTS pillar; it is destroyed and removed
-    from the scene. Carries the entity name for display."""
+    """The action broke the target's EXISTS pillar; it is destroyed and removed.
+
+    Carries the entity name for display.
+    """
 
     name: str
 
 
 @dataclass(frozen=True)
 class TargetSuspended:
-    """The action broke a non-lethal pillar (will, awareness, reach, capability);
-    the target is out of the scene but not destroyed. Carries the entity name."""
+    """The action broke a non-lethal pillar (will, awareness, reach, capability).
+
+    The target is out of the scene but not destroyed. Carries the entity name.
+    """
 
     name: str
 

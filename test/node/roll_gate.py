@@ -1,5 +1,8 @@
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock
 from dspy.primitives.prediction import Prediction
 
 from src.core.model.message import Message
@@ -28,7 +31,9 @@ def _state(human_text: str) -> GraphState:
 async def test_roll_gate_returns_needs_roll(human_text, gate_output, expected):
     node = RollGateNode()
     fake_prediction = Prediction(needs_roll=gate_output)
-    with patch.object(node._program, "aforward", new=AsyncMock(return_value=fake_prediction)):
+    with patch.object(
+        node._program, "aforward", new=AsyncMock(return_value=fake_prediction)
+    ):
         result = await node(_state(human_text))
     assert result["needs_roll"] == expected
     # On the no-roll (mundane) path the node also carries the player's message

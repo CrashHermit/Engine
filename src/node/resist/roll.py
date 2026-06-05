@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import replace
 from random import Random
 
@@ -16,11 +18,13 @@ def _replace_threat(threats: list[Threat], updated: Threat) -> list[Threat]:
 
 
 class ResistRollNode:
-    """Resolves the current threat, advances the cursor, and sets the directive
-    for its resolution line. ENDURE pays nothing; RESIST rolls, pays stress, and
-    improves this threat's magnitude by one. Stress/trauma thread across the
-    cycle; trauma_gained / character_lost are OR-accumulated so a later clean
-    iteration can't erase an earlier overflow."""
+    """Resolve the current threat, advance the cursor, and set the directive.
+
+    The directive is for the resolution line. ENDURE pays nothing; RESIST
+    rolls, pays stress, and improves this threat's magnitude by one.
+    Stress/trauma thread across the cycle; trauma_gained / character_lost are
+    OR-accumulated so a later clean iteration can't erase an earlier overflow.
+    """
 
     def __init__(self, *, rng: Random | None = None) -> None:
         self._rng: Random | None = rng
@@ -42,7 +46,9 @@ class ResistRollNode:
         if action == ResistAction.ENDURE:
             updates["threats"] = _replace_threat(
                 state.get("threats", []),
-                replace(threat, resist_action=action, resist_flavor=flavor, resisted=False),
+                replace(
+                    threat, resist_action=action, resist_flavor=flavor, resisted=False
+                ),
             )
             return updates
 
@@ -52,7 +58,8 @@ class ResistRollNode:
         updates.update(
             stress=stress_result.stress,
             trauma=stress_result.trauma,
-            trauma_gained=state.get("trauma_gained", False) or stress_result.trauma_gained,
+            trauma_gained=state.get("trauma_gained", False)
+            or stress_result.trauma_gained,
             character_lost=state.get("character_lost", False) or stress_result.lost,
         )
 
@@ -65,6 +72,8 @@ class ResistRollNode:
         )
         if threat.outcome is not None:
             new_mag = improve_magnitude(threat.outcome.landed_magnitude)
-            new_threat = replace(new_threat, outcome=replace(threat.outcome, landed_magnitude=new_mag))
+            new_threat = replace(
+                new_threat, outcome=replace(threat.outcome, landed_magnitude=new_mag)
+            )
         updates["threats"] = _replace_threat(state.get("threats", []), new_threat)
         return updates

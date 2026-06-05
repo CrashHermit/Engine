@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import uuid
 from dataclasses import dataclass, field
 from enum import StrEnum
@@ -23,9 +25,12 @@ class ThreatType(StrEnum):
 
 
 class ThreatMagnitudeLevel(StrEnum):
-    """The string ladder the LLM classifiers parse into. Distinct from the
-    mechanical Magnitude(IntEnum): the names line up (MINOR/STANDARD/SEVERE/
-    FATAL) so `Magnitude[level]` converts one to the other."""
+    """The string ladder the LLM classifiers parse into.
+
+    Distinct from the mechanical Magnitude(IntEnum): the names line up
+    (MINOR/STANDARD/SEVERE/FATAL) so `Magnitude[level]` converts one to the
+    other.
+    """
 
     MINOR = "MINOR"
     STANDARD = "STANDARD"
@@ -35,12 +40,14 @@ class ThreatMagnitudeLevel(StrEnum):
 
 @dataclass
 class Threat:
-    """One landed (or candidate) consequence from a single source. Offense and
-    defense are decoupled: the action roll lands the player's effect on the
-    target, while every Threat gets its OWN independent defense roll on its own
-    channel (which attribute resists it) — that per-threat tier scales it via
-    scale_threat. defense_roll/outcome/resist_* fill in as it moves through
-    dice_scale and the resist cycle."""
+    """One landed (or candidate) consequence from a single source.
+
+    Offense and defense are decoupled: the action roll lands the player's
+    effect on the target, while every Threat gets its OWN independent defense
+    roll on its own channel (which attribute resists it) — that per-threat
+    tier scales it via scale_threat. defense_roll/outcome/resist_* fill in as
+    it moves through dice_scale and the resist cycle.
+    """
 
     source: str  # entity name, or "environment"
     type: ThreatType

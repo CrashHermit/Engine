@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from src.worldgen.data import WorldData
 from src.worldgen.stages.dungeon import DungeonStage
 from src.worldgen.stages.grid import GridStage

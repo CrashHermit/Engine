@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.mechanic.threat_envelope import describe_threat
@@ -7,7 +9,8 @@ from src.state import GraphState, current_threat
 
 
 class ResistPushParserSignature(Signature):
-    """
+    """Parse the player's response to a consequence offer.
+
     The player has seen a consequence and typed a response. Parse their intent:
 
     - resist: they want to reduce the consequence by one magnitude step. They
@@ -29,11 +32,11 @@ class ResistPushParserSignature(Signature):
         description="The player's typed response to the consequence offer"
     )
 
-    action: ResistAction = OutputField(
-        description="What the player chooses to do"
-    )
+    action: ResistAction = OutputField(description="What the player chooses to do")
     flavor: str = OutputField(
-        description="The player's described approach in one short sentence, or empty if endure"
+        description=(
+            "The player's described approach in one short sentence, or empty if endure"
+        )
     )
 
 

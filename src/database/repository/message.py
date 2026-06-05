@@ -1,12 +1,12 @@
+from __future__ import annotations
+
 import uuid
-from typing import TYPE_CHECKING
+
+from arcadedb_embedded.graph import Vertex
 
 from src.core.model.database import EdgeType, VertexType
 from src.core.model.message import Message
 from src.database.repository.base import BaseRepository
-
-if TYPE_CHECKING:
-    from arcadedb_embedded.graph import Vertex
 
 
 class MessageRepository:
@@ -25,7 +25,9 @@ class MessageRepository:
         messages: list[Message] = []
         current: Vertex = edges[0].get_in()
         while True:
-            messages.append(Message(role=current.get("role"), content=current.get("content")))
+            messages.append(
+                Message(role=current.get("role"), content=current.get("content"))
+            )
             next_edges = list(current.get_out_edges(EdgeType.NEXT_MESSAGE))
             if not next_edges:
                 break

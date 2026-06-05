@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 from collections.abc import AsyncIterator
 from src.core.mechanic.duration import TICKS, Span, Unit
@@ -29,7 +31,7 @@ from src.state import GraphState
 
 
 def _interrupt_payload(result: dict) -> dict | str | None:
-    """The value of the first interrupt on a paused graph result, if any."""
+    """Return the value of the first interrupt on a paused graph result, if any."""
     interrupts = result.get("__interrupt__")
     if not interrupts:
         return None
@@ -63,7 +65,8 @@ def _interrupt_narration(result: dict) -> str | None:
     The narrator runs inside the resolution subgraph, so its ai_message does
     not surface in the parent graph result while the subgraph is paused on the
     resist interrupt. The held prose is therefore carried in the interrupt
-    payload, not in result["ai_message"]."""
+    payload, not in result["ai_message"].
+    """
     payload = _interrupt_payload(result)
     if isinstance(payload, dict):
         return payload.get("narration")
@@ -78,8 +81,10 @@ def _message_content(ai_msg: object) -> str:
 
 
 class GameCoordinator:
-    """Owns a single character's play session: location, turn carry, and the
-    graph turn loop. Talks to services only; never to Textual or repositories."""
+    """Own a single character's play session: location, turn carry, and the graph loop.
+
+    Talks to services only; never to Textual or repositories.
+    """
 
     def __init__(self, *, character: CharacterData, services: ServiceContainer) -> None:
         self._character: CharacterData = character
@@ -179,17 +184,22 @@ class GameCoordinator:
                 yield TurnError(str(e))
 
     def _advance_world_clock(self, result: dict) -> None:
-        """Advance the world clock by the fictional time this beat spanned. The
-        duration classifier (not yet wired) sets `beat_span`; until then a
+        """Advance the world clock by the fictional time this beat spanned.
+
+        The duration classifier (not yet wired) sets `beat_span`; until then a
         closed turn advances a single Round so the clock is live and the
-        round-trip exercised."""
+        round-trip exercised.
+        """
         beat_span: Span | None = result.get("beat_span")
         delta = beat_span.ticks if beat_span is not None else TICKS[Unit.ROUND]
         self._services.time.advance(delta)
 
     def _persist_economy(self, result: dict) -> list[TurnEvent]:
-        """Write the turn's stress/trauma back onto the character (only when it
-        changed) and return any trauma / permadeath events to surface."""
+        """Write the turn's stress/trauma back onto the character and return events.
+
+        Only writes when the value changed. Returns any trauma / permadeath
+        events to surface.
+        """
         stress = result.get("stress", self._character.stress)
         trauma = result.get("trauma", self._character.trauma)
         if (stress, trauma) != (self._character.stress, self._character.trauma):
@@ -207,8 +217,11 @@ class GameCoordinator:
         return events
 
     def _persist_entities(self, result: dict) -> list[TurnEvent]:
-        """Write back de-threat resolution state, remove a destroyed entity,
-        surface defeat/suspension, and refresh the cached location state."""
+        """Write back de-threat resolution state and return entity-change events.
+
+        Removes a destroyed entity, surfaces defeat/suspension, and refreshes
+        the cached location state.
+        """
         scene_entities = result.get("scene_entities") or []
         if not scene_entities:
             return []

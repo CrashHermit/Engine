@@ -1,5 +1,8 @@
+from __future__ import annotations
+
+from unittest.mock import AsyncMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock
 from dspy.primitives.prediction import Prediction
 
 from src.core.model.message import Message
@@ -21,7 +24,8 @@ def _state(human_text: str) -> GraphState:
     [
         # multi-beat: only the first contested beat is scoped; the rest is dropped
         (
-            "I sprint across the courtyard, kill the archer at the top, then grab the crown.",
+            "I sprint across the courtyard, kill the archer at the top,"
+            " then grab the crown.",
             ("I sprint across the courtyard", "kill the archer at the top"),
             ("I sprint across the courtyard", "kill the archer at the top"),
         ),
@@ -51,7 +55,9 @@ async def test_segmenter_splits_message(human_text, fake_output, expected):
     exp_lead, exp_contested = expected
     node = SegmenterNode()
     fake_prediction = Prediction(lead_up=lead_up, contested_beat=contested)
-    with patch.object(node._program, "aforward", new=AsyncMock(return_value=fake_prediction)):
+    with patch.object(
+        node._program, "aforward", new=AsyncMock(return_value=fake_prediction)
+    ):
         result = await node(_state(human_text))
     assert result == {
         "lead_up": exp_lead,

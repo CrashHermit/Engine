@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.lm import lm
@@ -5,12 +7,13 @@ from src.state import GraphState
 
 
 class PushSignature(Signature):
-    """
+    """Decide whether the player is PUSHING THEMSELVES for extra effect.
+
     Given the contested beat the player is about to roll, decide whether the
-    player is PUSHING THEMSELVES — going all-out, throwing everything in, taking
-    extra risk/exertion for a harder hit (e.g. "I put everything into one savage
-    blow"). A normal, measured action is not a push. A push costs stress for
-    extra effect, so only flag it when the player clearly reaches for more.
+    player is going all-out, throwing everything in, taking extra risk/exertion
+    for a harder hit (e.g. "I put everything into one savage blow"). A normal,
+    measured action is not a push. A push costs stress for extra effect, so
+    only flag it when the player clearly reaches for more.
     """
 
     character_description: str = InputField(default="")
@@ -19,7 +22,9 @@ class PushSignature(Signature):
     )
 
     push: bool = OutputField(
-        description="True only if the player is clearly pushing themselves for extra effect"
+        description=(
+            "True only if the player is clearly pushing themselves for extra effect"
+        )
     )
 
 

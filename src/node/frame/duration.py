@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.mechanic.duration import Span, Unit
@@ -6,11 +8,11 @@ from src.state import GraphState
 
 
 class DurationSignature(Signature):
-    """
-    You estimate how much *in-world time* the contested beat represents — the
-    fictional duration that passes while this single action plays out. Pick the
-    one rung on the ladder whose span best fits; you are not measuring seconds,
-    you are choosing the closest bucket.
+    """You estimate how much *in-world time* the contested beat represents.
+
+    The fictional duration that passes while this single action plays out.
+    Pick the one rung on the ladder whose span best fits; you are not measuring
+    seconds, you are choosing the closest bucket.
 
     - ROUND (~6s): a single decisive action or exchange — one strike, one leap,
       one quick line.
@@ -43,8 +45,11 @@ class DurationSignature(Signature):
 
 
 class DurationNode:
-    """Reads the contested beat → how much fictional time it spans, as a single
-    ladder rung (count 1). The world clock advances by this at turn close."""
+    """Read the contested beat and determine how much fictional time it spans.
+
+    Returns a single ladder rung (count 1). The world clock advances by this
+    at turn close.
+    """
 
     def __init__(self) -> None:
         self._program: Predict = Predict(signature=DurationSignature)
@@ -52,7 +57,9 @@ class DurationNode:
 
     async def __call__(self, state: GraphState) -> dict:
         entities = (
-            "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
+            "\n".join(state.get("entities_at_location", []))
+            if state.get("entities_at_location", [])
+            else ""
         )
         prediction: Prediction = await self._program.aforward(
             character_description=state.get("character_description", ""),

@@ -14,6 +14,8 @@ tunable thresholds -- so the rest of the engine still reads a clean word
 underneath.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field, replace
 
 from src.core.mechanic.magnitude import clamp_magnitude

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Any
 
 from textual import events
@@ -7,7 +9,10 @@ from textual.widgets import Static
 
 
 class PipSelector(Static):
-    """Arrow-key pip value selector. Displays ● ● ○ ○ ○ and responds to left/right."""
+    """Render an arrow-key pip value selector.
+
+    Displays ● ● ○ ○ ○ and responds to left/right arrow keys.
+    """
 
     FILLED = "●"
     EMPTY = "○"
@@ -16,7 +21,7 @@ class PipSelector(Static):
     value: reactive[int] = reactive(0)
 
     class Changed(Message):
-        def __init__(self, selector: "PipSelector", value: int) -> None:
+        def __init__(self, selector: PipSelector, value: int) -> None:
             super().__init__()
             self.selector = selector
             self.value = value

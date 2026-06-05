@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from langgraph.checkpoint.base import BaseCheckpointSaver
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -14,7 +16,9 @@ class MainGraphBuilder:
         # Subgraphs compile without their own checkpointer; they inherit the
         # parent's at runtime, which is what makes any internal interrupt()
         # pause and resume the whole main graph.
-        self.intent_alignment_graph: CompiledStateGraph = IntentAlignmentGraphBuilder().build()
+        self.intent_alignment_graph: CompiledStateGraph = (
+            IntentAlignmentGraphBuilder().build()
+        )
         self.resolution_graph: CompiledStateGraph = ResolutionGraphBuilder().build()
 
     def build(self) -> CompiledStateGraph:

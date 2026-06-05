@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from rich.markup import escape
 from textual import work
 from textual.app import ComposeResult
@@ -43,7 +45,8 @@ class GameScreen(Screen):
             with Horizontal(id="game-panels"):
                 yield LeftPanel(id="left-panel")
                 yield ChatPanel(
-                    character_name=self._coordinator.character.name or "You", id="chat-panel"
+                    character_name=self._coordinator.character.name or "You",
+                    id="chat-panel",
                 )
 
     def on_mount(self) -> None:
@@ -71,7 +74,8 @@ class GameScreen(Screen):
     def _show_location(self, state: LocationState) -> None:
         location = state.location
         exits = (
-            " · ".join(f"[{i + 1}] {n.name}" for i, n in enumerate(state.neighbors)) or "No exits."
+            " · ".join(f"[{i + 1}] {n.name}" for i, n in enumerate(state.neighbors))
+            or "No exits."
         )
         display_entities = [f"{e.name} — {e.scene_position}" for e in state.entities]
 
@@ -102,7 +106,9 @@ class GameScreen(Screen):
     def _render_event(self, event: TurnEvent, log: RichLog) -> None:
         match event:
             case ClarifyingQuestion(question):
-                log.write(f"[bold #7ec8e3]Intent Alignment:[/bold #7ec8e3] {escape(question)}")
+                log.write(
+                    f"[bold #7ec8e3]Intent Alignment:[/bold #7ec8e3] {escape(question)}"
+                )
             case Narration(text):
                 if text:
                     log.write(f"[bold #c9a84c]Narrator:[/bold #c9a84c] {escape(text)}")
@@ -111,9 +117,10 @@ class GameScreen(Screen):
             case ResistanceOffer(offer):
                 log.write(f"[bold #a87ee3]Resistance:[/bold #a87ee3] {escape(offer)}")
             case TraumaGained(trauma):
+                trauma_max = self._coordinator.character.trauma_max
                 log.write(
                     f"[bold #d98c5f]Trauma:[/bold #d98c5f] stress broke you — "
-                    f"trauma is now {trauma} / {self._coordinator.character.trauma_max}."
+                    f"trauma is now {trauma} / {trauma_max}."
                 )
             case CharacterLost():
                 log.write(
@@ -121,10 +128,18 @@ class GameScreen(Screen):
                     "This character is gone."
                 )
             case TargetDefeated(name):
-                log.write(f"[bold #6ec06e]Defeated:[/bold #6ec06e] {escape(name)} is down.")
+                log.write(
+                    f"[bold #6ec06e]Defeated:[/bold #6ec06e] {escape(name)} is down."
+                )
             case TargetSuspended(name):
-                log.write(f"[bold #6ec06e]Neutralized:[/bold #6ec06e] {escape(name)} is out of the fight.")
+                log.write(
+                    f"[bold #6ec06e]Neutralized:[/bold #6ec06e] {escape(name)}"
+                    " is out of the fight."
+                )
             case TargetReturned(name):
-                log.write(f"[bold #d98c5f]Returned:[/bold #d98c5f] {escape(name)} is back in the fight.")
+                log.write(
+                    f"[bold #d98c5f]Returned:[/bold #d98c5f] {escape(name)}"
+                    " is back in the fight."
+                )
             case TurnError(message):
                 log.write(f"[bold red]Error:[/bold red] {escape(message)}")

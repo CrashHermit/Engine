@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.mechanic.magnitude import Magnitude
@@ -14,11 +16,10 @@ from src.state import GraphState
 
 
 class ThreatClassifierSignature(Signature):
-    """
-    You are classifying the threat a SINGLE source poses during one contested
-    beat. The source is either a named entity present in the scene or the
-    environment itself. Many sources may threaten at once; you judge only this
-    one.
+    """You are classifying the threat a SINGLE source poses during one contested beat.
+
+    The source is either a named entity present in the scene or the environment
+    itself. Many sources may threaten at once; you judge only this one.
 
     First decide whether this source meaningfully threatens the character in
     THIS beat. A bystander, a calm ally, or irrelevant scenery does not — set
@@ -41,14 +42,22 @@ class ThreatClassifierSignature(Signature):
 
     source: str = InputField(description="The entity name, or 'environment'")
     danger: str = InputField(description="Source danger tier, or 'environment'")
-    affinity: str = InputField(default="", description="Comma-separated channels this source favours")
+    affinity: str = InputField(
+        default="", description="Comma-separated channels this source favours"
+    )
     character_description: str = InputField(default="")
     location_description: str = InputField(default="")
-    contested_beat: str = InputField(description="The single contested action that needs a roll")
+    contested_beat: str = InputField(
+        description="The single contested action that needs a roll"
+    )
 
-    threatens: bool = OutputField(description="Whether this source threatens the character this beat")
+    threatens: bool = OutputField(
+        description="Whether this source threatens the character this beat"
+    )
     threat_type: ThreatType = OutputField(description="Kind of consequence if it lands")
-    magnitude: ThreatMagnitudeLevel = OutputField(description="Severity on the 1–4 ladder")
+    magnitude: ThreatMagnitudeLevel = OutputField(
+        description="Severity on the 1–4 ladder"
+    )
     channel: Channel = OutputField(description="Channel the consequence falls on")
 
 

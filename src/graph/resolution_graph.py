@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
@@ -12,6 +14,7 @@ from src.graph.routers import (
     route_by_roll_gate,
     route_by_significance,
 )
+from src.node.effect.apply_effect import ApplyEffectNode
 from src.node.frame.approach import ApproachNode
 from src.node.frame.duration import DurationNode
 from src.node.frame.engagement import EngagementNode
@@ -21,26 +24,28 @@ from src.node.frame.push import PushNode
 from src.node.frame.roll_gate import RollGateNode
 from src.node.frame.segmenter import SegmenterNode
 from src.node.frame.target import TargetNode
+from src.node.resist.offer import ResistOfferNode
+from src.node.resist.push_parser import ResistPushParserNode
+from src.node.resist.roll import ResistRollNode
+from src.node.resolve.final_planner import FinalPlannerNode
+from src.node.resolve.held_planner import HeldPlannerNode
+from src.node.resolve.narrator import NarratorNode
+from src.node.resolve.turn_close import TurnCloseNode
 from src.node.threat.ambush import AmbushNode
 from src.node.threat.ambush_scale import AmbushScaleNode
 from src.node.threat.classify import ClassifyThreatNode
 from src.node.threat.dice_scale import DiceScaleNode
 from src.node.threat.gather import GatherThreatsNode
-from src.node.effect.apply_effect import ApplyEffectNode
-from src.node.resolve.final_planner import FinalPlannerNode
-from src.node.resolve.held_planner import HeldPlannerNode
-from src.node.resolve.narrator import NarratorNode
-from src.node.resolve.turn_close import TurnCloseNode
-from src.node.resist.offer import ResistOfferNode
-from src.node.resist.push_parser import ResistPushParserNode
-from src.node.resist.roll import ResistRollNode
 from src.state import GraphState
 
 
 class ResolutionGraphBuilder:
-    """Wires the resolution pipeline as five phase blocks. Each `_add_*` method
-    registers its phase's nodes and the edges leaving them; control-flow lives in
-    graph/routers.py. The turn flows: frame → (threat → effect) → resolve ⇄ resist."""
+    """Wire the resolution pipeline as five phase blocks.
+
+    Each `_add_*` method registers its phase's nodes and the edges leaving
+    them; control-flow lives in graph/routers.py. The turn flows:
+    frame → (threat → effect) → resolve ⇄ resist.
+    """
 
     def __init__(self) -> None:
         self.workflow: StateGraph = StateGraph(GraphState)
@@ -60,8 +65,10 @@ class ResolutionGraphBuilder:
         self.workflow.add_node(name, LoggedNode(name, node))
 
     def _add_frame(self) -> None:
-        """Scope the turn: wake creatures (engagement), gate the roll, and either
-        route to mundane narration, the ambush path, or scope the contested beat."""
+        """Scope the turn: wake creatures (engagement), gate the roll, and route.
+
+        Route to mundane narration, the ambush path, or scope the contested beat.
+        """
         self._node("engagement", EngagementNode())
         self._node("roll_gate", RollGateNode())
         self._node("mundane", MundaneNode())
@@ -98,8 +105,11 @@ class ResolutionGraphBuilder:
             self.workflow.add_edge(branch, "gather_threats")
 
     def _add_threat(self) -> None:
-        """Enumerate threats per source (player-action fan-out or world-acts
-        ambush), gather them, and scale: by the roll (dice_scale) or full (ambush)."""
+        """Enumerate threats per source, gather them, and scale.
+
+        Fan out per source (player-action or world-acts ambush) and scale:
+        by the roll (dice_scale) or full (ambush).
+        """
         self._node("ambush", AmbushNode())
         self._node("ambush_scale", AmbushScaleNode())
         self._node("classify_threat", ClassifyThreatNode())
@@ -119,16 +129,21 @@ class ResolutionGraphBuilder:
         self.workflow.add_edge("dice_scale", "apply_effect")
 
     def _add_effect(self) -> None:
-        """The other axis of the same roll: land the player's effect on the target
-        (fill the targeted pillar), then decide the held/avoided path."""
+        """Land the player's effect on the target — the other axis of the same roll.
+
+        Fill the targeted pillar, then decide the held/avoided path.
+        """
         self._node("apply_effect", ApplyEffectNode())
         self.workflow.add_conditional_edges(
             "apply_effect", route_by_significance, ["held_planner", "final_planner"]
         )
 
     def _add_resolve(self) -> None:
-        """Narrate the beat: a cohesive held setup (something landed) or the
-        avoided final beat, then route to the resist cycle or close the turn."""
+        """Narrate the beat and route to the resist cycle or close the turn.
+
+        Produce a cohesive held setup (something landed) or the avoided final
+        beat, then route accordingly.
+        """
         self._node("held_planner", HeldPlannerNode())
         self._node("final_planner", FinalPlannerNode())
         self._node("narrator", NarratorNode())
@@ -148,8 +163,10 @@ class ResolutionGraphBuilder:
         self.workflow.add_edge("turn_close", END)
 
     def _add_resist(self) -> None:
-        """Per-threat resist cycle: offer → parse → roll → resolution line, then
-        loop to the next landed threat or close (drives resolution_narrator)."""
+        """Run the per-threat resist cycle: offer → parse → roll → resolution line.
+
+        Loop to the next landed threat or close (drives resolution_narrator).
+        """
         self._node("resist_offer", ResistOfferNode())
         self._node("resist_push_parser", ResistPushParserNode())
         self._node("resist_roll", ResistRollNode())

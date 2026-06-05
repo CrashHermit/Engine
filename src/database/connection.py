@@ -1,5 +1,7 @@
-from pathlib import Path
+from __future__ import annotations
+
 import logging
+from pathlib import Path
 
 import arcadedb_embedded as arcadedb
 from arcadedb_embedded.exceptions import ArcadeDBError

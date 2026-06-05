@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from src.core.model.database import EdgeType, VertexType
 from src.database.repository.base import BaseRepository
 from src.worldgen.data import TileData

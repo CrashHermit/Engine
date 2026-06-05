@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.lm import lm
@@ -5,9 +7,10 @@ from src.state import GraphState
 
 
 class SegmenterSignature(Signature):
-    """
-    You are a beat segmenter. The player's message has been determined to need
-    a dice roll. Scope it down to the first contested beat:
+    """You are a beat segmenter.
+
+    The player's message has been determined to need a dice roll. Scope it down
+    to the first contested beat:
 
     - lead_up: the mundane preamble before the first contested beat. Actions
       with no danger and no uncertainty (walking, drawing a weapon, opening
@@ -32,9 +35,14 @@ class SegmenterSignature(Signature):
     )
     entities_at_location: str = InputField(
         default="",
-        description="Entities present in the current location, each formatted as 'Name: description. Location: scene_position'",
+        description=(
+            "Entities present in the current location, each formatted as"
+            " 'Name: description. Location: scene_position'"
+        ),
     )
-    message_history: str = InputField(default="", description="The conversation history so far")
+    message_history: str = InputField(
+        default="", description="The conversation history so far"
+    )
     human_message: str = InputField(description="The player's intended action")
 
     lead_up: str = OutputField(
@@ -52,7 +60,11 @@ class SegmenterNode:
 
     async def __call__(self, state: GraphState) -> dict:
         history: str = "\n".join(m.format() for m in state.get("message_history", []))
-        entities: str = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
+        entities: str = (
+            "\n".join(state.get("entities_at_location", []))
+            if state.get("entities_at_location", [])
+            else ""
+        )
         prediction: Prediction = await self._program.aforward(
             character_description=state.get("character_description", ""),
             location_description=state.get("location_description", ""),

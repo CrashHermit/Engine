@@ -1,6 +1,9 @@
-from arcadedb_embedded.graph import Vertex
+from __future__ import annotations
+
 import json
 import logging
+
+from arcadedb_embedded.graph import Vertex
 
 from src.core.model.entity import (
     Danger,
@@ -30,19 +33,27 @@ class LocationService:
         self._characters = characters
 
     def get_state_for_character(self, character_id: str) -> LocationState | None:
-        """Where the character currently is, plus its exits and entities. Returns
-        None only when the character has no location yet."""
+        """Return where the character currently is, plus its exits and entities.
+
+        Return None only when the character has no location yet.
+        """
         character = self._characters.get_character(character_id)
         if character is None:
             raise ValueError(f"Character not found: {character_id}")
         location = self._characters.get_current_location(character)
         state = self._build_state(location) if location is not None else None
-        self._logger.debug("get_state_for_character id=%s found=%s", character_id, state is not None)
+        self._logger.debug(
+            "get_state_for_character id=%s found=%s", character_id, state is not None
+        )
         return state
 
-    def move_character(self, character_id: str, destination_id: str) -> LocationState | None:
+    def move_character(
+        self, character_id: str, destination_id: str
+    ) -> LocationState | None:
         """Move the character to a connected location and return the new state."""
-        self._logger.info("move_character id=%s destination=%s", character_id, destination_id)
+        self._logger.info(
+            "move_character id=%s destination=%s", character_id, destination_id
+        )
         character = self._characters.get_character(character_id)
         if character is None:
             raise ValueError(f"Character not found: {character_id}")
@@ -56,8 +67,13 @@ class LocationService:
     def _build_state(self, location: Vertex) -> LocationState:
         return LocationState(
             location=self._to_location_data(location),
-            neighbors=[self._to_location_data(n) for n in self._locations.get_neighbors(location)],
-            entities=[self._to_entity_data(e) for e in self._locations.get_entities(location)],
+            neighbors=[
+                self._to_location_data(n)
+                for n in self._locations.get_neighbors(location)
+            ],
+            entities=[
+                self._to_entity_data(e) for e in self._locations.get_entities(location)
+            ],
         )
 
     def _to_location_data(self, location: Vertex) -> LocationData:
@@ -90,7 +106,9 @@ class LocationService:
             clocks=clocks,
             returns_when=returns_when,
             stance=stance,
-            disposition=Disposition(entity.get(name="disposition") or Disposition.NEUTRAL.value),
+            disposition=Disposition(
+                entity.get(name="disposition") or Disposition.NEUTRAL.value
+            ),
             pillar_profile=_profile_from_json(entity.get(name="pillar_profile")),
         )
 
@@ -102,7 +120,9 @@ class LocationService:
                     continue
                 vertex = self._locations.get_entity(e.id)
                 if vertex is not None:
-                    self._locations.set_entity_resolution(vertex, _resolution_to_json(e))
+                    self._locations.set_entity_resolution(
+                        vertex, _resolution_to_json(e)
+                    )
 
     def remove_entity(self, entity_id: str) -> None:
         """Remove a defeated entity from the world."""
@@ -117,7 +137,9 @@ def _resolution_to_json(entity: EntityData) -> str:
     return json.dumps(
         {
             "status": entity.status.value,
-            "broken_pillar": entity.broken_pillar.value if entity.broken_pillar else None,
+            "broken_pillar": entity.broken_pillar.value
+            if entity.broken_pillar
+            else None,
             "clocks": {p.value: f for p, f in entity.clocks.items()},
             "returns_when": entity.returns_when,
             "stance": entity.stance.value,
@@ -127,7 +149,9 @@ def _resolution_to_json(entity: EntityData) -> str:
 
 def _resolution_from_json(
     raw: str | None,
-) -> tuple[EntityStatus, ThreatPillar | None, dict[ThreatPillar, int], str, EntityStance]:
+) -> tuple[
+    EntityStatus, ThreatPillar | None, dict[ThreatPillar, int], str, EntityStance
+]:
     if not raw:
         return EntityStatus.ACTIVE, None, {}, "", EntityStance.UNAWARE
     data = json.loads(raw)

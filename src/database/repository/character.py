@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from arcadedb_embedded.graph import Edge, Vertex
 
 from src.core.model.database import EdgeType, VertexType
@@ -26,9 +28,7 @@ class CharacterRepository:
     def __init__(self, base: BaseRepository) -> None:
         self._base: BaseRepository = base
 
-    ############################################################################
     # Write verbs
-    ############################################################################
 
     def create_character(self, name: str, description: str) -> Vertex:
         return self._base.create_vertex(
@@ -37,21 +37,33 @@ class CharacterRepository:
             description=description,
         )
 
-    def add_node(self, source: Vertex, vertex_type: VertexType, edge_type: EdgeType) -> Vertex:
-        """Create a typed node and link it from `source`. Used for attribute
-        categories (corpus/mens/anima), personality, and big-five traits."""
+    def add_node(
+        self, source: Vertex, vertex_type: VertexType, edge_type: EdgeType
+    ) -> Vertex:
+        """Create a typed node and link it from `source`.
+
+        Used for attribute categories (corpus/mens/anima), personality, and
+        big-five traits.
+        """
         node: Vertex = self._base.create_vertex(type_name=vertex_type)
         self._base.create_edge(type_name=edge_type, source=source, target=node)
         return node
 
     def add_attribute(self, source: Vertex, value: int) -> Vertex:
-        attribute: Vertex = self._base.create_vertex(type_name=VertexType.ATTRIBUTE, value=value)
-        self._base.create_edge(type_name=EdgeType.HAS_ATTRIBUTE, source=source, target=attribute)
+        attribute: Vertex = self._base.create_vertex(
+            type_name=VertexType.ATTRIBUTE, value=value
+        )
+        self._base.create_edge(
+            type_name=EdgeType.HAS_ATTRIBUTE, source=source, target=attribute
+        )
         return attribute
 
     def delete_character(self, character: Vertex) -> None:
-        """Delete the character and every node it owns (attributes, personality,
-        traits), leaving shared vertices such as its location untouched."""
+        """Delete the character and every node it owns.
+
+        Removes attributes, personality, and traits, leaving shared vertices
+        such as its location untouched.
+        """
         children: list[Vertex] = [
             edge.get_in()
             for edge_type in _OWNED_EDGES
@@ -61,9 +73,7 @@ class CharacterRepository:
             self.delete_character(character=child)
         self._base.delete_vertex(vertex=character)
 
-    ############################################################################
     # Read verbs
-    ############################################################################
 
     def list_characters(self) -> list[Vertex]:
         return self._base.list_vertices(VertexType.CHARACTER)
@@ -96,9 +106,7 @@ class CharacterRepository:
         trait = personality.get_out_edges(edge_type)[0].get_in()
         return self.get_attribute_value(trait)
 
-    ############################################################################
     # Position verbs
-    ############################################################################
 
     def get_current_location(self, character: Vertex) -> Vertex | None:
         edges: list[Edge] = character.get_out_edges(EdgeType.LOCATED_AT)
@@ -120,9 +128,7 @@ class CharacterRepository:
             target=to_location,
         )
 
-    ############################################################################
     # Economy verbs
-    ############################################################################
     # Stress and trauma are modelled exactly like the core attributes: a typed
     # node (STRESS / TRAUMA) hung off the character by a HAS_STRESS / HAS_TRAUMA
     # edge, whose value lives on an ATTRIBUTE node via HAS_ATTRIBUTE. This reuses
@@ -144,11 +150,15 @@ class CharacterRepository:
         return self._economy_value(character, EdgeType.HAS_TRAUMA)
 
     def set_stress(self, character: Vertex, value: int) -> None:
-        node = self._ensure_economy_node(character, VertexType.STRESS, EdgeType.HAS_STRESS)
+        node = self._ensure_economy_node(
+            character, VertexType.STRESS, EdgeType.HAS_STRESS
+        )
         self.set_attribute_value(node, value)
 
     def set_trauma(self, character: Vertex, value: int) -> None:
-        node = self._ensure_economy_node(character, VertexType.TRAUMA, EdgeType.HAS_TRAUMA)
+        node = self._ensure_economy_node(
+            character, VertexType.TRAUMA, EdgeType.HAS_TRAUMA
+        )
         self.set_attribute_value(node, value)
 
     def _economy_value(self, character: Vertex, edge_type: EdgeType) -> int:

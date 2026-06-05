@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.model.message import Message
@@ -6,24 +8,33 @@ from src.state import GraphState
 
 
 class IntentSynthesizerSignature(Signature):
-    """
-    You are an intent synthesizer. Given the player's original message and the
-    clarification Q&A that followed, produce a single clear, complete statement
-    of what the player intends to do. The synthesized message should read as if
-    the player wrote it themselves — first person, concrete, and actionable.
-    Incorporate all resolved details from the clarification exchanges.
+    """You are an intent synthesizer.
+
+    Given the player's original message and the clarification Q&A that
+    followed, produce a single clear, complete statement of what the player
+    intends to do. The synthesized message should read as if the player wrote
+    it themselves — first person, concrete, and actionable. Incorporate all
+    resolved details from the clarification exchanges.
     """
 
-    character_name: str = InputField(default="", description="The player character's name")
+    character_name: str = InputField(
+        default="", description="The player character's name"
+    )
     character_description: str = InputField(
         default="", description="A description of the player character"
     )
-    location_name: str = InputField(default="", description="The name of the current location")
+    location_name: str = InputField(
+        default="", description="The name of the current location"
+    )
     location_description: str = InputField(
         default="", description="A description of the current location"
     )
-    message_history: str = InputField(default="", description="The conversation history so far")
-    human_message: str = InputField(description="The player's original message or action")
+    message_history: str = InputField(
+        default="", description="The conversation history so far"
+    )
+    human_message: str = InputField(
+        description="The player's original message or action"
+    )
     intent_alignment_history: str = InputField(
         description="The clarification Q&A that resolved the player's intent"
     )
@@ -42,7 +53,9 @@ class IntentSynthesizerNode:
         if not state.get("intent_alignment_history", []):
             return {"human_message": state.get("human_message")}
 
-        message_history: str = "\n".join(m.format() for m in state.get("message_history", []))
+        message_history: str = "\n".join(
+            m.format() for m in state.get("message_history", [])
+        )
         intent_alignment_history: str = "\n".join(
             m.format() for m in state.get("intent_alignment_history", [])
         )

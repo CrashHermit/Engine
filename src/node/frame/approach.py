@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.model.threat import Channel
@@ -6,9 +8,10 @@ from src.state import GraphState
 
 
 class ApproachSignature(Signature):
-    """
-    You are an attribute selector. Given the contested beat the player is about
-    to roll, decide which of the three attributes they should roll:
+    """You are an attribute selector.
+
+    Given the contested beat the player is about to roll, decide which of the
+    three attributes they should roll:
 
     - CORPUS: physical/material self — body, sensation, motor capacity.
       Climbing, lifting, dodging, stealth, striking, enduring physical strain.
@@ -44,7 +47,11 @@ class ApproachNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entities = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
+        entities = (
+            "\n".join(state.get("entities_at_location", []))
+            if state.get("entities_at_location", [])
+            else ""
+        )
         prediction: Prediction = await self._program.aforward(
             character_description=state.get("character_description", ""),
             location_description=state.get("location_description", ""),

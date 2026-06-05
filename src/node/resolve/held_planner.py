@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.mechanic.magnitude import Magnitude
@@ -8,11 +10,11 @@ from src.state import GraphState, landed_threats
 
 
 class HeldPlannerSignature(Signature):
-    """
-    One or more consequences have landed at once. Produce a single COHESIVE
-    scaffold so the narrator can set the whole moment as one blended beat —
-    committing to each impact while leaving depth and finality unresolved (the
-    player will resist each in turn).
+    """One or more consequences have landed at once.
+
+    Produce a single COHESIVE scaffold so the narrator can set the whole
+    moment as one blended beat — committing to each impact while leaving depth
+    and finality unresolved (the player will resist each in turn).
 
     - impact_focus: the core of what was struck, across all listed
       consequences. One short phrase.
@@ -28,12 +30,19 @@ class HeldPlannerSignature(Signature):
     character_description: str = InputField(default="")
     location_description: str = InputField(default="")
     entities_at_location: str = InputField(default="")
-    contested_beat: str = InputField(description="The single contested action that was rolled")
+    contested_beat: str = InputField(
+        description="The single contested action that was rolled"
+    )
     consequences: str = InputField(
-        description="The landed consequences, one per line: 'SEVERE harm (corpus) from the warden'"
+        description=(
+            "The landed consequences, one per line:"
+            " 'SEVERE harm (corpus) from the warden'"
+        )
     )
 
-    scaffold: HeldScaffold = OutputField(description="Cohesive scaffold for the held narration")
+    scaffold: HeldScaffold = OutputField(
+        description="Cohesive scaffold for the held narration"
+    )
 
 
 class HeldPlannerNode:
@@ -42,7 +51,11 @@ class HeldPlannerNode:
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entities = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
+        entities = (
+            "\n".join(state.get("entities_at_location", []))
+            if state.get("entities_at_location", [])
+            else ""
+        )
         landed = landed_threats(state)
         consequences = "\n".join(
             f"{Magnitude(t.outcome.landed_magnitude).name} {t.type.value} "

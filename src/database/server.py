@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from pathlib import Path
 
@@ -15,7 +17,9 @@ class Server:
         http_port: int = 2480,
     ) -> None:
         self._root_path: str = root_path
-        self._root_password: str | None = root_password or os.getenv("ARCADEDB_ROOT_PASSWORD")
+        self._root_password: str | None = root_password or os.getenv(
+            "ARCADEDB_ROOT_PASSWORD"
+        )
         self._http_port: int = http_port
         self._server: arcadedb.ArcadeDBServer | None = None
 

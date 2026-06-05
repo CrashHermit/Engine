@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.model.message import Message
@@ -6,11 +8,11 @@ from src.state import GraphState
 
 
 class NarratorSignature(Signature):
-    """
-    You are the narrator of a dark fantasy game in the spirit of Blades in
-    the Dark. The world is dangerous, lived-in, and morally grey. Write in
-    second person ("you"). Convey atmosphere, texture, and consequence.
-    Let silence and small details do work. Never break immersion.
+    """You are the narrator of a dark fantasy game in the spirit of Blades in the Dark.
+
+    The world is dangerous, lived-in, and morally grey. Write in second person
+    ("you"). Convey atmosphere, texture, and consequence. Let silence and small
+    details do work. Never break immersion.
 
     Follow the provided narration_directive exactly — it tells you what to
     narrate this beat and any specific constraints (what to leave open,
@@ -44,18 +46,27 @@ class NarratorNode:
 
     async def __call__(self, state: GraphState) -> dict:
         history = "\n".join(m.format() for m in state.get("message_history", []))
-        entities = "\n".join(state.get("entities_at_location", [])) if state.get("entities_at_location", []) else ""
+        entities = (
+            "\n".join(state.get("entities_at_location", []))
+            if state.get("entities_at_location", [])
+            else ""
+        )
         directive = state.get("narration_directive") or ""
         # A creature changing posture this turn (noticing, turning hostile, or a
         # neutralized foe re-engaging) is narrated first, then the effect outcome.
         engagement_note = state.get("engagement_note", "")
         if engagement_note:
-            directive = f"{directive}\n\nCreature posture change this turn: {engagement_note}"
+            directive = (
+                f"{directive}\n\nCreature posture change this turn: {engagement_note}"
+            )
         # The effect-on-target outcome (kill / disarm / rout / evade …) is a
         # structural instruction so prose can't recast a rout as a kill.
         resolution_outcome = state.get("resolution_outcome", "")
         if resolution_outcome:
-            directive = f"{directive}\n\nResolution of the action on its target: {resolution_outcome}"
+            directive = (
+                f"{directive}\n\nResolution of the action on its target:"
+                f" {resolution_outcome}"
+            )
         prediction: Prediction = await self._program.aforward(
             character_description=state.get("character_description", ""),
             location_description=state.get("location_description", ""),

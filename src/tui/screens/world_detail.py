@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
@@ -31,9 +33,15 @@ class WorldDetailScreen(Screen):
                 with Vertical(id="char-detail-panel"):
                     yield Label("—", id="char-name")
                     yield Static("", id="char-description")
-                    yield PipSelector("Corpus", max_val=4, value=0, readonly=True, id="pip-corpus")
-                    yield PipSelector("Mens", max_val=4, value=0, readonly=True, id="pip-mens")
-                    yield PipSelector("Anima", max_val=4, value=0, readonly=True, id="pip-anima")
+                    yield PipSelector(
+                        "Corpus", max_val=4, value=0, readonly=True, id="pip-corpus"
+                    )
+                    yield PipSelector(
+                        "Mens", max_val=4, value=0, readonly=True, id="pip-mens"
+                    )
+                    yield PipSelector(
+                        "Anima", max_val=4, value=0, readonly=True, id="pip-anima"
+                    )
             with Horizontal(id="detail-actions"):
                 yield Button("Back", id="btn-back", variant="default")
                 yield Button("New Character", id="btn-new-char", variant="default")
@@ -81,7 +89,9 @@ class WorldDetailScreen(Screen):
         self.query_one("#pip-mens", PipSelector).value = character.mens
         self.query_one("#pip-anima", PipSelector).value = character.anima
 
-    def _on_create_character_dismissed(self, result: dict[str, int | str] | None) -> None:
+    def _on_create_character_dismissed(
+        self, result: dict[str, int | str] | None
+    ) -> None:
         if result is None:
             return
         try:
@@ -112,7 +122,9 @@ class WorldDetailScreen(Screen):
         elif event.button.id == "btn-play":
             character = self._selected_character()
             if character is not None:
-                self.app.push_screen(GameScreen(character=character, services=self._services))
+                self.app.push_screen(
+                    GameScreen(character=character, services=self._services)
+                )
         elif event.button.id == "btn-delete":
             character = self._selected_character()
             if character is None:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from arcadedb_embedded.graph import Vertex
 
 from src.core.model.database import VertexType
