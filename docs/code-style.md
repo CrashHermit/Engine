@@ -33,11 +33,11 @@ core/mechanic      →  pure functions (no I/O, DB, LLM)
 
 | Layer | Location | May import | Must not import |
 |-------|----------|------------|-----------------|
-| Display | `src/tui/` | `session.*`, `services.*`, `state`, `core/model` | `database.repository.*` |
-| Coordination | `src/session/` | `services.*`, `state`, `core/model` | `textual`, `tui/*`, `database.repository.*` |
-| Graph | `src/graph/`, `src/nodes/` | `state`, `signatures`, `core/mechanic`, `core/model`, `lm` | `services/*`, `database/*`, `tui/*` |
-| LLM contracts | `src/signatures/` | DSPy types | nodes, services, database |
-| Services | `src/services/` | `database.repository.*`, `core/model`, `core/mechanic` | `tui/*`, `nodes/*` |
+| Display | `src/tui/` | `session.*`, `service.*`, `state`, `core/model` | `database.repository.*` |
+| Coordination | `src/session/` | `service.*`, `state`, `core/model` | `textual`, `tui/*`, `database.repository.*` |
+| Graph | `src/graph/`, `src/node/` | `state`, `core/mechanic`, `core/model`, `lm` | `service/*`, `database/*`, `tui/*` |
+| LLM steps | `src/node/{frame,intent,threat,resolve,resist,effect}/` | DSPy `Signature` + `{Name}Node` co-located | services, database |
+| Services | `src/service/` | `database.repository.*`, `core/model`, `core/mechanic` | `tui/*`, `node/*` |
 | Persistence | `src/database/` | `core/model`, ArcadeDB | TUI, graph nodes |
 | Mechanics | `src/core/mechanic/` | other mechanic modules, `core/model` | everything else |
 
@@ -65,10 +65,15 @@ src/
   core/
     model/       # DTOs, enums, domain vocabulary
     mechanic/    # pure game rules (dice, harm, economy, …)
-  signatures/    # DSPy Signature classes
-  nodes/         # async wrappers: GraphState → signature → partial update
+  node/          # LLM steps: Signature + Node co-located by phase
+    frame/       # roll gate, segmenter, approach, pillar, target, …
+    intent/      # alignment router, question generator, synthesizer
+    threat/      # classify, gather, dice_scale, ambush
+    resolve/     # narrator, planners, turn_close
+    resist/      # offer, push_parser, roll
+    effect/      # apply_effect
   graph/         # LangGraph builders and routing functions
-  services/      # use-case orchestration, vertex → DTO mapping
+  service/       # use-case orchestration, vertex → DTO mapping
   database/      # connection, schema, repositories
   session/       # turn coordination — the Textual-free integration boundary
   tui/           # Textual screens, modals, widgets
@@ -80,8 +85,8 @@ tests/           # mirrors src/ where practical
 
 | Kind | Pattern | Example |
 |------|---------|---------|
-| LLM contract | `{Name}Signature` | `ActionGeneratorSignature` |
-| Graph step | `{Name}Node` | `ActionGeneratorNode` |
+| LLM contract | `{Name}Signature` | `RollGateSignature` |
+| Graph step | `{Name}Node` | `RollGateNode` |
 | Graph assembly | `{Name}GraphBuilder` | `MainGraphBuilder` |
 | Use case | `{Entity}Service` | `CharacterService` |
 | DB access | `{Entity}Repository` | `CharacterRepository` |
@@ -93,7 +98,7 @@ tests/           # mirrors src/ where practical
 | Private member | leading `_` | `self._program` |
 
 LangGraph node names use **snake_case** strings that match the node class stem
-(e.g. `"action_generator"` → `ActionGeneratorNode`).
+(e.g. `"roll_gate"` → `RollGateNode`).
 
 ---
 
@@ -123,12 +128,12 @@ Always use the **`src.`** prefix:
 
 ```python
 from src.core.mechanic.dice import RollTier
-from src.services.container import ServiceContainer
+from src.service.container import ServiceContainer
 ```
 
 Import order: stdlib → third-party → `src.*`.
 
-Do **not** use bare `from core...` or `from services...` paths.
+Do **not** use bare `from core...` or `from service...` paths.
 
 ---
 
@@ -196,27 +201,29 @@ def add_stress(..., config: EconomyConfig = DEFAULT_ECONOMY_CONFIG) -> StressRes
 
 Every LLM step follows the same shape.
 
-**Signature** (`src/signatures/`) — prompt + typed I/O, no logic:
+**Signature + Node** (co-located in `src/node/<phase>/`) — prompt + typed I/O in
+the `Signature`; the `Node` wires it to `GraphState` and assigns shared `lm`:
 
 ```python
-class ActionGeneratorSignature(Signature):
-    """You are an action decomposer…"""
+# src/node/frame/roll_gate.py
+class RollGateSignature(Signature):
+    """You are a roll gate…"""
 
     human_message: str = InputField(description="The player's intended action")
-    action_list: list[str] = OutputField(description="Ordered list of discrete actions")
-```
+    needs_roll: bool = OutputField(description="Whether the beat needs a dice roll")
 
-**Node** (`src/nodes/`) — wires signature to `GraphState`, assigns shared `lm`:
 
-```python
-class ActionGeneratorNode:
+class RollGateNode:
     def __init__(self) -> None:
-        self._program: Predict = Predict(signature=ActionGeneratorSignature)
+        self._program: Predict = Predict(signature=RollGateSignature)
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        prediction = await self._program.aforward(human_message=state.human_message.content, ...)
-        return {"action_list": prediction.action_list}
+        prediction = await self._program.aforward(
+            human_message=state.get("human_message").content,
+            ...
+        )
+        return {"needs_roll": prediction.needs_roll}
 ```
 
 ### Rules

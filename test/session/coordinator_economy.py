@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.core.model.character import CharacterData
-from src.core.model.location import EntityData, LocationData, LocationState
+from src.core.model.entity import EntityData
+from src.core.model.location import LocationData, LocationState
 from src.core.model.message import Message
 from src.session.coordinator import GameCoordinator
 from src.session.result import CharacterLost, Narration, TraumaGained

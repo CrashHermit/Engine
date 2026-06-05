@@ -1,19 +1,20 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from enum import StrEnum
 
+from src.core.model.threat import Channel
 
 class Danger(StrEnum):
     """An entity's structural threat ceiling (NPCs carry danger, not HP).
 
-    Maps to a magnitude cap in threat_envelope.py. The structured entity DTO
-    lives in core/model/location.py (EntityData).
+    Maps to a magnitude cap in threat_envelope.py.
     """
 
-    LOW = "low"
-    STANDARD = "standard"
-    ELITE = "elite"
-    DEADLY = "deadly"
+    LOW: str = "low"
+    STANDARD: str = "standard"
+    ELITE: str = "elite"
+    DEADLY: str = "deadly"
 
 
 class EntityKind(StrEnum):
@@ -25,8 +26,8 @@ class EntityKind(StrEnum):
     has no meaningful clock.
     """
 
-    CREATURE = "creature"
-    OBJECT = "object"
+    CREATURE: str = "creature"
+    OBJECT: str = "object"
 
 
 class ThreatPillar(StrEnum):
@@ -40,11 +41,11 @@ class ThreatPillar(StrEnum):
     WILLING:  it wants to act
     """
 
-    EXISTS = "exists"
-    CAPABLE = "capable"
-    AWARE = "aware"
-    IN_REACH = "in_reach"
-    WILLING = "willing"
+    EXISTS: str = "exists"
+    CAPABLE: str = "capable"
+    AWARE: str = "aware"
+    IN_REACH: str = "in_reach"
+    WILLING: str = "willing"
 
 
 class EntityStatus(StrEnum):
@@ -54,9 +55,9 @@ class EntityStatus(StrEnum):
     threats; GONE creatures are removed.
     """
 
-    ACTIVE = "active"
-    SUSPENDED = "suspended"
-    GONE = "gone"
+    ACTIVE: str = "active"
+    SUSPENDED: str = "suspended"
+    GONE: str = "gone"
 
 
 class Disposition(StrEnum):
@@ -66,12 +67,12 @@ class Disposition(StrEnum):
     turn hostile on their own.
     """
 
-    PREDATORY = "predatory"  # hunts; strikes when it notices prey
-    TERRITORIAL = "territorial"  # attacks when its space is encroached
-    GUARDIAN = "guardian"  # defends a charge/place; warns then strikes
-    SKITTISH = "skittish"  # flees/avoids rather than fights
-    NEUTRAL = "neutral"  # indifferent; won't initiate
-    FRIENDLY = "friendly"  # well-disposed; won't initiate
+    PREDATORY: str = "predatory"  # hunts; strikes when it notices prey
+    TERRITORIAL: str = "territorial"  # attacks when its space is encroached
+    GUARDIAN: str = "guardian"  # defends a charge/place; warns then strikes
+    SKITTISH: str = "skittish"  # flees/avoids rather than fights
+    NEUTRAL: str = "neutral"  # indifferent; won't initiate
+    FRIENDLY: str = "friendly"  # well-disposed; won't initiate
 
 
 class EntityStance(StrEnum):
@@ -81,6 +82,37 @@ class EntityStance(StrEnum):
     generates threats. UNAWARE -> WARY -> HOSTILE is the escalation ladder.
     """
 
-    UNAWARE = "unaware"  # hasn't noticed / dormant
-    WARY = "wary"  # noticed, tense, not yet committed
-    HOSTILE = "hostile"  # actively threatening
+    UNAWARE: str = "unaware"  # hasn't noticed / dormant
+    WARY: str = "wary"  # noticed, tense, not yet committed
+    HOSTILE: str = "hostile"  # actively threatening
+
+@dataclass
+class EntityData:
+    name: str
+    description: str = ""
+    scene_position: str = ""
+    # Creature vs inert prop. Defaults to OBJECT so only entities explicitly
+    # tagged as creatures are foes (can be targeted/defeated).
+    kind: EntityKind = EntityKind.OBJECT
+    # Structural spine fed to the threat classifier + magnitude cap. Defaulted
+    # so existing call sites need not change.
+    danger: Danger = Danger.STANDARD
+    threat_channels: frozenset[Channel] = field(default_factory=frozenset)
+    id: str = ""
+    # Per-creature pillar profile (authored): pillar -> clock capacity. Empty =
+    # unauthored (uniform from danger). A pillar omitted from a non-empty profile
+    # is IMMUNE (can't be broken that way). Static config, not live state.
+    pillar_profile: dict[ThreatPillar, int] = field(default_factory=dict)
+    # De-threat resolution state. Each pillar the player attacks accrues its own
+    # clock (filled segments); capacity comes from danger (Phase 1, uniform).
+    # Filling a pillar breaks it: EXISTS -> GONE, others -> SUSPENDED.
+    clocks: dict[ThreatPillar, int] = field(default_factory=dict)
+    status: EntityStatus = EntityStatus.ACTIVE
+    broken_pillar: ThreatPillar | None = None
+    # When suspended: the fiction under which this creature re-engages (read by
+    # the engagement check). Empty while active.
+    returns_when: str = ""
+    # Aggro axis (orthogonal to status): static nature + current posture. A
+    # creature threatens only while HOSTILE; the engagement check escalates it.
+    disposition: Disposition = Disposition.NEUTRAL
+    stance: EntityStance = EntityStance.UNAWARE

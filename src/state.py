@@ -7,8 +7,7 @@ from src.core.mechanic.dice import RollResult
 from src.core.mechanic.duration import Duration
 from src.core.mechanic.magnitude import Magnitude
 from src.core.model.action import ActionIntent
-from src.core.model.entity import ThreatPillar
-from src.core.model.location import EntityData
+from src.core.model.entity import EntityData, ThreatPillar
 from src.core.model.message import Message
 from src.core.model.resist import FinalScaffold, HeldScaffold, ResistAction
 from src.core.model.threat import Channel, Threat

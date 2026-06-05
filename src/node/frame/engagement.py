@@ -4,8 +4,7 @@ from dataclasses import replace
 
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
-from src.core.model.entity import EntityKind, EntityStance, EntityStatus
-from src.core.model.location import EntityData
+from src.core.model.entity import EntityData, EntityKind, EntityStance, EntityStatus
 from src.lm import lm
 from src.state import GraphState
 

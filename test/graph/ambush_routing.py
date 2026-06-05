@@ -3,11 +3,11 @@ from __future__ import annotations
 from src.core.model.entity import (
     Danger,
     Disposition,
+    EntityData,
     EntityKind,
     EntityStance,
     EntityStatus,
 )
-from src.core.model.location import EntityData
 from src.graph.routers import (
     fan_out_ambush,
     route_after_gather,

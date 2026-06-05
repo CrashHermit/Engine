@@ -12,8 +12,7 @@ from src.core.mechanic.effect import (
     returns_when_for,
 )
 from src.core.mechanic.push import PUSH_FOR_EFFECT_SEGMENTS, PUSH_FOR_EFFECT_STRESS
-from src.core.model.entity import EntityKind, EntityStatus, ThreatPillar
-from src.core.model.location import EntityData
+from src.core.model.entity import EntityData, EntityKind, EntityStatus, ThreatPillar
 from src.state import GraphState, action_intent, pool_for
 
 

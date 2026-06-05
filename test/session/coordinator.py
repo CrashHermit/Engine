@@ -7,7 +7,8 @@ import pytest
 
 from src.core.mechanic.duration import TICKS, Duration, Unit
 from src.core.model.character import CharacterData
-from src.core.model.location import EntityData, LocationData, LocationState
+from src.core.model.entity import EntityData
+from src.core.model.location import LocationData, LocationState
 from src.core.model.message import Message
 from src.core.model.threat import Channel
 from src.session.coordinator import GameCoordinator

@@ -13,12 +13,12 @@ from src.core.mechanic.scaling import Outcome, Position
 from src.core.model.entity import (
     Danger,
     Disposition,
+    EntityData,
     EntityKind,
     EntityStance,
     EntityStatus,
     ThreatPillar,
 )
-from src.core.model.location import EntityData
 from src.core.model.message import Message
 from src.core.model.resist import FinalScaffold, HeldScaffold, ResistAction
 from src.core.model.threat import Channel, Threat, ThreatType

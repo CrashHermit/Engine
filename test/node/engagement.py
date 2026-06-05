@@ -8,12 +8,12 @@ from dspy.primitives.prediction import Prediction
 from src.core.model.entity import (
     Danger,
     Disposition,
+    EntityData,
     EntityKind,
     EntityStance,
     EntityStatus,
     ThreatPillar,
 )
-from src.core.model.location import EntityData
 from src.core.model.message import Message
 from src.node.frame.engagement import EngagementNode
 from src.state import GraphState

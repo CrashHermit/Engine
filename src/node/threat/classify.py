@@ -8,8 +8,7 @@ from src.core.mechanic.threat_envelope import (
     position_for,
     snap_channel,
 )
-from src.core.model.entity import Danger
-from src.core.model.location import EntityData
+from src.core.model.entity import Danger, EntityData
 from src.core.model.threat import Channel, Threat, ThreatMagnitudeLevel, ThreatType
 from src.lm import lm
 from src.state import GraphState

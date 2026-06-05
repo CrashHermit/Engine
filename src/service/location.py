@@ -8,12 +8,13 @@ from arcadedb_embedded.graph import Vertex
 from src.core.model.entity import (
     Danger,
     Disposition,
+    EntityData,
     EntityKind,
     EntityStance,
     EntityStatus,
     ThreatPillar,
 )
-from src.core.model.location import EntityData, LocationData, LocationState
+from src.core.model.location import LocationData, LocationState
 from src.core.model.threat import Channel
 from src.database.repository.base import BaseRepository
 from src.database.repository.character import CharacterRepository
