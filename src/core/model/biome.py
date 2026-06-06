@@ -80,7 +80,7 @@ BIOME: dict[Biome, str] = {
     Biome.TEMPERATE_FOREST: "deciduous and mixed woods; four seasons",
     Biome.TEMPERATE_RAINFOREST: "wet mild woods; year-round green",
     Biome.MARSH: "reedbeds, warm standing water",
-    Biome.DESERT: "sand and stone; hot or warm aridity",
+    Biome.DESERT: "sand and stone; warm aridity",
     Biome.SEMI_DESERT: "arid fringe; scrub and bare ground",
     Biome.SAVANNA: "grass with scattered trees; dry season",
     Biome.TROPICAL_WOODLAND: "open tropical trees; reliable rain",
@@ -117,7 +117,9 @@ BIOME: dict[Biome, str] = {
 }
 
 
-_SURFACE_BIOMES_TEMPERATURE_PRECIPITATION_GRID: dict[tuple[Temperature, Precipitation], Biome] = {
+_SURFACE_BIOMES_TEMPERATURE_PRECIPITATION_GRID: dict[
+    tuple[Temperature, Precipitation], Biome
+] = {
     (Temperature.FREEZING, Precipitation.ARID): Biome.POLAR_DESERT,
     (Temperature.FREEZING, Precipitation.DRY): Biome.POLAR_BARRENS,
     (Temperature.FREEZING, Precipitation.SEASONAL): Biome.TUNDRA,
@@ -133,16 +135,37 @@ _SURFACE_BIOMES_TEMPERATURE_PRECIPITATION_GRID: dict[tuple[Temperature, Precipit
     (Temperature.MILD, Precipitation.SEASONAL): Biome.TEMPERATE_FOREST,
     (Temperature.MILD, Precipitation.WET): Biome.TEMPERATE_RAINFOREST,
     (Temperature.MILD, Precipitation.DELUGE): Biome.MARSH,
-    (Temperature.WARM, Precipitation.ARID): Biome.DUNE_SEA,
-    (Temperature.WARM, Precipitation.DRY): Biome.THORN_SCRUB,
-    (Temperature.WARM, Precipitation.SEASONAL): Biome.BUSHVELD,
-    (Temperature.WARM, Precipitation.WET): Biome.MONSOON_FOREST,
-    (Temperature.WARM, Precipitation.DELUGE): Biome.RAINFOREST,
+    (Temperature.WARM, Precipitation.ARID): Biome.DESERT,
+    (Temperature.WARM, Precipitation.DRY): Biome.SEMI_DESERT,
+    (Temperature.WARM, Precipitation.SEASONAL): Biome.SAVANNA,
+    (Temperature.WARM, Precipitation.WET): Biome.TROPICAL_WOODLAND,
+    (Temperature.WARM, Precipitation.DELUGE): Biome.SEASONAL_JUNGLE,
     (Temperature.HOT, Precipitation.ARID): Biome.DUNE_SEA,
     (Temperature.HOT, Precipitation.DRY): Biome.THORN_SCRUB,
     (Temperature.HOT, Precipitation.SEASONAL): Biome.BUSHVELD,
     (Temperature.HOT, Precipitation.WET): Biome.MONSOON_FOREST,
     (Temperature.HOT, Precipitation.DELUGE): Biome.RAINFOREST,
+}
+
+_TEMPERATURE_INDEX: dict[Temperature, int] = {
+    temperature: index for index, temperature in enumerate(Temperature)
+}
+_PRECIPITATION_INDEX: dict[Precipitation, int] = {
+    precipitation: index for index, precipitation in enumerate(Precipitation)
+}
+
+# Each surface biome anchored at the centre of its (temperature, precipitation)
+# band, derived from the grid so the anchors can never drift from it. Band
+# centres reproduce the grid exactly; interpolated points fall to the nearest
+# anchor.
+_SURFACE_BIOME_ANCHORS: dict[Biome, tuple[float, float]] = {
+    biome: (
+        float(_TEMPERATURE_INDEX[temperature]),
+        float(_PRECIPITATION_INDEX[precipitation]),
+    )
+    for (temperature, precipitation), biome in (
+        _SURFACE_BIOMES_TEMPERATURE_PRECIPITATION_GRID.items()
+    )
 }
 
 _AQUATIC_BIOMES_HYDROLOGY_GRID: dict[Hydrology, Biome] = {
@@ -197,23 +220,17 @@ _WET_PRECIP: frozenset[Precipitation] = frozenset(
 _COLD_TEMPS: frozenset[Temperature] = frozenset(
     {Temperature.FREEZING, Temperature.COOL}
 )
-_WARM_TEMPS: frozenset[Temperature] = frozenset(
-    {Temperature.WARM, Temperature.HOT}
-)
+_WARM_TEMPS: frozenset[Temperature] = frozenset({Temperature.WARM, Temperature.HOT})
 _SHALLOW_DEPTH: frozenset[WaterDepth] = frozenset({WaterDepth.SHALLOW})
 _FRESHWATER_HYDROLOGY: frozenset[Hydrology] = frozenset(
     {Hydrology.RIVER, Hydrology.LAKE, Hydrology.INLAND_SEA}
 )
-_SALT_HYDROLOGY: frozenset[Hydrology] = frozenset(
-    {Hydrology.SEA, Hydrology.OCEAN}
-)
+_SALT_HYDROLOGY: frozenset[Hydrology] = frozenset({Hydrology.SEA, Hydrology.OCEAN})
 _DRY_LAND_HYDROLOGY: frozenset[Hydrology] = frozenset({Hydrology.NONE})
 _HIGH_ELEVATIONS: frozenset[Elevation] = frozenset(
     {Elevation.HIGHLAND, Elevation.ALPINE}
 )
-_PEAK_ELEVATIONS: frozenset[Elevation] = frozenset(
-    {Elevation.ALPINE, Elevation.SUMMIT}
-)
+_PEAK_ELEVATIONS: frozenset[Elevation] = frozenset({Elevation.ALPINE, Elevation.SUMMIT})
 _UNDERGROUND: frozenset[Elevation] = frozenset(_SUBTERRANEAN_BIOMES_ELEVATION_GRID)
 
 
@@ -318,8 +335,28 @@ def elevation_override_surface_biome(
     return base
 
 
+def nearest_surface_biome(point: tuple[float, float]) -> Biome:
+    """Return the surface biome whose anchor is nearest to ``point``."""
+    temperature_value, precipitation_value = point
+    return min(
+        _SURFACE_BIOME_ANCHORS,
+        key=lambda biome: (
+            (_SURFACE_BIOME_ANCHORS[biome][0] - temperature_value) ** 2
+            + (_SURFACE_BIOME_ANCHORS[biome][1] - precipitation_value) ** 2
+        ),
+    )
+
+
 def get_surface_biome(temperature: Temperature, precipitation: Precipitation) -> Biome:
-    return _SURFACE_BIOMES_TEMPERATURE_PRECIPITATION_GRID[(temperature, precipitation)]
+    """Resolve the surface biome for a climate band pair via nearest anchor.
+
+    Anchors sit at band centres, so band inputs reproduce the grid exactly.
+    """
+    point = (
+        float(_TEMPERATURE_INDEX[temperature]),
+        float(_PRECIPITATION_INDEX[precipitation]),
+    )
+    return nearest_surface_biome(point)
 
 
 def get_subterranean_biome(elevation: Elevation) -> Biome:

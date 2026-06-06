@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.core.model.biome import Biome, biome_from
+from src.core.model.biome import Biome, biome_from, get_surface_biome
 from src.core.model.climate import Precipitation, Temperature
 from src.core.model.terrain import Elevation, Hydrology, WaterDepth
 
@@ -173,3 +173,59 @@ def test_inland_lowland_wet_is_not_shore_biome() -> None:
         )
         == Biome.TEMPERATE_RAINFOREST
     )
+
+
+def test_surface_climate_grid_yields_25_distinct_biomes() -> None:
+    """Every temperature × precipitation band pair maps to a distinct biome."""
+    results = {
+        get_surface_biome(temperature, precipitation)
+        for temperature in Temperature
+        for precipitation in Precipitation
+    }
+    assert len(results) == 25
+
+
+@pytest.mark.parametrize(
+    "biome",
+    [
+        Biome.DESERT,
+        Biome.SEMI_DESERT,
+        Biome.SAVANNA,
+        Biome.TROPICAL_WOODLAND,
+        Biome.SEASONAL_JUNGLE,
+    ],
+)
+def test_previously_orphan_warm_biomes_are_reachable(biome: Biome) -> None:
+    """The warm band activates the five biomes the old grid never produced."""
+    results = {
+        get_surface_biome(temperature, precipitation)
+        for temperature in Temperature
+        for precipitation in Precipitation
+    }
+    assert biome in results
+
+
+@pytest.mark.parametrize(
+    ("temperature", "precipitation", "expected"),
+    [
+        (Temperature.WARM, Precipitation.ARID, Biome.DESERT),
+        (Temperature.WARM, Precipitation.DELUGE, Biome.SEASONAL_JUNGLE),
+        (Temperature.HOT, Precipitation.ARID, Biome.DUNE_SEA),
+        (Temperature.HOT, Precipitation.DELUGE, Biome.RAINFOREST),
+    ],
+)
+def test_warm_and_hot_rows_are_distinct(
+    temperature: Temperature, precipitation: Precipitation, expected: Biome
+) -> None:
+    assert get_surface_biome(temperature, precipitation) == expected
+
+
+def test_band_centre_anchors_reproduce_the_climate_grid() -> None:
+    """Nearest-anchor resolution on exact bands matches a direct grid lookup."""
+    from src.core.model.biome import _SURFACE_BIOMES_TEMPERATURE_PRECIPITATION_GRID
+
+    for (
+        temperature,
+        precipitation,
+    ), expected in _SURFACE_BIOMES_TEMPERATURE_PRECIPITATION_GRID.items():
+        assert get_surface_biome(temperature, precipitation) == expected
