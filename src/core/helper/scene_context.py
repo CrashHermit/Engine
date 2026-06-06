@@ -6,7 +6,7 @@ from typing import Any
 import yaml
 
 from src.core.helper.enum_text import describe, labeled
-from src.core.model.biome import BIOME, Biome, biome_from
+from src.core.model.biome import BIOME, BIOME_MATRIX, Biome
 from src.core.model.climate import (
     GLOBAL_PRECIPITATION,
     TEMPERATURE,
@@ -42,7 +42,7 @@ class SceneContextHelper:
     def resolve_location_biome(self, location: LocationData) -> Biome:
         terrain = location.environment.terrain
         climate = location.environment.climate
-        return biome_from(
+        return BIOME_MATRIX.resolve(
             temperature=climate.temperature,
             precipitation=climate.precipitation,
             elevation=terrain.elevation,
@@ -90,7 +90,9 @@ class SceneContextHelper:
         return {
             "climate": {
                 "temperature": self._entry(climate.temperature, TEMPERATURE),
-                "precipitation": self._entry(climate.precipitation, GLOBAL_PRECIPITATION),
+                "precipitation": self._entry(
+                    climate.precipitation, GLOBAL_PRECIPITATION
+                ),
             },
             "terrain": {
                 "elevation": self._entry(terrain.elevation, ELEVATION),

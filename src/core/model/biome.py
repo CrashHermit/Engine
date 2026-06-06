@@ -5,7 +5,7 @@ from __future__ import annotations
 from enum import StrEnum
 
 from src.core.model.climate import Precipitation, Temperature
-from src.core.model.terrain import Elevation, Hydrology, SHORE_HYDROLOGY, WaterDepth
+from src.core.model.terrain import SHORE_HYDROLOGY, Elevation, Hydrology, WaterDepth
 
 
 class Biome(StrEnum):
@@ -35,15 +35,16 @@ class Biome(StrEnum):
     BUSHVELD = "bushveld"
     MONSOON_FOREST = "monsoon_forest"
     RAINFOREST = "rainforest"
+    # ── Elevation biomes (high-altitude anchors) ─────────────────────────────
+    MOOR = "moor"
+    MONTANE_FOREST = "montane_forest"
+    ALPINE_TUNDRA = "alpine_tundra"
+    GLACIER = "glacier"
     # ── Shore grid (hydrology × elevation) ──────────────────────────────────
     BEACH = "beach"
     SEA_CLIFF = "sea_cliff"
     HEADLAND = "headland"
     TIDAL_FLAT = "tidal_flat"
-    MOOR = "moor"
-    MONTANE_FOREST = "montane_forest"
-    ALPINE_TUNDRA = "alpine_tundra"
-    GLACIER = "glacier"
     # ── Aquatic overrides (hydrology grid) ──────────────────────────────────
     BROOK = "brook"
     RIVER = "river"
@@ -90,14 +91,14 @@ BIOME: dict[Biome, str] = {
     Biome.BUSHVELD: "hot grass-shrub; seasonal rhythm",
     Biome.MONSOON_FOREST: "burst-green canopy; heavy wet season",
     Biome.RAINFOREST: "dense equatorial canopy; constant moisture",
-    Biome.BEACH: "sandy shore; dunes, surf line, tidal pools",
-    Biome.SEA_CLIFF: "sea cliff; drop to water, spray, wind-exposed rock",
-    Biome.HEADLAND: "rocky promontory; cape or point into open water",
-    Biome.TIDAL_FLAT: "tidal flat; mud, salt marsh edge, channels at low tide",
     Biome.MOOR: "open high wet heath; wind, peat, low growth",
     Biome.MONTANE_FOREST: "mountain woods; cooler, steeper",
     Biome.ALPINE_TUNDRA: "above treeline; rock, snow, hardy mats",
     Biome.GLACIER: "permanent ice on peaks",
+    Biome.BEACH: "sandy shore; dunes, surf line, tidal pools",
+    Biome.SEA_CLIFF: "sea cliff; drop to water, spray, wind-exposed rock",
+    Biome.HEADLAND: "rocky promontory; cape or point into open water",
+    Biome.TIDAL_FLAT: "tidal flat; mud, salt marsh edge, channels at low tide",
     Biome.BROOK: "creek, riffle; wadeable freshwater flow",
     Biome.RIVER: "strong current; ford, bridge, or boat",
     Biome.LAKE: "standing freshwater; wind, waves, reeds",
@@ -117,247 +118,252 @@ BIOME: dict[Biome, str] = {
 }
 
 
-_SURFACE_BIOMES_TEMPERATURE_PRECIPITATION_GRID: dict[
-    tuple[Temperature, Precipitation], Biome
-] = {
-    (Temperature.FREEZING, Precipitation.ARID): Biome.POLAR_DESERT,
-    (Temperature.FREEZING, Precipitation.DRY): Biome.POLAR_BARRENS,
-    (Temperature.FREEZING, Precipitation.SEASONAL): Biome.TUNDRA,
-    (Temperature.FREEZING, Precipitation.WET): Biome.SNOWY_TUNDRA,
-    (Temperature.FREEZING, Precipitation.DELUGE): Biome.FEN,
-    (Temperature.COOL, Precipitation.ARID): Biome.COLD_DESERT,
-    (Temperature.COOL, Precipitation.DRY): Biome.STEPPE,
-    (Temperature.COOL, Precipitation.SEASONAL): Biome.TAIGA,
-    (Temperature.COOL, Precipitation.WET): Biome.BOREAL_FOREST,
-    (Temperature.COOL, Precipitation.DELUGE): Biome.BOG,
-    (Temperature.MILD, Precipitation.ARID): Biome.SCRUBLAND,
-    (Temperature.MILD, Precipitation.DRY): Biome.PRAIRIE,
-    (Temperature.MILD, Precipitation.SEASONAL): Biome.TEMPERATE_FOREST,
-    (Temperature.MILD, Precipitation.WET): Biome.TEMPERATE_RAINFOREST,
-    (Temperature.MILD, Precipitation.DELUGE): Biome.MARSH,
-    (Temperature.WARM, Precipitation.ARID): Biome.DESERT,
-    (Temperature.WARM, Precipitation.DRY): Biome.SEMI_DESERT,
-    (Temperature.WARM, Precipitation.SEASONAL): Biome.SAVANNA,
-    (Temperature.WARM, Precipitation.WET): Biome.TROPICAL_WOODLAND,
-    (Temperature.WARM, Precipitation.DELUGE): Biome.SEASONAL_JUNGLE,
-    (Temperature.HOT, Precipitation.ARID): Biome.DUNE_SEA,
-    (Temperature.HOT, Precipitation.DRY): Biome.THORN_SCRUB,
-    (Temperature.HOT, Precipitation.SEASONAL): Biome.BUSHVELD,
-    (Temperature.HOT, Precipitation.WET): Biome.MONSOON_FOREST,
-    (Temperature.HOT, Precipitation.DELUGE): Biome.RAINFOREST,
-}
+class BiomeMatrix:
+    """Resolve biomes from climate and terrain via a nearest-anchor matrix.
 
-_TEMPERATURE_INDEX: dict[Temperature, int] = {
-    temperature: index for index, temperature in enumerate(Temperature)
-}
-_PRECIPITATION_INDEX: dict[Precipitation, int] = {
-    precipitation: index for index, precipitation in enumerate(Precipitation)
-}
-
-# Each surface biome anchored at the centre of its (temperature, precipitation)
-# band, derived from the grid so the anchors can never drift from it. Band
-# centres reproduce the grid exactly; interpolated points fall to the nearest
-# anchor.
-_SURFACE_BIOME_ANCHORS: dict[Biome, tuple[float, float]] = {
-    biome: (
-        float(_TEMPERATURE_INDEX[temperature]),
-        float(_PRECIPITATION_INDEX[precipitation]),
-    )
-    for (temperature, precipitation), biome in (
-        _SURFACE_BIOMES_TEMPERATURE_PRECIPITATION_GRID.items()
-    )
-}
-
-_AQUATIC_BIOMES_HYDROLOGY_GRID: dict[Hydrology, Biome] = {
-    Hydrology.STREAM: Biome.BROOK,
-    Hydrology.RIVER: Biome.RIVER,
-    Hydrology.LAKE: Biome.LAKE,
-    Hydrology.ESTUARY: Biome.ESTUARY,
-    Hydrology.INLAND_SEA: Biome.LAKE,
-    Hydrology.SEA: Biome.LITTORAL,
-    Hydrology.OCEAN: Biome.OPEN_OCEAN,
-}
-
-_SHORE_BIOMES_HYDROLOGY_ELEVATION_GRID: dict[tuple[Hydrology, Elevation], Biome] = {
-    (Hydrology.BEACH, Elevation.LOWLAND): Biome.BEACH,
-    (Hydrology.BEACH, Elevation.BASIN): Biome.BEACH,
-    (Hydrology.BEACH, Elevation.ROLLING): Biome.BEACH,
-    (Hydrology.CLIFF, Elevation.LOWLAND): Biome.SEA_CLIFF,
-    (Hydrology.CLIFF, Elevation.HIGHLAND): Biome.SEA_CLIFF,
-    (Hydrology.CLIFF, Elevation.ALPINE): Biome.SEA_CLIFF,
-    (Hydrology.CLIFF, Elevation.SUMMIT): Biome.SEA_CLIFF,
-    (Hydrology.HEADLAND, Elevation.LOWLAND): Biome.HEADLAND,
-    (Hydrology.HEADLAND, Elevation.ROLLING): Biome.HEADLAND,
-    (Hydrology.HEADLAND, Elevation.HIGHLAND): Biome.HEADLAND,
-    (Hydrology.TIDAL_FLAT, Elevation.LOWLAND): Biome.TIDAL_FLAT,
-    (Hydrology.TIDAL_FLAT, Elevation.BASIN): Biome.TIDAL_FLAT,
-}
-
-_SUBTERRANEAN_BIOMES_ELEVATION_GRID: dict[Elevation, Biome] = {
-    Elevation.ABYSSAL: Biome.ABYSS,
-    Elevation.BURIED: Biome.VAULT,
-    Elevation.DEEP: Biome.DEEP_CAVERN,
-    Elevation.LOW: Biome.CAVERN,
-    Elevation.SHALLOW: Biome.CELLAR,
-    Elevation.SUBGRADE: Biome.CRYPT,
-}
-
-_FOREST_BASES: frozenset[Biome] = frozenset(
-    {
-        Biome.TAIGA,
-        Biome.BOREAL_FOREST,
-        Biome.TEMPERATE_FOREST,
-        Biome.TEMPERATE_RAINFOREST,
-        Biome.TROPICAL_WOODLAND,
-        Biome.SEASONAL_JUNGLE,
-        Biome.MONSOON_FOREST,
-        Biome.RAINFOREST,
-    }
-)
-_WET_PRECIP: frozenset[Precipitation] = frozenset(
-    {Precipitation.WET, Precipitation.DELUGE}
-)
-_COLD_TEMPS: frozenset[Temperature] = frozenset(
-    {Temperature.FREEZING, Temperature.COOL}
-)
-_WARM_TEMPS: frozenset[Temperature] = frozenset({Temperature.WARM, Temperature.HOT})
-_SHALLOW_DEPTH: frozenset[WaterDepth] = frozenset({WaterDepth.SHALLOW})
-_FRESHWATER_HYDROLOGY: frozenset[Hydrology] = frozenset(
-    {Hydrology.RIVER, Hydrology.LAKE, Hydrology.INLAND_SEA}
-)
-_SALT_HYDROLOGY: frozenset[Hydrology] = frozenset({Hydrology.SEA, Hydrology.OCEAN})
-_DRY_LAND_HYDROLOGY: frozenset[Hydrology] = frozenset({Hydrology.NONE})
-_HIGH_ELEVATIONS: frozenset[Elevation] = frozenset(
-    {Elevation.HIGHLAND, Elevation.ALPINE}
-)
-_PEAK_ELEVATIONS: frozenset[Elevation] = frozenset({Elevation.ALPINE, Elevation.SUMMIT})
-_UNDERGROUND: frozenset[Elevation] = frozenset(_SUBTERRANEAN_BIOMES_ELEVATION_GRID)
-
-
-def biome_from(
-    *,
-    temperature: Temperature,
-    precipitation: Precipitation,
-    elevation: Elevation,
-    hydrology: Hydrology = Hydrology.NONE,
-    water_depth: WaterDepth = WaterDepth.NONE,
-) -> Biome:
-    """Resolve the biome for a tile or location."""
-    if hydrology in SHORE_HYDROLOGY:
-        return get_shore_biome(hydrology, elevation)
-    if hydrology not in _DRY_LAND_HYDROLOGY:
-        return get_aquatic_biome(
-            hydrology,
-            temperature=temperature,
-            precipitation=precipitation,
-            water_depth=water_depth,
-        )
-    if elevation in _UNDERGROUND:
-        return get_subterranean_biome(elevation)
-    base: Biome = get_surface_biome(temperature, precipitation)
-    return elevation_override_surface_biome(
-        base,
-        elevation=elevation,
-        temperature=temperature,
-        precipitation=precipitation,
-    )
-
-
-def get_shore_biome(hydrology: Hydrology, elevation: Elevation) -> Biome:
-    """Resolve shore biome from hydrology × elevation grid."""
-    key = (hydrology, elevation)
-    if key in _SHORE_BIOMES_HYDROLOGY_ELEVATION_GRID:
-        return _SHORE_BIOMES_HYDROLOGY_ELEVATION_GRID[key]
-    fallback = (hydrology, Elevation.LOWLAND)
-    if fallback in _SHORE_BIOMES_HYDROLOGY_ELEVATION_GRID:
-        return _SHORE_BIOMES_HYDROLOGY_ELEVATION_GRID[fallback]
-    raise ValueError(f"unsupported shore hydrology and elevation: {key!r}")
-
-
-def get_aquatic_biome(
-    hydrology: Hydrology,
-    *,
-    temperature: Temperature,
-    precipitation: Precipitation,
-    water_depth: WaterDepth,
-) -> Biome:
-    """Resolve aquatic biome from hydrology grid, refined by climate."""
-    if hydrology in _FRESHWATER_HYDROLOGY and temperature == Temperature.FREEZING:
-        return Biome.ICE_SHELF
-
-    if hydrology in _SALT_HYDROLOGY:
-        if temperature == Temperature.FREEZING:
-            return Biome.POLAR_SEA
-        if hydrology == Hydrology.OCEAN:
-            return Biome.OPEN_OCEAN
-        if (
-            water_depth in _SHALLOW_DEPTH
-            and temperature in _COLD_TEMPS
-            and precipitation in _WET_PRECIP
-        ):
-            return Biome.KELP_FOREST
-        if (
-            water_depth in _SHALLOW_DEPTH
-            and temperature in _WARM_TEMPS
-            and precipitation in _WET_PRECIP
-        ):
-            return Biome.CORAL_REEF
-        return Biome.LITTORAL
-
-    return _AQUATIC_BIOMES_HYDROLOGY_GRID[hydrology]
-
-
-def elevation_override_surface_biome(
-    base: Biome,
-    *,
-    elevation: Elevation,
-    temperature: Temperature,
-    precipitation: Precipitation,
-) -> Biome:
-    """Apply elevation overrides on top of the climate base biome."""
-    if elevation == Elevation.SUMMIT and temperature == Temperature.FREEZING:
-        return Biome.GLACIER
-
-    if elevation in _PEAK_ELEVATIONS and temperature in _COLD_TEMPS:
-        return Biome.ALPINE_TUNDRA
-
-    if elevation in _HIGH_ELEVATIONS and base in _FOREST_BASES:
-        return Biome.MONTANE_FOREST
-
-    if (
-        elevation == Elevation.HIGHLAND
-        and temperature == Temperature.COOL
-        and precipitation in _WET_PRECIP
-        and base not in _FOREST_BASES
-    ):
-        return Biome.MOOR
-
-    return base
-
-
-def nearest_surface_biome(point: tuple[float, float]) -> Biome:
-    """Return the surface biome whose anchor is nearest to ``point``."""
-    temperature_value, precipitation_value = point
-    return min(
-        _SURFACE_BIOME_ANCHORS,
-        key=lambda biome: (
-            (_SURFACE_BIOME_ANCHORS[biome][0] - temperature_value) ** 2
-            + (_SURFACE_BIOME_ANCHORS[biome][1] - precipitation_value) ** 2
-        ),
-    )
-
-
-def get_surface_biome(temperature: Temperature, precipitation: Precipitation) -> Biome:
-    """Resolve the surface biome for a climate band pair via nearest anchor.
-
-    Anchors sit at band centres, so band inputs reproduce the grid exactly.
+    Surface biomes are points in (temperature, precipitation, altitude) space.
+    The climate grid anchors 25 biomes at the midland default altitude; four
+    elevation biomes anchor higher up. Any surface point resolves to its nearest
+    anchor, so band-centre inputs reproduce the grid while off-centre inputs fall
+    to the closest neighbour. Shore, aquatic, and subterranean tiles branch out
+    of the matrix before it is consulted.
     """
-    point = (
-        float(_TEMPERATURE_INDEX[temperature]),
-        float(_PRECIPITATION_INDEX[precipitation]),
+
+    # ── Surface climate grid (5×5: temperature × precipitation) ───────────────
+    _SURFACE_GRID: dict[tuple[Temperature, Precipitation], Biome] = {
+        (Temperature.FREEZING, Precipitation.ARID): Biome.POLAR_DESERT,
+        (Temperature.FREEZING, Precipitation.DRY): Biome.POLAR_BARRENS,
+        (Temperature.FREEZING, Precipitation.SEASONAL): Biome.TUNDRA,
+        (Temperature.FREEZING, Precipitation.WET): Biome.SNOWY_TUNDRA,
+        (Temperature.FREEZING, Precipitation.DELUGE): Biome.FEN,
+        (Temperature.COOL, Precipitation.ARID): Biome.COLD_DESERT,
+        (Temperature.COOL, Precipitation.DRY): Biome.STEPPE,
+        (Temperature.COOL, Precipitation.SEASONAL): Biome.TAIGA,
+        (Temperature.COOL, Precipitation.WET): Biome.BOREAL_FOREST,
+        (Temperature.COOL, Precipitation.DELUGE): Biome.BOG,
+        (Temperature.MILD, Precipitation.ARID): Biome.SCRUBLAND,
+        (Temperature.MILD, Precipitation.DRY): Biome.PRAIRIE,
+        (Temperature.MILD, Precipitation.SEASONAL): Biome.TEMPERATE_FOREST,
+        (Temperature.MILD, Precipitation.WET): Biome.TEMPERATE_RAINFOREST,
+        (Temperature.MILD, Precipitation.DELUGE): Biome.MARSH,
+        (Temperature.WARM, Precipitation.ARID): Biome.DESERT,
+        (Temperature.WARM, Precipitation.DRY): Biome.SEMI_DESERT,
+        (Temperature.WARM, Precipitation.SEASONAL): Biome.SAVANNA,
+        (Temperature.WARM, Precipitation.WET): Biome.TROPICAL_WOODLAND,
+        (Temperature.WARM, Precipitation.DELUGE): Biome.SEASONAL_JUNGLE,
+        (Temperature.HOT, Precipitation.ARID): Biome.DUNE_SEA,
+        (Temperature.HOT, Precipitation.DRY): Biome.THORN_SCRUB,
+        (Temperature.HOT, Precipitation.SEASONAL): Biome.BUSHVELD,
+        (Temperature.HOT, Precipitation.WET): Biome.MONSOON_FOREST,
+        (Temperature.HOT, Precipitation.DELUGE): Biome.RAINFOREST,
+    }
+
+    # The open-air elevation bands, low to high; altitude is the third axis.
+    _SURFACE_ELEVATIONS: tuple[Elevation, ...] = (
+        Elevation.LOWLAND,
+        Elevation.BASIN,
+        Elevation.ROLLING,
+        Elevation.MIDLAND,
+        Elevation.HIGHLAND,
+        Elevation.ALPINE,
+        Elevation.SUMMIT,
     )
-    return nearest_surface_biome(point)
+    # The climate biomes anchor at this default altitude; band-centre tiles here
+    # reproduce the climate grid exactly.
+    _DEFAULT_ELEVATION: Elevation = Elevation.MIDLAND
+
+    # The four elevation biomes, anchored high in the matrix instead of resolved
+    # by a separate override pass: (temperature, precipitation, altitude) centre.
+    _ELEVATION_ANCHORS: dict[Biome, tuple[Temperature, Precipitation, Elevation]] = {
+        Biome.MONTANE_FOREST: (
+            Temperature.MILD,
+            Precipitation.WET,
+            Elevation.HIGHLAND,
+        ),
+        Biome.MOOR: (Temperature.COOL, Precipitation.DELUGE, Elevation.HIGHLAND),
+        Biome.ALPINE_TUNDRA: (
+            Temperature.COOL,
+            Precipitation.SEASONAL,
+            Elevation.ALPINE,
+        ),
+        Biome.GLACIER: (Temperature.FREEZING, Precipitation.SEASONAL, Elevation.SUMMIT),
+    }
+
+    _AQUATIC_GRID: dict[Hydrology, Biome] = {
+        Hydrology.STREAM: Biome.BROOK,
+        Hydrology.RIVER: Biome.RIVER,
+        Hydrology.LAKE: Biome.LAKE,
+        Hydrology.ESTUARY: Biome.ESTUARY,
+        Hydrology.INLAND_SEA: Biome.LAKE,
+        Hydrology.SEA: Biome.LITTORAL,
+        Hydrology.OCEAN: Biome.OPEN_OCEAN,
+    }
+
+    _SHORE_GRID: dict[tuple[Hydrology, Elevation], Biome] = {
+        (Hydrology.BEACH, Elevation.LOWLAND): Biome.BEACH,
+        (Hydrology.BEACH, Elevation.BASIN): Biome.BEACH,
+        (Hydrology.BEACH, Elevation.ROLLING): Biome.BEACH,
+        (Hydrology.CLIFF, Elevation.LOWLAND): Biome.SEA_CLIFF,
+        (Hydrology.CLIFF, Elevation.HIGHLAND): Biome.SEA_CLIFF,
+        (Hydrology.CLIFF, Elevation.ALPINE): Biome.SEA_CLIFF,
+        (Hydrology.CLIFF, Elevation.SUMMIT): Biome.SEA_CLIFF,
+        (Hydrology.HEADLAND, Elevation.LOWLAND): Biome.HEADLAND,
+        (Hydrology.HEADLAND, Elevation.ROLLING): Biome.HEADLAND,
+        (Hydrology.HEADLAND, Elevation.HIGHLAND): Biome.HEADLAND,
+        (Hydrology.TIDAL_FLAT, Elevation.LOWLAND): Biome.TIDAL_FLAT,
+        (Hydrology.TIDAL_FLAT, Elevation.BASIN): Biome.TIDAL_FLAT,
+    }
+
+    _SUBTERRANEAN_GRID: dict[Elevation, Biome] = {
+        Elevation.ABYSSAL: Biome.ABYSS,
+        Elevation.BURIED: Biome.VAULT,
+        Elevation.DEEP: Biome.DEEP_CAVERN,
+        Elevation.LOW: Biome.CAVERN,
+        Elevation.SHALLOW: Biome.CELLAR,
+        Elevation.SUBGRADE: Biome.CRYPT,
+    }
+
+    # Climate / terrain bands used to refine salt and fresh water.
+    _WET_PRECIP: frozenset[Precipitation] = frozenset(
+        {Precipitation.WET, Precipitation.DELUGE}
+    )
+    _COLD_TEMPS: frozenset[Temperature] = frozenset(
+        {Temperature.FREEZING, Temperature.COOL}
+    )
+    _WARM_TEMPS: frozenset[Temperature] = frozenset({Temperature.WARM, Temperature.HOT})
+    _SHALLOW_DEPTH: frozenset[WaterDepth] = frozenset({WaterDepth.SHALLOW})
+    _FRESHWATER_HYDROLOGY: frozenset[Hydrology] = frozenset(
+        {Hydrology.RIVER, Hydrology.LAKE, Hydrology.INLAND_SEA}
+    )
+    _SALT_HYDROLOGY: frozenset[Hydrology] = frozenset({Hydrology.SEA, Hydrology.OCEAN})
+    _DRY_LAND_HYDROLOGY: frozenset[Hydrology] = frozenset({Hydrology.NONE})
+
+    def __init__(self) -> None:
+        self._temperature_index = {
+            temperature: index for index, temperature in enumerate(Temperature)
+        }
+        self._precipitation_index = {
+            precipitation: index for index, precipitation in enumerate(Precipitation)
+        }
+        self._altitude_index = {
+            elevation: index for index, elevation in enumerate(self._SURFACE_ELEVATIONS)
+        }
+        self._underground = frozenset(self._SUBTERRANEAN_GRID)
+        self._anchors = self._build_anchors()
+
+    def resolve(
+        self,
+        *,
+        temperature: Temperature,
+        precipitation: Precipitation,
+        elevation: Elevation,
+        hydrology: Hydrology = Hydrology.NONE,
+        water_depth: WaterDepth = WaterDepth.NONE,
+    ) -> Biome:
+        """Resolve the biome for a tile or location."""
+        if hydrology in SHORE_HYDROLOGY:
+            return self._shore_biome(hydrology, elevation)
+        if hydrology not in self._DRY_LAND_HYDROLOGY:
+            return self._aquatic_biome(
+                hydrology,
+                temperature=temperature,
+                precipitation=precipitation,
+                water_depth=water_depth,
+            )
+        if elevation in self._underground:
+            return self._SUBTERRANEAN_GRID[elevation]
+        return self._surface_biome(temperature, precipitation, elevation)
+
+    def _build_anchors(self) -> dict[Biome, tuple[float, float, float]]:
+        anchors = {
+            biome: self._anchor(temperature, precipitation, self._DEFAULT_ELEVATION)
+            for (temperature, precipitation), biome in self._SURFACE_GRID.items()
+        }
+        for biome, (
+            temperature,
+            precipitation,
+            elevation,
+        ) in self._ELEVATION_ANCHORS.items():
+            anchors[biome] = self._anchor(temperature, precipitation, elevation)
+        return anchors
+
+    def _anchor(
+        self,
+        temperature: Temperature,
+        precipitation: Precipitation,
+        elevation: Elevation,
+    ) -> tuple[float, float, float]:
+        return (
+            float(self._temperature_index[temperature]),
+            float(self._precipitation_index[precipitation]),
+            float(self._altitude_index[elevation]),
+        )
+
+    def _surface_biome(
+        self,
+        temperature: Temperature,
+        precipitation: Precipitation,
+        elevation: Elevation,
+    ) -> Biome:
+        """Resolve the surface biome nearest to the climate-altitude point."""
+        return self._nearest_anchor(self._anchor(temperature, precipitation, elevation))
+
+    def _nearest_anchor(self, point: tuple[float, float, float]) -> Biome:
+        temperature_value, precipitation_value, altitude_value = point
+        return min(
+            self._anchors,
+            key=lambda biome: (
+                (self._anchors[biome][0] - temperature_value) ** 2
+                + (self._anchors[biome][1] - precipitation_value) ** 2
+                + (self._anchors[biome][2] - altitude_value) ** 2
+            ),
+        )
+
+    def _shore_biome(self, hydrology: Hydrology, elevation: Elevation) -> Biome:
+        """Resolve the shore biome from the hydrology × elevation grid."""
+        key = (hydrology, elevation)
+        if key in self._SHORE_GRID:
+            return self._SHORE_GRID[key]
+        fallback = (hydrology, Elevation.LOWLAND)
+        if fallback in self._SHORE_GRID:
+            return self._SHORE_GRID[fallback]
+        raise ValueError(f"unsupported shore hydrology and elevation: {key!r}")
+
+    def _aquatic_biome(
+        self,
+        hydrology: Hydrology,
+        *,
+        temperature: Temperature,
+        precipitation: Precipitation,
+        water_depth: WaterDepth,
+    ) -> Biome:
+        """Resolve the aquatic biome from the hydrology grid, refined by climate."""
+        if (
+            hydrology in self._FRESHWATER_HYDROLOGY
+            and temperature == Temperature.FREEZING
+        ):
+            return Biome.ICE_SHELF
+
+        if hydrology in self._SALT_HYDROLOGY:
+            if temperature == Temperature.FREEZING:
+                return Biome.POLAR_SEA
+            if hydrology == Hydrology.OCEAN:
+                return Biome.OPEN_OCEAN
+            if (
+                water_depth in self._SHALLOW_DEPTH
+                and temperature in self._COLD_TEMPS
+                and precipitation in self._WET_PRECIP
+            ):
+                return Biome.KELP_FOREST
+            if (
+                water_depth in self._SHALLOW_DEPTH
+                and temperature in self._WARM_TEMPS
+                and precipitation in self._WET_PRECIP
+            ):
+                return Biome.CORAL_REEF
+            return Biome.LITTORAL
+
+        return self._AQUATIC_GRID[hydrology]
 
 
-def get_subterranean_biome(elevation: Elevation) -> Biome:
-    return _SUBTERRANEAN_BIOMES_ELEVATION_GRID[elevation]
+BIOME_MATRIX = BiomeMatrix()
