@@ -10,13 +10,15 @@ from src.core.model.weather import WeatherData
 @dataclass
 class LocationData:
     id: str
-    environment: EnvironmentData
-    weather: WeatherData
-    
-
+    name: str
+    description: str
+    #environment: EnvironmentData
+    #weather: WeatherData
 
 @dataclass
 class LocationState:
     location: LocationData
+    #environment: EnvironmentData
+    #weather: WeatherData
     neighbors: list[LocationData] = field(default_factory=list)
     entities: list[EntityData] = field(default_factory=list)
