@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from enum import StrEnum
 
 from src.core.model.climate import Precipitation, Temperature
@@ -35,7 +36,7 @@ class Biome(StrEnum):
     BUSHVELD = "bushveld"
     MONSOON_FOREST = "monsoon_forest"
     RAINFOREST = "rainforest"
-    # ── Elevation biomes (high-altitude anchors) ─────────────────────────────
+    # ── Elevation biomes (high-elevation anchors) ───────────────────────────
     MOOR = "moor"
     MONTANE_FOREST = "montane_forest"
     ALPINE_TUNDRA = "alpine_tundra"
@@ -121,12 +122,14 @@ BIOME: dict[Biome, str] = {
 class BiomeMatrix:
     """Resolve biomes from climate and terrain via a nearest-anchor matrix.
 
-    Surface biomes are points in (temperature, precipitation, altitude) space.
-    The climate grid anchors 25 biomes at the midland default altitude; four
-    elevation biomes anchor higher up. Any surface point resolves to its nearest
-    anchor, so band-centre inputs reproduce the grid while off-centre inputs fall
-    to the closest neighbour. Shore, aquatic, and subterranean tiles branch out
-    of the matrix before it is consulted.
+    The surface is a 5x5x5 cube: temperature, precipitation, and elevation are
+    each a five-band scale centred on its neutral default (mild, seasonal,
+    midland), so the ordinary temperate lowland sits at the origin and every
+    biome is a deviation outward. The climate grid anchors 25 biomes on the
+    midland plane; four elevation biomes anchor higher up. Any surface point
+    resolves to its nearest anchor, so band-centre inputs reproduce the grid
+    while off-centre inputs fall to the closest neighbour. Shore, aquatic, and
+    subterranean tiles branch out of the matrix before it is consulted.
     """
 
     # ── Surface climate grid (5×5: temperature × precipitation) ───────────────
@@ -158,22 +161,23 @@ class BiomeMatrix:
         (Temperature.HOT, Precipitation.DELUGE): Biome.RAINFOREST,
     }
 
-    # The open-air elevation bands, low to high; altitude is the third axis.
+    # The open-air elevation bands, low to high; elevation is the third axis,
+    # centred on the midland default just as temperature centres on mild.
     _SURFACE_ELEVATIONS: tuple[Elevation, ...] = (
         Elevation.LOWLAND,
-        Elevation.BASIN,
         Elevation.ROLLING,
         Elevation.MIDLAND,
         Elevation.HIGHLAND,
-        Elevation.ALPINE,
         Elevation.SUMMIT,
     )
-    # The climate biomes anchor at this default altitude; band-centre tiles here
-    # reproduce the climate grid exactly.
+    # The climate biomes anchor at this default elevation (the centre of the
+    # axis); band-centre tiles here reproduce the climate grid exactly.
     _DEFAULT_ELEVATION: Elevation = Elevation.MIDLAND
 
     # The four elevation biomes, anchored high in the matrix instead of resolved
-    # by a separate override pass: (temperature, precipitation, altitude) centre.
+    # by a separate override pass: (temperature, precipitation, elevation) centre.
+    # At the peak, temperature alone separates glacier, alpine tundra, and the
+    # montane/moor pair a step below.
     _ELEVATION_ANCHORS: dict[Biome, tuple[Temperature, Precipitation, Elevation]] = {
         Biome.MONTANE_FOREST: (
             Temperature.MILD,
@@ -184,7 +188,7 @@ class BiomeMatrix:
         Biome.ALPINE_TUNDRA: (
             Temperature.COOL,
             Precipitation.SEASONAL,
-            Elevation.ALPINE,
+            Elevation.SUMMIT,
         ),
         Biome.GLACIER: (Temperature.FREEZING, Precipitation.SEASONAL, Elevation.SUMMIT),
     }
@@ -256,17 +260,18 @@ class BiomeMatrix:
     }
 
     def __init__(self) -> None:
-        self._temperature_index = {
-            temperature: index for index, temperature in enumerate(Temperature)
-        }
-        self._precipitation_index = {
-            precipitation: index for index, precipitation in enumerate(Precipitation)
-        }
-        self._altitude_index = {
-            elevation: index for index, elevation in enumerate(self._SURFACE_ELEVATIONS)
-        }
+        self._temperature_index = self._centered_index(Temperature)
+        self._precipitation_index = self._centered_index(Precipitation)
+        self._elevation_index = self._centered_index(self._SURFACE_ELEVATIONS)
         self._underground = frozenset(self._SUBTERRANEAN_GRID)
         self._anchors = self._build_anchors()
+
+    @staticmethod
+    def _centered_index[T](bands: Iterable[T]) -> dict[T, int]:
+        """Map each ordered band to a coordinate centred on the middle band."""
+        members = tuple(bands)
+        centre = (len(members) - 1) // 2
+        return {member: index - centre for index, member in enumerate(members)}
 
     def resolve(
         self,
@@ -308,7 +313,7 @@ class BiomeMatrix:
         return (
             float(self._temperature_index[temperature]),
             float(self._precipitation_index[precipitation]),
-            float(self._altitude_index[elevation]),
+            float(self._elevation_index[elevation]),
         )
 
     def _surface_biome(
@@ -317,17 +322,17 @@ class BiomeMatrix:
         precipitation: Precipitation,
         elevation: Elevation,
     ) -> Biome:
-        """Resolve the surface biome nearest to the climate-altitude point."""
+        """Resolve the surface biome nearest to the climate-elevation point."""
         return self._nearest_anchor(self._anchor(temperature, precipitation, elevation))
 
     def _nearest_anchor(self, point: tuple[float, float, float]) -> Biome:
-        temperature_value, precipitation_value, altitude_value = point
+        temperature_value, precipitation_value, elevation_value = point
         return min(
             self._anchors,
             key=lambda biome: (
                 (self._anchors[biome][0] - temperature_value) ** 2
                 + (self._anchors[biome][1] - precipitation_value) ** 2
-                + (self._anchors[biome][2] - altitude_value) ** 2
+                + (self._anchors[biome][2] - elevation_value) ** 2
             ),
         )
 

@@ -10,7 +10,7 @@ from src.core.model.terrain import SHORE_HYDROLOGY, Elevation, Hydrology, WaterD
 
 
 def _surface(temperature: Temperature, precipitation: Precipitation) -> Biome:
-    """Resolve a dry-land climate band pair at the default (midland) altitude."""
+    """Resolve a dry-land climate band pair at the default (midland) elevation."""
     return BIOME_MATRIX.resolve(
         temperature=temperature,
         precipitation=precipitation,
@@ -43,31 +43,41 @@ def test_hydrology_grid_biome(hydrology: Hydrology, expected: Biome) -> None:
 
 
 @pytest.mark.parametrize(
-    ("hydrology", "elevation", "expected"),
+    ("hydrology", "expected"),
     [
-        (Hydrology.BEACH, Elevation.LOWLAND, Biome.BEACH),
-        (Hydrology.BEACH, Elevation.ROLLING, Biome.BEACH),
-        (Hydrology.CLIFF, Elevation.LOWLAND, Biome.SEA_CLIFF),
-        (Hydrology.CLIFF, Elevation.HIGHLAND, Biome.SEA_CLIFF),
-        (Hydrology.CLIFF, Elevation.ALPINE, Biome.SEA_CLIFF),
-        (Hydrology.HEADLAND, Elevation.LOWLAND, Biome.HEADLAND),
-        (Hydrology.HEADLAND, Elevation.HIGHLAND, Biome.HEADLAND),
-        (Hydrology.TIDAL_FLAT, Elevation.LOWLAND, Biome.TIDAL_FLAT),
-        (Hydrology.TIDAL_FLAT, Elevation.BASIN, Biome.TIDAL_FLAT),
+        (Hydrology.BEACH, Biome.BEACH),
+        (Hydrology.CLIFF, Biome.SEA_CLIFF),
+        (Hydrology.HEADLAND, Biome.HEADLAND),
+        (Hydrology.TIDAL_FLAT, Biome.TIDAL_FLAT),
     ],
 )
-def test_shore_hydrology_elevation_grid(
-    hydrology: Hydrology, elevation: Elevation, expected: Biome
-) -> None:
+def test_shore_hydrology_biome(hydrology: Hydrology, expected: Biome) -> None:
     assert (
         BIOME_MATRIX.resolve(
             temperature=Temperature.MILD,
             precipitation=Precipitation.WET,
-            elevation=elevation,
+            elevation=Elevation.LOWLAND,
             hydrology=hydrology,
         )
         == expected
     )
+
+
+def test_shore_biome_ignores_elevation() -> None:
+    """A cliff is a sea cliff whether it meets the water low or high."""
+    low = BIOME_MATRIX.resolve(
+        temperature=Temperature.MILD,
+        precipitation=Precipitation.WET,
+        elevation=Elevation.LOWLAND,
+        hydrology=Hydrology.CLIFF,
+    )
+    high = BIOME_MATRIX.resolve(
+        temperature=Temperature.MILD,
+        precipitation=Precipitation.WET,
+        elevation=Elevation.SUMMIT,
+        hydrology=Hydrology.CLIFF,
+    )
+    assert low == high == Biome.SEA_CLIFF
 
 
 def test_cliff_over_ocean_at_highland_is_sea_cliff_not_montane_forest() -> None:
@@ -248,7 +258,7 @@ def test_band_centre_anchors_reproduce_the_climate_grid() -> None:
         (
             Temperature.COOL,
             Precipitation.SEASONAL,
-            Elevation.ALPINE,
+            Elevation.SUMMIT,
             Biome.ALPINE_TUNDRA,
         ),
         (
@@ -271,7 +281,7 @@ def test_elevation_biomes_resolve_at_their_anchors(
     elevation: Elevation,
     expected: Biome,
 ) -> None:
-    """The four elevation biomes win at their high-altitude anchor points."""
+    """The four elevation biomes win at their high-elevation anchor points."""
     assert (
         BIOME_MATRIX.resolve(
             temperature=temperature,
@@ -283,7 +293,7 @@ def test_elevation_biomes_resolve_at_their_anchors(
     )
 
 
-def test_default_altitude_keeps_the_climate_biome() -> None:
+def test_default_elevation_keeps_the_climate_biome() -> None:
     """A forest at the midland default stays its climate biome, not montane."""
     assert _surface(Temperature.MILD, Precipitation.SEASONAL) == Biome.TEMPERATE_FOREST
 

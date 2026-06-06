@@ -12,11 +12,9 @@ class Elevation(StrEnum):
     SHALLOW = "shallow"
     SUBGRADE = "subgrade"
     LOWLAND = "lowland"
-    BASIN = "basin"
     ROLLING = "rolling"
     MIDLAND = "midland"
     HIGHLAND = "highland"
-    ALPINE = "alpine"
     SUMMIT = "summit"
 
 
@@ -28,11 +26,9 @@ ELEVATION: dict[Elevation, str] = {
     Elevation.SHALLOW: "cellars, basements, service tunnels",
     Elevation.SUBGRADE: "just below street level; crypts, sunken passages",
     Elevation.LOWLAND: "lowest open air; coast, docks, marshes, river bottoms",
-    Elevation.BASIN: "sunken valley or bowl; sheltered below surroundings",
     Elevation.ROLLING: "gentle hills, foothills, sloped countryside",
     Elevation.MIDLAND: "typical settled elevation; anchor (like mild)",
     Elevation.HIGHLAND: "noticeably elevated; windier overlooks",
-    Elevation.ALPINE: "harsh high slopes; thin air; snow line",
     Elevation.SUMMIT: "peak, aerie, exposed crown; nowhere higher",
 }
 
