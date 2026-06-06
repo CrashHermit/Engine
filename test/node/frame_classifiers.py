@@ -117,3 +117,47 @@ async def test_target_classifies_when_ambiguous():
         result = await node(_state(entities=[_entity("Spider"), _entity("Golem")]))
     assert result == {"target_entity": "Spider"}  # stripped
     fake.assert_awaited_once()
+
+
+# ── fan-out contract: the five framing classifiers write disjoint keys ──────
+@pytest.mark.asyncio
+async def test_framing_classifiers_write_five_disjoint_keys():
+    """Pin the disjoint-write contract the parallel fan-out relies on.
+
+    fan_out_frame_and_threats runs these five classifiers concurrently and
+    leans on each writing a key no sibling writes (disjoint-key writes never
+    raise, so LangGraph cannot catch a collision for us — see routers.py).
+    This asserts structurally what that docstring asserts in prose: each node
+    returns exactly one key, and the five are the disjoint contract set. If a
+    node ever grows a second write or reaches into a sibling's key, this fails.
+    """
+    cases = [
+        (ApproachNode(), Prediction(attribute=Channel.MENS), _state()),
+        (PillarNode(), Prediction(pillar=ThreatPillar.WILLING), _state()),
+        (PushNode(), Prediction(push=True), _state()),
+        # Two entities forces the LLM path so target writes via a prediction too.
+        (
+            TargetNode(),
+            Prediction(target="Spider"),
+            _state(entities=[_entity("Spider"), _entity("Golem")]),
+        ),
+        (DurationNode(), Prediction(unit=Unit.SIX_SECONDS), _state()),
+    ]
+    written: list[str] = []
+    for node, prediction, state in cases:
+        with patch.object(
+            node._program, "aforward", new=AsyncMock(return_value=prediction)
+        ):
+            result = await node(state)
+        assert len(result) == 1, f"{type(node).__name__} wrote more than one key"
+        written.extend(result)
+
+    # Pairwise disjoint (set collapses nothing) and equal to the documented set.
+    assert len(written) == len(set(written)) == 5
+    assert set(written) == {
+        "attribute",
+        "target_pillar",
+        "push_for_effect",
+        "target_entity",
+        "beat_span",
+    }

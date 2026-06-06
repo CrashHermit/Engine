@@ -23,7 +23,7 @@ def test_fan_out_covers_framing_then_threats():
     sends = fan_out_frame_and_threats(state)
     targets = [s.node for s in sends]
 
-    # All four discrete framing classifiers fan out, exactly once each...
+    # All five discrete framing classifiers fan out, exactly once each...
     assert targets[: len(FRAME_BRANCHES)] == list(FRAME_BRANCHES)
     # ...alongside the threat branches (the hostile creature + the environment).
     assert targets[len(FRAME_BRANCHES) :] == ["classify_threat", "classify_threat"]
