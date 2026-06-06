@@ -189,29 +189,61 @@ class BiomeMatrix:
         Biome.GLACIER: (Temperature.FREEZING, Precipitation.SEASONAL, Elevation.SUMMIT),
     }
 
-    _AQUATIC_GRID: dict[Hydrology, Biome] = {
-        Hydrology.STREAM: Biome.BROOK,
-        Hydrology.RIVER: Biome.RIVER,
-        Hydrology.LAKE: Biome.LAKE,
-        Hydrology.ESTUARY: Biome.ESTUARY,
-        Hydrology.INLAND_SEA: Biome.LAKE,
-        Hydrology.SEA: Biome.LITTORAL,
-        Hydrology.OCEAN: Biome.OPEN_OCEAN,
+    # Shore biome is a function of the shore hydrology alone.
+    _SHORE_GRID: dict[Hydrology, Biome] = {
+        Hydrology.BEACH: Biome.BEACH,
+        Hydrology.CLIFF: Biome.SEA_CLIFF,
+        Hydrology.HEADLAND: Biome.HEADLAND,
+        Hydrology.TIDAL_FLAT: Biome.TIDAL_FLAT,
     }
 
-    _SHORE_GRID: dict[tuple[Hydrology, Elevation], Biome] = {
-        (Hydrology.BEACH, Elevation.LOWLAND): Biome.BEACH,
-        (Hydrology.BEACH, Elevation.BASIN): Biome.BEACH,
-        (Hydrology.BEACH, Elevation.ROLLING): Biome.BEACH,
-        (Hydrology.CLIFF, Elevation.LOWLAND): Biome.SEA_CLIFF,
-        (Hydrology.CLIFF, Elevation.HIGHLAND): Biome.SEA_CLIFF,
-        (Hydrology.CLIFF, Elevation.ALPINE): Biome.SEA_CLIFF,
-        (Hydrology.CLIFF, Elevation.SUMMIT): Biome.SEA_CLIFF,
-        (Hydrology.HEADLAND, Elevation.LOWLAND): Biome.HEADLAND,
-        (Hydrology.HEADLAND, Elevation.ROLLING): Biome.HEADLAND,
-        (Hydrology.HEADLAND, Elevation.HIGHLAND): Biome.HEADLAND,
-        (Hydrology.TIDAL_FLAT, Elevation.LOWLAND): Biome.TIDAL_FLAT,
-        (Hydrology.TIDAL_FLAT, Elevation.BASIN): Biome.TIDAL_FLAT,
+    # ── Aquatic grid (hydrology × temperature) ────────────────────────────────
+    # Standing fresh water freezes to ice; salt water freezes to polar sea and
+    # opens to ocean offshore. The shallow overlay below adds reefs and kelp.
+    _AQUATIC_GRID: dict[tuple[Hydrology, Temperature], Biome] = {
+        (Hydrology.STREAM, Temperature.FREEZING): Biome.BROOK,
+        (Hydrology.STREAM, Temperature.COOL): Biome.BROOK,
+        (Hydrology.STREAM, Temperature.MILD): Biome.BROOK,
+        (Hydrology.STREAM, Temperature.WARM): Biome.BROOK,
+        (Hydrology.STREAM, Temperature.HOT): Biome.BROOK,
+        (Hydrology.RIVER, Temperature.FREEZING): Biome.ICE_SHELF,
+        (Hydrology.RIVER, Temperature.COOL): Biome.RIVER,
+        (Hydrology.RIVER, Temperature.MILD): Biome.RIVER,
+        (Hydrology.RIVER, Temperature.WARM): Biome.RIVER,
+        (Hydrology.RIVER, Temperature.HOT): Biome.RIVER,
+        (Hydrology.LAKE, Temperature.FREEZING): Biome.ICE_SHELF,
+        (Hydrology.LAKE, Temperature.COOL): Biome.LAKE,
+        (Hydrology.LAKE, Temperature.MILD): Biome.LAKE,
+        (Hydrology.LAKE, Temperature.WARM): Biome.LAKE,
+        (Hydrology.LAKE, Temperature.HOT): Biome.LAKE,
+        (Hydrology.INLAND_SEA, Temperature.FREEZING): Biome.ICE_SHELF,
+        (Hydrology.INLAND_SEA, Temperature.COOL): Biome.LAKE,
+        (Hydrology.INLAND_SEA, Temperature.MILD): Biome.LAKE,
+        (Hydrology.INLAND_SEA, Temperature.WARM): Biome.LAKE,
+        (Hydrology.INLAND_SEA, Temperature.HOT): Biome.LAKE,
+        (Hydrology.ESTUARY, Temperature.FREEZING): Biome.ESTUARY,
+        (Hydrology.ESTUARY, Temperature.COOL): Biome.ESTUARY,
+        (Hydrology.ESTUARY, Temperature.MILD): Biome.ESTUARY,
+        (Hydrology.ESTUARY, Temperature.WARM): Biome.ESTUARY,
+        (Hydrology.ESTUARY, Temperature.HOT): Biome.ESTUARY,
+        (Hydrology.SEA, Temperature.FREEZING): Biome.POLAR_SEA,
+        (Hydrology.SEA, Temperature.COOL): Biome.LITTORAL,
+        (Hydrology.SEA, Temperature.MILD): Biome.LITTORAL,
+        (Hydrology.SEA, Temperature.WARM): Biome.LITTORAL,
+        (Hydrology.SEA, Temperature.HOT): Biome.LITTORAL,
+        (Hydrology.OCEAN, Temperature.FREEZING): Biome.POLAR_SEA,
+        (Hydrology.OCEAN, Temperature.COOL): Biome.OPEN_OCEAN,
+        (Hydrology.OCEAN, Temperature.MILD): Biome.OPEN_OCEAN,
+        (Hydrology.OCEAN, Temperature.WARM): Biome.OPEN_OCEAN,
+        (Hydrology.OCEAN, Temperature.HOT): Biome.OPEN_OCEAN,
+    }
+
+    # Shallow salt water grows reefs and kelp; consulted only when shallow, and
+    # falls through to the aquatic grid for any pair it does not cover.
+    _SHALLOW_SEA_GRID: dict[tuple[Hydrology, Temperature], Biome] = {
+        (Hydrology.SEA, Temperature.COOL): Biome.KELP_FOREST,
+        (Hydrology.SEA, Temperature.WARM): Biome.CORAL_REEF,
+        (Hydrology.SEA, Temperature.HOT): Biome.CORAL_REEF,
     }
 
     _SUBTERRANEAN_GRID: dict[Elevation, Biome] = {
@@ -222,21 +254,6 @@ class BiomeMatrix:
         Elevation.SHALLOW: Biome.CELLAR,
         Elevation.SUBGRADE: Biome.CRYPT,
     }
-
-    # Climate / terrain bands used to refine salt and fresh water.
-    _WET_PRECIP: frozenset[Precipitation] = frozenset(
-        {Precipitation.WET, Precipitation.DELUGE}
-    )
-    _COLD_TEMPS: frozenset[Temperature] = frozenset(
-        {Temperature.FREEZING, Temperature.COOL}
-    )
-    _WARM_TEMPS: frozenset[Temperature] = frozenset({Temperature.WARM, Temperature.HOT})
-    _SHALLOW_DEPTH: frozenset[WaterDepth] = frozenset({WaterDepth.SHALLOW})
-    _FRESHWATER_HYDROLOGY: frozenset[Hydrology] = frozenset(
-        {Hydrology.RIVER, Hydrology.LAKE, Hydrology.INLAND_SEA}
-    )
-    _SALT_HYDROLOGY: frozenset[Hydrology] = frozenset({Hydrology.SEA, Hydrology.OCEAN})
-    _DRY_LAND_HYDROLOGY: frozenset[Hydrology] = frozenset({Hydrology.NONE})
 
     def __init__(self) -> None:
         self._temperature_index = {
@@ -262,14 +279,9 @@ class BiomeMatrix:
     ) -> Biome:
         """Resolve the biome for a tile or location."""
         if hydrology in SHORE_HYDROLOGY:
-            return self._shore_biome(hydrology, elevation)
-        if hydrology not in self._DRY_LAND_HYDROLOGY:
-            return self._aquatic_biome(
-                hydrology,
-                temperature=temperature,
-                precipitation=precipitation,
-                water_depth=water_depth,
-            )
+            return self._SHORE_GRID[hydrology]
+        if hydrology != Hydrology.NONE:
+            return self._aquatic_biome(hydrology, temperature, water_depth)
         if elevation in self._underground:
             return self._SUBTERRANEAN_GRID[elevation]
         return self._surface_biome(temperature, precipitation, elevation)
@@ -319,51 +331,18 @@ class BiomeMatrix:
             ),
         )
 
-    def _shore_biome(self, hydrology: Hydrology, elevation: Elevation) -> Biome:
-        """Resolve the shore biome from the hydrology × elevation grid."""
-        key = (hydrology, elevation)
-        if key in self._SHORE_GRID:
-            return self._SHORE_GRID[key]
-        fallback = (hydrology, Elevation.LOWLAND)
-        if fallback in self._SHORE_GRID:
-            return self._SHORE_GRID[fallback]
-        raise ValueError(f"unsupported shore hydrology and elevation: {key!r}")
-
     def _aquatic_biome(
         self,
         hydrology: Hydrology,
-        *,
         temperature: Temperature,
-        precipitation: Precipitation,
         water_depth: WaterDepth,
     ) -> Biome:
-        """Resolve the aquatic biome from the hydrology grid, refined by climate."""
-        if (
-            hydrology in self._FRESHWATER_HYDROLOGY
-            and temperature == Temperature.FREEZING
-        ):
-            return Biome.ICE_SHELF
-
-        if hydrology in self._SALT_HYDROLOGY:
-            if temperature == Temperature.FREEZING:
-                return Biome.POLAR_SEA
-            if hydrology == Hydrology.OCEAN:
-                return Biome.OPEN_OCEAN
-            if (
-                water_depth in self._SHALLOW_DEPTH
-                and temperature in self._COLD_TEMPS
-                and precipitation in self._WET_PRECIP
-            ):
-                return Biome.KELP_FOREST
-            if (
-                water_depth in self._SHALLOW_DEPTH
-                and temperature in self._WARM_TEMPS
-                and precipitation in self._WET_PRECIP
-            ):
-                return Biome.CORAL_REEF
-            return Biome.LITTORAL
-
-        return self._AQUATIC_GRID[hydrology]
+        """Resolve the aquatic biome from the hydrology × temperature grid."""
+        if water_depth == WaterDepth.SHALLOW:
+            shallow = self._SHALLOW_SEA_GRID.get((hydrology, temperature))
+            if shallow is not None:
+                return shallow
+        return self._AQUATIC_GRID[hydrology, temperature]
 
 
 BIOME_MATRIX = BiomeMatrix()

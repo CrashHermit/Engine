@@ -6,7 +6,7 @@ import pytest
 
 from src.core.model.biome import BIOME_MATRIX, Biome, BiomeMatrix
 from src.core.model.climate import Precipitation, Temperature
-from src.core.model.terrain import Elevation, Hydrology, WaterDepth
+from src.core.model.terrain import SHORE_HYDROLOGY, Elevation, Hydrology, WaterDepth
 
 
 def _surface(temperature: Temperature, precipitation: Precipitation) -> Biome:
@@ -286,3 +286,33 @@ def test_elevation_biomes_resolve_at_their_anchors(
 def test_default_altitude_keeps_the_climate_biome() -> None:
     """A forest at the midland default stays its climate biome, not montane."""
     assert _surface(Temperature.MILD, Precipitation.SEASONAL) == Biome.TEMPERATE_FOREST
+
+
+def test_aquatic_grid_covers_every_water_body_and_temperature() -> None:
+    """The aquatic grid is square: every water body × temperature pair is set."""
+    water = [
+        hydrology
+        for hydrology in Hydrology
+        if hydrology not in SHORE_HYDROLOGY and hydrology != Hydrology.NONE
+    ]
+    expected = {
+        (hydrology, temperature) for hydrology in water for temperature in Temperature
+    }
+    assert set(BiomeMatrix._AQUATIC_GRID) == expected
+
+
+@pytest.mark.parametrize("precipitation", list(Precipitation))
+def test_shallow_warm_sea_is_coral_regardless_of_precipitation(
+    precipitation: Precipitation,
+) -> None:
+    """Shallow warm seas reef on temperature alone; rainfall no longer matters."""
+    assert (
+        BIOME_MATRIX.resolve(
+            temperature=Temperature.WARM,
+            precipitation=precipitation,
+            elevation=Elevation.LOWLAND,
+            hydrology=Hydrology.SEA,
+            water_depth=WaterDepth.SHALLOW,
+        )
+        == Biome.CORAL_REEF
+    )
