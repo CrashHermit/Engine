@@ -33,12 +33,13 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "resolution": arcadedb.PropertyType.STRING,
     "pillar_profile": arcadedb.PropertyType.STRING,
     "disposition": arcadedb.PropertyType.STRING,
-    "elapsed_ticks": arcadedb.PropertyType.INTEGER,
+    "elapsed_ticks": arcadedb.PropertyType.LONG,
 }
 
 BASELINE_PROPERTIES: list[str] = ["id", "created_at", "updated_at", "invalidated_at"]
 
 VERTEX_SCHEMA: dict[VertexType, list[str]] = {
+    VertexType.TIME: ["elapsed_ticks"],
     VertexType.USER: [],
     VertexType.LOCATION: ["name", "description", "is_center"],
     VertexType.PART: [
@@ -93,6 +94,7 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
 }
 
 EDGE_SCHEMA: dict[EdgeType, list[str]] = {
+    EdgeType.HAS_TIME: [],
     EdgeType.HAS_CORPUS: [],
     EdgeType.HAS_MENS: [],
     EdgeType.HAS_ANIMA: [],

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from database.repository.time import TimeRepository
 from arcadedb_embedded.graph import Vertex
+from src.core.model.time import WorldDateTime
 
 
 class TimeService:
@@ -22,15 +23,36 @@ class TimeService:
         current_ticks: int = time_vertex.get(name="elapsed_ticks")
         return current_ticks
 
-    def advance_elapsed_ticks(self, delta_ticks: int) -> int:
-        """Advance the world clock by `delta_ticks` and return the new elapsed ticks.
-
-        A non-positive delta is a no-op.
+    def update_elapsed_ticks(self, elapsed_ticks: int) -> int:
         """
-        time_vertex: Vertex = self._time.advance_elapsed_ticks(delta_ticks)
+        Update the elapsed ticks to the given value.
+        """
+        time_vertex: Vertex = self._time.update_elapsed_ticks(elapsed_ticks)
         return time_vertex.get(name="elapsed_ticks")
+        
+    def create_time_vertex(self, elapsed_ticks: int) -> Vertex:
+        """
+        Create a new time vertex.
+        """
+        return self._time.create_time_vertex(elapsed_ticks)
 
-    def get_current_world_time(self) -> datetime:
-        """Return the current world time as a datetime object."""
+    def get_current_world_time(self) -> WorldDateTime:
+        """Return the current world time as a WorldDateTime object."""
+
         elapsed_ticks: int = self.get_elapsed_ticks()
-        return datetime.fromtimestamp(elapsed_ticks * 6)
+        seconds: int = elapsed_ticks * 6
+        minutes: int = seconds // 60
+        hours: int = minutes // 60
+        days: int = hours // 24
+        weeks: int = days // 7
+        months: int = weeks // 4
+        years: int = months // 12
+
+        return WorldDateTime(
+            year=years,
+            month=months,
+            day=days,
+            hour=hours,
+            minute=minutes,
+            second=seconds,
+        )
