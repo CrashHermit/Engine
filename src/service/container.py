@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import logging
-
 import arcadedb_embedded
 from arcadedb_embedded.core import Database
 
@@ -34,7 +32,6 @@ class ServiceContainer:
         world_name: str,
         graph_service: GraphService,
     ) -> None:
-        self._logger = logging.getLogger("engine.service.container")
         self._database: Database = database
         self.world_name: str = world_name
         self.graph_service: GraphService = graph_service
@@ -49,4 +46,3 @@ class ServiceContainer:
         self.location: LocationService = LocationService(base, locations, characters)
         self.message: MessageService = MessageService(base, messages)
         self.time: TimeService = TimeService(worlds)
-        self._logger.info("service container ready world=%s", world_name)

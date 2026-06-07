@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from core.model.terrain import Depth, Hydrology
+from core.model.climate import Temperature
 from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Protocol
@@ -342,14 +344,14 @@ class BiomeMatrix:
         # overlay precedes open water so reefs and kelp beat plain littoral, and
         # every water/underground stage precedes the total surface fallback.
         self._pipeline: tuple[Resolver, ...] = (
-            Lookup(key=_hydrology, table=self._SHORE_GRID),
-            Lookup(
+            Lookup[Hydrology](key=_hydrology, table=self._SHORE_GRID),
+            Lookup[tuple[Hydrology, Temperature]](
                 key=_hydrology_temperature,
                 table=self._SHALLOW_SEA_GRID,
                 when=_is_shallow,
             ),
-            Lookup(key=_hydrology_temperature, table=self._AQUATIC_GRID),
-            Lookup(key=_depth, table=self._SUBTERRANEAN_GRID),
+            Lookup[tuple[Hydrology, Temperature]](key=_hydrology_temperature, table=self._AQUATIC_GRID),
+            Lookup[Depth](key=_depth, table=self._SUBTERRANEAN_GRID),
             Geometric(anchors=self._build_anchors(), project=_surface_point),
         )
 

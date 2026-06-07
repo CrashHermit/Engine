@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 
 from arcadedb_embedded.graph import Vertex
 
@@ -28,7 +27,6 @@ class LocationService:
         locations: LocationRepository,
         characters: CharacterRepository,
     ) -> None:
-        self._logger = logging.getLogger("engine.service.location")
         self._base = base
         self._locations = locations
         self._characters = characters
@@ -43,18 +41,12 @@ class LocationService:
             raise ValueError(f"Character not found: {character_id}")
         location = self._characters.get_current_location(character)
         state = self._build_state(location) if location is not None else None
-        self._logger.debug(
-            "get_state_for_character id=%s found=%s", character_id, state is not None
-        )
         return state
 
     def move_character(
         self, character_id: str, destination_id: str
     ) -> LocationState | None:
         """Move the character to a connected location and return the new state."""
-        self._logger.info(
-            "move_character id=%s destination=%s", character_id, destination_id
-        )
         character = self._characters.get_character(character_id)
         if character is None:
             raise ValueError(f"Character not found: {character_id}")
@@ -127,7 +119,6 @@ class LocationService:
 
     def remove_entity(self, entity_id: str) -> None:
         """Remove a defeated entity from the world."""
-        self._logger.info("remove_entity id=%s", entity_id)
         with self._base.transaction():
             vertex = self._locations.get_entity(entity_id)
             if vertex is not None:

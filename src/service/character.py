@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import logging
-
 from arcadedb_embedded.graph import Vertex
 
 from src.core.mechanic.economy import DEFAULT_ECONOMY_CONFIG
@@ -35,7 +33,6 @@ class CharacterService:
         characters: CharacterRepository,
         worlds: WorldRepository,
     ) -> None:
-        self._logger = logging.getLogger("engine.service.character")
         self._base = base
         self._characters = characters
         self._worlds = worlds
@@ -43,9 +40,7 @@ class CharacterService:
     # Reads
 
     def list_characters(self) -> list[CharacterData]:
-        data = [self._to_data(v) for v in self._characters.list_characters()]
-        self._logger.debug("list_characters count=%s", len(data))
-        return data
+        return [self._to_data(v) for v in self._characters.list_characters()]
 
     def get_character(self, character_id: str) -> CharacterData | None:
         vertex = self._characters.get_character(character_id)
@@ -66,7 +61,6 @@ class CharacterService:
         neuroticism: int,
         conscientiousness: int,
     ) -> CharacterData:
-        self._logger.info("create_character name=%s", name)
         attribute_values = {
             VertexType.CORPUS: corpus,
             VertexType.MENS: mens,
@@ -108,16 +102,12 @@ class CharacterService:
 
     def set_economy(self, character_id: str, *, stress: int, trauma: int) -> None:
         """Persist the per-run economy (stress / trauma) back onto the character."""
-        self._logger.debug(
-            "set_economy id=%s stress=%s trauma=%s", character_id, stress, trauma
-        )
         character = self._require(character_id)
         with self._base.transaction():
             self._characters.set_stress(character, stress)
             self._characters.set_trauma(character, trauma)
 
     def delete_character(self, character_id: str) -> None:
-        self._logger.info("delete_character id=%s", character_id)
         character = self._require(character_id)
         with self._base.transaction():
             self._characters.delete_character(character)

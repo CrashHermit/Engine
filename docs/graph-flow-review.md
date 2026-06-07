@@ -33,7 +33,6 @@ the native LangGraph shape:
 - `Send` payloads are now plain dict copies (`{**state, ...}` / `dict(state)`) —
   the native channel payload. This **removes** the old `model_copy` hazard the
   `routers.py` docstrings warned about (those comments were updated/inverted).
-- `LoggedNode` logs `dict(state)` instead of `state.model_dump()`.
 
 ### Verification
 - Full suite green (`115 passed`); tests asserting the old Pydantic Send contract

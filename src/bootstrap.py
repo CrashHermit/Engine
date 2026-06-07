@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import logging
-
 from src.database.connection import DatabaseConnection
 from src.database.server import Server
 from src.service.checkpoint import CheckpointService
@@ -19,7 +17,6 @@ class AppBootstrap:
     """
 
     def __init__(self) -> None:
-        self._logger = logging.getLogger("engine.bootstrap")
         self.server: Server | None = None
         self.connection: DatabaseConnection | None = None
         self.checkpoint: CheckpointService = CheckpointService()
@@ -27,7 +24,6 @@ class AppBootstrap:
 
     def start_server(self) -> None:
         """Start the embedded DB server and open a connection (synchronous)."""
-        self._logger.info("starting database server")
         self.server = Server()
         self.server.start()
         self.connection = DatabaseConnection(self.server)
@@ -42,7 +38,6 @@ class AppBootstrap:
             self.connection,
             checkpointer=self.checkpoint.saver,
         )
-        self._logger.info("world session factory ready")
         return self.factory
 
     async def stop(self) -> None:

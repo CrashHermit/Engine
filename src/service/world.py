@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import logging
 
 from arcadedb_embedded.core import Database
 from arcadedb_embedded.graph import Vertex
@@ -26,7 +25,6 @@ class WorldService:
     """
 
     def __init__(self, connection: DatabaseConnection) -> None:
-        self._logger = logging.getLogger("engine.service.world")
         self._connection: DatabaseConnection = connection
 
     def create_world(
@@ -35,7 +33,6 @@ class WorldService:
         description: str,
         size: int,
     ) -> None:
-        self._logger.info("create_world name=%s", name)
         world_data: WorldData = WorldData(
             name=name,
             description=description,
@@ -64,7 +61,6 @@ class WorldService:
                 base.create_edge(
                     type_name=EdgeType.HAS_START, source=world, target=start
                 )
-        self._logger.info("create_world complete name=%s", name)
 
     def _seed_dungeon(
         self, location_repo: LocationRepository, dungeon: DungeonData | None

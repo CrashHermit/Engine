@@ -577,7 +577,7 @@ real ELITE creature; everything else is an OBJECT.
 Per turn the candidate threat sources are **every ACTIVE scene entity + `environment`**.
 A LangGraph **`Send` fan-out** runs one `classify_threat` branch per source (each Send
 carries a full `GraphState` copy — Send does **not** coerce a dict into the pydantic
-schema, so a bare dict would break `LoggedNode`/attribute access). Each branch decides
+schema, so a bare dict would break node/attribute access). Each branch decides
 *threat-or-none* and, if it threatens, emits one `Threat {source, type, channel,
 magnitude, position, id}` into `pending_threats` (an `operator.add` channel);
 `gather_threats` copies them into the plain `threats` list. Anchoring is belt-and-

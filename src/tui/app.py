@@ -4,7 +4,6 @@ from textual.app import App
 from textual.binding import Binding
 
 from src.bootstrap import AppBootstrap
-from src.logging_utils import configure_logging
 from src.tui.screens.start import StartScreen
 
 
@@ -20,7 +19,6 @@ class GameApp(App):
 
     def __init__(self) -> None:
         super().__init__()
-        configure_logging()
         # Composition root lives in src/bootstrap so the TUI never imports
         # src/database directly. Screens read `self.app.bootstrap.connection`
         # and `self.app.bootstrap.factory`.

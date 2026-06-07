@@ -3,7 +3,6 @@ from __future__ import annotations
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 
-from src.graph.logged_node import LoggedNode
 from src.graph.routers import (
     FRAME_BRANCHES,
     fan_out_ambush,
@@ -62,7 +61,7 @@ class ResolutionGraphBuilder:
         return self.workflow.compile()
 
     def _node(self, name: str, node: object) -> None:
-        self.workflow.add_node(name, LoggedNode(name, node))
+        self.workflow.add_node(name, node)
 
     def _add_frame(self) -> None:
         """Scope the turn: wake creatures (engagement), gate the roll, and route.

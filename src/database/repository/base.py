@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -15,7 +14,6 @@ from src.core.model.database import EdgeType, VertexType
 
 class BaseRepository:
     def __init__(self, database: arcadedb.Database) -> None:
-        self._logger = logging.getLogger("engine.repository.base")
         self._database: arcadedb.Database = database
         self._now: datetime | None = None
 
@@ -25,12 +23,10 @@ class BaseRepository:
             yield
             return
         self._now = datetime.now(tz=UTC)
-        self._logger.debug("begin transaction")
         try:
             with self._database.transaction():
                 yield
         finally:
-            self._logger.debug("end transaction")
             self._now = None
 
     def _current_time(self) -> datetime:
@@ -43,9 +39,6 @@ class BaseRepository:
         properties.setdefault("id", str(uuid.uuid4()))
         properties.setdefault("created_at", now)
         properties.setdefault("updated_at", now)
-        self._logger.debug(
-            "create vertex type=%s keys=%s", type_name, list(properties.keys())
-        )
         with self.transaction():
             vertex: Vertex = self._database.new_vertex(type_name=type_name)
             for name, value in properties.items():
@@ -60,23 +53,18 @@ class BaseRepository:
             return [self.create_vertex(type_name=type_name, **item) for item in items]
 
     def get_vertex(self, type_name: VertexType, id: str) -> Vertex | None:
-        self._logger.debug("get vertex type=%s id=%s", type_name, id)
         return self._database.lookup_by_key(
             type_name=type_name, keys=["id"], values=[id]
         )
 
     def update_vertex(self, vertex: Vertex, **properties: Any) -> None:
         properties.setdefault("updated_at", self._current_time())
-        self._logger.debug(
-            "update vertex rid=%s keys=%s", vertex.get_rid(), list(properties.keys())
-        )
         mutable: Vertex = vertex.modify()
         for name, value in properties.items():
             mutable.set(name=name, value=value)
         mutable.save()
 
     def delete_vertex(self, vertex: Vertex) -> None:
-        self._logger.debug("delete vertex rid=%s", vertex.get_rid())
         vertex.delete()
 
     def invalidate_vertex(self, vertex: Vertex) -> None:
@@ -97,13 +85,6 @@ class BaseRepository:
         now = self._current_time()
         properties.setdefault("created_at", now)
         properties.setdefault("updated_at", now)
-        self._logger.debug(
-            "create edge type=%s source=%s target=%s keys=%s",
-            type_name,
-            source.get_rid(),
-            target.get_rid(),
-            list(properties.keys()),
-        )
 
         with self.transaction():
             return source.new_edge(label=type_name, target=target, **properties)
@@ -124,16 +105,12 @@ class BaseRepository:
 
     def update_edge(self, edge: Edge, **properties: Any) -> None:
         properties.setdefault("updated_at", self._current_time())
-        self._logger.debug(
-            "update edge rid=%s keys=%s", edge.get_rid(), list(properties.keys())
-        )
         mutable: Edge = edge.modify()
         for name, value in properties.items():
             mutable.set(name=name, value=value)
         mutable.save()
 
     def delete_edge(self, edge: Edge) -> None:
-        self._logger.debug("delete edge rid=%s", edge.get_rid())
         edge.delete()
 
     def invalidate_edge(self, edge: Edge) -> None:
@@ -145,6 +122,5 @@ class BaseRepository:
     # Query operations
 
     def list_vertices(self, type_name: VertexType) -> list[Vertex]:
-        self._logger.debug("list vertices type=%s", type_name)
         results = self._database.query("cypher", f"MATCH (n:{type_name}) RETURN n")
         return [v for r in results if (v := r.get_vertex()) is not None]
