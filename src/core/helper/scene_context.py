@@ -17,8 +17,9 @@ from src.core.model.location import LocationData
 from src.core.model.terrain import (
     DEPTH,
     ELEVATION,
+    EXPANSE,
     HYDROLOGY,
-    SHORE_HYDROLOGY,
+    SALINITY,
     WATER_DEPTH,
     Hydrology,
     TerrainData,
@@ -70,8 +71,11 @@ class SceneContextHelper:
             lines.append(f"Underground: {labeled(terrain.depth, DEPTH)}")
         if terrain.hydrology != Hydrology.NONE:
             lines.append(f"Hydrology: {labeled(terrain.hydrology, HYDROLOGY)}")
-            if terrain.hydrology not in SHORE_HYDROLOGY:
-                lines.append(f"Depth: {labeled(terrain.water_depth, WATER_DEPTH)}")
+        if terrain.water is not None:
+            water = terrain.water
+            lines.append(f"Salinity: {labeled(water.salinity, SALINITY)}")
+            lines.append(f"Expanse: {labeled(water.expanse, EXPANSE)}")
+            lines.append(f"Depth: {labeled(water.depth, WATER_DEPTH)}")
         return "\n".join(lines)
 
     def format_biome(self, biome: Biome) -> str:
