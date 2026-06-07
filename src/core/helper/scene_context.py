@@ -41,16 +41,7 @@ class SceneContextHelper:
         }
 
     def resolve_location_biome(self, location: LocationData) -> Biome:
-        terrain = location.environment.terrain
-        climate = location.environment.climate
-        return BIOME_MATRIX.resolve(
-            temperature=climate.temperature,
-            precipitation=climate.precipitation,
-            elevation=terrain.elevation,
-            hydrology=terrain.hydrology,
-            water_depth=terrain.water_depth,
-            depth=terrain.depth,
-        )
+        return BIOME_MATRIX.resolve(location.environment)
 
     def format_climate(self, climate: ClimateData) -> str:
         return "\n".join(

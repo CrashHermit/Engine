@@ -5,23 +5,43 @@ from __future__ import annotations
 import pytest
 
 from src.core.model.biome import BIOME_MATRIX, Biome, BiomeMatrix
-from src.core.model.climate import Precipitation, Temperature
+from src.core.model.climate import ClimateData, Precipitation, Temperature
+from src.core.model.environment import EnvironmentData
 from src.core.model.terrain import (
     SHORE_HYDROLOGY,
     Depth,
     Elevation,
     Hydrology,
+    TerrainData,
     WaterDepth,
 )
+
+
+def _env(
+    *,
+    temperature: Temperature = Temperature.MILD,
+    precipitation: Precipitation = Precipitation.SEASONAL,
+    elevation: Elevation = Elevation.MIDLAND,
+    hydrology: Hydrology = Hydrology.NONE,
+    water_depth: WaterDepth = WaterDepth.NONE,
+    depth: Depth | None = None,
+) -> EnvironmentData:
+    """Bundle loose climate/terrain features into an environment for resolve()."""
+    return EnvironmentData(
+        climate=ClimateData(temperature=temperature, precipitation=precipitation),
+        terrain=TerrainData(
+            elevation=elevation,
+            hydrology=hydrology,
+            water_depth=water_depth,
+            depth=depth,
+        ),
+    )
 
 
 def _surface(temperature: Temperature, precipitation: Precipitation) -> Biome:
     """Resolve a dry-land climate band pair at the default (midland) elevation."""
     return BIOME_MATRIX.resolve(
-        temperature=temperature,
-        precipitation=precipitation,
-        elevation=Elevation.MIDLAND,
-        hydrology=Hydrology.NONE,
+        _env(temperature=temperature, precipitation=precipitation)
     )
 
 
@@ -38,11 +58,11 @@ def _surface(temperature: Temperature, precipitation: Precipitation) -> Biome:
 def test_hydrology_grid_biome(hydrology: Hydrology, expected: Biome) -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.MILD,
-            precipitation=Precipitation.SEASONAL,
-            elevation=Elevation.LOWLAND,
-            hydrology=hydrology,
-            water_depth=WaterDepth.DEEP,
+            _env(
+                elevation=Elevation.LOWLAND,
+                hydrology=hydrology,
+                water_depth=WaterDepth.DEEP,
+            )
         )
         == expected
     )
@@ -60,10 +80,11 @@ def test_hydrology_grid_biome(hydrology: Hydrology, expected: Biome) -> None:
 def test_shore_hydrology_biome(hydrology: Hydrology, expected: Biome) -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.MILD,
-            precipitation=Precipitation.WET,
-            elevation=Elevation.LOWLAND,
-            hydrology=hydrology,
+            _env(
+                precipitation=Precipitation.WET,
+                elevation=Elevation.LOWLAND,
+                hydrology=hydrology,
+            )
         )
         == expected
     )
@@ -72,16 +93,18 @@ def test_shore_hydrology_biome(hydrology: Hydrology, expected: Biome) -> None:
 def test_shore_biome_ignores_elevation() -> None:
     """A cliff is a sea cliff whether it meets the water low or high."""
     low = BIOME_MATRIX.resolve(
-        temperature=Temperature.MILD,
-        precipitation=Precipitation.WET,
-        elevation=Elevation.LOWLAND,
-        hydrology=Hydrology.CLIFF,
+        _env(
+            precipitation=Precipitation.WET,
+            elevation=Elevation.LOWLAND,
+            hydrology=Hydrology.CLIFF,
+        )
     )
     high = BIOME_MATRIX.resolve(
-        temperature=Temperature.MILD,
-        precipitation=Precipitation.WET,
-        elevation=Elevation.SUMMIT,
-        hydrology=Hydrology.CLIFF,
+        _env(
+            precipitation=Precipitation.WET,
+            elevation=Elevation.SUMMIT,
+            hydrology=Hydrology.CLIFF,
+        )
     )
     assert low == high == Biome.SEA_CLIFF
 
@@ -89,10 +112,11 @@ def test_shore_biome_ignores_elevation() -> None:
 def test_cliff_over_ocean_at_highland_is_sea_cliff_not_montane_forest() -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.MILD,
-            precipitation=Precipitation.WET,
-            elevation=Elevation.HIGHLAND,
-            hydrology=Hydrology.CLIFF,
+            _env(
+                precipitation=Precipitation.WET,
+                elevation=Elevation.HIGHLAND,
+                hydrology=Hydrology.CLIFF,
+            )
         )
         == Biome.SEA_CLIFF
     )
@@ -101,11 +125,12 @@ def test_cliff_over_ocean_at_highland_is_sea_cliff_not_montane_forest() -> None:
 def test_estuary_hydrology_is_estuary() -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.MILD,
-            precipitation=Precipitation.WET,
-            elevation=Elevation.LOWLAND,
-            hydrology=Hydrology.ESTUARY,
-            water_depth=WaterDepth.MODERATE,
+            _env(
+                precipitation=Precipitation.WET,
+                elevation=Elevation.LOWLAND,
+                hydrology=Hydrology.ESTUARY,
+                water_depth=WaterDepth.MODERATE,
+            )
         )
         == Biome.ESTUARY
     )
@@ -114,11 +139,12 @@ def test_estuary_hydrology_is_estuary() -> None:
 def test_inland_sea_is_lake() -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.MILD,
-            precipitation=Precipitation.WET,
-            elevation=Elevation.LOWLAND,
-            hydrology=Hydrology.INLAND_SEA,
-            water_depth=WaterDepth.VERY_DEEP,
+            _env(
+                precipitation=Precipitation.WET,
+                elevation=Elevation.LOWLAND,
+                hydrology=Hydrology.INLAND_SEA,
+                water_depth=WaterDepth.VERY_DEEP,
+            )
         )
         == Biome.LAKE
     )
@@ -127,11 +153,13 @@ def test_inland_sea_is_lake() -> None:
 def test_frozen_river_is_ice_shelf() -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.FREEZING,
-            precipitation=Precipitation.WET,
-            elevation=Elevation.LOWLAND,
-            hydrology=Hydrology.RIVER,
-            water_depth=WaterDepth.DEEP,
+            _env(
+                temperature=Temperature.FREEZING,
+                precipitation=Precipitation.WET,
+                elevation=Elevation.LOWLAND,
+                hydrology=Hydrology.RIVER,
+                water_depth=WaterDepth.DEEP,
+            )
         )
         == Biome.ICE_SHELF
     )
@@ -140,11 +168,13 @@ def test_frozen_river_is_ice_shelf() -> None:
 def test_frozen_sea_is_polar_sea() -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.FREEZING,
-            precipitation=Precipitation.DRY,
-            elevation=Elevation.LOWLAND,
-            hydrology=Hydrology.SEA,
-            water_depth=WaterDepth.DEEP,
+            _env(
+                temperature=Temperature.FREEZING,
+                precipitation=Precipitation.DRY,
+                elevation=Elevation.LOWLAND,
+                hydrology=Hydrology.SEA,
+                water_depth=WaterDepth.DEEP,
+            )
         )
         == Biome.POLAR_SEA
     )
@@ -153,11 +183,13 @@ def test_frozen_sea_is_polar_sea() -> None:
 def test_shallow_cool_wet_sea_is_kelp_forest() -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.COOL,
-            precipitation=Precipitation.WET,
-            elevation=Elevation.LOWLAND,
-            hydrology=Hydrology.SEA,
-            water_depth=WaterDepth.SHALLOW,
+            _env(
+                temperature=Temperature.COOL,
+                precipitation=Precipitation.WET,
+                elevation=Elevation.LOWLAND,
+                hydrology=Hydrology.SEA,
+                water_depth=WaterDepth.SHALLOW,
+            )
         )
         == Biome.KELP_FOREST
     )
@@ -166,11 +198,13 @@ def test_shallow_cool_wet_sea_is_kelp_forest() -> None:
 def test_shallow_warm_wet_sea_is_coral_reef() -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.WARM,
-            precipitation=Precipitation.DELUGE,
-            elevation=Elevation.LOWLAND,
-            hydrology=Hydrology.SEA,
-            water_depth=WaterDepth.SHALLOW,
+            _env(
+                temperature=Temperature.WARM,
+                precipitation=Precipitation.DELUGE,
+                elevation=Elevation.LOWLAND,
+                hydrology=Hydrology.SEA,
+                water_depth=WaterDepth.SHALLOW,
+            )
         )
         == Biome.CORAL_REEF
     )
@@ -179,12 +213,11 @@ def test_shallow_warm_wet_sea_is_coral_reef() -> None:
 def test_hydrology_overrides_underground() -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.MILD,
-            precipitation=Precipitation.SEASONAL,
-            elevation=Elevation.MIDLAND,
-            hydrology=Hydrology.LAKE,
-            water_depth=WaterDepth.DEEP,
-            depth=Depth.LOW,
+            _env(
+                hydrology=Hydrology.LAKE,
+                water_depth=WaterDepth.DEEP,
+                depth=Depth.LOW,
+            )
         )
         == Biome.LAKE
     )
@@ -201,24 +234,16 @@ def test_hydrology_overrides_underground() -> None:
     ],
 )
 def test_depth_resolves_subterranean_biome(depth: Depth, expected: Biome) -> None:
-    assert (
-        BIOME_MATRIX.resolve(
-            temperature=Temperature.MILD,
-            precipitation=Precipitation.SEASONAL,
-            elevation=Elevation.MIDLAND,
-            depth=depth,
-        )
-        == expected
-    )
+    assert BIOME_MATRIX.resolve(_env(depth=depth)) == expected
 
 
 def test_inland_lowland_wet_is_not_shore_biome() -> None:
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.MILD,
-            precipitation=Precipitation.WET,
-            elevation=Elevation.LOWLAND,
-            hydrology=Hydrology.NONE,
+            _env(
+                precipitation=Precipitation.WET,
+                elevation=Elevation.LOWLAND,
+            )
         )
         == Biome.TEMPERATE_RAINFOREST
     )
@@ -313,10 +338,11 @@ def test_elevation_biomes_resolve_at_their_anchors(
     """The four elevation biomes win at their high-elevation anchor points."""
     assert (
         BIOME_MATRIX.resolve(
-            temperature=temperature,
-            precipitation=precipitation,
-            elevation=elevation,
-            hydrology=Hydrology.NONE,
+            _env(
+                temperature=temperature,
+                precipitation=precipitation,
+                elevation=elevation,
+            )
         )
         == expected
     )
@@ -347,11 +373,13 @@ def test_shallow_warm_sea_is_coral_regardless_of_precipitation(
     """Shallow warm seas reef on temperature alone; rainfall no longer matters."""
     assert (
         BIOME_MATRIX.resolve(
-            temperature=Temperature.WARM,
-            precipitation=precipitation,
-            elevation=Elevation.LOWLAND,
-            hydrology=Hydrology.SEA,
-            water_depth=WaterDepth.SHALLOW,
+            _env(
+                temperature=Temperature.WARM,
+                precipitation=precipitation,
+                elevation=Elevation.LOWLAND,
+                hydrology=Hydrology.SEA,
+                water_depth=WaterDepth.SHALLOW,
+            )
         )
         == Biome.CORAL_REEF
     )
