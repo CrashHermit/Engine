@@ -1,14 +1,11 @@
 from __future__ import annotations
 
-from enum import StrEnum
-from typing import TypeVar
-
-E = TypeVar("E", bound=StrEnum)
+from enum import Enum
 
 
-def describe(member: E, descriptions: dict[E, str]) -> str:
+def describe[E: Enum](member: E, descriptions: dict[E, str]) -> str:
     return descriptions[member]
 
 
-def labeled(member: E, descriptions: dict[E, str]) -> str:
-    return f"{member.value} — {descriptions[member]}"
+def labeled[E: Enum](member: E, descriptions: dict[E, str]) -> str:
+    return f"{member.name.lower()} — {descriptions[member]}"
