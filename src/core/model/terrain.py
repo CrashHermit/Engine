@@ -39,18 +39,18 @@ DEPTH: dict[Depth, str] = {
 
 
 class Hydrology(StrEnum):
+    """Where land meets water: dry ground or a categorical shore landform.
+
+    Open water is no longer modelled here — it is an ordinal medium (see
+    ``WaterData``). This axis is for the land's relationship to the waterline,
+    which is a shape, not a scale.
+    """
+
     NONE = "none"
     BEACH = "beach"
     CLIFF = "cliff"
     HEADLAND = "headland"
     TIDAL_FLAT = "tidal_flat"
-    STREAM = "stream"
-    RIVER = "river"
-    LAKE = "lake"
-    ESTUARY = "estuary"
-    INLAND_SEA = "inland_sea"
-    SEA = "sea"
-    OCEAN = "ocean"
 
 
 HYDROLOGY: dict[Hydrology, str] = {
@@ -59,13 +59,6 @@ HYDROLOGY: dict[Hydrology, str] = {
     Hydrology.CLIFF: "sea cliff; dry rock face dropping to open water below",
     Hydrology.HEADLAND: "rocky promontory; headland jutting into open water",
     Hydrology.TIDAL_FLAT: "tidal flat; mud, salt marsh edge, channels at low tide",
-    Hydrology.STREAM: "brook, creek; wadeable freshwater flow",
-    Hydrology.RIVER: "strong current; ford, bridge, or boat; freshwater",
-    Hydrology.LAKE: "standing freshwater; shores, wind fetch, waves",
-    Hydrology.ESTUARY: "brackish tidal mix; mudflats, salt marsh edge",
-    Hydrology.INLAND_SEA: "freshwater at ocean scale; Great Lakes, inland seas",
-    Hydrology.SEA: "nearshore salt water; swell, spray, tides",
-    Hydrology.OCEAN: "pelagic salt water; deep; no land in sight",
 }
 
 SHORE_HYDROLOGY: frozenset[Hydrology] = frozenset(
@@ -78,26 +71,70 @@ SHORE_HYDROLOGY: frozenset[Hydrology] = frozenset(
 )
 
 
-class WaterDepth(StrEnum):
-    NONE = "none"
-    SHALLOW = "shallow"
-    MODERATE = "moderate"
-    DEEP = "deep"
-    VERY_DEEP = "very_deep"
+class Salinity(IntEnum):
+    FRESH = 0
+    BRACKISH = 2
+    SALINE = 4
+
+
+SALINITY: dict[Salinity, str] = {
+    Salinity.FRESH: "freshwater; rivers, lakes, springs",
+    Salinity.BRACKISH: "brackish; estuary mixing, salt marsh, tidal reach",
+    Salinity.SALINE: "salt water; seas and open ocean",
+}
+
+
+class Expanse(IntEnum):
+    CHANNEL = 0
+    COURSE = 1
+    BASIN = 2
+    NEARSHORE = 3
+    OPEN = 4
+
+
+EXPANSE: dict[Expanse, str] = {
+    Expanse.CHANNEL: "narrow flow; brook, creek, ditch",
+    Expanse.COURSE: "broad flow; river current, no easy ford",
+    Expanse.BASIN: "enclosed standing water; pond, lake, lagoon",
+    Expanse.NEARSHORE: "coastal margin; bays and shallows within sight of land",
+    Expanse.OPEN: "open water; pelagic reach, no land in sight",
+}
+
+
+class WaterDepth(IntEnum):
+    NONE = 0
+    SHALLOW = 1
+    MODERATE = 2
+    DEEP = 3
+    VERY_DEEP = 4
 
 
 WATER_DEPTH: dict[WaterDepth, str] = {
     WaterDepth.NONE: "dry land; no open water",
-    WaterDepth.SHALLOW: "shallow water; ankle deep",
-    WaterDepth.MODERATE: "moderate water; waist deep",
-    WaterDepth.DEEP: "deep water; head deep",
-    WaterDepth.VERY_DEEP: "very deep water; neck deep",
+    WaterDepth.SHALLOW: "shallow; wadeable, sunlit bottom",
+    WaterDepth.MODERATE: "moderate; over the head, bottom still near",
+    WaterDepth.DEEP: "deep; dark below, no footing",
+    WaterDepth.VERY_DEEP: "very deep; abyssal reach",
 }
+
+
+@dataclass
+class WaterData:
+    """An open body of water as a point on three ordinal axes.
+
+    Salinity, expanse, and depth vary independently, so combinations the old
+    named water bodies never spelled out (a warm shallow brackish lagoon) are
+    expressible and resolve to their nearest known biome.
+    """
+
+    salinity: Salinity = Salinity.FRESH
+    expanse: Expanse = Expanse.BASIN
+    depth: WaterDepth = WaterDepth.MODERATE
 
 
 @dataclass
 class TerrainData:
     elevation: Elevation = Elevation.MIDLAND
     hydrology: Hydrology = Hydrology.NONE
-    water_depth: WaterDepth = WaterDepth.NONE
+    water: WaterData | None = None
     depth: Depth | None = None

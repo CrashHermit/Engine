@@ -9,7 +9,14 @@ from typing import Protocol
 
 from src.core.model.climate import Precipitation, Temperature
 from src.core.model.environment import EnvironmentData
-from src.core.model.terrain import Depth, Elevation, Hydrology, WaterDepth
+from src.core.model.terrain import (
+    Depth,
+    Elevation,
+    Expanse,
+    Hydrology,
+    Salinity,
+    WaterDepth,
+)
 
 
 class Biome(StrEnum):
@@ -156,14 +163,18 @@ class Geometric:
     """Claim a tile by its nearest anchor across ordinal axes.
 
     The right primitive for features where "between" is meaningful, so a point
-    off the authored anchors falls to its closest neighbour. Total — every point
-    has a nearest anchor — so this is always the terminal resolver.
+    off the authored anchors falls to its closest neighbour. Total within its
+    domain — every point has a nearest anchor — so an unguarded ``Geometric`` is
+    a terminal resolver; a ``when`` guard scopes it to one medium (open water).
     """
 
     anchors: Mapping[Biome, tuple[float, ...]]
     project: Callable[[EnvironmentData], tuple[float, ...]]
+    when: Callable[[EnvironmentData], bool] = field(default=lambda env: True)
 
-    def resolve(self, env: EnvironmentData) -> Biome:
+    def resolve(self, env: EnvironmentData) -> Biome | None:
+        if not self.when(env):
+            return None
         point = self.project(env)
         return min(
             self.anchors,
@@ -175,16 +186,23 @@ def _hydrology(env: EnvironmentData) -> Hydrology:
     return env.terrain.hydrology
 
 
-def _hydrology_temperature(env: EnvironmentData) -> tuple[Hydrology, Temperature]:
-    return (env.terrain.hydrology, env.climate.temperature)
-
-
 def _depth(env: EnvironmentData) -> Depth | None:
     return env.terrain.depth
 
 
-def _is_shallow(env: EnvironmentData) -> bool:
-    return env.terrain.water_depth == WaterDepth.SHALLOW
+def _is_water(env: EnvironmentData) -> bool:
+    return env.terrain.water is not None
+
+
+def _water_point(env: EnvironmentData) -> tuple[float, float, float, float]:
+    water = env.terrain.water
+    assert water is not None  # guaranteed by the _is_water guard
+    return (
+        float(water.salinity),
+        float(water.expanse),
+        float(env.climate.temperature),
+        float(water.depth),
+    )
 
 
 def _surface_point(env: EnvironmentData) -> tuple[float, float, float]:
@@ -280,53 +298,68 @@ class BiomeMatrix:
         Hydrology.TIDAL_FLAT: Biome.TIDAL_FLAT,
     }
 
-    # ── Aquatic grid (hydrology × temperature) ────────────────────────────────
-    # Standing fresh water freezes to ice; salt water freezes to polar sea and
-    # opens to ocean offshore. The shallow overlay below adds reefs and kelp.
-    _AQUATIC_GRID: dict[tuple[Hydrology, Temperature], Biome] = {
-        (Hydrology.STREAM, Temperature.FREEZING): Biome.BROOK,
-        (Hydrology.STREAM, Temperature.COOL): Biome.BROOK,
-        (Hydrology.STREAM, Temperature.MILD): Biome.BROOK,
-        (Hydrology.STREAM, Temperature.WARM): Biome.BROOK,
-        (Hydrology.STREAM, Temperature.HOT): Biome.BROOK,
-        (Hydrology.RIVER, Temperature.FREEZING): Biome.ICE_SHELF,
-        (Hydrology.RIVER, Temperature.COOL): Biome.RIVER,
-        (Hydrology.RIVER, Temperature.MILD): Biome.RIVER,
-        (Hydrology.RIVER, Temperature.WARM): Biome.RIVER,
-        (Hydrology.RIVER, Temperature.HOT): Biome.RIVER,
-        (Hydrology.LAKE, Temperature.FREEZING): Biome.ICE_SHELF,
-        (Hydrology.LAKE, Temperature.COOL): Biome.LAKE,
-        (Hydrology.LAKE, Temperature.MILD): Biome.LAKE,
-        (Hydrology.LAKE, Temperature.WARM): Biome.LAKE,
-        (Hydrology.LAKE, Temperature.HOT): Biome.LAKE,
-        (Hydrology.INLAND_SEA, Temperature.FREEZING): Biome.ICE_SHELF,
-        (Hydrology.INLAND_SEA, Temperature.COOL): Biome.LAKE,
-        (Hydrology.INLAND_SEA, Temperature.MILD): Biome.LAKE,
-        (Hydrology.INLAND_SEA, Temperature.WARM): Biome.LAKE,
-        (Hydrology.INLAND_SEA, Temperature.HOT): Biome.LAKE,
-        (Hydrology.ESTUARY, Temperature.FREEZING): Biome.ESTUARY,
-        (Hydrology.ESTUARY, Temperature.COOL): Biome.ESTUARY,
-        (Hydrology.ESTUARY, Temperature.MILD): Biome.ESTUARY,
-        (Hydrology.ESTUARY, Temperature.WARM): Biome.ESTUARY,
-        (Hydrology.ESTUARY, Temperature.HOT): Biome.ESTUARY,
-        (Hydrology.SEA, Temperature.FREEZING): Biome.POLAR_SEA,
-        (Hydrology.SEA, Temperature.COOL): Biome.LITTORAL,
-        (Hydrology.SEA, Temperature.MILD): Biome.LITTORAL,
-        (Hydrology.SEA, Temperature.WARM): Biome.LITTORAL,
-        (Hydrology.SEA, Temperature.HOT): Biome.LITTORAL,
-        (Hydrology.OCEAN, Temperature.FREEZING): Biome.POLAR_SEA,
-        (Hydrology.OCEAN, Temperature.COOL): Biome.OPEN_OCEAN,
-        (Hydrology.OCEAN, Temperature.MILD): Biome.OPEN_OCEAN,
-        (Hydrology.OCEAN, Temperature.WARM): Biome.OPEN_OCEAN,
-        (Hydrology.OCEAN, Temperature.HOT): Biome.OPEN_OCEAN,
-    }
-
-    # Shallow salt water grows reefs and kelp; consulted only when shallow, and
-    # falls through to the aquatic grid for any pair it does not cover.
-    _SHALLOW_SEA_GRID: dict[tuple[Hydrology, Temperature], Biome] = {
-        (Hydrology.SEA, Temperature.COOL): Biome.KELP_FOREST,
-        (Hydrology.SEA, Temperature.WARM): Biome.CORAL_REEF,
-        (Hydrology.SEA, Temperature.HOT): Biome.CORAL_REEF,
+    # ── Aquatic anchors (salinity × expanse × temperature × depth) ────────────
+    # Open water is its own ordinal cube, resolved by nearest anchor like the
+    # surface. Freezing pulls fresh water to ice and salt water to polar sea;
+    # shallow salt nearshore warms to reef or cools to kelp. These transitions
+    # are anchor geometry now, not branches — a body off the named points (a
+    # warm shallow brackish lagoon) still falls to its closest known biome.
+    _AQUATIC_ANCHORS: dict[Biome, tuple[Salinity, Expanse, Temperature, WaterDepth]] = {
+        Biome.BROOK: (
+            Salinity.FRESH,
+            Expanse.CHANNEL,
+            Temperature.MILD,
+            WaterDepth.SHALLOW,
+        ),
+        Biome.RIVER: (
+            Salinity.FRESH,
+            Expanse.COURSE,
+            Temperature.MILD,
+            WaterDepth.DEEP,
+        ),
+        Biome.LAKE: (Salinity.FRESH, Expanse.BASIN, Temperature.MILD, WaterDepth.DEEP),
+        Biome.ICE_SHELF: (
+            Salinity.FRESH,
+            Expanse.BASIN,
+            Temperature.FREEZING,
+            WaterDepth.DEEP,
+        ),
+        Biome.ESTUARY: (
+            Salinity.BRACKISH,
+            Expanse.BASIN,
+            Temperature.MILD,
+            WaterDepth.MODERATE,
+        ),
+        Biome.LITTORAL: (
+            Salinity.SALINE,
+            Expanse.NEARSHORE,
+            Temperature.MILD,
+            WaterDepth.DEEP,
+        ),
+        Biome.KELP_FOREST: (
+            Salinity.SALINE,
+            Expanse.NEARSHORE,
+            Temperature.COOL,
+            WaterDepth.SHALLOW,
+        ),
+        Biome.CORAL_REEF: (
+            Salinity.SALINE,
+            Expanse.NEARSHORE,
+            Temperature.WARM,
+            WaterDepth.SHALLOW,
+        ),
+        Biome.OPEN_OCEAN: (
+            Salinity.SALINE,
+            Expanse.OPEN,
+            Temperature.MILD,
+            WaterDepth.DEEP,
+        ),
+        Biome.POLAR_SEA: (
+            Salinity.SALINE,
+            Expanse.OPEN,
+            Temperature.FREEZING,
+            WaterDepth.DEEP,
+        ),
     }
 
     _SUBTERRANEAN_GRID: dict[Depth, Biome] = {
@@ -338,17 +371,17 @@ class BiomeMatrix:
     }
 
     def __init__(self) -> None:
-        # Priority pipeline; first resolver to claim the tile wins. The shallow
-        # overlay precedes open water so reefs and kelp beat plain littoral, and
-        # every water/underground stage precedes the total surface fallback.
+        # Priority pipeline; first resolver to claim the tile wins. Categorical
+        # media — shore landforms, underground — resolve by Lookup; the open-air
+        # surface and open water are ordinal and resolve by nearest anchor. The
+        # unguarded surface resolver is total, so it sits last as the fallback.
+        aquatic_anchors = {
+            biome: tuple(float(band) for band in bands)
+            for biome, bands in self._AQUATIC_ANCHORS.items()
+        }
         self._pipeline: tuple[Resolver, ...] = (
             Lookup(key=_hydrology, table=self._SHORE_GRID),
-            Lookup(
-                key=_hydrology_temperature,
-                table=self._SHALLOW_SEA_GRID,
-                when=_is_shallow,
-            ),
-            Lookup(key=_hydrology_temperature, table=self._AQUATIC_GRID),
+            Geometric(anchors=aquatic_anchors, project=_water_point, when=_is_water),
             Lookup(key=_depth, table=self._SUBTERRANEAN_GRID),
             Geometric(anchors=self._build_anchors(), project=_surface_point),
         )
@@ -359,7 +392,7 @@ class BiomeMatrix:
             biome = resolver.resolve(env)
             if biome is not None:
                 return biome
-        raise AssertionError("the geometric resolver is total")
+        raise AssertionError("the surface resolver is total")
 
     def _build_anchors(self) -> dict[Biome, tuple[float, float, float]]:
         anchors = {
