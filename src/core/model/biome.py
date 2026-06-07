@@ -2,11 +2,16 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
 from enum import StrEnum
 
 from src.core.model.climate import Precipitation, Temperature
-from src.core.model.terrain import SHORE_HYDROLOGY, Elevation, Hydrology, WaterDepth
+from src.core.model.terrain import (
+    SHORE_HYDROLOGY,
+    Depth,
+    Elevation,
+    Hydrology,
+    WaterDepth,
+)
 
 
 class Biome(StrEnum):
@@ -57,9 +62,8 @@ class Biome(StrEnum):
     OPEN_OCEAN = "open_ocean"
     POLAR_SEA = "polar_sea"
     ICE_SHELF = "ice_shelf"
-    # ── Underground (elevation below lowland) ───────────────────────────────
+    # ── Underground (depth 0–4) ─────────────────────────────────────────────
     ABYSS = "abyss"
-    VAULT = "vault"
     DEEP_CAVERN = "deep_cavern"
     CAVERN = "cavern"
     CELLAR = "cellar"
@@ -111,7 +115,6 @@ BIOME: dict[Biome, str] = {
     Biome.POLAR_SEA: "freezing salt water; pack ice, bitter cold",
     Biome.ICE_SHELF: "frozen-over freshwater; creaking ice",
     Biome.ABYSS: "abyssal vaults; days from daylight",
-    Biome.VAULT: "buried deep works; far from sky",
     Biome.DEEP_CAVERN: "established deep halls; mines, cisterns",
     Biome.CAVERN: "typical underground; sewers, natural caves",
     Biome.CELLAR: "shallow underworks; basements, service tunnels",
@@ -123,13 +126,12 @@ class BiomeMatrix:
     """Resolve biomes from climate and terrain via a nearest-anchor matrix.
 
     The surface is a 5x5x5 cube: temperature, precipitation, and elevation are
-    each a five-band scale centred on its neutral default (mild, seasonal,
-    midland), so the ordinary temperate lowland sits at the origin and every
-    biome is a deviation outward. The climate grid anchors 25 biomes on the
-    midland plane; four elevation biomes anchor higher up. Any surface point
-    resolves to its nearest anchor, so band-centre inputs reproduce the grid
-    while off-centre inputs fall to the closest neighbour. Shore, aquatic, and
-    subterranean tiles branch out of the matrix before it is consulted.
+    each a 0-4 band scale, and the enum values are the coordinates themselves.
+    The climate grid anchors 25 biomes on the midland plane; four elevation
+    biomes anchor higher up. A surface point resolves to its nearest anchor, so
+    band inputs reproduce the grid while interpolated inputs fall to the closest
+    neighbour. Shore, aquatic, and subterranean tiles branch out of the matrix
+    before it is consulted.
     """
 
     # ── Surface climate grid (5×5: temperature × precipitation) ───────────────
@@ -161,17 +163,8 @@ class BiomeMatrix:
         (Temperature.HOT, Precipitation.DELUGE): Biome.RAINFOREST,
     }
 
-    # The open-air elevation bands, low to high; elevation is the third axis,
-    # centred on the midland default just as temperature centres on mild.
-    _SURFACE_ELEVATIONS: tuple[Elevation, ...] = (
-        Elevation.LOWLAND,
-        Elevation.ROLLING,
-        Elevation.MIDLAND,
-        Elevation.HIGHLAND,
-        Elevation.SUMMIT,
-    )
-    # The climate biomes anchor at this default elevation (the centre of the
-    # axis); band-centre tiles here reproduce the climate grid exactly.
+    # The climate biomes anchor at this default elevation; tiles here reproduce
+    # the climate grid exactly. The four elevation biomes anchor higher up.
     _DEFAULT_ELEVATION: Elevation = Elevation.MIDLAND
 
     # The four elevation biomes, anchored high in the matrix instead of resolved
@@ -250,28 +243,16 @@ class BiomeMatrix:
         (Hydrology.SEA, Temperature.HOT): Biome.CORAL_REEF,
     }
 
-    _SUBTERRANEAN_GRID: dict[Elevation, Biome] = {
-        Elevation.ABYSSAL: Biome.ABYSS,
-        Elevation.BURIED: Biome.VAULT,
-        Elevation.DEEP: Biome.DEEP_CAVERN,
-        Elevation.LOW: Biome.CAVERN,
-        Elevation.SHALLOW: Biome.CELLAR,
-        Elevation.SUBGRADE: Biome.CRYPT,
+    _SUBTERRANEAN_GRID: dict[Depth, Biome] = {
+        Depth.SUBGRADE: Biome.CRYPT,
+        Depth.SHALLOW: Biome.CELLAR,
+        Depth.LOW: Biome.CAVERN,
+        Depth.DEEP: Biome.DEEP_CAVERN,
+        Depth.ABYSSAL: Biome.ABYSS,
     }
 
     def __init__(self) -> None:
-        self._temperature_index = self._centered_index(Temperature)
-        self._precipitation_index = self._centered_index(Precipitation)
-        self._elevation_index = self._centered_index(self._SURFACE_ELEVATIONS)
-        self._underground = frozenset(self._SUBTERRANEAN_GRID)
         self._anchors = self._build_anchors()
-
-    @staticmethod
-    def _centered_index[T](bands: Iterable[T]) -> dict[T, int]:
-        """Map each ordered band to a coordinate centred on the middle band."""
-        members = tuple(bands)
-        centre = (len(members) - 1) // 2
-        return {member: index - centre for index, member in enumerate(members)}
 
     def resolve(
         self,
@@ -281,14 +262,15 @@ class BiomeMatrix:
         elevation: Elevation,
         hydrology: Hydrology = Hydrology.NONE,
         water_depth: WaterDepth = WaterDepth.NONE,
+        depth: Depth | None = None,
     ) -> Biome:
         """Resolve the biome for a tile or location."""
         if hydrology in SHORE_HYDROLOGY:
             return self._SHORE_GRID[hydrology]
         if hydrology != Hydrology.NONE:
             return self._aquatic_biome(hydrology, temperature, water_depth)
-        if elevation in self._underground:
-            return self._SUBTERRANEAN_GRID[elevation]
+        if depth is not None:
+            return self._SUBTERRANEAN_GRID[depth]
         return self._surface_biome(temperature, precipitation, elevation)
 
     def _build_anchors(self) -> dict[Biome, tuple[float, float, float]]:
@@ -304,17 +286,14 @@ class BiomeMatrix:
             anchors[biome] = self._anchor(temperature, precipitation, elevation)
         return anchors
 
+    @staticmethod
     def _anchor(
-        self,
         temperature: Temperature,
         precipitation: Precipitation,
         elevation: Elevation,
     ) -> tuple[float, float, float]:
-        return (
-            float(self._temperature_index[temperature]),
-            float(self._precipitation_index[precipitation]),
-            float(self._elevation_index[elevation]),
-        )
+        """Read the (temperature, precipitation, elevation) coordinate triple."""
+        return (float(temperature), float(precipitation), float(elevation))
 
     def _surface_biome(
         self,

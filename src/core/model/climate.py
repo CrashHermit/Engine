@@ -1,63 +1,32 @@
 from __future__ import annotations
 
-
-
 from dataclasses import dataclass
-
-from enum import StrEnum
-
+from enum import IntEnum
 
 
-
-
-class Temperature(StrEnum):
-
-    FREEZING = "freezing"
-
-    COOL = "cool"
-
-    MILD = "mild"
-
-    WARM = "warm"
-
-    HOT = "hot"
-
-
-
+class Temperature(IntEnum):
+    FREEZING = 0
+    COOL = 1
+    MILD = 2
+    WARM = 3
+    HOT = 4
 
 
 TEMPERATURE: dict[Temperature, str] = {
-
     Temperature.FREEZING: "bitter cold; frigid wastes, polar night, breath clouds",
-
     Temperature.COOL: "brisk; light jacket; taiga edges, high-country spring",
-
     Temperature.MILD: "comfortable; anchor — temperate default",
-
     Temperature.WARM: "noticeably warm; lowland summer, savanna heat",
-
     Temperature.HOT: "oppressive heat; deserts, relentless sun, shade useless",
-
 }
 
 
-
-
-
-class Precipitation(StrEnum):
-
-    ARID = "arid"
-
-    DRY = "dry"
-
-    SEASONAL = "seasonal"
-
-    WET = "wet"
-
-    DELUGE = "deluge"
-
-
-
+class Precipitation(IntEnum):
+    ARID = 0
+    DRY = 1
+    SEASONAL = 2
+    WET = 3
+    DELUGE = 4
 
 
 GLOBAL_PRECIPITATION: dict[Precipitation, str] = {
@@ -69,11 +38,7 @@ GLOBAL_PRECIPITATION: dict[Precipitation, str] = {
 }
 
 
-
-
-
 @dataclass
 class ClimateData:
     temperature: Temperature = Temperature.MILD
     precipitation: Precipitation = Precipitation.WET
-

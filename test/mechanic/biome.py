@@ -6,7 +6,13 @@ import pytest
 
 from src.core.model.biome import BIOME_MATRIX, Biome, BiomeMatrix
 from src.core.model.climate import Precipitation, Temperature
-from src.core.model.terrain import SHORE_HYDROLOGY, Elevation, Hydrology, WaterDepth
+from src.core.model.terrain import (
+    SHORE_HYDROLOGY,
+    Depth,
+    Elevation,
+    Hydrology,
+    WaterDepth,
+)
 
 
 def _surface(temperature: Temperature, precipitation: Precipitation) -> Biome:
@@ -175,11 +181,34 @@ def test_hydrology_overrides_underground() -> None:
         BIOME_MATRIX.resolve(
             temperature=Temperature.MILD,
             precipitation=Precipitation.SEASONAL,
-            elevation=Elevation.DEEP,
+            elevation=Elevation.MIDLAND,
             hydrology=Hydrology.LAKE,
             water_depth=WaterDepth.DEEP,
+            depth=Depth.LOW,
         )
         == Biome.LAKE
+    )
+
+
+@pytest.mark.parametrize(
+    ("depth", "expected"),
+    [
+        (Depth.SUBGRADE, Biome.CRYPT),
+        (Depth.SHALLOW, Biome.CELLAR),
+        (Depth.LOW, Biome.CAVERN),
+        (Depth.DEEP, Biome.DEEP_CAVERN),
+        (Depth.ABYSSAL, Biome.ABYSS),
+    ],
+)
+def test_depth_resolves_subterranean_biome(depth: Depth, expected: Biome) -> None:
+    assert (
+        BIOME_MATRIX.resolve(
+            temperature=Temperature.MILD,
+            precipitation=Precipitation.SEASONAL,
+            elevation=Elevation.MIDLAND,
+            depth=depth,
+        )
+        == expected
     )
 
 

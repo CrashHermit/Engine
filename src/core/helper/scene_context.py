@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 import yaml
@@ -15,6 +15,7 @@ from src.core.model.climate import (
 from src.core.model.environment import EnvironmentData
 from src.core.model.location import LocationData
 from src.core.model.terrain import (
+    DEPTH,
     ELEVATION,
     HYDROLOGY,
     SHORE_HYDROLOGY,
@@ -33,9 +34,9 @@ from src.core.model.weather import (
 
 class SceneContextHelper:
     @staticmethod
-    def _entry(member: StrEnum, descriptions: dict[StrEnum, str]) -> dict[str, str]:
+    def _entry(member: Enum, descriptions: dict[Enum, str]) -> dict[str, str]:
         return {
-            "value": member.value,
+            "value": member.name.lower(),
             "description": describe(member, descriptions),
         }
 
@@ -48,6 +49,7 @@ class SceneContextHelper:
             elevation=terrain.elevation,
             hydrology=terrain.hydrology,
             water_depth=terrain.water_depth,
+            depth=terrain.depth,
         )
 
     def format_climate(self, climate: ClimateData) -> str:
@@ -73,6 +75,8 @@ class SceneContextHelper:
 
     def format_terrain(self, terrain: TerrainData) -> str:
         lines = [f"Elevation: {labeled(terrain.elevation, ELEVATION)}"]
+        if terrain.depth is not None:
+            lines.append(f"Underground: {labeled(terrain.depth, DEPTH)}")
         if terrain.hydrology != Hydrology.NONE:
             lines.append(f"Hydrology: {labeled(terrain.hydrology, HYDROLOGY)}")
             if terrain.hydrology not in SHORE_HYDROLOGY:
