@@ -1,9 +1,9 @@
-"""Hydrology enum coverage."""
+"""Elevation enum coverage."""
 
 from __future__ import annotations
 
-from src.core.model.terrain import HYDROLOGY, Hydrology
+from src.core.model.terrain import ELEVATION, Elevation
 
 
-def test_hydrology_descriptions_cover_all_members() -> None:
-    assert set(HYDROLOGY) == set(Hydrology)
+def test_elevation_descriptions_cover_all_members() -> None:
+    assert set(ELEVATION) == set(Elevation)

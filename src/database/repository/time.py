@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from arcadedb_embedded.graph import Vertex
-
 from src.core.model.database import VertexType
 from src.database.repository.base import BaseRepository
 
@@ -33,6 +32,3 @@ class TimeRepository:
         current_elapsed_ticks: int = time_vertex.get(name="elapsed_ticks")
         new_elapsed_ticks: int = current_elapsed_ticks + elapsed_ticks
         return self._base.update_vertex(time_vertex, elapsed_ticks=new_elapsed_ticks)
-
-    
-    

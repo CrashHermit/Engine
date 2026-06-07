@@ -13,7 +13,7 @@ from src.core.model.climate import (
 )
 from src.core.model.environment import EnvironmentData
 from src.core.model.location import LocationData
-from src.core.model.terrain import Elevation, Hydrology, TerrainData
+from src.core.model.terrain import Elevation, TerrainData
 from src.core.model.weather import (
     Humidity,
     Precipitation as WeatherPrecipitation,
@@ -31,15 +31,14 @@ def helper() -> SceneContextHelper:
 def _sample_location() -> LocationData:
     return LocationData(
         id="north-trail",
+        name="North Trail",
+        description="A highland path.",
         environment=EnvironmentData(
             climate=ClimateData(
-                temperature=Temperature.COOL,
+                temperature=Temperature.MILD,
                 precipitation=ClimatePrecipitation.WET,
             ),
-            terrain=TerrainData(
-                elevation=Elevation.HIGHLAND,
-                hydrology=Hydrology.NONE,
-            ),
+            terrain=TerrainData(elevation=Elevation.HIGHLAND),
         ),
         weather=WeatherData(
             humidity=Humidity.CRISP,
@@ -51,14 +50,15 @@ def _sample_location() -> LocationData:
 
 
 def test_resolve_location_biome(helper: SceneContextHelper) -> None:
-    assert helper.resolve_location_biome(_sample_location()) == Biome.MONTANE_FOREST
+    assert helper.resolve_location_biome(_sample_location()) == Biome.TEMPERATE_RAINFOREST
 
 
 def test_compose_location_structured(helper: SceneContextHelper) -> None:
     structured = helper.compose_location_structured(_sample_location())
     assert structured["location_id"] == "north-trail"
-    assert structured["biome"]["value"] == "montane_forest"
+    assert structured["biome"]["value"] == "temperate_rainforest"
     assert structured["weather"]["wind_speed"]["value"] == "breezy"
+    assert structured["environment"]["terrain"]["elevation"]["value"] == "highland"
 
 
 def test_compose_location_prose_includes_sections(helper: SceneContextHelper) -> None:

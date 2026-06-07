@@ -1,360 +1,62 @@
-"""Biome resolution from climate and terrain."""
+"""Biome resolution from climate."""
 
 from __future__ import annotations
 
 import pytest
 
-from src.core.model.biome import BIOME_MATRIX, Biome, BiomeMatrix
-from src.core.model.climate import ClimateData, Precipitation, Temperature
-from src.core.model.environment import EnvironmentData
-from src.core.model.terrain import (
-    Depth,
-    Elevation,
-    Expanse,
-    Hydrology,
-    Salinity,
-    TerrainData,
-    WaterData,
-    WaterDepth,
-)
+from core.model.climate.biome import BIOME_MATRIX, Biome, Biome
+from core.model.climate.precipitation import PrecipitationEnum, PrecipitationData
+from core.model.temperature import Temperature, TemperatureData
 
 
-def _env(
-    *,
-    temperature: Temperature = Temperature.MILD,
-    precipitation: Precipitation = Precipitation.SEASONAL,
-    elevation: Elevation = Elevation.MIDLAND,
-    hydrology: Hydrology = Hydrology.NONE,
-    water: WaterData | None = None,
-    depth: Depth | None = None,
-) -> EnvironmentData:
-    """Bundle loose climate/terrain features into an environment for resolve()."""
-    return EnvironmentData(
-        climate=ClimateData(temperature=temperature, precipitation=precipitation),
-        terrain=TerrainData(
-            elevation=elevation,
-            hydrology=hydrology,
-            water=water,
-            depth=depth,
-        ),
-    )
-
-
-@pytest.mark.parametrize(
-    ("water", "expected"),
-    [
-        (WaterData(Salinity.FRESH, Expanse.CHANNEL, WaterDepth.SHALLOW), Biome.BROOK),
-        (WaterData(Salinity.FRESH, Expanse.COURSE, WaterDepth.DEEP), Biome.RIVER),
-        (WaterData(Salinity.FRESH, Expanse.BASIN, WaterDepth.DEEP), Biome.LAKE),
-        (
-            WaterData(Salinity.SALINE, Expanse.NEARSHORE, WaterDepth.DEEP),
-            Biome.LITTORAL,
-        ),
-        (WaterData(Salinity.SALINE, Expanse.OPEN, WaterDepth.DEEP), Biome.OPEN_OCEAN),
-    ],
-)
-def test_open_water_biome(water: WaterData, expected: Biome) -> None:
-    assert BIOME_MATRIX.resolve(_env(water=water)) == expected
-
-
-@pytest.mark.parametrize(
-    ("hydrology", "expected"),
-    [
-        (Hydrology.BEACH, Biome.BEACH),
-        (Hydrology.CLIFF, Biome.SEA_CLIFF),
-        (Hydrology.HEADLAND, Biome.HEADLAND),
-        (Hydrology.TIDAL_FLAT, Biome.TIDAL_FLAT),
-    ],
-)
-def test_shore_hydrology_biome(hydrology: Hydrology, expected: Biome) -> None:
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(
-                precipitation=Precipitation.WET,
-                elevation=Elevation.LOWLAND,
-                hydrology=hydrology,
-            )
-        )
-        == expected
-    )
-
-
-def test_shore_biome_ignores_elevation() -> None:
-    """A cliff is a sea cliff whether it meets the water low or high."""
-    low = BIOME_MATRIX.resolve(
-        _env(
-            precipitation=Precipitation.WET,
-            elevation=Elevation.LOWLAND,
-            hydrology=Hydrology.CLIFF,
-        )
-    )
-    high = BIOME_MATRIX.resolve(
-        _env(
-            precipitation=Precipitation.WET,
-            elevation=Elevation.SUMMIT,
-            hydrology=Hydrology.CLIFF,
-        )
-    )
-    assert low == high == Biome.SEA_CLIFF
-
-
-def test_cliff_over_ocean_at_highland_is_sea_cliff_not_montane_forest() -> None:
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(
-                precipitation=Precipitation.WET,
-                elevation=Elevation.HIGHLAND,
-                hydrology=Hydrology.CLIFF,
-            )
-        )
-        == Biome.SEA_CLIFF
-    )
-
-
-def test_brackish_water_is_estuary() -> None:
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(water=WaterData(Salinity.BRACKISH, Expanse.BASIN, WaterDepth.MODERATE))
-        )
-        == Biome.ESTUARY
-    )
-
-
-def test_fresh_open_water_is_lake_not_ocean() -> None:
-    """Salinity dominates: a freshwater body at ocean scale is still a lake."""
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(water=WaterData(Salinity.FRESH, Expanse.OPEN, WaterDepth.DEEP))
-        )
-        == Biome.LAKE
-    )
-
-
-def test_frozen_river_is_ice_shelf() -> None:
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(
-                temperature=Temperature.FREEZING,
-                water=WaterData(Salinity.FRESH, Expanse.COURSE, WaterDepth.DEEP),
-            )
-        )
-        == Biome.ICE_SHELF
-    )
-
-
-def test_frozen_sea_is_polar_sea() -> None:
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(
-                temperature=Temperature.FREEZING,
-                water=WaterData(Salinity.SALINE, Expanse.NEARSHORE, WaterDepth.DEEP),
-            )
-        )
-        == Biome.POLAR_SEA
-    )
-
-
-def test_shallow_cool_sea_is_kelp_forest() -> None:
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(
-                temperature=Temperature.COOL,
-                water=WaterData(Salinity.SALINE, Expanse.NEARSHORE, WaterDepth.SHALLOW),
-            )
-        )
-        == Biome.KELP_FOREST
-    )
-
-
-def test_shallow_warm_sea_is_coral_reef() -> None:
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(
-                temperature=Temperature.WARM,
-                water=WaterData(Salinity.SALINE, Expanse.NEARSHORE, WaterDepth.SHALLOW),
-            )
-        )
-        == Biome.CORAL_REEF
-    )
-
-
-def test_water_overrides_underground() -> None:
-    """A submerged tile resolves as water even when a depth is also set."""
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(
-                water=WaterData(Salinity.FRESH, Expanse.BASIN, WaterDepth.DEEP),
-                depth=Depth.LOW,
-            )
-        )
-        == Biome.LAKE
-    )
-
-
-@pytest.mark.parametrize(
-    ("depth", "expected"),
-    [
-        (Depth.SUBGRADE, Biome.CRYPT),
-        (Depth.SHALLOW, Biome.CELLAR),
-        (Depth.LOW, Biome.CAVERN),
-        (Depth.DEEP, Biome.DEEP_CAVERN),
-        (Depth.ABYSSAL, Biome.ABYSS),
-    ],
-)
-def test_depth_resolves_subterranean_biome(depth: Depth, expected: Biome) -> None:
-    assert BIOME_MATRIX.resolve(_env(depth=depth)) == expected
-
-
-def test_inland_lowland_wet_is_not_shore_biome() -> None:
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(
-                precipitation=Precipitation.WET,
-                elevation=Elevation.LOWLAND,
-            )
-        )
-        == Biome.TEMPERATE_RAINFOREST
-    )
-
-
-def test_aquatic_anchors_resolve_to_themselves() -> None:
-    """Each open-water anchor, fed at its own coordinates, returns itself."""
-    for biome, (
-        salinity,
-        expanse,
-        temperature,
-        depth,
-    ) in BiomeMatrix._AQUATIC_ANCHORS.items():
-        env = _env(
-            temperature=temperature,
-            water=WaterData(salinity=salinity, expanse=expanse, depth=depth),
-        )
-        assert BIOME_MATRIX.resolve(env) == biome
-
-
-def test_emergent_warm_shallow_brackish_lagoon_resolves_to_nearest() -> None:
-    """A body the old named grid never spelled out still falls to a known biome."""
-    env = _env(
-        temperature=Temperature.WARM,
-        water=WaterData(Salinity.BRACKISH, Expanse.NEARSHORE, WaterDepth.SHALLOW),
-    )
-    assert BIOME_MATRIX.resolve(env) == Biome.ESTUARY
-
-
-def test_surface_climate_grid_yields_25_distinct_biomes() -> None:
+def test_climate_grid_yields_49_distinct_biomes() -> None:
     """Every temperature × precipitation band pair maps to a distinct biome."""
     results = {
-        _surface(temperature, precipitation)
+        _resolve(temperature, precipitation)
         for temperature in Temperature
-        for precipitation in Precipitation
+        for precipitation in PrecipitationEnum
     }
-    assert len(results) == 25
-
-
-@pytest.mark.parametrize(
-    "biome",
-    [
-        Biome.DESERT,
-        Biome.SEMI_DESERT,
-        Biome.SAVANNA,
-        Biome.TROPICAL_WOODLAND,
-        Biome.SEASONAL_JUNGLE,
-    ],
-)
-def test_previously_orphan_warm_biomes_are_reachable(biome: Biome) -> None:
-    """The warm band activates the five biomes the old grid never produced."""
-    results = {
-        _surface(temperature, precipitation)
-        for temperature in Temperature
-        for precipitation in Precipitation
-    }
-    assert biome in results
+    assert len(results) == 49
 
 
 @pytest.mark.parametrize(
     ("temperature", "precipitation", "expected"),
     [
-        (Temperature.WARM, Precipitation.ARID, Biome.DESERT),
-        (Temperature.WARM, Precipitation.DELUGE, Biome.SEASONAL_JUNGLE),
-        (Temperature.HOT, Precipitation.ARID, Biome.DUNE_SEA),
-        (Temperature.HOT, Precipitation.DELUGE, Biome.RAINFOREST),
+        (Temperature.FRIGID, PrecipitationEnum.HYPER_ARID, Biome.ICE_SHEET),
+        (Temperature.FRIGID, PrecipitationEnum.SATURATED, Biome.MELTING_PACK),
+        (Temperature.FREEZING, PrecipitationEnum.HYPER_ARID, Biome.COLD_DESERT),
+        (Temperature.COOL, PrecipitationEnum.SATURATED, Biome.FEN_WETLAND),
+        (Temperature.MILD, PrecipitationEnum.HYPER_HUMID, Biome.TEMPERATE_RAINFOREST),
+        (Temperature.WARM, PrecipitationEnum.ARID, Biome.THORN_SCRUB),
+        (Temperature.HOT, PrecipitationEnum.HYPER_ARID, Biome.SAND_DESERT),
+        (Temperature.SCORCHING, PrecipitationEnum.SATURATED, Biome.FLOODED_JUNGLE),
     ],
 )
-def test_warm_and_hot_rows_are_distinct(
-    temperature: Temperature, precipitation: Precipitation, expected: Biome
+def test_sample_climate_cells(
+    temperature: Temperature, precipitation: PrecipitationEnum, expected: Biome
 ) -> None:
-    assert _surface(temperature, precipitation) == expected
+    assert _resolve(temperature, precipitation) == expected
 
 
-def test_band_centre_anchors_reproduce_the_climate_grid() -> None:
-    """Midland nearest-anchor resolution matches a direct climate-grid lookup."""
-    for (temperature, precipitation), expected in BiomeMatrix._SURFACE_GRID.items():
-        assert _surface(temperature, precipitation) == expected
+def test_climate_grid_lookup() -> None:
+    """Each temperature × precipitation pair maps directly to its grid biome."""
+    for (temperature, precipitation), expected in Biome.biome_grid.items():
+        assert _resolve(temperature, precipitation) == expected
 
 
-@pytest.mark.parametrize(
-    ("temperature", "precipitation", "elevation", "expected"),
-    [
-        (
-            Temperature.FREEZING,
-            Precipitation.SEASONAL,
-            Elevation.SUMMIT,
-            Biome.GLACIER,
-        ),
-        (
-            Temperature.COOL,
-            Precipitation.SEASONAL,
-            Elevation.SUMMIT,
-            Biome.ALPINE_TUNDRA,
-        ),
-        (
-            Temperature.MILD,
-            Precipitation.WET,
-            Elevation.HIGHLAND,
-            Biome.MONTANE_FOREST,
-        ),
-        (
-            Temperature.COOL,
-            Precipitation.DELUGE,
-            Elevation.HIGHLAND,
-            Biome.MOOR,
-        ),
-    ],
-)
-def test_elevation_biomes_resolve_at_their_anchors(
-    temperature: Temperature,
-    precipitation: Precipitation,
-    elevation: Elevation,
-    expected: Biome,
-) -> None:
-    """The four elevation biomes win at their high-elevation anchor points."""
-    assert (
-        BIOME_MATRIX.resolve(
-            _env(
-                temperature=temperature,
-                precipitation=precipitation,
-                elevation=elevation,
+def test_biome_matrix_singleton_matches_class_grid() -> None:
+    for (temperature, precipitation), expected in Biome.biome_grid.items():
+        assert (
+            BIOME_MATRIX.resolve_biome(
+                TemperatureData(temperature=temperature),
+                PrecipitationData(precipitation=precipitation),
             )
+            == expected
         )
-        == expected
-    )
 
 
-def test_default_elevation_keeps_the_climate_biome() -> None:
-    """A forest at the midland default stays its climate biome, not montane."""
-    assert _surface(Temperature.MILD, Precipitation.SEASONAL) == Biome.TEMPERATE_FOREST
-
-
-def test_aquatic_anchors_are_ten_distinct_biomes() -> None:
-    """The open-water cube anchors exactly the ten aquatic biomes, all distinct."""
-    assert len(set(BiomeMatrix._AQUATIC_ANCHORS.values())) == len(
-        BiomeMatrix._AQUATIC_ANCHORS
-    )
-    assert len(BiomeMatrix._AQUATIC_ANCHORS) == 10
-
-
-def _surface(temperature: Temperature, precipitation: Precipitation) -> Biome:
-    """Resolve a dry-land climate band pair at the default (midland) elevation."""
-    return BIOME_MATRIX.resolve(
-        _env(temperature=temperature, precipitation=precipitation)
+def _resolve(temperature: Temperature, precipitation: PrecipitationEnum) -> Biome:
+    return BIOME_MATRIX.resolve_biome(
+        TemperatureData(temperature=temperature),
+        PrecipitationData(precipitation=precipitation),
     )

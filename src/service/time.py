@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from database.repository.time import TimeRepository
+from src.database.repository.time import TimeRepository
 from arcadedb_embedded.graph import Vertex
 from src.core.model.time import WorldDateTime
 
