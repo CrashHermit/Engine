@@ -1,11 +1,13 @@
-"""Biome names and the climate × terrain resolution pipeline."""
+"""Biome names and the climate × terrain mapping.
+
+Reading order: first the ``Biome`` vocabulary and its descriptions, then
+``BiomeMatrix``, which turns an environment into a biome. The matrix is the
+interesting part — its class docstring explains how resolution works.
+"""
 
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Protocol
 
 from src.core.model.climate import Precipitation, Temperature
 from src.core.model.environment import EnvironmentData
@@ -20,7 +22,7 @@ from src.core.model.terrain import (
 
 
 class Biome(StrEnum):
-    # ── Climate grid (5×5: temperature × precipitation) ───────────────────
+    # ── Surface climate biomes (temperature × precipitation) ─────────────────
     POLAR_DESERT = "polar_desert"
     POLAR_BARRENS = "polar_barrens"
     TUNDRA = "tundra"
@@ -46,17 +48,17 @@ class Biome(StrEnum):
     BUSHVELD = "bushveld"
     MONSOON_FOREST = "monsoon_forest"
     RAINFOREST = "rainforest"
-    # ── Elevation biomes (high-elevation anchors) ───────────────────────────
+    # ── Highland biomes (anchored higher in the surface cube) ────────────────
     MOOR = "moor"
     MONTANE_FOREST = "montane_forest"
     ALPINE_TUNDRA = "alpine_tundra"
     GLACIER = "glacier"
-    # ── Shore grid (hydrology × elevation) ──────────────────────────────────
+    # ── Shore biomes (one per coastline landform) ────────────────────────────
     BEACH = "beach"
     SEA_CLIFF = "sea_cliff"
     HEADLAND = "headland"
     TIDAL_FLAT = "tidal_flat"
-    # ── Aquatic overrides (hydrology grid) ──────────────────────────────────
+    # ── Open-water biomes (salinity × expanse × temperature × depth) ──────────
     BROOK = "brook"
     RIVER = "river"
     LAKE = "lake"
@@ -67,7 +69,7 @@ class Biome(StrEnum):
     OPEN_OCEAN = "open_ocean"
     POLAR_SEA = "polar_sea"
     ICE_SHELF = "ice_shelf"
-    # ── Underground (depth 0–4) ─────────────────────────────────────────────
+    # ── Underground biomes (one per depth band) ──────────────────────────────
     ABYSS = "abyss"
     DEEP_CAVERN = "deep_cavern"
     CAVERN = "cavern"
@@ -127,118 +129,28 @@ BIOME: dict[Biome, str] = {
 }
 
 
-class Resolver(Protocol):
-    """One stage of biome resolution: claim a tile, or pass to the next."""
-
-    def resolve(self, env: EnvironmentData) -> Biome | None: ...
-
-
-def _squared_distance(a: tuple[float, ...], b: tuple[float, ...]) -> float:
-    return sum((x - y) ** 2 for x, y in zip(a, b, strict=True))
-
-
-@dataclass(frozen=True)
-class Lookup[K]:
-    """Claim a tile by exact table lookup on a categorical key.
-
-    The table's own keyset is the domain of applicability: a missing key (or a
-    failing ``when`` guard) returns ``None`` and passes the tile along. This is
-    the right primitive for features that are types rather than scales —
-    hydrology, depth — where "nearest" is meaningless and only exact matches
-    make sense.
-    """
-
-    key: Callable[[EnvironmentData], K]
-    table: Mapping[K, Biome]
-    when: Callable[[EnvironmentData], bool] = field(default=lambda env: True)
-
-    def resolve(self, env: EnvironmentData) -> Biome | None:
-        if not self.when(env):
-            return None
-        return self.table.get(self.key(env))
-
-
-@dataclass(frozen=True)
-class Geometric:
-    """Claim a tile by its nearest anchor across ordinal axes.
-
-    The right primitive for features where "between" is meaningful, so a point
-    off the authored anchors falls to its closest neighbour. Total within its
-    domain — every point has a nearest anchor — so an unguarded ``Geometric`` is
-    a terminal resolver; a ``when`` guard scopes it to one medium (open water).
-    """
-
-    anchors: Mapping[Biome, tuple[float, ...]]
-    project: Callable[[EnvironmentData], tuple[float, ...]]
-    when: Callable[[EnvironmentData], bool] = field(default=lambda env: True)
-
-    def resolve(self, env: EnvironmentData) -> Biome | None:
-        if not self.when(env):
-            return None
-        point = self.project(env)
-        return min(
-            self.anchors,
-            key=lambda biome: _squared_distance(self.anchors[biome], point),
-        )
-
-
-def _hydrology(env: EnvironmentData) -> Hydrology:
-    return env.terrain.hydrology
-
-
-def _depth(env: EnvironmentData) -> Depth | None:
-    return env.terrain.depth
-
-
-def _is_water(env: EnvironmentData) -> bool:
-    return env.terrain.water is not None
-
-
-def _water_point(env: EnvironmentData) -> tuple[float, float, float, float]:
-    water = env.terrain.water
-    assert water is not None  # guaranteed by the _is_water guard
-    return (
-        float(water.salinity),
-        float(water.expanse),
-        float(env.climate.temperature),
-        float(water.depth),
-    )
-
-
-def _surface_point(env: EnvironmentData) -> tuple[float, float, float]:
-    return (
-        float(env.climate.temperature),
-        float(env.climate.precipitation),
-        float(env.terrain.elevation),
-    )
-
-
-def _anchor(
-    temperature: Temperature,
-    precipitation: Precipitation,
-    elevation: Elevation,
-) -> tuple[float, float, float]:
-    """Read the (temperature, precipitation, elevation) coordinate triple."""
-    return (float(temperature), float(precipitation), float(elevation))
-
-
 class BiomeMatrix:
-    """Resolve a biome by running an environment through a resolver pipeline.
+    """Turn an environment into a biome.
 
-    Resolution is a priority pipeline of two primitives. Shore, aquatic, and
-    subterranean tiles are categorical and resolve by ``Lookup``; the open-air
-    surface is ordinal and resolves by ``Geometric`` nearest-anchor. The first
-    resolver to claim the tile wins, and the surface resolver is total, so it
-    sits last as the fallback.
+    A tile belongs to exactly one "medium", and ``resolve`` checks them in
+    priority order, returning the first that applies:
 
-    The surface is a 5x5x5 cube: temperature, precipitation, and elevation are
-    each a 0-4 band scale, and the enum values are the coordinates themselves.
-    The climate grid anchors 25 biomes on the midland plane; four elevation
-    biomes anchor higher up. Band inputs reproduce the grid exactly while
-    interpolated inputs fall to the closest neighbour.
+        1. shore      — a coastline landform (beach, cliff, ...)
+        2. open water — a body of water (set on ``terrain.water``)
+        3. underground — below the surface (set on ``terrain.depth``)
+        4. surface    — open air; the fallback when none of the above apply
+
+    Two of these are simple table lookups (shore, underground): the input maps
+    straight to a biome. The other two — open water and the surface — use
+    "nearest anchor": each biome is placed at a point in a small grid of ordinal
+    traits (e.g. the surface grid is temperature × precipitation × elevation),
+    and a tile resolves to the biome whose point is closest to its own traits.
+    That is what lets a tile *between* two biomes fall to the nearer one.
     """
 
-    # ── Surface climate grid (5×5: temperature × precipitation) ───────────────
+    # ── Data tables ───────────────────────────────────────────────────────────
+
+    # Surface climate grid: 25 biomes, one per temperature × precipitation pair.
     _SURFACE_GRID: dict[tuple[Temperature, Precipitation], Biome] = {
         (Temperature.FREEZING, Precipitation.ARID): Biome.POLAR_DESERT,
         (Temperature.FREEZING, Precipitation.DRY): Biome.POLAR_BARRENS,
@@ -267,20 +179,13 @@ class BiomeMatrix:
         (Temperature.HOT, Precipitation.DELUGE): Biome.RAINFOREST,
     }
 
-    # The climate biomes anchor at this default elevation; tiles here reproduce
-    # the climate grid exactly. The four elevation biomes anchor higher up.
+    # The 25 climate biomes above all sit at this elevation; tiles here reproduce
+    # the climate grid exactly. The four highland biomes below anchor higher up.
     _DEFAULT_ELEVATION: Elevation = Elevation.MIDLAND
 
-    # The four elevation biomes, anchored high in the matrix instead of resolved
-    # by a separate override pass: (temperature, precipitation, elevation) centre.
-    # At the peak, temperature alone separates glacier, alpine tundra, and the
-    # montane/moor pair a step below.
+    # Highland biomes: (temperature, precipitation, elevation) anchor points.
     _ELEVATION_ANCHORS: dict[Biome, tuple[Temperature, Precipitation, Elevation]] = {
-        Biome.MONTANE_FOREST: (
-            Temperature.MILD,
-            Precipitation.WET,
-            Elevation.HIGHLAND,
-        ),
+        Biome.MONTANE_FOREST: (Temperature.MILD, Precipitation.WET, Elevation.HIGHLAND),
         Biome.MOOR: (Temperature.COOL, Precipitation.DELUGE, Elevation.HIGHLAND),
         Biome.ALPINE_TUNDRA: (
             Temperature.COOL,
@@ -290,7 +195,7 @@ class BiomeMatrix:
         Biome.GLACIER: (Temperature.FREEZING, Precipitation.SEASONAL, Elevation.SUMMIT),
     }
 
-    # Shore biome is a function of the shore hydrology alone.
+    # Shore: each coastline landform maps straight to one biome.
     _SHORE_GRID: dict[Hydrology, Biome] = {
         Hydrology.BEACH: Biome.BEACH,
         Hydrology.CLIFF: Biome.SEA_CLIFF,
@@ -298,12 +203,9 @@ class BiomeMatrix:
         Hydrology.TIDAL_FLAT: Biome.TIDAL_FLAT,
     }
 
-    # ── Aquatic anchors (salinity × expanse × temperature × depth) ────────────
-    # Open water is its own ordinal cube, resolved by nearest anchor like the
-    # surface. Freezing pulls fresh water to ice and salt water to polar sea;
-    # shallow salt nearshore warms to reef or cools to kelp. These transitions
-    # are anchor geometry now, not branches — a body off the named points (a
-    # warm shallow brackish lagoon) still falls to its closest known biome.
+    # Open-water anchors: (salinity, expanse, temperature, depth) points. Freezing
+    # pulls fresh water to ice and salt water to polar sea; a shallow salt
+    # nearshore warms to reef or cools to kelp — all just nearest-anchor geometry.
     _AQUATIC_ANCHORS: dict[Biome, tuple[Salinity, Expanse, Temperature, WaterDepth]] = {
         Biome.BROOK: (
             Salinity.FRESH,
@@ -362,6 +264,7 @@ class BiomeMatrix:
         ),
     }
 
+    # Underground: each depth band maps straight to one biome.
     _SUBTERRANEAN_GRID: dict[Depth, Biome] = {
         Depth.SUBGRADE: Biome.CRYPT,
         Depth.SHALLOW: Biome.CELLAR,
@@ -371,41 +274,106 @@ class BiomeMatrix:
     }
 
     def __init__(self) -> None:
-        # Priority pipeline; first resolver to claim the tile wins. Categorical
-        # media — shore landforms, underground — resolve by Lookup; the open-air
-        # surface and open water are ordinal and resolve by nearest anchor. The
-        # unguarded surface resolver is total, so it sits last as the fallback.
-        aquatic_anchors = {
-            biome: tuple(float(band) for band in bands)
-            for biome, bands in self._AQUATIC_ANCHORS.items()
-        }
-        self._pipeline: tuple[Resolver, ...] = (
-            Lookup(key=_hydrology, table=self._SHORE_GRID),
-            Geometric(anchors=aquatic_anchors, project=_water_point, when=_is_water),
-            Lookup(key=_depth, table=self._SUBTERRANEAN_GRID),
-            Geometric(anchors=self._build_anchors(), project=_surface_point),
-        )
+        # Pre-compute the nearest-anchor grids once: turn the trait tables above
+        # into plain coordinate points the distance check can compare against.
+        self._surface_anchors = self._build_surface_anchors()
+        self._water_anchors = self._build_water_anchors()
 
     def resolve(self, env: EnvironmentData) -> Biome:
-        """Resolve the biome for an environment by running the pipeline."""
-        for resolver in self._pipeline:
-            biome = resolver.resolve(env)
-            if biome is not None:
-                return biome
-        raise AssertionError("the surface resolver is total")
+        """Resolve the biome for an environment (first matching medium wins)."""
+        shore = self._shore_biome(env)
+        if shore is not None:
+            return shore
+        water = self._water_biome(env)
+        if water is not None:
+            return water
+        underground = self._underground_biome(env)
+        if underground is not None:
+            return underground
+        return self._surface_biome(env)
 
-    def _build_anchors(self) -> dict[Biome, tuple[float, float, float]]:
-        anchors = {
-            biome: _anchor(temperature, precipitation, self._DEFAULT_ELEVATION)
-            for (temperature, precipitation), biome in self._SURFACE_GRID.items()
-        }
+    # ── One method per medium ─────────────────────────────────────────────────
+
+    def _shore_biome(self, env: EnvironmentData) -> Biome | None:
+        """Map a coastline landform straight to a biome (else no match)."""
+        return self._SHORE_GRID.get(env.terrain.hydrology)
+
+    def _water_biome(self, env: EnvironmentData) -> Biome | None:
+        """Open water: the aquatic biome nearest to this body's traits."""
+        water = env.terrain.water
+        if water is None:
+            return None
+        point = (
+            float(water.salinity),
+            float(water.expanse),
+            float(env.climate.temperature),
+            float(water.depth),
+        )
+        return self._nearest(self._water_anchors, point)
+
+    def _underground_biome(self, env: EnvironmentData) -> Biome | None:
+        """Below ground, the depth band maps straight to a biome."""
+        depth = env.terrain.depth
+        if depth is None:
+            return None
+        return self._SUBTERRANEAN_GRID[depth]
+
+    def _surface_biome(self, env: EnvironmentData) -> Biome:
+        """Open air: the surface biome nearest to this tile's climate."""
+        point = (
+            float(env.climate.temperature),
+            float(env.climate.precipitation),
+            float(env.terrain.elevation),
+        )
+        return self._nearest(self._surface_anchors, point)
+
+    # ── Helpers ───────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _nearest(
+        anchors: dict[Biome, tuple[float, ...]],
+        point: tuple[float, ...],
+    ) -> Biome:
+        """Return the biome whose anchor point is closest to ``point``."""
+
+        def distance_to(biome: Biome) -> float:
+            anchor = anchors[biome]
+            return sum((a - p) ** 2 for a, p in zip(anchor, point, strict=True))
+
+        return min(anchors, key=distance_to)
+
+    def _build_surface_anchors(self) -> dict[Biome, tuple[float, float, float]]:
+        """Place each surface biome at its (temp, precip, elevation) point."""
+        anchors: dict[Biome, tuple[float, float, float]] = {}
+        for (temperature, precipitation), biome in self._SURFACE_GRID.items():
+            anchors[biome] = (
+                float(temperature),
+                float(precipitation),
+                float(self._DEFAULT_ELEVATION),
+            )
         for biome, (
             temperature,
             precipitation,
             elevation,
         ) in self._ELEVATION_ANCHORS.items():
-            anchors[biome] = _anchor(temperature, precipitation, elevation)
+            anchors[biome] = (
+                float(temperature),
+                float(precipitation),
+                float(elevation),
+            )
         return anchors
+
+    def _build_water_anchors(self) -> dict[Biome, tuple[float, float, float, float]]:
+        """Place each open-water biome at its (salinity, expanse, temp, depth) point."""
+        return {
+            biome: (float(salinity), float(expanse), float(temperature), float(depth))
+            for biome, (
+                salinity,
+                expanse,
+                temperature,
+                depth,
+            ) in self._AQUATIC_ANCHORS.items()
+        }
 
 
 BIOME_MATRIX = BiomeMatrix()
