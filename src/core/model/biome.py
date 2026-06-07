@@ -338,7 +338,7 @@ class BiomeMatrix:
 
         def distance_to(biome: Biome) -> float:
             anchor = anchors[biome]
-            return sum((a - p) ** 2 for a, p in zip(anchor, point, strict=True))
+            return sum([(a - p) ** 2 for a, p in zip(anchor, point)])
 
         return min(anchors, key=distance_to)
 
