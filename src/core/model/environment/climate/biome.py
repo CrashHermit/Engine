@@ -6,7 +6,7 @@ from src.core.model.environment.climate.precipitation import PrecipitationEnum
 from src.core.model.environment.temperature import TemperatureEnum
 
 
-class Biome(StrEnum):
+class BiomeEnum(StrEnum):
     ICE_SHEET = "ice_sheet"
     POLAR_DESERT = "polar_desert"
     WINDFELL = "windfell"
@@ -61,70 +61,70 @@ class Biome(StrEnum):
 class Biome:
     """Turn climate TemperatureEnum and precipitation into a biome."""
 
-    biome_grid: dict[tuple[TemperatureEnum, PrecipitationEnum], Biome] = {
+    biome_grid: dict[tuple[TemperatureEnum, PrecipitationEnum], BiomeEnum] = {
         # ── FRIGID ────────────────────────────────────────────────────────────
-        (TemperatureEnum.FRIGID, PrecipitationEnum.HYPER_ARID): Biome.ICE_SHEET,
-        (TemperatureEnum.FRIGID, PrecipitationEnum.ARID): Biome.POLAR_DESERT,
-        (TemperatureEnum.FRIGID, PrecipitationEnum.SEMI_ARID): Biome.WINDFELL,
-        (TemperatureEnum.FRIGID, PrecipitationEnum.SUB_HUMID): Biome.FROST_BOG,
-        (TemperatureEnum.FRIGID, PrecipitationEnum.HUMID): Biome.ICE_MIRE,
-        (TemperatureEnum.FRIGID, PrecipitationEnum.HYPER_HUMID): Biome.GLACIAL_MARGIN,
-        (TemperatureEnum.FRIGID, PrecipitationEnum.SATURATED): Biome.MELTING_PACK,
+        (TemperatureEnum.FRIGID, PrecipitationEnum.HYPER_ARID): BiomeEnum.ICE_SHEET,
+        (TemperatureEnum.FRIGID, PrecipitationEnum.ARID): BiomeEnum.POLAR_DESERT,
+        (TemperatureEnum.FRIGID, PrecipitationEnum.SEMI_ARID): BiomeEnum.WINDFELL,
+        (TemperatureEnum.FRIGID, PrecipitationEnum.SUB_HUMID): BiomeEnum.FROST_BOG,
+        (TemperatureEnum.FRIGID, PrecipitationEnum.HUMID): BiomeEnum.ICE_MIRE,
+        (TemperatureEnum.FRIGID, PrecipitationEnum.HYPER_HUMID): BiomeEnum.GLACIAL_MARGIN,
+        (TemperatureEnum.FRIGID, PrecipitationEnum.SATURATED): BiomeEnum.MELTING_PACK,
         # ── FREEZING ──────────────────────────────────────────────────────────
-        (TemperatureEnum.FREEZING, PrecipitationEnum.HYPER_ARID): Biome.COLD_DESERT,
-        (TemperatureEnum.FREEZING, PrecipitationEnum.ARID): Biome.DRY_TAIGA,
-        (TemperatureEnum.FREEZING, PrecipitationEnum.SEMI_ARID): Biome.LICHEN_WOODLAND,
-        (TemperatureEnum.FREEZING, PrecipitationEnum.SUB_HUMID): Biome.OPEN_BOREAL,
-        (TemperatureEnum.FREEZING, PrecipitationEnum.HUMID): Biome.DENSE_TAIGA,
-        (TemperatureEnum.FREEZING, PrecipitationEnum.HYPER_HUMID): Biome.WET_BOREAL,
-        (TemperatureEnum.FREEZING, PrecipitationEnum.SATURATED): Biome.MUSKEG_BOG,
+        (TemperatureEnum.FREEZING, PrecipitationEnum.HYPER_ARID): BiomeEnum.COLD_DESERT,
+        (TemperatureEnum.FREEZING, PrecipitationEnum.ARID): BiomeEnum.DRY_TAIGA,
+        (TemperatureEnum.FREEZING, PrecipitationEnum.SEMI_ARID): BiomeEnum.LICHEN_WOODLAND,
+        (TemperatureEnum.FREEZING, PrecipitationEnum.SUB_HUMID): BiomeEnum.OPEN_BOREAL,
+        (TemperatureEnum.FREEZING, PrecipitationEnum.HUMID): BiomeEnum.DENSE_TAIGA,
+        (TemperatureEnum.FREEZING, PrecipitationEnum.HYPER_HUMID): BiomeEnum.WET_BOREAL,
+        (TemperatureEnum.FREEZING, PrecipitationEnum.SATURATED): BiomeEnum.MUSKEG_BOG,
         # ── COOL ──────────────────────────────────────────────────────────────
-        (TemperatureEnum.COOL, PrecipitationEnum.HYPER_ARID): Biome.SAGEBRUSH_STEPPE,
-        (TemperatureEnum.COOL, PrecipitationEnum.ARID): Biome.SHORTGRASS_PRAIRIE,
-        (TemperatureEnum.COOL, PrecipitationEnum.SEMI_ARID): Biome.MIXED_PRAIRIE,
-        (TemperatureEnum.COOL, PrecipitationEnum.SUB_HUMID): Biome.DECIDUOUS_FOREST,
-        (TemperatureEnum.COOL, PrecipitationEnum.HUMID): Biome.MOIST_TEMPERATE_FOREST,
-        (TemperatureEnum.COOL, PrecipitationEnum.HYPER_HUMID): Biome.COOL_RAINFOREST,
-        (TemperatureEnum.COOL, PrecipitationEnum.SATURATED): Biome.FEN_WETLAND,
+        (TemperatureEnum.COOL, PrecipitationEnum.HYPER_ARID): BiomeEnum.SAGEBRUSH_STEPPE,
+        (TemperatureEnum.COOL, PrecipitationEnum.ARID): BiomeEnum.SHORTGRASS_PRAIRIE,
+        (TemperatureEnum.COOL, PrecipitationEnum.SEMI_ARID): BiomeEnum.MIXED_PRAIRIE,
+        (TemperatureEnum.COOL, PrecipitationEnum.SUB_HUMID): BiomeEnum.DECIDUOUS_FOREST,
+        (TemperatureEnum.COOL, PrecipitationEnum.HUMID): BiomeEnum.MOIST_TEMPERATE_FOREST,
+        (TemperatureEnum.COOL, PrecipitationEnum.HYPER_HUMID): BiomeEnum.COOL_RAINFOREST,
+        (TemperatureEnum.COOL, PrecipitationEnum.SATURATED): BiomeEnum.FEN_WETLAND,
         # ── MILD ──────────────────────────────────────────────────────────────
-        (TemperatureEnum.MILD, PrecipitationEnum.HYPER_ARID): Biome.BADLANDS,
-        (TemperatureEnum.MILD, PrecipitationEnum.ARID): Biome.CHAPARRAL,
-        (TemperatureEnum.MILD, PrecipitationEnum.SEMI_ARID): Biome.WOODLAND_SAVANNA,
-        (TemperatureEnum.MILD, PrecipitationEnum.SUB_HUMID): Biome.EVERGREEN_OAK_FOREST,
-        (TemperatureEnum.MILD, PrecipitationEnum.HUMID): Biome.LAUREL_FOREST,
-        (TemperatureEnum.MILD, PrecipitationEnum.HYPER_HUMID): Biome.TEMPERATE_RAINFOREST,
-        (TemperatureEnum.MILD, PrecipitationEnum.SATURATED): Biome.PEAT_MARSH,
+        (TemperatureEnum.MILD, PrecipitationEnum.HYPER_ARID): BiomeEnum.BADLANDS,
+        (TemperatureEnum.MILD, PrecipitationEnum.ARID): BiomeEnum.CHAPARRAL,
+        (TemperatureEnum.MILD, PrecipitationEnum.SEMI_ARID): BiomeEnum.WOODLAND_SAVANNA,
+        (TemperatureEnum.MILD, PrecipitationEnum.SUB_HUMID): BiomeEnum.EVERGREEN_OAK_FOREST,
+        (TemperatureEnum.MILD, PrecipitationEnum.HUMID): BiomeEnum.LAUREL_FOREST,
+        (TemperatureEnum.MILD, PrecipitationEnum.HYPER_HUMID): BiomeEnum.TEMPERATE_RAINFOREST,
+        (TemperatureEnum.MILD, PrecipitationEnum.SATURATED): BiomeEnum.PEAT_MARSH,
         # ── WARM ──────────────────────────────────────────────────────────────
-        (TemperatureEnum.WARM, PrecipitationEnum.HYPER_ARID): Biome.SEMI_ARID_SHRUBLAND,
-        (TemperatureEnum.WARM, PrecipitationEnum.ARID): Biome.THORN_SCRUB,
-        (TemperatureEnum.WARM, PrecipitationEnum.SEMI_ARID): Biome.DRY_FOREST,
-        (TemperatureEnum.WARM, PrecipitationEnum.SUB_HUMID): Biome.MARITIME_WOODLAND,
-        (TemperatureEnum.WARM, PrecipitationEnum.HUMID): Biome.SUBTROPICAL_RAINFOREST,
-        (TemperatureEnum.WARM, PrecipitationEnum.HYPER_HUMID): Biome.WARM_RAINFOREST,
-        (TemperatureEnum.WARM, PrecipitationEnum.SATURATED): Biome.SWAMP_FOREST,
+        (TemperatureEnum.WARM, PrecipitationEnum.HYPER_ARID): BiomeEnum.SEMI_ARID_SHRUBLAND,
+        (TemperatureEnum.WARM, PrecipitationEnum.ARID): BiomeEnum.THORN_SCRUB,
+        (TemperatureEnum.WARM, PrecipitationEnum.SEMI_ARID): BiomeEnum.DRY_FOREST,
+        (TemperatureEnum.WARM, PrecipitationEnum.SUB_HUMID): BiomeEnum.MARITIME_WOODLAND,
+        (TemperatureEnum.WARM, PrecipitationEnum.HUMID): BiomeEnum.SUBTROPICAL_RAINFOREST,
+        (TemperatureEnum.WARM, PrecipitationEnum.HYPER_HUMID): BiomeEnum.WARM_RAINFOREST,
+        (TemperatureEnum.WARM, PrecipitationEnum.SATURATED): BiomeEnum.SWAMP_FOREST,
         # ── HOT ───────────────────────────────────────────────────────────────
-        (TemperatureEnum.HOT, PrecipitationEnum.HYPER_ARID): Biome.SAND_DESERT,
-        (TemperatureEnum.HOT, PrecipitationEnum.ARID): Biome.SAVANNA_SCRUB,
-        (TemperatureEnum.HOT, PrecipitationEnum.SEMI_ARID): Biome.SEASONAL_FOREST,
-        (TemperatureEnum.HOT, PrecipitationEnum.SUB_HUMID): Biome.MONSOON_RAINFOREST,
-        (TemperatureEnum.HOT, PrecipitationEnum.HUMID): Biome.TROPICAL_RAINFOREST,
-        (TemperatureEnum.HOT, PrecipitationEnum.HYPER_HUMID): Biome.WET_RAINFOREST,
-        (TemperatureEnum.HOT, PrecipitationEnum.SATURATED): Biome.MANGROVE_SWAMP,
+        (TemperatureEnum.HOT, PrecipitationEnum.HYPER_ARID): BiomeEnum.SAND_DESERT,
+        (TemperatureEnum.HOT, PrecipitationEnum.ARID): BiomeEnum.SAVANNA_SCRUB,
+        (TemperatureEnum.HOT, PrecipitationEnum.SEMI_ARID): BiomeEnum.SEASONAL_FOREST,
+        (TemperatureEnum.HOT, PrecipitationEnum.SUB_HUMID): BiomeEnum.MONSOON_RAINFOREST,
+        (TemperatureEnum.HOT, PrecipitationEnum.HUMID): BiomeEnum.TROPICAL_RAINFOREST,
+        (TemperatureEnum.HOT, PrecipitationEnum.HYPER_HUMID): BiomeEnum.WET_RAINFOREST,
+        (TemperatureEnum.HOT, PrecipitationEnum.SATURATED): BiomeEnum.MANGROVE_SWAMP,
         # ── SCORCHING ───────────────────────────────────────────────────────
-        (TemperatureEnum.SCORCHING, PrecipitationEnum.HYPER_ARID): Biome.SCORCHING_WASTELAND,
-        (TemperatureEnum.SCORCHING, PrecipitationEnum.ARID): Biome.DRY_SAVANNA,
-        (TemperatureEnum.SCORCHING, PrecipitationEnum.SEMI_ARID): Biome.MONSOON_FOREST,
-        (TemperatureEnum.SCORCHING, PrecipitationEnum.SUB_HUMID): Biome.MOIST_FOREST,
-        (TemperatureEnum.SCORCHING, PrecipitationEnum.HUMID): Biome.LOWLAND_RAINFOREST,
-        (TemperatureEnum.SCORCHING, PrecipitationEnum.HYPER_HUMID): Biome.EQUATORIAL_RAINFOREST,
-        (TemperatureEnum.SCORCHING, PrecipitationEnum.SATURATED): Biome.FLOODED_JUNGLE,
+        (TemperatureEnum.SCORCHING, PrecipitationEnum.HYPER_ARID): BiomeEnum.SCORCHING_WASTELAND,
+        (TemperatureEnum.SCORCHING, PrecipitationEnum.ARID): BiomeEnum.DRY_SAVANNA,
+        (TemperatureEnum.SCORCHING, PrecipitationEnum.SEMI_ARID): BiomeEnum.MONSOON_FOREST,
+        (TemperatureEnum.SCORCHING, PrecipitationEnum.SUB_HUMID): BiomeEnum.MOIST_FOREST,
+        (TemperatureEnum.SCORCHING, PrecipitationEnum.HUMID): BiomeEnum.LOWLAND_RAINFOREST,
+        (TemperatureEnum.SCORCHING, PrecipitationEnum.HYPER_HUMID): BiomeEnum.EQUATORIAL_RAINFOREST,
+        (TemperatureEnum.SCORCHING, PrecipitationEnum.SATURATED): BiomeEnum.FLOODED_JUNGLE,
     }
 
     def get_biome(
         self,
         temperature_enum: TemperatureEnum,
         precipitation_enum: PrecipitationEnum,
-    ) -> Biome:
+    ) -> BiomeEnum:
         return self.biome_grid[
             (temperature_enum, precipitation_enum)
         ]
