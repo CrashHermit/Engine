@@ -14,62 +14,77 @@ class TileRepository:
     def get_tile_vertex(self, id: str) -> Vertex | None:
         return self._base.get_vertex(type_name=VertexType.TILE, id=id)
 
-    def update_tile_vertex(
-        self, 
-        x: int, 
-        y: int, 
-        z: int, 
-        is_land: bool, 
-        landmass_id: int,
-        temperature: float,
-        precipitation: float,
-        wind_u: float,
-        wind_v: float,
-        wind_magnitude: float,
-        biomes: list[BiomeEnum]
+    def update_tile_vertex_climate(
+        self,
+        tile_vertex: Vertex,
+        climate_temperature: float,
+        climate_precipitation: float,
+        climate_wind_u: float,
+        climate_wind_v: float,
+        climate_wind_magnitude: float,
+        biomes: list[BiomeEnum],
     ) -> Vertex:
         return self._base.update_vertex(
-            type_name=VertexType.TILE, 
-            x=x, 
-            y=y,
-            z=z,
-            is_land=is_land,
+            vertex=tile_vertex,
+            climate_temperature=climate_temperature,
+            climate_precipitation=climate_precipitation,
+            climate_wind_u=climate_wind_u,
+            climate_wind_v=climate_wind_v,
+            climate_wind_magnitude=climate_wind_magnitude,
+            biomes=biomes,
+        )
+
+    def update_tile_vertex_weather(
+        self,
+        tile_vertex: Vertex,
+        weather_temperature: float,
+        weather_precipitation: float,
+        weather_wind_u: float,
+        weather_wind_v: float,
+        weather_wind_magnitude: float,
+    ) -> Vertex:
+        return self._base.update_vertex(
+            vertex=tile_vertex,
+            weather_temperature=weather_temperature,
+            weather_precipitation=weather_precipitation,
+            weather_wind_u=weather_wind_u,
+            weather_wind_v=weather_wind_v,
+            weather_wind_magnitude=weather_wind_magnitude,
+        )
+
+    def update_tile_vertex_hydrology(
+        self,
+        tile_vertex: Vertex,
+        is_river: bool,
+        is_lake: bool,
+    ) -> Vertex:
+        return self._base.update_vertex(
+            vertex=tile_vertex,
+            is_river=is_river,
+            is_lake=is_lake,
+        )
+
+    def update_tile_vertex_geology(
+        self,
+        tile_vertex: Vertex,
+        is_land: bool,
+        landmass_id: int,
+    ) -> Vertex:
+        return self._base.update_vertex(
+            vertex=tile_vertex, 
+            is_land=is_land, 
             landmass_id=landmass_id,
-            temperature=temperature,
-            precipitation=precipitation,
-            wind_u=wind_u,
-            wind_v=wind_v,
-            wind_magnitude=wind_magnitude,
-            biomes=biomes
-        )     
+        )
 
     def create_tile_vertex(
         self, 
         x: int, 
         y: int, 
-        z: int, 
-        is_land: bool, 
-        landmass_id: int,
-        temperature: float,
-        precipitation: float,
-        wind_u: float,
-        wind_v: float,
-        wind_magnitude: float,
-        biomes: list[BiomeEnum]
     ) -> Vertex:
         return self._base.create_vertex(
             type_name=VertexType.TILE, 
             x=x, 
             y=y,
-            z=z,
-            is_land=is_land,
-            landmass_id=landmass_id,
-            temperature=temperature,
-            precipitation=precipitation,
-            wind_u=wind_u,
-            wind_v=wind_v,
-            wind_magnitude=wind_magnitude,
-            biomes=biomes
         )        
 
     def get_tile_vertex_at(self, x: int, y: int) -> Vertex | None:
