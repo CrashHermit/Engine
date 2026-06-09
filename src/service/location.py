@@ -50,7 +50,7 @@ class LocationService:
         character = self._characters.get_character(character_id)
         if character is None:
             raise ValueError(f"Character not found: {character_id}")
-        destination = self._locations.get_location(destination_id)
+        destination = self._locations.get_location_vertex(destination_id)
         if destination is None:
             raise ValueError(f"Location not found: {destination_id}")
         with self._base.transaction():
@@ -62,10 +62,10 @@ class LocationService:
             location=self._to_location_data(location),
             neighbors=[
                 self._to_location_data(n)
-                for n in self._locations.get_neighbors(location)
+                for n in self._locations.get_location_vertex_neighbors(location)
             ],
             entities=[
-                self._to_entity_data(e) for e in self._locations.get_entities(location)
+                self._to_entity_data(e) for e in self._locations.get_entity_vertices(location)
             ],
         )
 
@@ -111,18 +111,18 @@ class LocationService:
             for e in entities:
                 if not e.id:
                     continue
-                vertex = self._locations.get_entity(e.id)
+                vertex = self._locations.get_entity_vertex(e.id)
                 if vertex is not None:
-                    self._locations.set_entity_resolution(
+                    self._locations.set_entity_vertex_resolution(
                         vertex, _resolution_to_json(e)
                     )
 
     def remove_entity(self, entity_id: str) -> None:
         """Remove a defeated entity from the world."""
         with self._base.transaction():
-            vertex = self._locations.get_entity(entity_id)
+            vertex = self._locations.get_entity_vertex(entity_id)
             if vertex is not None:
-                self._locations.remove_entity(vertex)
+                self._locations.remove_entity_vertex(vertex)
 
 
 def _resolution_to_json(entity: EntityData) -> str:

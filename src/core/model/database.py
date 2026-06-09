@@ -32,6 +32,7 @@ class VertexType(StrEnum):
     TILE = "TILE"
     WORLD = "WORLD"
     ENTITY = "ENTITY"  # PROTOTYPE
+    TIME = "TIME"
 
 
 class EdgeType(StrEnum):
@@ -73,3 +74,6 @@ class EdgeType(StrEnum):
     IS_CONTROLLABLE = "IS_CONTROLLABLE"
     ADJACENT = "ADJACENT"
     HAS_START = "HAS_START"  # PROTOTYPE: WORLD → LOCATION
+    HAS_TILE = "HAS_TILE"
+    HAS_TIME = "HAS_TIME"
+    HAS_LOCATION = "HAS_LOCATION"

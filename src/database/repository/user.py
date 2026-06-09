@@ -8,7 +8,7 @@ from src.database.repository.base import BaseRepository
 
 class UserRepository:
     def __init__(self, base: BaseRepository) -> None:
-        self._base = base
+        self._base: BaseRepository = base
 
     def get_user(self) -> Vertex | None:
         return self._base.get_vertex(type_name=VertexType.USER, id="user")
@@ -17,7 +17,7 @@ class UserRepository:
         return self._base.create_vertex(type_name=VertexType.USER, id="user")
 
     def get_or_create_user(self) -> Vertex:
-        user = self.get_user()
+        user: Vertex | None = self.get_user()
         if user is not None:
             return user
         return self.create_user()

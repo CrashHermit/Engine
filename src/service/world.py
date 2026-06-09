@@ -70,7 +70,7 @@ class WorldService:
             return None
 
         nodes = [
-            location_repo.create_location(
+            location_repo.create_location_vertex(
                 name=loc.name,
                 description=loc.description,
                 is_center=loc.is_center,
@@ -79,7 +79,7 @@ class WorldService:
         ]
 
         for a, b in dungeon.connections:
-            location_repo.connect_locations(nodes[a], nodes[b])
+            location_repo.connect_location_vertices(nodes[a], nodes[b])
 
         for node, loc in zip(nodes, dungeon.locations, strict=True):
             for entity in loc.entities:

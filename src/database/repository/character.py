@@ -76,7 +76,7 @@ class CharacterRepository:
     # Read verbs
 
     def list_characters(self) -> list[Vertex]:
-        return self._base.list_vertices(VertexType.CHARACTER)
+        return self._base.list_vertices(type_name=VertexType.CHARACTER)
 
     def get_character(self, id: str) -> Vertex | None:
         return self._base.get_vertex(type_name=VertexType.CHARACTER, id=id)

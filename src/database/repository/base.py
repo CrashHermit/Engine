@@ -1,5 +1,8 @@
 from __future__ import annotations
+from arcadedb_embedded.graph import Vertex
+from arcadedb_embedded.results import ResultSet
 
+from arcadedb_embedded.graph import Document, Edge, Vertex
 import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -35,7 +38,7 @@ class BaseRepository:
     # Vertex operations
 
     def create_vertex(self, type_name: VertexType, **properties: Any) -> Vertex:
-        now = self._current_time()
+        now: datetime = self._current_time()
         properties.setdefault("id", str(uuid.uuid4()))
         properties.setdefault("created_at", now)
         properties.setdefault("updated_at", now)
@@ -52,8 +55,20 @@ class BaseRepository:
         with self.transaction():
             return [self.create_vertex(type_name=type_name, **item) for item in items]
 
-    def get_vertex(self, type_name: VertexType, id: str) -> Vertex | None:
+    def lookup_vertex(
+        self,
+        type_name: VertexType,
+        keys: list[str],
+        values: list[Any],
+    ) -> Vertex | None:
         return self._database.lookup_by_key(
+            type_name=type_name,
+            keys=keys,
+            values=values,
+        )
+
+    def get_vertex(self, type_name: VertexType, id: str) -> Vertex | None:
+        return self.lookup_vertex(
             type_name=type_name, keys=["id"], values=[id]
         )
 
@@ -63,6 +78,20 @@ class BaseRepository:
         for name, value in properties.items():
             mutable.set(name=name, value=value)
         mutable.save()
+
+    def upsert_vertex(
+        self,
+        type_name: VertexType,
+        *,
+        keys: list[str],
+        values: list[Any],
+        **properties: Any,
+    ) -> Vertex:
+        vertex: Vertex | None = self.lookup_vertex(type_name, keys, values)
+        if vertex is None:
+            return self.create_vertex(type_name=type_name, **properties)
+        self.update_vertex(vertex=vertex, **properties)
+        return vertex
 
     def delete_vertex(self, vertex: Vertex) -> None:
         vertex.delete()
@@ -82,7 +111,7 @@ class BaseRepository:
         target: Vertex,
         **properties: Any,
     ) -> Edge:
-        now = self._current_time()
+        now: datetime = self._current_time()
         properties.setdefault("created_at", now)
         properties.setdefault("updated_at", now)
 
@@ -96,7 +125,7 @@ class BaseRepository:
             return [self.create_edge(type_name=type_name, **item) for item in items]
 
     def get_edge(self, type_name: EdgeType, id: str) -> Edge | None:
-        record = self._database.lookup_by_key(
+        record: Vertex | Edge | Document | None = self._database.lookup_by_key(
             type_name=type_name,
             keys=["id"],
             values=[id],
@@ -110,6 +139,18 @@ class BaseRepository:
             mutable.set(name=name, value=value)
         mutable.save()
 
+    def lookup_edge(
+        self,
+        type_name: EdgeType,
+        keys: list[str],
+        values: list[Any],
+    ) -> Edge | None:
+        return self._database.lookup_by_key(
+            type_name=type_name,
+            keys=keys,
+            values=values,
+        )
+
     def delete_edge(self, edge: Edge) -> None:
         edge.delete()
 
@@ -122,5 +163,5 @@ class BaseRepository:
     # Query operations
 
     def list_vertices(self, type_name: VertexType) -> list[Vertex]:
-        results = self._database.query("cypher", f"MATCH (n:{type_name}) RETURN n")
+        results: ResultSet = self._database.query(language="cypher", command=f"MATCH (n:{type_name}) RETURN n")
         return [v for r in results if (v := r.get_vertex()) is not None]

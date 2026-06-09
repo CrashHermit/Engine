@@ -21,8 +21,6 @@ PROPERTY_TYPES: dict[str, arcadedb.PropertyType] = {
     "created_at": arcadedb.PropertyType.DATETIME,
     "updated_at": arcadedb.PropertyType.DATETIME,
     "invalidated_at": arcadedb.PropertyType.DATETIME,
-    "q": arcadedb.PropertyType.INTEGER,
-    "r": arcadedb.PropertyType.INTEGER,
     "size": arcadedb.PropertyType.INTEGER,
     "direction": arcadedb.PropertyType.STRING,
     "is_center": arcadedb.PropertyType.BOOLEAN,
@@ -73,12 +71,13 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
     VertexType.AGREEABLENESS: [],
     VertexType.CONSCIENTIOUSNESS: [],
     VertexType.ATTRIBUTE: ["value"],
-    VertexType.TILE: ["q", "r"],
+    VertexType.TILE: [
+
+    ],
     VertexType.WORLD: [
         "name",
         "description",
-        "size",
-        "elapsed_ticks",
+        "size"
     ],
     VertexType.ENTITY: [
         "name",
@@ -118,9 +117,11 @@ EDGE_SCHEMA: dict[EdgeType, list[str]] = {
     EdgeType.IS_CONTROLLABLE: [],
     EdgeType.ADJACENT: [],
     EdgeType.CONNECTS: [],
+    EdgeType.HAS_TILE: [],
     EdgeType.LOCATED_AT: [],
     EdgeType.HAS_CHARACTER: [],
-    EdgeType.HAS_START: [],  # PROTOTYPE: WORLD → LOCATION
+    EdgeType.HAS_START: [],
+    EdgeType.HAS_LOCATION: [],
 }
 
 
