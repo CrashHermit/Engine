@@ -72,7 +72,9 @@ def parse_args() -> argparse.Namespace:
     layer_names = [layer.value for layer in LAYER_ORDER]
     parser = argparse.ArgumentParser(description="Export worldgen maps to PNG.")
     parser.add_argument("--seed", type=int, default=0, help="World seed (default: 0)")
-    parser.add_argument("--size", type=int, default=200, help="Grid size (default: 200)")
+    parser.add_argument(
+        "--size", type=int, default=200, help="Grid size (default: 200)"
+    )
     parser.add_argument(
         "--layer",
         choices=layer_names,

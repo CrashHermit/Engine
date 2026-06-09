@@ -50,9 +50,7 @@ def _run_seed(seed: int, size: int, config: WorldgenConfig) -> None:
         ("M" if f >= 0.10 else ("m" if f >= 0.02 else ".")) for f in fractions[:20]
     )
     grid_land_pct = (
-        100
-        * sum(1 for t in world.grid if t.position.is_land)
-        // len(world.grid)
+        100 * sum(1 for t in world.grid if t.position.is_land) // len(world.grid)
     )
     print(
         f"  seed {seed:>6}: {len(sizes):>3} components  "

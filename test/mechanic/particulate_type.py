@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-
 from core.model.climate.biome import Biome
 from core.model.weather.particulate_type import ParticulateType, ParticulateTypeEnum
 from core.model.weather.wind_intensity import WindIntensityEnum
@@ -14,11 +13,7 @@ def test_grid_has_343_entries() -> None:
 
 
 def test_grid_covers_all_biome_wind_pairs() -> None:
-    expected = {
-        (biome, wind)
-        for biome in Biome
-        for wind in WindIntensityEnum
-    }
+    expected = {(biome, wind) for biome in Biome for wind in WindIntensityEnum}
     assert set(ParticulateType.particulate_type_grid.keys()) == expected
 
 
@@ -71,5 +66,11 @@ def test_none_biomes_stay_clear(wind: WindIntensityEnum) -> None:
 
 def test_cold_desert_ash_at_breezy_plus() -> None:
     pt = ParticulateType()
-    assert pt.get_particulate_type(Biome.COLD_DESERT, WindIntensityEnum.CALM) == ParticulateTypeEnum.NONE
-    assert pt.get_particulate_type(Biome.COLD_DESERT, WindIntensityEnum.BREEZY) == ParticulateTypeEnum.ASH
+    assert (
+        pt.get_particulate_type(Biome.COLD_DESERT, WindIntensityEnum.CALM)
+        == ParticulateTypeEnum.NONE
+    )
+    assert (
+        pt.get_particulate_type(Biome.COLD_DESERT, WindIntensityEnum.BREEZY)
+        == ParticulateTypeEnum.ASH
+    )

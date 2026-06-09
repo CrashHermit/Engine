@@ -116,13 +116,16 @@ class ContinentAnchorProvider:
             )
             for ax, ay in self._continent_anchors
         )
-        island_val = max(
-            _smooth_falloff(
-                _toroidal_distance(x, y, ax, ay, self._width, self._height),
-                self._island_radius,
+        island_val = (
+            max(
+                _smooth_falloff(
+                    _toroidal_distance(x, y, ax, ay, self._width, self._height),
+                    self._island_radius,
+                )
+                for ax, ay in self._island_anchors
             )
-            for ax, ay in self._island_anchors
-        ) * self._island_weight
+            * self._island_weight
+        )
 
         organic = self._island_field.sample(x, y, 1.5) * 0.15
         return continent_val + island_val + organic

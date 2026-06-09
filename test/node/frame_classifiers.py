@@ -6,8 +6,7 @@ import pytest
 from dspy.primitives.prediction import Prediction
 
 from src.core.mechanic.duration import Duration, Unit
-from src.core.model.entity import EntityKind, ThreatPillar
-from src.core.model.entity import EntityData
+from src.core.model.entity import EntityData, EntityKind, ThreatPillar
 from src.core.model.threat import Channel
 from src.node.frame.approach import ApproachNode
 from src.node.frame.duration import DurationNode

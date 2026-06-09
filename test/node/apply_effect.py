@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 
 from src.core.mechanic.dice import RollResult, RollTier
-from src.core.model.entity import Danger, EntityData, EntityKind, EntityStatus, ThreatPillar
+from src.core.model.entity import (
+    Danger,
+    EntityData,
+    EntityKind,
+    EntityStatus,
+    ThreatPillar,
+)
 from src.core.model.threat import Channel
 from src.node.effect.apply_effect import ApplyEffectNode
 from src.state import GraphState

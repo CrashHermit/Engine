@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -11,6 +13,7 @@ class WindDirectionEnum(StrEnum):
     NORTH_WEST = "north_west"
     SOUTH_EAST = "south_east"
     SOUTH_WEST = "south_west"
+
 
 @dataclass
 class WindDirectionData:

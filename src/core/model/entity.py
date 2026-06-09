@@ -5,16 +5,17 @@ from enum import StrEnum
 
 from src.core.model.threat import Channel
 
+
 class Danger(StrEnum):
     """An entity's structural threat ceiling (NPCs carry danger, not HP).
 
     Maps to a magnitude cap in threat_envelope.py.
     """
 
-    LOW: str = "low"
-    STANDARD: str = "standard"
-    ELITE: str = "elite"
-    DEADLY: str = "deadly"
+    LOW = "low"
+    STANDARD = "standard"
+    ELITE = "elite"
+    DEADLY = "deadly"
 
 
 class EntityKind(StrEnum):
@@ -26,8 +27,8 @@ class EntityKind(StrEnum):
     has no meaningful clock.
     """
 
-    CREATURE: str = "creature"
-    OBJECT: str = "object"
+    CREATURE = "creature"
+    OBJECT = "object"
 
 
 class ThreatPillar(StrEnum):
@@ -41,11 +42,11 @@ class ThreatPillar(StrEnum):
     WILLING:  it wants to act
     """
 
-    EXISTS: str = "exists"
-    CAPABLE: str = "capable"
-    AWARE: str = "aware"
-    IN_REACH: str = "in_reach"
-    WILLING: str = "willing"
+    EXISTS = "exists"
+    CAPABLE = "capable"
+    AWARE = "aware"
+    IN_REACH = "in_reach"
+    WILLING = "willing"
 
 
 class EntityStatus(StrEnum):
@@ -85,6 +86,7 @@ class EntityStance(StrEnum):
     UNAWARE: str = "unaware"  # hasn't noticed / dormant
     WARY: str = "wary"  # noticed, tense, not yet committed
     HOSTILE: str = "hostile"  # actively threatening
+
 
 @dataclass
 class EntityData:

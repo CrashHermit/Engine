@@ -13,7 +13,7 @@ class MeshConfig:
 
     cell_count: int = 12000
     lloyd_iterations: int = 2
-    width: float = 0.0   # 0 → use float(world_size)
+    width: float = 0.0  # 0 → use float(world_size)
     height: float = 0.0  # 0 → use float(world_size)
 
 
@@ -44,9 +44,9 @@ class NoiseLayerConfig:
 
 def _default_three_bands() -> list[NoiseLayerConfig]:
     return [
-        NoiseLayerConfig(frequency=0.20, weight=0.65, octaves=4, kind="fbm"),
-        NoiseLayerConfig(frequency=0.75, weight=0.25, octaves=3, kind="fbm"),
-        NoiseLayerConfig(frequency=2.50, weight=0.10, octaves=2, kind="fbm"),
+        NoiseLayerConfig(frequency=0.22, weight=0.50, octaves=4, kind="fbm"),
+        NoiseLayerConfig(frequency=0.80, weight=0.35, octaves=4, kind="fbm"),
+        NoiseLayerConfig(frequency=2.00, weight=0.15, octaves=3, kind="fbm"),
     ]
 
 
@@ -68,9 +68,9 @@ class ElevationConfig:
 
     provider: str = "layered_noise"
     layers: list[NoiseLayerConfig] = field(default_factory=_default_three_bands)
-    warp_amplitude: float = 0.15
+    warp_amplitude: float = 0.18
     warp_frequency: float = 0.5
-    redistribution_power: float = 1.4
+    redistribution_power: float = 1.35
     elevation_scale: float = 1.0
 
 
@@ -83,7 +83,7 @@ class ElevationConfig:
 class SeaLevelConfig:
     """Percentile cut that converts raw elevation to ``is_land``."""
 
-    target_land_fraction: float = 0.30
+    target_land_fraction: float = 0.32
 
 
 # ---------------------------------------------------------------------------

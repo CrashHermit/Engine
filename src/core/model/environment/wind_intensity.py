@@ -1,5 +1,7 @@
-from enum import IntEnum
+from __future__ import annotations
+
 from dataclasses import dataclass
+from enum import IntEnum
 
 
 class WindIntensityEnum(IntEnum):
@@ -10,6 +12,7 @@ class WindIntensityEnum(IntEnum):
     GALE = 4
     STORM = 5
     HURRICANE = 6
+
 
 @dataclass
 class WindIntensityData:

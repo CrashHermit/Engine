@@ -58,7 +58,7 @@ class RiverRasterizeStage:
 
                 for ix in range(ix_min, ix_max + 1):
                     for iy in range(iy_min, iy_max + 1):
-                        if (ix - cx) ** 2 + (iy - cy) ** 2 > radius ** 2:
+                        if (ix - cx) ** 2 + (iy - cy) ** 2 > radius**2:
                             continue
                         wx = ix % size
                         wy = iy % size

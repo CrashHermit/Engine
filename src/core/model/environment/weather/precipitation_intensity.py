@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import IntEnum
 
@@ -48,8 +50,14 @@ class PrecipitationIntensity:
         (CloudCoverEnum.SCATTERED, HumidityEnum.CRISP): PrecipitationIntensityEnum.NONE,
         (CloudCoverEnum.SCATTERED, HumidityEnum.MILD): PrecipitationIntensityEnum.NONE,
         (CloudCoverEnum.SCATTERED, HumidityEnum.HUMID): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.SCATTERED, HumidityEnum.MUGGY): PrecipitationIntensityEnum.DRIZZLE,
-        (CloudCoverEnum.SCATTERED, HumidityEnum.SOAKING): PrecipitationIntensityEnum.LIGHT,
+        (
+            CloudCoverEnum.SCATTERED,
+            HumidityEnum.MUGGY,
+        ): PrecipitationIntensityEnum.DRIZZLE,
+        (
+            CloudCoverEnum.SCATTERED,
+            HumidityEnum.SOAKING,
+        ): PrecipitationIntensityEnum.LIGHT,
         # ── BROKEN ──────────────────────────────────────────────────────────────
         (CloudCoverEnum.BROKEN, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
         (CloudCoverEnum.BROKEN, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
@@ -57,7 +65,10 @@ class PrecipitationIntensity:
         (CloudCoverEnum.BROKEN, HumidityEnum.MILD): PrecipitationIntensityEnum.DRIZZLE,
         (CloudCoverEnum.BROKEN, HumidityEnum.HUMID): PrecipitationIntensityEnum.LIGHT,
         (CloudCoverEnum.BROKEN, HumidityEnum.MUGGY): PrecipitationIntensityEnum.LIGHT,
-        (CloudCoverEnum.BROKEN, HumidityEnum.SOAKING): PrecipitationIntensityEnum.STEADY,
+        (
+            CloudCoverEnum.BROKEN,
+            HumidityEnum.SOAKING,
+        ): PrecipitationIntensityEnum.STEADY,
         # ── MOSTLY ──────────────────────────────────────────────────────────────
         (CloudCoverEnum.MOSTLY, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
         (CloudCoverEnum.MOSTLY, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
@@ -69,19 +80,31 @@ class PrecipitationIntensity:
         # ── OVERCAST ────────────────────────────────────────────────────────────
         (CloudCoverEnum.OVERCAST, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
         (CloudCoverEnum.OVERCAST, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.OVERCAST, HumidityEnum.CRISP): PrecipitationIntensityEnum.DRIZZLE,
+        (
+            CloudCoverEnum.OVERCAST,
+            HumidityEnum.CRISP,
+        ): PrecipitationIntensityEnum.DRIZZLE,
         (CloudCoverEnum.OVERCAST, HumidityEnum.MILD): PrecipitationIntensityEnum.LIGHT,
         (CloudCoverEnum.OVERCAST, HumidityEnum.HUMID): PrecipitationIntensityEnum.HEAVY,
         (CloudCoverEnum.OVERCAST, HumidityEnum.MUGGY): PrecipitationIntensityEnum.HEAVY,
-        (CloudCoverEnum.OVERCAST, HumidityEnum.SOAKING): PrecipitationIntensityEnum.TORRENTIAL,
+        (
+            CloudCoverEnum.OVERCAST,
+            HumidityEnum.SOAKING,
+        ): PrecipitationIntensityEnum.TORRENTIAL,
         # ── LEADEN ──────────────────────────────────────────────────────────────
         (CloudCoverEnum.LEADEN, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
         (CloudCoverEnum.LEADEN, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
         (CloudCoverEnum.LEADEN, HumidityEnum.CRISP): PrecipitationIntensityEnum.DRIZZLE,
         (CloudCoverEnum.LEADEN, HumidityEnum.MILD): PrecipitationIntensityEnum.STEADY,
         (CloudCoverEnum.LEADEN, HumidityEnum.HUMID): PrecipitationIntensityEnum.HEAVY,
-        (CloudCoverEnum.LEADEN, HumidityEnum.MUGGY): PrecipitationIntensityEnum.TORRENTIAL,
-        (CloudCoverEnum.LEADEN, HumidityEnum.SOAKING): PrecipitationIntensityEnum.CLOUDBURST,
+        (
+            CloudCoverEnum.LEADEN,
+            HumidityEnum.MUGGY,
+        ): PrecipitationIntensityEnum.TORRENTIAL,
+        (
+            CloudCoverEnum.LEADEN,
+            HumidityEnum.SOAKING,
+        ): PrecipitationIntensityEnum.CLOUDBURST,
     }
 
     def get_precipitation_intensity(

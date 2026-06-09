@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import IntEnum
 
@@ -10,6 +12,7 @@ class CloudCoverEnum(IntEnum):
     MOSTLY = 4
     OVERCAST = 5
     LEADEN = 6
+
 
 @dataclass
 class CloudCoverData:

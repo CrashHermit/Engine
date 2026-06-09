@@ -23,18 +23,18 @@ class HydrologyStage:
     def run(self, ctx: WorldContext) -> WorldContext:
         if ctx.data.mesh is None:
             return ctx
-        mesh = ctx.data.mesh
+        mesh: VoronoiMesh = ctx.data.mesh
         self._reset_cells(mesh.cells)
         self._fill_depressions(mesh)
-        flow_targets = self._compute_flow_targets(mesh)
-        flux = self._accumulate_flux(mesh, flow_targets)
-        threshold = self._config.river_flux_threshold
+        flow_targets: dict[int, int | None] = self._compute_flow_targets(mesh)
+        flux: list[float] = self._accumulate_flux(mesh, flow_targets)
+        threshold: float = self._config.river_flux_threshold
         ctx.data.rivers.clear()
         for cell in mesh.cells:
             cell.river_flux = float(flux[cell.id])
             cell.drainage = int(flux[cell.id])
             cell.is_river = cell.is_land and flux[cell.id] >= threshold
-            downstream_id = flow_targets.get(cell.id)
+            downstream_id: int | None = flow_targets.get(cell.id)
             if downstream_id is not None and flux[cell.id] >= threshold:
                 ctx.data.rivers.append(
                     self._make_segment(mesh, cell.id, downstream_id, flux[cell.id])

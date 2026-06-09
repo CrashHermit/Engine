@@ -71,6 +71,3 @@ ban-relative-imports = "all"
 
 [tool.ruff.lint.pydocstyle]
 convention = "pep257"
-
-[tool.pyright]
-stubPath = "typings"

@@ -18,7 +18,9 @@ class GridIndex:
     def build_base_grid(self, world_data: WorldData) -> WorldData:
         for x in range(self._size):
             for y in range(self._size):
-                world_data.grid.append(GridTileData(position=GridPositionData(x=x, y=y)))
+                world_data.grid.append(
+                    GridTileData(position=GridPositionData(x=x, y=y))
+                )
         return world_data
 
     def build_neighbors(self, world_data: WorldData) -> WorldData:

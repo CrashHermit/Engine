@@ -36,9 +36,9 @@ class BiomeStage:
             for center in self._centers:
                 dx = cell.temperature - center.ideal_temp
                 dy = cell.precipitation - center.ideal_precip
-                distance = math.sqrt(dx ** 2 + dy ** 2)
+                distance = math.sqrt(dx**2 + dy**2)
                 distance = max(0.001, distance)
-                weight = 1.0 / (distance ** cfg.blend_sharpness)
+                weight = 1.0 / (distance**cfg.blend_sharpness)
                 weights[center.biome] = weight
                 total_weight += weight
 

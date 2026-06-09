@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from arcadedb_embedded.graph import Vertex
+
 from src.core.model.database import VertexType
 from src.database.repository.base import BaseRepository
 
@@ -23,7 +24,7 @@ class TimeRepository:
         time_vertex: Vertex | None = self.get_time_vertex()
         if time_vertex is None:
             return
-        self._base.delete_vertex(time_vertex)
+        self._base.delete_vertex(vertex=time_vertex)
 
     def update_elapsed_ticks(self, elapsed_ticks: int) -> Vertex:
         time_vertex: Vertex | None = self.get_time_vertex()
@@ -31,4 +32,4 @@ class TimeRepository:
             return None
         current_elapsed_ticks: int = time_vertex.get(name="elapsed_ticks")
         new_elapsed_ticks: int = current_elapsed_ticks + elapsed_ticks
-        return self._base.update_vertex(time_vertex, elapsed_ticks=new_elapsed_ticks)
+        return self._base.update_vertex(vertex=time_vertex, elapsed_ticks=new_elapsed_ticks)

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
+
 from src.core.mechanic.duration import TICKS, Duration, Unit
 from src.core.model.character import CharacterData
 from src.core.model.location import LocationState

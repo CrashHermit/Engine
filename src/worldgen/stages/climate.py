@@ -66,7 +66,7 @@ class ClimateStage:
             noise_v = wind_v_field.sample(x, y, wind_freq)
             raw_u = base_u + noise_u * cfg.wind_turbulence
             raw_v = base_v + noise_v * cfg.wind_turbulence
-            magnitude = math.sqrt(raw_u ** 2 + raw_v ** 2)
+            magnitude = math.sqrt(raw_u**2 + raw_v**2)
 
             if magnitude > 0.0:
                 cell.wind_u = raw_u / magnitude
@@ -97,9 +97,7 @@ class ClimateStage:
             # --- temperature ------------------------------------------
             warp_y_t = temp_warp.sample(x, y, cfg.noise_scale) * cfg.warp_amplitude
             warped_y_t = y + warp_y_t
-            phase_t = (
-                2.0 * math.pi * warped_y_t / mesh.height * cfg.temperature_bands
-            )
+            phase_t = 2.0 * math.pi * warped_y_t / mesh.height * cfg.temperature_bands
             base_temp = (math.cos(phase_t) + 1.0) / 2.0
             elevation_cooling = max(0.0, cell.z) * cfg.lapse_rate
             cell.temperature = max(0.0, base_temp - elevation_cooling)
@@ -112,9 +110,7 @@ class ClimateStage:
             wx, wy = x + warp_px, y + warp_py
             warped_y_p = y + warp_py
             normalized_py = (warped_y_p / mesh.height) * 2.0 - 1.0
-            band_precip = math.sin(
-                normalized_py * math.pi * cfg.precip_latitude_bands
-            )
+            band_precip = math.sin(normalized_py * math.pi * cfg.precip_latitude_bands)
             organic_precip = precip_field.sample(wx, wy, cfg.noise_scale)
             cell.precipitation = (
                 (band_precip * cfg.band_weight)

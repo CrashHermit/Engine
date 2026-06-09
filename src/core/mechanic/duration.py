@@ -16,28 +16,32 @@ from enum import StrEnum
 
 TICK_SECONDS: int = 6
 
+
 class Unit(StrEnum):
-    SIX_SECONDS = "six_seconds"           # 1 tick (A quick reaction / combat round)
-    THIRTY_SECONDS = "thirty_seconds"     # 5 ticks (A brief physical exchange)
-    ONE_MINUTE = "one_minute"             # 10 ticks (A quick search / lockpick)
-    FIVE_MINUTES = "five_minutes"         # 50 ticks (Bandaging, short rest)
-    TEN_MINUTES = "ten_minutes"           # 100 ticks (A focused conversation / ritual)
-    FIFTEEN_MINUTES = "fifteen_minutes"   # 150 ticks (A quarter-hour / thorough room search)
-    THIRTY_MINUTES = "thirty_minutes"     # 300 ticks (A half-hour / short meal)
-    ONE_HOUR = "one_hour"                 # 600 ticks (Standard travel / study)
-    TWO_HOURS = "two_hours"               # 1200 ticks (Watching a movie / long meeting)
-    FOUR_HOURS = "four_hours"             # 2400 ticks (A half workday / guard watch)
-    EIGHT_HOURS = "eight_hours"           # 4800 ticks (A full workday / night's sleep)
-    TWELVE_HOURS = "twelve_hours"         # 7200 ticks (Half a day / dawn to dusk)
-    ONE_DAY = "one_day"                   # 14400 ticks (24 hours)
-    THREE_DAYS = "three_days"             # 43200 ticks ("A few days" / weekend trip)
-    ONE_WEEK = "one_week"                 # 100800 ticks (7 days)
-    TWO_WEEKS = "two_weeks"               # 201600 ticks (A fortnight)
-    THREE_WEEKS = "three_weeks"           # 302400 ticks (21 days)
-    ONE_MONTH = "one_month"               # 432000 ticks (30 days)
-    THREE_MONTHS = "three_months"         # 1296000 ticks (A season / quarter year)
-    SIX_MONTHS = "six_months"             # 2592000 ticks (Half a year)
-    ONE_YEAR = "one_year"                 # 5256000 ticks (365 days)
+    SIX_SECONDS = "six_seconds"  # 1 tick (A quick reaction / combat round)
+    THIRTY_SECONDS = "thirty_seconds"  # 5 ticks (A brief physical exchange)
+    ONE_MINUTE = "one_minute"  # 10 ticks (A quick search / lockpick)
+    FIVE_MINUTES = "five_minutes"  # 50 ticks (Bandaging, short rest)
+    TEN_MINUTES = "ten_minutes"  # 100 ticks (A focused conversation / ritual)
+    FIFTEEN_MINUTES = (
+        "fifteen_minutes"  # 150 ticks (A quarter-hour / thorough room search)
+    )
+    THIRTY_MINUTES = "thirty_minutes"  # 300 ticks (A half-hour / short meal)
+    ONE_HOUR = "one_hour"  # 600 ticks (Standard travel / study)
+    TWO_HOURS = "two_hours"  # 1200 ticks (Watching a movie / long meeting)
+    FOUR_HOURS = "four_hours"  # 2400 ticks (A half workday / guard watch)
+    EIGHT_HOURS = "eight_hours"  # 4800 ticks (A full workday / night's sleep)
+    TWELVE_HOURS = "twelve_hours"  # 7200 ticks (Half a day / dawn to dusk)
+    ONE_DAY = "one_day"  # 14400 ticks (24 hours)
+    THREE_DAYS = "three_days"  # 43200 ticks ("A few days" / weekend trip)
+    ONE_WEEK = "one_week"  # 100800 ticks (7 days)
+    TWO_WEEKS = "two_weeks"  # 201600 ticks (A fortnight)
+    THREE_WEEKS = "three_weeks"  # 302400 ticks (21 days)
+    ONE_MONTH = "one_month"  # 432000 ticks (30 days)
+    THREE_MONTHS = "three_months"  # 1296000 ticks (A season / quarter year)
+    SIX_MONTHS = "six_months"  # 2592000 ticks (Half a year)
+    ONE_YEAR = "one_year"  # 5256000 ticks (365 days)
+
 
 TICKS: dict[Unit, int] = {
     Unit.SIX_SECONDS: 1,

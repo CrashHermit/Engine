@@ -13,6 +13,7 @@ class ElevationEnum(IntEnum):
     LOFTY = 5
     SUMMIT = 6
 
+
 @dataclass
 class ElevationData:
     elevation: ElevationEnum

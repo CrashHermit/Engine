@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import pytest
-
-from core.model.climate.biome import BIOME_MATRIX, Biome, Biome
-from core.model.climate.precipitation import PrecipitationEnum, PrecipitationData
+from core.model.climate.biome import BIOME_MATRIX, Biome
+from core.model.climate.precipitation import PrecipitationData, PrecipitationEnum
 from core.model.temperature import Temperature, TemperatureData
 
 

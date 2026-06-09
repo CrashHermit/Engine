@@ -57,9 +57,7 @@ class IntentQuestionGeneratorNode:
         intent_alignment_history: str = "\n".join(
             m.format() for m in state.get("intent_alignment_history", [])
         )
-        entity_names = "\n".join(
-            e.name for e in state.get("scene_entities", [])
-        )
+        entity_names = "\n".join(e.name for e in state.get("scene_entities", []))
         prediction: Prediction = await self._program.aforward(
             character_name=state.get("character_name", ""),
             location_name=state.get("location_name", ""),

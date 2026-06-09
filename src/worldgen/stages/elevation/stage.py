@@ -63,6 +63,6 @@ class ElevationStage:
 
         for cell, value in zip(mesh.cells, raw):
             norm = (value - raw_min) / span_val
-            cell.z = norm ** cfg.redistribution_power
+            cell.z = norm**cfg.redistribution_power
 
         return ctx

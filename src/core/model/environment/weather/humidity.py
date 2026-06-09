@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from enum import IntEnum
 
@@ -10,6 +12,7 @@ class HumidityEnum(IntEnum):
     HUMID = 4
     MUGGY = 5
     SOAKING = 6
+
 
 @dataclass
 class HumidityData:

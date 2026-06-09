@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.mechanic.narration_directive import final_directive
@@ -8,7 +10,8 @@ from src.state import GraphState
 
 class FinalPlannerSignature(Signature):
     """Reached only when nothing landed (clean/crit, or every threat reduced to
-    0 at scale time). Narrates the avoided beat."""
+    0 at scale time). Narrates the avoided beat.
+    """
 
     contested_beat: str = InputField(description="The action that was rolled")
     threat_type: str = InputField(default="")
@@ -21,16 +24,20 @@ class FinalPlannerSignature(Signature):
     narration_directive: str = OutputField(description="The narration directive")
     anchors: str = OutputField(description="The anchors")
 
+
 class FinalPlannerNode:
     """Reached only when nothing landed (clean/crit, or every threat reduced to
-    0 at scale time). Narrates the avoided beat."""
+    0 at scale time). Narrates the avoided beat.
+    """
 
     def __init__(self) -> None:
         self._program: Predict = Predict(signature=FinalPlannerSignature)
         self._program.lm = lm
 
     async def __call__(self, state: GraphState) -> dict:
-        entities = "\n".join(state.entities_at_location) if state.entities_at_location else ""
+        entities = (
+            "\n".join(state.entities_at_location) if state.entities_at_location else ""
+        )
         first = state.threats[0] if state.threats else None
 
         prediction: Prediction = await self._program.aforward(

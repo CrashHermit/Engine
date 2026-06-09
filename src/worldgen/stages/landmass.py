@@ -43,9 +43,7 @@ class LandmassStage:
             cell.landmass_class = OCEAN
             cell.coast_distance = 0.0
 
-    def _label_components(
-        self, mesh: VoronoiMesh, ctx: WorldContext
-    ) -> dict[int, int]:
+    def _label_components(self, mesh: VoronoiMesh, ctx: WorldContext) -> dict[int, int]:
         cells = mesh.cells
         unvisited = {cell.id for cell in cells if cell.is_land}
         next_id = 0

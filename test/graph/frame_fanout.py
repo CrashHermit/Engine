@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from src.core.model.entity import Danger, EntityData, EntityKind, EntityStance, EntityStatus
+from src.core.model.entity import (
+    Danger,
+    EntityData,
+    EntityKind,
+    EntityStance,
+    EntityStatus,
+)
 from src.graph.routers import FRAME_BRANCHES, fan_out_frame_and_threats
 from src.state import GraphState
 

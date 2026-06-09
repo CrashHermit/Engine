@@ -15,14 +15,14 @@ def earthlike() -> WorldgenConfig:
         elevation=ElevationConfig(
             provider="layered_noise",
             layers=[
-                NoiseLayerConfig(frequency=0.20, weight=0.65, octaves=4, kind="fbm"),
-                NoiseLayerConfig(frequency=0.75, weight=0.25, octaves=3, kind="fbm"),
-                NoiseLayerConfig(frequency=2.50, weight=0.10, octaves=2, kind="fbm"),
+                NoiseLayerConfig(frequency=0.22, weight=0.50, octaves=4, kind="fbm"),
+                NoiseLayerConfig(frequency=0.80, weight=0.35, octaves=4, kind="fbm"),
+                NoiseLayerConfig(frequency=2.00, weight=0.15, octaves=3, kind="fbm"),
             ],
-            warp_amplitude=0.15,
-            redistribution_power=1.4,
+            warp_amplitude=0.18,
+            redistribution_power=1.35,
         ),
-        sea_level=SeaLevelConfig(target_land_fraction=0.30),
+        sea_level=SeaLevelConfig(target_land_fraction=0.32),
     )
 
 

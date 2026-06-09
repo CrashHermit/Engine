@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from src.database.repository.time import TimeRepository
 from arcadedb_embedded.graph import Vertex
+
 from src.core.model.time import WorldDateTime
+from src.database.repository.time import TimeRepository
 
 
 class TimeService:
@@ -29,7 +30,7 @@ class TimeService:
         """
         time_vertex: Vertex = self._time.update_elapsed_ticks(elapsed_ticks)
         return time_vertex.get(name="elapsed_ticks")
-        
+
     def create_time_vertex(self, elapsed_ticks: int) -> Vertex:
         """
         Create a new time vertex.
@@ -38,7 +39,6 @@ class TimeService:
 
     def get_current_world_time(self) -> WorldDateTime:
         """Return the current world time as a WorldDateTime object."""
-
         elapsed_ticks: int = self.get_elapsed_ticks()
         seconds: int = elapsed_ticks * 6
         minutes: int = seconds // 60

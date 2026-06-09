@@ -8,18 +8,22 @@ from src.core.helper.scene_context import SceneContextHelper
 from src.core.model.biome import Biome
 from src.core.model.climate import (
     ClimateData,
-    Precipitation as ClimatePrecipitation,
     Temperature,
+)
+from src.core.model.climate import (
+    Precipitation as ClimatePrecipitation,
 )
 from src.core.model.environment import EnvironmentData
 from src.core.model.location import LocationData
 from src.core.model.terrain import Elevation, TerrainData
 from src.core.model.weather import (
     Humidity,
-    Precipitation as WeatherPrecipitation,
     WeatherData,
     WindDirection,
     WindSpeed,
+)
+from src.core.model.weather import (
+    Precipitation as WeatherPrecipitation,
 )
 
 
@@ -50,7 +54,9 @@ def _sample_location() -> LocationData:
 
 
 def test_resolve_location_biome(helper: SceneContextHelper) -> None:
-    assert helper.resolve_location_biome(_sample_location()) == Biome.TEMPERATE_RAINFOREST
+    assert (
+        helper.resolve_location_biome(_sample_location()) == Biome.TEMPERATE_RAINFOREST
+    )
 
 
 def test_compose_location_structured(helper: SceneContextHelper) -> None:

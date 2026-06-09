@@ -23,7 +23,7 @@ def field_offset(field_id: int) -> tuple[float, float, float, float]:
 
 
 # Named field IDs used throughout the worldgen system.
-FIELD_LAYER_BASE: int = 0       # elevation layers: FIELD_LAYER_BASE + layer_index
+FIELD_LAYER_BASE: int = 0  # elevation layers: FIELD_LAYER_BASE + layer_index
 FIELD_WARP_X: int = 20
 FIELD_WARP_Y: int = 21
 FIELD_CLIMATE_TEMP_WARP: int = 30
