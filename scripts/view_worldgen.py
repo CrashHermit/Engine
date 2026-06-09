@@ -94,11 +94,13 @@ class WorldgenViewerApp(App[None]):
         Binding("1", "layer('elevation')", "Elevation"),
         Binding("2", "layer('temperature')", "Temperature"),
         Binding("3", "layer('precipitation')", "Precipitation"),
-        Binding("4", "layer('biomes')", "Biomes"),
-        Binding("5", "layer('hydrology')", "Hydrology"),
-        Binding("6", "layer('rivers')", "Rivers"),
-        Binding("7", "layer('landmasses')", "Landmasses"),
-        Binding("8", "layer('mesh')", "Mesh"),
+        Binding("4", "layer('savagery')", "Savagery"),
+        Binding("5", "layer('alignment')", "Alignment"),
+        Binding("6", "layer('biomes')", "Biomes"),
+        Binding("7", "layer('hydrology')", "Hydrology"),
+        Binding("8", "layer('rivers')", "Rivers"),
+        Binding("9", "layer('landmasses')", "Landmasses"),
+        Binding("0", "layer('mesh')", "Mesh"),
     ]
 
     def __init__(self, grid_size: int, seed: int) -> None:
@@ -140,7 +142,7 @@ class WorldgenViewerApp(App[None]):
         self.query_one("#info-title", Static).update(LAYER_LABELS[self._layer])
         self.query_one("#info-desc", Static).update(LAYER_DESCRIPTIONS[self._layer])
         self.query_one("#info-meta", Static).update(
-            "Press 1-8 or click a layer.\n[r] re-roll  [q] quit"
+            "Press 1-9, 0 or click a layer.\n[r] re-roll  [q] quit"
         )
         for layer in LAYER_ORDER:
             button = self.query_one(f"#btn-{layer.value}", Button)

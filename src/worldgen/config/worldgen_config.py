@@ -151,6 +151,29 @@ class ClimateConfig:
 
 
 # ---------------------------------------------------------------------------
+# Savagery and alignment
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class SavageryConfig:
+    """Savagery field parameters (0 = tame, 1 = savage)."""
+
+    noise_scale: float = 2.0
+    blend_weight: float = 0.7
+    amplitude: float = 1.0
+
+
+@dataclass
+class AlignmentConfig:
+    """Alignment field parameters (-1 = chaotic, +1 = ordered)."""
+
+    noise_scale: float = 2.0
+    blend_weight: float = 0.7
+    amplitude: float = 1.0
+
+
+# ---------------------------------------------------------------------------
 # Biomes
 # ---------------------------------------------------------------------------
 
@@ -204,5 +227,7 @@ class WorldgenConfig:
     landmass: LandmassConfig = field(default_factory=LandmassConfig)
     hydrology: HydrologyConfig = field(default_factory=HydrologyConfig)
     climate: ClimateConfig = field(default_factory=ClimateConfig)
+    savagery: SavageryConfig = field(default_factory=SavageryConfig)
+    alignment: AlignmentConfig = field(default_factory=AlignmentConfig)
     biome: BiomeConfig = field(default_factory=BiomeConfig)
     anchor: AnchorConfig = field(default_factory=AnchorConfig)

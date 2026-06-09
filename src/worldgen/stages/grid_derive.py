@@ -8,8 +8,9 @@ from src.worldgen.geometry.mesh_index import VoronoiMeshIndex
 class GridDeriveStage:
     """Samples mesh fields onto each grid tile via nearest-cell lookup.
 
-    Copies elevation, temperature, precipitation, wind, hydrology, biomes,
-    and landmass data from the closest Voronoi cell to each grid tile.
+    Copies elevation, temperature, precipitation, wind, hydrology, savagery,
+    alignment, biomes, and landmass data from the closest Voronoi cell to
+    each grid tile.
     River flags are intentionally left false here; ``RiverRasterizeStage``
     stamps them afterwards from the segment network.
 
@@ -44,6 +45,8 @@ class GridDeriveStage:
             position.river_flux = cell.river_flux
             position.is_lake = cell.is_lake
             position.is_river = False
+            position.savagery = cell.savagery
+            position.alignment = cell.alignment
             position.biome_weights = [
                 BiomeWeights(biome=entry.biome, weight=entry.weight)
                 for entry in cell.biome_weights

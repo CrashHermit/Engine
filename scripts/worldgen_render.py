@@ -20,6 +20,8 @@ class Layer(StrEnum):
     ELEVATION = "elevation"
     TEMPERATURE = "temperature"
     PRECIPITATION = "precipitation"
+    SAVAGERY = "savagery"
+    ALIGNMENT = "alignment"
     BIOMES = "biomes"
     HYDROLOGY = "hydrology"
     RIVERS = "rivers"
@@ -31,6 +33,8 @@ LAYER_ORDER: tuple[Layer, ...] = (
     Layer.ELEVATION,
     Layer.TEMPERATURE,
     Layer.PRECIPITATION,
+    Layer.SAVAGERY,
+    Layer.ALIGNMENT,
     Layer.BIOMES,
     Layer.HYDROLOGY,
     Layer.RIVERS,
@@ -42,6 +46,8 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.ELEVATION: "Elevation",
     Layer.TEMPERATURE: "Temperature",
     Layer.PRECIPITATION: "Precipitation",
+    Layer.SAVAGERY: "Savagery",
+    Layer.ALIGNMENT: "Alignment",
     Layer.BIOMES: "Biomes",
     Layer.HYDROLOGY: "Hydrology",
     Layer.RIVERS: "Rivers",
@@ -58,6 +64,8 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
         "Surface warmth. Blue = cold, green = mild, yellow = warm, red = hot."
     ),
     Layer.PRECIPITATION: "Moisture. Tan = dry, blue = wet.",
+    Layer.SAVAGERY: "Low = tame, high = savage.",
+    Layer.ALIGNMENT: "Negative = dark/chaotic, positive = ordered/holy.",
     Layer.BIOMES: (
         "Dominant biome per land tile. Each hue is a biome; water stays blue."
     ),
@@ -160,6 +168,14 @@ def tile_color(
         t = _normalize(position.precipitation, low, high)
         return _lerp_color((194, 145, 80), (30, 90, 200), t)
 
+    if layer == Layer.SAVAGERY:
+        t = max(0.0, min(1.0, position.savagery))
+        return _lerp_color((25, 35, 60), (180, 60, 25), t)
+
+    if layer == Layer.ALIGNMENT:
+        t = (position.alignment + 1.0) * 0.5
+        return _lerp_color((70, 40, 140), (230, 220, 95), t)
+
     if layer == Layer.BIOMES:
         biome = _dominant_biome(tile)
         if biome is None:
@@ -210,6 +226,8 @@ def compute_ranges(grid: list[GridTileData]) -> dict[str, tuple[float, float]]:
         "elevation": _scalar_range(grid, lambda tile: tile.position.z),
         "temperature": _scalar_range(grid, lambda tile: tile.position.temperature),
         "precipitation": _scalar_range(grid, lambda tile: tile.position.precipitation),
+        "savagery": _scalar_range(grid, lambda tile: tile.position.savagery),
+        "alignment": _scalar_range(grid, lambda tile: tile.position.alignment),
         "drainage": _scalar_range(
             [tile for tile in grid if tile.position.is_land] or grid,
             lambda tile: float(tile.position.drainage_tiles),
