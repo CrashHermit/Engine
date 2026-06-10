@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from src.core.model.environment.climate.biome import BiomeEnum
+from src.core.model.environment.ecology.biome import BiomeEnum
 from src.worldgen.config.worldgen_config import BiomeConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.data import BiomeCenter, BiomeWeights

@@ -3,7 +3,7 @@ from __future__ import annotations
 import colorsys
 from enum import StrEnum
 
-from src.core.model.environment.climate.biome import BiomeEnum
+from src.core.model.environment.ecology.biome import BiomeEnum
 from src.worldgen.data import GridTileData, WorldData
 from src.worldgen.geometry.mesh_index import VoronoiMeshIndex
 from src.worldgen.pipeline import WorldgenPipeline

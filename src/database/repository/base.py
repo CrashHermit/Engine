@@ -2,7 +2,7 @@ from __future__ import annotations
 from arcadedb_embedded.graph import Vertex
 from arcadedb_embedded.results import ResultSet
 
-from arcadedb_embedded.graph import Document, Edge, Vertex
+from arcadedb_embedded.graph import Document, Edge
 import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
@@ -10,7 +10,6 @@ from datetime import UTC, datetime
 from typing import Any
 
 import arcadedb_embedded as arcadedb
-from arcadedb_embedded.graph import Edge, Vertex
 
 from src.core.model.database import EdgeType, VertexType
 
@@ -35,7 +34,9 @@ class BaseRepository:
     def _current_time(self) -> datetime:
         return self._now if self._now is not None else datetime.now(tz=UTC)
 
+    ########################################################################################
     # Vertex operations
+    ########################################################################################
 
     def create_vertex(self, type_name: VertexType, **properties: Any) -> Vertex:
         now: datetime = self._current_time()
@@ -68,9 +69,7 @@ class BaseRepository:
         )
 
     def get_vertex(self, type_name: VertexType, id: str) -> Vertex | None:
-        return self.lookup_vertex(
-            type_name=type_name, keys=["id"], values=[id]
-        )
+        return self.lookup_vertex(type_name=type_name, keys=["id"], values=[id])
 
     def update_vertex(self, vertex: Vertex, **properties: Any) -> None:
         properties.setdefault("updated_at", self._current_time())
@@ -102,7 +101,9 @@ class BaseRepository:
             value=self._current_time(),
         ).save()
 
+    ########################################################################################
     # Edge operations
+    ########################################################################################
 
     def create_edge(
         self,
@@ -160,8 +161,12 @@ class BaseRepository:
             value=self._current_time(),
         ).save()
 
+    ########################################################################################
     # Query operations
+    ########################################################################################
 
     def list_vertices(self, type_name: VertexType) -> list[Vertex]:
-        results: ResultSet = self._database.query(language="cypher", command=f"MATCH (n:{type_name}) RETURN n")
+        results: ResultSet = self._database.query(
+            language="cypher", command=f"MATCH (n:{type_name}) RETURN n"
+        )
         return [v for r in results if (v := r.get_vertex()) is not None]

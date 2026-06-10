@@ -1,5 +1,5 @@
 class WeatherSystem:
-    def step(self, grid: WorldGridState)  -> None:
+    def step(self, grid: WorldGridState) -> None:
         for y in range(grid.size):
             for x in range(grid.size):
                 i: int = y * grid.size + x

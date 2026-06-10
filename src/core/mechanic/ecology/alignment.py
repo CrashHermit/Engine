@@ -1,19 +1,19 @@
 from __future__ import annotations
 
-from src.core.model.environment.weather.cloud_cover import (
+from src.core.model.environment.ecology.alignment import (
     BREAKPOINTS,
     ORDER,
-    CloudCoverBand,
+    AlignmentBand,
 )
 
 
-class CloudCover:
-    def cloudcover_band(self, value: float) -> CloudCoverBand:
+class Alignment:
+    def alignment_band(self, value: float) -> AlignmentBand:
         clamped: float = max(0.0, min(1.0, value))
         for index, edge in enumerate(BREAKPOINTS):
             if clamped < edge:
                 return ORDER[index]
         return ORDER[-1]
 
-    def cloudcover_index(self, band: CloudCoverBand) -> int:
+    def alignment_index(self, band: AlignmentBand) -> int:
         return ORDER.index(band)

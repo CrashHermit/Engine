@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from src.core.model.environment.climate.biome import BiomeEnum
+from src.core.model.environment.ecology.biome import BiomeEnum
 
 
 @dataclass

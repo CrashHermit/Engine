@@ -71,14 +71,8 @@ VERTEX_SCHEMA: dict[VertexType, list[str]] = {
     VertexType.AGREEABLENESS: [],
     VertexType.CONSCIENTIOUSNESS: [],
     VertexType.ATTRIBUTE: ["value"],
-    VertexType.TILE: [
-
-    ],
-    VertexType.WORLD: [
-        "name",
-        "description",
-        "size"
-    ],
+    VertexType.TILE: [],
+    VertexType.WORLD: ["name", "description", "size"],
     VertexType.ENTITY: [
         "name",
         "description",

@@ -28,8 +28,6 @@ class CharacterRepository:
     def __init__(self, base: BaseRepository) -> None:
         self._base: BaseRepository = base
 
-    # Write verbs
-
     def create_character(self, name: str, description: str) -> Vertex:
         return self._base.create_vertex(
             type_name=VertexType.CHARACTER,
@@ -40,11 +38,6 @@ class CharacterRepository:
     def add_node(
         self, source: Vertex, vertex_type: VertexType, edge_type: EdgeType
     ) -> Vertex:
-        """Create a typed node and link it from `source`.
-
-        Used for attribute categories (corpus/mens/anima), personality, and
-        big-five traits.
-        """
         node: Vertex = self._base.create_vertex(type_name=vertex_type)
         self._base.create_edge(type_name=edge_type, source=source, target=node)
         return node
@@ -59,11 +52,6 @@ class CharacterRepository:
         return attribute
 
     def delete_character(self, character: Vertex) -> None:
-        """Delete the character and every node it owns.
-
-        Removes attributes, personality, and traits, leaving shared vertices
-        such as its location untouched.
-        """
         children: list[Vertex] = [
             edge.get_in()
             for edge_type in _OWNED_EDGES
@@ -72,8 +60,6 @@ class CharacterRepository:
         for child in children:
             self.delete_character(character=child)
         self._base.delete_vertex(vertex=character)
-
-    # Read verbs
 
     def list_characters(self) -> list[Vertex]:
         return self._base.list_vertices(type_name=VertexType.CHARACTER)
@@ -106,8 +92,6 @@ class CharacterRepository:
         trait = personality.get_out_edges(edge_type)[0].get_in()
         return self.get_attribute_value(trait)
 
-    # Position verbs
-
     def get_current_location(self, character: Vertex) -> Vertex | None:
         edges: list[Edge] = character.get_out_edges(EdgeType.LOCATED_AT)
         return edges[0].get_in() if edges else None
@@ -128,14 +112,7 @@ class CharacterRepository:
             target=to_location,
         )
 
-    # Economy verbs
-    # Stress and trauma are modelled exactly like the core attributes: a typed
-    # node (STRESS / TRAUMA) hung off the character by a HAS_STRESS / HAS_TRAUMA
-    # edge, whose value lives on an ATTRIBUTE node via HAS_ATTRIBUTE. This reuses
-    # add_node / add_attribute / get_attribute_value / set_attribute_value.
-
     def add_economy(self, character: Vertex) -> None:
-        """Attach STRESS and TRAUMA nodes (value 0) to a fresh character."""
         for vertex_type, edge_type in (
             (VertexType.STRESS, EdgeType.HAS_STRESS),
             (VertexType.TRAUMA, EdgeType.HAS_TRAUMA),
@@ -162,8 +139,7 @@ class CharacterRepository:
         self.set_attribute_value(node, value)
 
     def _economy_value(self, character: Vertex, edge_type: EdgeType) -> int:
-        # Tolerant read: characters created before the economy nodes existed
-        # simply have none — treat that as 0 rather than erroring.
+
         edges = character.get_out_edges(edge_type)
         return self.get_attribute_value(edges[0].get_in()) if edges else 0
 

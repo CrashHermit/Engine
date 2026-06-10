@@ -40,34 +40,6 @@ filterwarnings = [
 ]
 
 
-[tool.ruff]
-line-length = 88
-target-version = "py313"
-
-[tool.ruff.format]
-quote-style = "double"
-
 [tool.ruff.lint]
-# Curated for aesthetic uniformity, not bug-hunting or complexity opinions.
-#   E,W  pycodestyle whitespace        I    import sorting (isort)
-#   F    unused imports / names        Q    quote consistency
-#   UP   modern syntax (str | None)    TID  tidy imports (ban relative)
-#   COM  trailing commas               N    naming conventions
-#   D    docstring style (imperative mood via D401)
-select = ["E", "W", "F", "I", "UP", "Q", "COM", "TID", "N", "D"]
-ignore = [
-    # Don't force docstrings onto every module/class/function.
-    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
-    # Conflict with the formatter (Ruff's own recommendation).
-    "COM812", "ISC001",
-]
-
-[tool.ruff.lint.isort]
-known-first-party = ["src"]
-required-imports = ["from __future__ import annotations"]
-
-[tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
-
-[tool.ruff.lint.pydocstyle]
-convention = "pep257"
+# Whitespace/layout: ruff format. Lint: unused imports (F401) and modern syntax (UP).
+select = ["F401", "UP"]

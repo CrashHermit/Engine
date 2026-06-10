@@ -31,10 +31,10 @@ class GridIndex:
                     if dx == 0 and dy == 0:
                         continue
 
-                    wrap_x = (tile.position.x + dx) % self._size
-                    wrap_y = (tile.position.y + dy) % self._size
+                    wrap_x: int = (tile.position.x + dx) % self._size
+                    wrap_y: int = (tile.position.y + dy) % self._size
 
-                    neighbor_index = wrap_x * self._size + wrap_y
+                    neighbor_index: int = wrap_x * self._size + wrap_y
                     neighbors.append(world_data.grid[neighbor_index].position)
 
             tile.neighbors = neighbors

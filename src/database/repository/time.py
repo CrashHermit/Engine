@@ -32,4 +32,6 @@ class TimeRepository:
             return None
         current_elapsed_ticks: int = time_vertex.get(name="elapsed_ticks")
         new_elapsed_ticks: int = current_elapsed_ticks + elapsed_ticks
-        return self._base.update_vertex(vertex=time_vertex, elapsed_ticks=new_elapsed_ticks)
+        return self._base.update_vertex(
+            vertex=time_vertex, elapsed_ticks=new_elapsed_ticks
+        )

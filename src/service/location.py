@@ -65,7 +65,8 @@ class LocationService:
                 for n in self._locations.get_location_vertex_neighbors(location)
             ],
             entities=[
-                self._to_entity_data(e) for e in self._locations.get_entity_vertices(location)
+                self._to_entity_data(e)
+                for e in self._locations.get_entity_vertices(location)
             ],
         )
 

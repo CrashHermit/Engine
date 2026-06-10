@@ -5,6 +5,7 @@ from arcadedb_embedded.graph import Vertex
 from src.database.repository.base import BaseRepository
 from src.core.model.database import VertexType
 
+
 class WorldRepository:
     def __init__(self, base: BaseRepository) -> None:
         self._base: BaseRepository = base
