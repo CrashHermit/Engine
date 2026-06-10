@@ -4,6 +4,7 @@ import heapq
 
 from src.worldgen.config.worldgen_config import HydrologyConfig
 from src.worldgen.context import WorldContext
+from src.worldgen.geometry.flow import accumulate_flux, steepest_descent
 from src.worldgen.model import MeshCell, RiverSegment, VoronoiMesh
 
 
@@ -24,8 +25,20 @@ class HydrologyStage:
         mesh: VoronoiMesh = ctx.data.mesh
         self._reset_cells(mesh.cells)
         self._fill_depressions(mesh)
-        flow_targets: dict[int, int | None] = self._compute_flow_targets(mesh)
-        flux: list[float] = self._accumulate_flux(mesh, flow_targets)
+        flow_targets = steepest_descent(
+            mesh,
+            source=lambda cell: (
+                cell.env.terrain.is_land and not cell.env.hydrology.is_lake
+            ),
+        )
+        flux = accumulate_flux(
+            mesh,
+            flow_targets,
+            source=lambda cell: cell.env.terrain.is_land,
+            sink=lambda cell: (
+                not cell.env.terrain.is_land or cell.env.hydrology.is_lake
+            ),
+        )
         threshold: float = self._config.river_flux_threshold
         ctx.data.rivers.clear()
         for cell in mesh.cells:
@@ -98,43 +111,3 @@ class HydrologyStage:
                     heapq.heappush(
                         heap, (max(elevation, neighbor.env.terrain.z), neighbor_id)
                     )
-
-    def _compute_flow_targets(self, mesh: VoronoiMesh) -> dict[int, int | None]:
-        flow: dict[int, int | None] = {}
-        for cell in mesh.cells:
-            if not cell.env.terrain.is_land or cell.env.hydrology.is_lake:
-                flow[cell.id] = None
-                continue
-            lowest_id: int | None = None
-            lowest_z = cell.env.terrain.z
-            for neighbor_id in cell.neighbors:
-                neighbor = mesh.cells[neighbor_id]
-                if neighbor.env.terrain.z < lowest_z:
-                    lowest_z = neighbor.env.terrain.z
-                    lowest_id = neighbor_id
-            flow[cell.id] = lowest_id
-        return flow
-
-    def _accumulate_flux(
-        self,
-        mesh: VoronoiMesh,
-        flow_targets: dict[int, int | None],
-    ) -> list[float]:
-        land_cells = [cell for cell in mesh.cells if cell.env.terrain.is_land]
-        land_cells.sort(key=lambda cell: cell.env.terrain.z, reverse=True)
-        flux = [0.0] * len(mesh.cells)
-
-        for cell in land_cells:
-            flux[cell.id] += 1.0
-            downstream = flow_targets.get(cell.id)
-            if downstream is None:
-                continue
-            downstream_cell = mesh.cells[downstream]
-            if (
-                not downstream_cell.env.terrain.is_land
-                or downstream_cell.env.hydrology.is_lake
-            ):
-                continue
-            flux[downstream] += flux[cell.id]
-
-        return flux

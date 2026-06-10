@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.worldgen.config.worldgen_config import ErosionConfig, SeaLevelConfig
 from src.worldgen.context import WorldContext
+from src.worldgen.geometry.flow import accumulate_flux, steepest_descent
 from src.worldgen.model import VoronoiMesh
 
 
@@ -32,50 +33,32 @@ class ErosionStage:
 
         mesh = ctx.data.mesh
         for _ in range(self._config.iterations):
-            flow_targets, flux = self._flow_and_flux(mesh)
+            flow_targets = steepest_descent(
+                mesh, source=lambda cell: cell.env.terrain.is_land
+            )
+            flux = accumulate_flux(
+                mesh,
+                flow_targets,
+                source=lambda cell: cell.env.terrain.is_land,
+                sink=lambda cell: not cell.env.terrain.is_land,
+            )
             self._stream_power(mesh, flow_targets, flux)
             self._thermal(mesh)
 
-        # Re-apply sea level on the eroded surface
+        # Re-derive sea level on the eroded surface and re-zero elevation so the
+        # "0 = sea level" invariant (relied on by ClimateStage's lapse rate)
+        # still holds after erosion has reshaped the terrain.
         cells = mesh.cells
         sorted_z = sorted(cell.env.terrain.z for cell in cells)
         idx = int((1.0 - self._sea_level.target_land_fraction) * len(sorted_z))
         idx = max(0, min(idx, len(sorted_z) - 1))
         sea_level = sorted_z[idx]
         for cell in cells:
-            cell.env.terrain.is_land = cell.env.terrain.z >= sea_level
+            terrain = cell.env.terrain
+            terrain.is_land = terrain.z >= sea_level
+            terrain.z -= sea_level
 
     # ------------------------------------------------------------------
-
-    def _flow_and_flux(
-        self, mesh: VoronoiMesh
-    ) -> tuple[dict[int, int | None], list[float]]:
-        cells = mesh.cells
-        flow: dict[int, int | None] = {}
-        for cell in cells:
-            if not cell.env.terrain.is_land:
-                flow[cell.id] = None
-                continue
-            best: int | None = None
-            best_z = cell.env.terrain.z
-            for nid in cell.neighbors:
-                if cells[nid].env.terrain.z < best_z:
-                    best_z = cells[nid].env.terrain.z
-                    best = nid
-            flow[cell.id] = best
-
-        land_cells = sorted(
-            (c for c in cells if c.env.terrain.is_land),
-            key=lambda c: c.env.terrain.z,
-            reverse=True,
-        )
-        flux = [0.0] * len(cells)
-        for cell in land_cells:
-            flux[cell.id] += 1.0
-            ds = flow.get(cell.id)
-            if ds is not None and cells[ds].env.terrain.is_land:
-                flux[ds] += flux[cell.id]
-        return flow, flux
 
     def _stream_power(
         self,
