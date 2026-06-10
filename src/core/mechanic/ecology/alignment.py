@@ -9,9 +9,12 @@ from src.core.model.environment.ecology.alignment import (
 
 class Alignment:
     def alignment_band(self, value: float) -> AlignmentBand:
-        clamped: float = max(0.0, min(1.0, value))
+        # Worldgen emits alignment on a signed [-1, 1] axis (-1 = evil,
+        # 0 = neutral, +1 = good); remap to [0, 1] so the equal-thirds
+        # BREAKPOINTS split it symmetrically (0 -> 0.5 -> NEUTRAL).
+        normalized: float = (max(-1.0, min(1.0, value)) + 1.0) * 0.5
         for index, edge in enumerate(BREAKPOINTS):
-            if clamped < edge:
+            if normalized < edge:
                 return ORDER[index]
         return ORDER[-1]
 
