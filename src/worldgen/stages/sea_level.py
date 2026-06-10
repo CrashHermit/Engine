@@ -19,20 +19,18 @@ class SeaLevelStage:
         self._config = config
 
     def run(self, ctx: WorldContext) -> WorldContext:
-        if ctx.data.mesh is None:
-            return ctx
-
         cfg = self._config
         cells = ctx.data.mesh.cells
 
-        sorted_heights = sorted(cell.z for cell in cells)
+        sorted_heights = sorted(cell.env.terrain.z for cell in cells)
         target_idx = int((1.0 - cfg.target_land_fraction) * len(sorted_heights))
         target_idx = max(0, min(target_idx, len(sorted_heights) - 1))
         sea_level = sorted_heights[target_idx]
 
         scale = ctx.config.elevation.elevation_scale
         for cell in cells:
-            cell.is_land = cell.z >= sea_level
-            cell.z = (cell.z - sea_level) * scale
+            terrain = cell.env.terrain
+            terrain.is_land = terrain.z >= sea_level
+            terrain.z = (terrain.z - sea_level) * scale
 
         return ctx

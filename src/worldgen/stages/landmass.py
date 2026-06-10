@@ -4,7 +4,7 @@ from collections import deque
 
 from src.worldgen.config.worldgen_config import LandmassConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.data import MeshCell, VoronoiMesh
+from src.worldgen.model import MeshCell, VoronoiMesh
 
 # landmass_class constants
 OCEAN = 0
@@ -28,8 +28,6 @@ class LandmassStage:
         self._config: LandmassConfig = config
 
     def run(self, ctx: WorldContext) -> WorldContext:
-        if ctx.data.mesh is None:
-            return ctx
         mesh = ctx.data.mesh
         self._reset_labels(mesh.cells)
         sizes = self._label_components(mesh, ctx)
@@ -39,13 +37,14 @@ class LandmassStage:
 
     def _reset_labels(self, cells: list[MeshCell]) -> None:
         for cell in cells:
-            cell.landmass_id = -1
-            cell.landmass_class = OCEAN
-            cell.coast_distance = 0.0
+            terrain = cell.env.terrain
+            terrain.landmass_id = -1
+            terrain.landmass_class = OCEAN
+            terrain.coast_distance = 0.0
 
     def _label_components(self, mesh: VoronoiMesh, ctx: WorldContext) -> dict[int, int]:
         cells = mesh.cells
-        unvisited = {cell.id for cell in cells if cell.is_land}
+        unvisited = {cell.id for cell in cells if cell.env.terrain.is_land}
         next_id = 0
         sizes: dict[int, int] = {}
 
@@ -59,7 +58,7 @@ class LandmassStage:
 
             while queue:
                 cell_id = queue.popleft()
-                cells[cell_id].landmass_id = landmass_id
+                cells[cell_id].env.terrain.landmass_id = landmass_id
                 component_size += 1
                 for neighbor_id in cells[cell_id].neighbors:
                     if neighbor_id in unvisited:
@@ -81,16 +80,17 @@ class LandmassStage:
         landmass_threshold = cfg.landmass_min_fraction * total_land
 
         for cell in mesh.cells:
-            if not cell.is_land:
-                cell.landmass_class = OCEAN
+            terrain = cell.env.terrain
+            if not terrain.is_land:
+                terrain.landmass_class = OCEAN
                 continue
-            size = sizes.get(cell.landmass_id, 0)
+            size = sizes.get(terrain.landmass_id, 0)
             if size < island_threshold:
-                cell.landmass_class = ISLAND
+                terrain.landmass_class = ISLAND
             elif size < landmass_threshold:
-                cell.landmass_class = LANDMASS
+                terrain.landmass_class = LANDMASS
             else:
-                cell.landmass_class = MAJOR
+                terrain.landmass_class = MAJOR
 
     def _compute_coast_distance(self, mesh: VoronoiMesh) -> None:
         cells = mesh.cells
@@ -98,11 +98,11 @@ class LandmassStage:
         visited: set[int] = set()
 
         for cell in cells:
-            if not cell.is_land:
+            if not cell.env.terrain.is_land:
                 continue
             for neighbor_id in cell.neighbors:
-                if not cells[neighbor_id].is_land:
-                    cell.coast_distance = 0.0
+                if not cells[neighbor_id].env.terrain.is_land:
+                    cell.env.terrain.coast_distance = 0.0
                     if cell.id not in visited:
                         visited.add(cell.id)
                         queue.append((cell.id, 0.0))
@@ -110,9 +110,9 @@ class LandmassStage:
 
         while queue:
             cell_id, dist = queue.popleft()
-            cells[cell_id].coast_distance = dist
+            cells[cell_id].env.terrain.coast_distance = dist
             for neighbor_id in cells[cell_id].neighbors:
                 neighbor = cells[neighbor_id]
-                if neighbor.is_land and neighbor_id not in visited:
+                if neighbor.env.terrain.is_land and neighbor_id not in visited:
                     visited.add(neighbor_id)
                     queue.append((neighbor_id, dist + 1.0))

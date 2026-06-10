@@ -19,10 +19,10 @@ class RiverRasterizeStage:
         self._config = config
 
     def run(self, ctx: WorldContext) -> WorldContext:
-        if ctx.data.mesh is None or not ctx.data.rivers:
+        if not ctx.data.rivers:
             return ctx
 
-        size = ctx.data.size
+        size = ctx.config.size
         mesh = ctx.data.mesh
         cfg = self._config
         grid_lookup = ctx.data.grid
@@ -63,8 +63,9 @@ class RiverRasterizeStage:
                         wx = ix % size
                         wy = iy % size
                         tile = grid_lookup[wx * size + wy]
-                        tile.position.is_river = True
-                        if flux > tile.position.river_flux:
-                            tile.position.river_flux = flux
+                        hydrology = tile.env.hydrology
+                        hydrology.is_river = True
+                        if flux > hydrology.river_flux:
+                            hydrology.river_flux = flux
 
         return ctx

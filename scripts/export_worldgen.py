@@ -19,7 +19,7 @@ from scripts.worldgen_render import (
     generate_world,
     rasterize_grid,
 )
-from src.worldgen.data import WorldData
+from src.worldgen.model import WorldData
 
 
 def _draw_grid_lines(pixels: list[list[RGB]], scale: int) -> Image.Image:
@@ -58,9 +58,10 @@ def export_layer(
     if grid or scale > 1:
         image = _draw_grid_lines(pixels, scale) if grid else _draw_scaled(pixels, scale)
     else:
-        image = Image.new("RGB", (world_data.size, world_data.size))
-        for y in range(world_data.size):
-            for x in range(world_data.size):
+        size = len(pixels)
+        image = Image.new("RGB", (size, size))
+        for y in range(size):
+            for x in range(size):
                 image.putpixel((x, y), pixels[y][x])
 
     output.parent.mkdir(parents=True, exist_ok=True)

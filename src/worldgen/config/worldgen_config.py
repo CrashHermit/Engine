@@ -176,17 +176,6 @@ class AlignmentConfig:
 # ---------------------------------------------------------------------------
 # Biomes
 # ---------------------------------------------------------------------------
-
-
-@dataclass
-class BiomeConfig:
-    """Biome soft-assignment parameters."""
-
-    blend_sharpness: float = 2.0
-    weight_cutoff: float = 0.05
-
-
-# ---------------------------------------------------------------------------
 # Anchor-based continent provider
 # ---------------------------------------------------------------------------
 
@@ -229,5 +218,4 @@ class WorldgenConfig:
     climate: ClimateConfig = field(default_factory=ClimateConfig)
     savagery: SavageryConfig = field(default_factory=SavageryConfig)
     alignment: AlignmentConfig = field(default_factory=AlignmentConfig)
-    biome: BiomeConfig = field(default_factory=BiomeConfig)
     anchor: AnchorConfig = field(default_factory=AnchorConfig)

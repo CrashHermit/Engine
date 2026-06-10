@@ -3,9 +3,12 @@ from __future__ import annotations
 import colorsys
 from enum import StrEnum
 
+from src.core.mechanic.climate.precipitation import Precipitation
+from src.core.mechanic.ecology.biome import Biome
+from src.core.mechanic.shared.temperature import Temperature
 from src.core.model.environment.ecology.biome import BiomeEnum
-from src.worldgen.data import GridTileData, WorldData
 from src.worldgen.geometry.mesh_index import VoronoiMeshIndex
+from src.worldgen.model import GridTile, WorldData, WorldSpec
 from src.worldgen.pipeline import WorldgenPipeline
 
 RGB = tuple[int, int, int]
@@ -14,6 +17,11 @@ WATER_COLOR: RGB = (20, 60, 140)
 LAKE_COLOR: RGB = (50, 120, 200)
 RIVER_COLOR: RGB = (80, 200, 255)
 GRID_COLOR: RGB = (40, 40, 50)
+
+# Stateless interpretation helpers shared across all tiles.
+_TEMPERATURE = Temperature()
+_PRECIPITATION = Precipitation()
+_BIOME = Biome()
 
 
 class Layer(StrEnum):
@@ -85,7 +93,12 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
 
 
 def generate_world(size: int, seed: int) -> WorldData:
-    return WorldgenPipeline().run(WorldData(size=size, seed=seed))
+    return WorldgenPipeline().run(WorldSpec(size=size, seed=seed))
+
+
+def _grid_size(world_data: WorldData) -> int:
+    """Side length of the square gameplay grid (it always holds size*size tiles)."""
+    return round(len(world_data.grid) ** 0.5)
 
 
 def _lerp_color(low: RGB, high: RGB, t: float) -> RGB:
@@ -109,7 +122,7 @@ def _biome_color(biome: BiomeEnum) -> RGB:
     return int(red * 255), int(green * 255), int(blue * 255)
 
 
-def _scalar_range(grid: list[GridTileData], accessor) -> tuple[float, float]:
+def _scalar_range(grid: list[GridTile], accessor) -> tuple[float, float]:
     values = [accessor(tile) for tile in grid]
     if not values:
         return (0.0, 1.0)
@@ -126,28 +139,33 @@ def _normalize(value: float, low: float, high: float) -> float:
     return (value - low) / (high - low)
 
 
-def _water_color(tile: GridTileData) -> RGB | None:
-    if not tile.position.is_land:
+def _water_color(tile: GridTile) -> RGB | None:
+    if not tile.env.terrain.is_land:
         return WATER_COLOR
-    if tile.position.is_lake:
+    if tile.env.hydrology.is_lake:
         return LAKE_COLOR
     return None
 
 
-def _dominant_biome(tile: GridTileData) -> BiomeEnum | None:
-    if not tile.position.biome_weights:
-        return None
-    return max(tile.position.biome_weights, key=lambda entry: entry.weight).biome
+def _dominant_biome(tile: GridTile) -> BiomeEnum:
+    """Derive the tile's biome from its climate via the canonical band grid."""
+    climate = tile.env.climate
+    temp_band = _TEMPERATURE.temperature_band(climate.temperature)
+    precip_band = _PRECIPITATION.precipitation_band(climate.precipitation)
+    return _BIOME.biome_from_climate(temp_band, precip_band)
 
 
 def tile_color(
-    tile: GridTileData,
+    tile: GridTile,
     layer: Layer,
     ranges: dict[str, tuple[float, float]],
     world_data: WorldData,
     mesh_index: VoronoiMeshIndex | None = None,
 ) -> RGB:
-    position = tile.position
+    terrain = tile.env.terrain
+    climate = tile.env.climate
+    hydrology = tile.env.hydrology
+    ecology = tile.env.ecology
     water = _water_color(tile)
 
     if layer in {Layer.ELEVATION, Layer.BIOMES} and water is not None:
@@ -155,64 +173,62 @@ def tile_color(
 
     if layer == Layer.ELEVATION:
         low, high = ranges["elevation"]
-        t = _normalize(position.z, low, high)
+        t = _normalize(terrain.z, low, high)
         return _lerp_color((30, 80, 40), (220, 210, 180), t)
 
     if layer == Layer.TEMPERATURE:
         low, high = ranges["temperature"]
-        t = _normalize(position.temperature, low, high)
+        t = _normalize(climate.temperature, low, high)
         return _thermal_color(t)
 
     if layer == Layer.PRECIPITATION:
         low, high = ranges["precipitation"]
-        t = _normalize(position.precipitation, low, high)
+        t = _normalize(climate.precipitation, low, high)
         return _lerp_color((194, 145, 80), (30, 90, 200), t)
 
     if layer == Layer.SAVAGERY:
-        t = max(0.0, min(1.0, position.savagery))
+        t = max(0.0, min(1.0, ecology.savagery))
         return _lerp_color((25, 35, 60), (180, 60, 25), t)
 
     if layer == Layer.ALIGNMENT:
-        t = (position.alignment + 1.0) * 0.5
+        t = (ecology.alignment + 1.0) * 0.5
         return _lerp_color((70, 40, 140), (230, 220, 95), t)
 
     if layer == Layer.BIOMES:
-        biome = _dominant_biome(tile)
-        if biome is None:
-            return (80, 80, 80)
-        return _biome_color(biome)
+        return _biome_color(_dominant_biome(tile))
 
     if layer == Layer.HYDROLOGY:
-        if not position.is_land:
+        if not terrain.is_land:
             return WATER_COLOR
-        if position.is_lake:
+        if hydrology.is_lake:
             return LAKE_COLOR
-        if position.is_river:
+        if hydrology.is_river:
             return RIVER_COLOR
         low, high = ranges["drainage"]
-        t = _normalize(float(position.drainage_tiles), low, high)
+        t = _normalize(float(hydrology.drainage), low, high)
         return _lerp_color((200, 200, 180), (30, 80, 180), t)
 
     if layer == Layer.RIVERS:
-        if position.is_river:
+        if hydrology.is_river:
             return RIVER_COLOR
         if water is not None:
             return water
         low, high = ranges["elevation"]
-        t = _normalize(position.z, low, high)
+        t = _normalize(terrain.z, low, high)
         return _lerp_color((30, 80, 40), (220, 210, 180), t)
 
     if layer == Layer.LANDMASSES:
-        if not position.is_land:
+        if not terrain.is_land:
             return WATER_COLOR
-        hue = ((position.landmass_id + 1) * 0.6180339887) % 1.0
-        saturation = (0.3, 0.5, 0.7, 0.9)[min(position.landmass_class, 3)]
+        hue = ((terrain.landmass_id + 1) * 0.6180339887) % 1.0
+        saturation = (0.3, 0.5, 0.7, 0.9)[min(terrain.landmass_class, 3)]
         red, green, blue = colorsys.hsv_to_rgb(hue, saturation, 0.85)
         return int(red * 255), int(green * 255), int(blue * 255)
 
-    if layer == Layer.MESH and world_data.mesh is not None and mesh_index is not None:
-        fx = (position.x + 0.5) / world_data.size * world_data.mesh.width
-        fy = (position.y + 0.5) / world_data.size * world_data.mesh.height
+    if layer == Layer.MESH and world_data.mesh.cells and mesh_index is not None:
+        size = _grid_size(world_data)
+        fx = (tile.x + 0.5) / size * world_data.mesh.width
+        fy = (tile.y + 0.5) / size * world_data.mesh.height
         cell_id = mesh_index.nearest_cell_id(fx, fy)
         hue = (cell_id * 0.6180339887) % 1.0
         red, green, blue = colorsys.hsv_to_rgb(hue, 0.7, 0.9)
@@ -221,16 +237,18 @@ def tile_color(
     return (0, 0, 0)
 
 
-def compute_ranges(grid: list[GridTileData]) -> dict[str, tuple[float, float]]:
+def compute_ranges(grid: list[GridTile]) -> dict[str, tuple[float, float]]:
     return {
-        "elevation": _scalar_range(grid, lambda tile: tile.position.z),
-        "temperature": _scalar_range(grid, lambda tile: tile.position.temperature),
-        "precipitation": _scalar_range(grid, lambda tile: tile.position.precipitation),
-        "savagery": _scalar_range(grid, lambda tile: tile.position.savagery),
-        "alignment": _scalar_range(grid, lambda tile: tile.position.alignment),
+        "elevation": _scalar_range(grid, lambda tile: tile.env.terrain.z),
+        "temperature": _scalar_range(grid, lambda tile: tile.env.climate.temperature),
+        "precipitation": _scalar_range(
+            grid, lambda tile: tile.env.climate.precipitation
+        ),
+        "savagery": _scalar_range(grid, lambda tile: tile.env.ecology.savagery),
+        "alignment": _scalar_range(grid, lambda tile: tile.env.ecology.alignment),
         "drainage": _scalar_range(
-            [tile for tile in grid if tile.position.is_land] or grid,
-            lambda tile: float(tile.position.drainage_tiles),
+            [tile for tile in grid if tile.env.terrain.is_land] or grid,
+            lambda tile: float(tile.env.hydrology.drainage),
         ),
     }
 
@@ -242,13 +260,13 @@ def rasterize(
     ranges = compute_ranges(world_data.grid)
     mesh_index = (
         VoronoiMeshIndex(world_data.mesh)
-        if layer == Layer.MESH and world_data.mesh is not None
+        if layer == Layer.MESH and world_data.mesh.cells
         else None
     )
     pixels: dict[RGB, list[tuple[int, int]]] = {}
     for tile in world_data.grid:
         color = tile_color(tile, layer, ranges, world_data, mesh_index)
-        pixels.setdefault(color, []).append((tile.position.x, tile.position.y))
+        pixels.setdefault(color, []).append((tile.x, tile.y))
     return pixels
 
 
@@ -257,7 +275,7 @@ def rasterize_grid(
     layer: Layer,
 ) -> list[list[RGB]]:
     """Dense size x size color grid (row-major by y then x)."""
-    size = world_data.size
+    size = _grid_size(world_data)
     grid = [[(0, 0, 0) for _ in range(size)] for _ in range(size)]
     for color, coords in rasterize(world_data, layer).items():
         for x, y in coords:

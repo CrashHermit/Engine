@@ -5,17 +5,14 @@ from src.worldgen.geometry.grid_index import GridIndex
 
 
 class GridStage:
-    """Builds the gameplay tile grid and pre-computes neighbour references.
+    """Builds the gameplay tile grid.
 
-    Pipeline position: after ``BiomeStage``.
+    Pipeline position: after ``AlignmentStage``.
     """
 
     def run(self, ctx: WorldContext) -> WorldContext:
-        size = ctx.config.size
-        ctx.data.size = size
         ctx.data.grid.clear()
 
-        grid_index = GridIndex(size)
+        grid_index = GridIndex(ctx.config.size)
         ctx.data = grid_index.build_base_grid(ctx.data)
-        ctx.data = grid_index.build_neighbors(ctx.data)
         return ctx

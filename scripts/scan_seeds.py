@@ -24,7 +24,7 @@ if str(_ROOT) not in sys.path:
 # ruff: noqa: E402
 from src.worldgen.config.presets import PRESETS
 from src.worldgen.config.worldgen_config import WorldgenConfig
-from src.worldgen.data import WorldData
+from src.worldgen.model import WorldSpec
 from src.worldgen.pipeline import WorldgenPipeline
 
 
@@ -32,7 +32,7 @@ def _run_seed(seed: int, size: int, config: WorldgenConfig) -> None:
     from dataclasses import replace
 
     cfg = replace(config)
-    world = WorldgenPipeline(cfg).run(WorldData(size=size, seed=seed))
+    world = WorldgenPipeline(cfg).run(WorldSpec(size=size, seed=seed))
 
     sizes = world.landmass_sizes
     total_land = sum(sizes.values())
@@ -50,7 +50,7 @@ def _run_seed(seed: int, size: int, config: WorldgenConfig) -> None:
         ("M" if f >= 0.10 else ("m" if f >= 0.02 else ".")) for f in fractions[:20]
     )
     grid_land_pct = (
-        100 * sum(1 for t in world.grid if t.position.is_land) // len(world.grid)
+        100 * sum(1 for t in world.grid if t.env.terrain.is_land) // len(world.grid)
     )
     print(
         f"  seed {seed:>6}: {len(sizes):>3} components  "

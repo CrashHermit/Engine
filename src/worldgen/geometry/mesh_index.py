@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from scipy.spatial import cKDTree
 
-from src.worldgen.data import VoronoiMesh
+from src.worldgen.model import VoronoiMesh
 
 
 class VoronoiMeshIndex:

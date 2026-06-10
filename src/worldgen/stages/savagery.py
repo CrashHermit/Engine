@@ -17,9 +17,6 @@ class SavageryStage:
         self._config = config
 
     def run(self, ctx: WorldContext) -> WorldContext:
-        if ctx.data.mesh is None:
-            return ctx
-
         mesh = ctx.data.mesh
         cfg = self._config
         field = FractalField(ctx.sampler, FIELD_SAVAGERY, octaves=3)
@@ -29,6 +26,6 @@ class SavageryStage:
             raw = field.sample(x, y, cfg.noise_scale)
             value = (raw + 1.0) * 0.5
             value = value * cfg.blend_weight + 0.5 * (1.0 - cfg.blend_weight)
-            cell.savagery = max(0.0, min(1.0, value * cfg.amplitude))
+            cell.env.ecology.savagery = max(0.0, min(1.0, value * cfg.amplitude))
 
         return ctx

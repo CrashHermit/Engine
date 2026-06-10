@@ -33,8 +33,6 @@ class ClimateStage:
         self._config = config
 
     def run(self, ctx: WorldContext) -> WorldContext:
-        if ctx.data.mesh is None:
-            return ctx
         self._generate_wind(ctx)
         self._generate_climate(ctx)
         self._apply_orographic(ctx)
@@ -49,7 +47,6 @@ class ClimateStage:
     def _generate_wind(self, ctx: WorldContext) -> None:
         cfg = self._config
         mesh = ctx.data.mesh
-        assert mesh is not None
 
         wind_freq = cfg.noise_scale * cfg.wind_noise_scale_factor
         wind_u_field = FractalField(ctx.sampler, FIELD_CLIMATE_WIND_U, octaves=2)
@@ -68,14 +65,15 @@ class ClimateStage:
             raw_v = base_v + noise_v * cfg.wind_turbulence
             magnitude = math.sqrt(raw_u**2 + raw_v**2)
 
+            climate = cell.env.climate
             if magnitude > 0.0:
-                cell.wind_u = raw_u / magnitude
-                cell.wind_v = raw_v / magnitude
-                cell.wind_magnitude = magnitude
+                climate.wind_u = raw_u / magnitude
+                climate.wind_v = raw_v / magnitude
+                climate.wind_magnitude = magnitude
             else:
-                cell.wind_u = 0.0
-                cell.wind_v = 0.0
-                cell.wind_magnitude = 0.0
+                climate.wind_u = 0.0
+                climate.wind_v = 0.0
+                climate.wind_magnitude = 0.0
 
     # ------------------------------------------------------------------
     # Temperature and precipitation
@@ -84,7 +82,6 @@ class ClimateStage:
     def _generate_climate(self, ctx: WorldContext) -> None:
         cfg = self._config
         mesh = ctx.data.mesh
-        assert mesh is not None
 
         temp_warp = FractalField(ctx.sampler, FIELD_CLIMATE_TEMP_WARP, octaves=2)
         precip_field = FractalField(ctx.sampler, FIELD_CLIMATE_PRECIP, octaves=3)
@@ -99,8 +96,8 @@ class ClimateStage:
             warped_y_t = y + warp_y_t
             phase_t = 2.0 * math.pi * warped_y_t / mesh.height * cfg.temperature_bands
             base_temp = (math.cos(phase_t) + 1.0) / 2.0
-            elevation_cooling = max(0.0, cell.z) * cfg.lapse_rate
-            cell.temperature = max(0.0, base_temp - elevation_cooling)
+            elevation_cooling = max(0.0, cell.env.terrain.z) * cfg.lapse_rate
+            cell.env.climate.temperature = max(0.0, base_temp - elevation_cooling)
 
             # --- precipitation ----------------------------------------
             warp_px = precip_warp.sample(x, y, cfg.noise_scale) * cfg.warp_amplitude
@@ -112,7 +109,7 @@ class ClimateStage:
             normalized_py = (warped_y_p / mesh.height) * 2.0 - 1.0
             band_precip = math.sin(normalized_py * math.pi * cfg.precip_latitude_bands)
             organic_precip = precip_field.sample(wx, wy, cfg.noise_scale)
-            cell.precipitation = (
+            cell.env.climate.precipitation = (
                 (band_precip * cfg.band_weight)
                 + (organic_precip * organic_weight)
                 + 1.0
@@ -125,48 +122,49 @@ class ClimateStage:
     def _apply_orographic(self, ctx: WorldContext) -> None:
         cfg = self._config
         mesh = ctx.data.mesh
-        assert mesh is not None
         mesh_index = VoronoiMeshIndex(mesh)
 
         for cell in mesh.cells:
-            if not cell.is_land:
+            climate = cell.env.climate
+            if not cell.env.terrain.is_land:
                 continue
-            if cell.wind_u == 0.0 and cell.wind_v == 0.0:
+            if climate.wind_u == 0.0 and climate.wind_v == 0.0:
                 continue
             upwind_id = self._find_upwind_cell(mesh, mesh_index, cell)
             if upwind_id is None:
                 continue
             upwind = mesh.cells[upwind_id]
-            dz = cell.z - upwind.z
-            modifier = dz * cell.wind_magnitude * cfg.orographic_multiplier
-            cell.precipitation = max(0.0, cell.precipitation + modifier)
+            dz = cell.env.terrain.z - upwind.env.terrain.z
+            modifier = dz * climate.wind_magnitude * cfg.orographic_multiplier
+            climate.precipitation = max(0.0, climate.precipitation + modifier)
 
     def _find_upwind_cell(self, mesh, mesh_index, cell) -> int | None:
+        climate = cell.env.climate
         step = min(mesh.width, mesh.height) * 0.02
-        upwind_x = (cell.site[0] - cell.wind_u * step) % mesh.width
-        upwind_y = (cell.site[1] - cell.wind_v * step) % mesh.height
+        upwind_x = (cell.site[0] - climate.wind_u * step) % mesh.width
+        upwind_y = (cell.site[1] - climate.wind_v * step) % mesh.height
         upwind_id = mesh_index.nearest_cell_id(upwind_x, upwind_y)
         return None if upwind_id == cell.id else upwind_id
 
     def _advect_moisture(self, ctx: WorldContext) -> None:
         cfg = self._config
         mesh = ctx.data.mesh
-        assert mesh is not None
         mesh_index = VoronoiMeshIndex(mesh)
 
-        advected = [cell.precipitation for cell in mesh.cells]
+        advected = [cell.env.climate.precipitation for cell in mesh.cells]
         for cell in mesh.cells:
-            if not cell.is_land:
+            climate = cell.env.climate
+            if not cell.env.terrain.is_land:
                 continue
             upwind_id = self._find_upwind_cell(mesh, mesh_index, cell)
             if upwind_id is None:
                 continue
             upwind = mesh.cells[upwind_id]
             transfer = (
-                (upwind.precipitation - cell.precipitation)
+                (upwind.env.climate.precipitation - climate.precipitation)
                 * cfg.moisture_advection
-                * cell.wind_magnitude
+                * climate.wind_magnitude
             )
-            advected[cell.id] = max(0.0, cell.precipitation + transfer)
+            advected[cell.id] = max(0.0, climate.precipitation + transfer)
         for index, cell in enumerate(mesh.cells):
-            cell.precipitation = advected[index]
+            cell.env.climate.precipitation = advected[index]

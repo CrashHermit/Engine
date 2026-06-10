@@ -5,7 +5,7 @@ import random
 
 from scipy.spatial import Delaunay, Voronoi
 
-from src.worldgen.data import MeshCell, VoronoiMesh
+from src.worldgen.model import MeshCell, VoronoiMesh
 
 
 class PeriodicVoronoi:

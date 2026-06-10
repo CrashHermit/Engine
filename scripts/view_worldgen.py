@@ -26,7 +26,7 @@ from scripts.worldgen_render import (
     generate_world,
     rasterize,
 )
-from src.worldgen.data import WorldData
+from src.worldgen.model import WorldData
 
 # Re-export for backwards compatibility if anything imported from view_worldgen
 __all__ = ["Layer", "generate_world", "rasterize"]

@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-from src.worldgen.config.biome_centers import BIOME_CENTERS
 from src.worldgen.config.worldgen_config import WorldgenConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.data import WorldData
+from src.worldgen.model import WorldData, WorldSpec
 from src.worldgen.stages.alignment import AlignmentStage
 from src.worldgen.stages.base import Stage
-from src.worldgen.stages.biomes import BiomeStage
 from src.worldgen.stages.climate import ClimateStage
 from src.worldgen.stages.elevation.stage import ElevationStage
 from src.worldgen.stages.erosion import ErosionStage
@@ -32,7 +30,6 @@ def _build_stages(config: WorldgenConfig) -> list[Stage]:
         ClimateStage(config.climate),
         SavageryStage(config.savagery),
         AlignmentStage(config.alignment),
-        BiomeStage(BIOME_CENTERS, config.biome),
         GridStage(),
         GridDeriveStage(),
         RiverRasterizeStage(config.hydrology),
@@ -44,10 +41,10 @@ class WorldgenPipeline:
 
     Usage::
 
-        from src.worldgen.data import WorldData
+        from src.worldgen.model import WorldSpec
         from src.worldgen.pipeline import WorldgenPipeline
 
-        world = WorldgenPipeline().run(WorldData(size=200, seed=42))
+        world = WorldgenPipeline().run(WorldSpec(size=200, seed=42))
 
     Pass a ``WorldgenConfig`` to override defaults, or use one of the named
     presets from ``src.worldgen.config.presets``.
@@ -56,8 +53,8 @@ class WorldgenPipeline:
     def __init__(self, config: WorldgenConfig | None = None) -> None:
         self._config: WorldgenConfig | None = config
 
-    def run(self, world_data: WorldData) -> WorldData:
-        ctx = WorldContext.build(world_data, self._config)
+    def run(self, spec: WorldSpec) -> WorldData:
+        ctx = WorldContext.build(spec, self._config)
         for stage in _build_stages(ctx.config):
             ctx = stage.run(ctx)
         return ctx.data

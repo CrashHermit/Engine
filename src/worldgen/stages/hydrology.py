@@ -4,7 +4,7 @@ import heapq
 
 from src.worldgen.config.worldgen_config import HydrologyConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.data import MeshCell, RiverSegment, VoronoiMesh
+from src.worldgen.model import MeshCell, RiverSegment, VoronoiMesh
 
 
 class HydrologyStage:
@@ -21,8 +21,6 @@ class HydrologyStage:
         self._config: HydrologyConfig = config
 
     def run(self, ctx: WorldContext) -> WorldContext:
-        if ctx.data.mesh is None:
-            return ctx
         mesh: VoronoiMesh = ctx.data.mesh
         self._reset_cells(mesh.cells)
         self._fill_depressions(mesh)
@@ -31,13 +29,15 @@ class HydrologyStage:
         threshold: float = self._config.river_flux_threshold
         ctx.data.rivers.clear()
         for cell in mesh.cells:
-            cell.river_flux = float(flux[cell.id])
-            cell.drainage = int(flux[cell.id])
-            cell.is_river = cell.is_land and flux[cell.id] >= threshold
+            flux_val = flux[cell.id]
+            hydrology = cell.env.hydrology
+            hydrology.river_flux = float(flux_val)
+            hydrology.drainage = int(flux_val)
+            hydrology.is_river = cell.env.terrain.is_land and flux_val >= threshold
             downstream_id: int | None = flow_targets.get(cell.id)
-            if downstream_id is not None and flux[cell.id] >= threshold:
+            if downstream_id is not None and flux_val >= threshold:
                 ctx.data.rivers.append(
-                    self._make_segment(mesh, cell.id, downstream_id, flux[cell.id])
+                    self._make_segment(mesh, cell.id, downstream_id, flux_val)
                 )
         return ctx
 
@@ -60,10 +60,11 @@ class HydrologyStage:
 
     def _reset_cells(self, cells: list[MeshCell]) -> None:
         for cell in cells:
-            cell.drainage = 0
-            cell.river_flux = 0.0
-            cell.is_lake = False
-            cell.is_river = False
+            hydrology = cell.env.hydrology
+            hydrology.drainage = 0
+            hydrology.river_flux = 0.0
+            hydrology.is_lake = False
+            hydrology.is_river = False
 
     def _fill_depressions(self, mesh: VoronoiMesh) -> None:
         cells = mesh.cells
@@ -71,12 +72,12 @@ class HydrologyStage:
         heap: list[tuple[float, int]] = []
 
         for cell in cells:
-            if not cell.is_land:
-                heapq.heappush(heap, (cell.z, cell.id))
+            if not cell.env.terrain.is_land:
+                heapq.heappush(heap, (cell.env.terrain.z, cell.id))
 
         if not heap:
             for cell in cells:
-                heapq.heappush(heap, (cell.z, cell.id))
+                heapq.heappush(heap, (cell.env.terrain.z, cell.id))
 
         while heap:
             elevation, cell_id = heapq.heappop(heap)
@@ -84,30 +85,33 @@ class HydrologyStage:
                 continue
             visited.add(cell_id)
             cell = cells[cell_id]
-            if cell.z < elevation:
-                cell.z = elevation
-            if not cell.is_land:
-                cell.is_lake = False
-            elif cell.z <= 0.0:
-                cell.is_lake = True
+            terrain = cell.env.terrain
+            if terrain.z < elevation:
+                terrain.z = elevation
+            if not terrain.is_land:
+                cell.env.hydrology.is_lake = False
+            elif terrain.z <= 0.0:
+                cell.env.hydrology.is_lake = True
 
             for neighbor_id in cell.neighbors:
                 if neighbor_id not in visited:
                     neighbor = cells[neighbor_id]
-                    heapq.heappush(heap, (max(elevation, neighbor.z), neighbor_id))
+                    heapq.heappush(
+                        heap, (max(elevation, neighbor.env.terrain.z), neighbor_id)
+                    )
 
     def _compute_flow_targets(self, mesh: VoronoiMesh) -> dict[int, int | None]:
         flow: dict[int, int | None] = {}
         for cell in mesh.cells:
-            if not cell.is_land or cell.is_lake:
+            if not cell.env.terrain.is_land or cell.env.hydrology.is_lake:
                 flow[cell.id] = None
                 continue
             lowest_id: int | None = None
-            lowest_z = cell.z
+            lowest_z = cell.env.terrain.z
             for neighbor_id in cell.neighbors:
                 neighbor = mesh.cells[neighbor_id]
-                if neighbor.z < lowest_z:
-                    lowest_z = neighbor.z
+                if neighbor.env.terrain.z < lowest_z:
+                    lowest_z = neighbor.env.terrain.z
                     lowest_id = neighbor_id
             flow[cell.id] = lowest_id
         return flow
@@ -117,8 +121,8 @@ class HydrologyStage:
         mesh: VoronoiMesh,
         flow_targets: dict[int, int | None],
     ) -> list[float]:
-        land_cells = [cell for cell in mesh.cells if cell.is_land]
-        land_cells.sort(key=lambda cell: cell.z, reverse=True)
+        land_cells = [cell for cell in mesh.cells if cell.env.terrain.is_land]
+        land_cells.sort(key=lambda cell: cell.env.terrain.z, reverse=True)
         flux = [0.0] * len(mesh.cells)
 
         for cell in land_cells:
@@ -127,7 +131,10 @@ class HydrologyStage:
             if downstream is None:
                 continue
             downstream_cell = mesh.cells[downstream]
-            if not downstream_cell.is_land or downstream_cell.is_lake:
+            if (
+                not downstream_cell.env.terrain.is_land
+                or downstream_cell.env.hydrology.is_lake
+            ):
                 continue
             flux[downstream] += flux[cell.id]
 
