@@ -7,6 +7,11 @@ from dataclasses import dataclass, field
 class Terrain:
     """Solid-ground attributes: elevation and landmass classification."""
 
+    # Surface elevation on a single continuous vertical axis where 0 == sea
+    # level (set by SeaLevelStage and re-established by ErosionStage). Land is
+    # > 0, ocean floor is < 0. The axis is unbounded, so it doubles as the
+    # world's depth scale: sea depth at an ocean cell is -z, and underground
+    # positions are simply z below this surface value.
     z: float = 0.0
     coast_distance: float = 0.0
     landmass_id: int = -1
