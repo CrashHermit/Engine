@@ -17,7 +17,7 @@ class GridDeriveStage:
     Pipeline position: after ``GridStage``.
     """
 
-    def run(self, ctx: WorldContext) -> WorldContext:
+    def run(self, ctx: WorldContext) -> None:
         mesh = ctx.data.mesh
         mesh_index = VoronoiMeshIndex(mesh)
         size = ctx.config.size
@@ -29,5 +29,3 @@ class GridDeriveStage:
 
             tile.env = deepcopy(cell.env)
             tile.env.hydrology.is_river = False
-
-        return ctx

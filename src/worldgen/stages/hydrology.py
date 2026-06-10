@@ -20,7 +20,7 @@ class HydrologyStage:
     def __init__(self, config: HydrologyConfig) -> None:
         self._config: HydrologyConfig = config
 
-    def run(self, ctx: WorldContext) -> WorldContext:
+    def run(self, ctx: WorldContext) -> None:
         mesh: VoronoiMesh = ctx.data.mesh
         self._reset_cells(mesh.cells)
         self._fill_depressions(mesh)
@@ -39,7 +39,6 @@ class HydrologyStage:
                 ctx.data.rivers.append(
                     self._make_segment(mesh, cell.id, downstream_id, flux_val)
                 )
-        return ctx
 
     def _make_segment(
         self,

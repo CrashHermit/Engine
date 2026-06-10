@@ -10,7 +10,7 @@ class MeshStage:
     Pipeline position: first stage.
     """
 
-    def run(self, ctx: WorldContext) -> WorldContext:
+    def run(self, ctx: WorldContext) -> None:
         cfg = ctx.config.mesh
         ctx.data.mesh = PeriodicVoronoi(
             width=cfg.width,
@@ -20,4 +20,3 @@ class MeshStage:
             cell_count=cfg.cell_count,
             lloyd_iterations=cfg.lloyd_iterations,
         )
-        return ctx

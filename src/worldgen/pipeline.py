@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from src.worldgen.config.worldgen_config import WorldgenConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.model import WorldData, WorldSpec
-from src.worldgen.stages.alignment import AlignmentStage
+from src.worldgen.model import CellEnvironment, WorldData, WorldSpec
+from src.worldgen.noise.sampler import FIELD_ALIGNMENT, FIELD_SAVAGERY
 from src.worldgen.stages.base import Stage
 from src.worldgen.stages.climate import ClimateStage
 from src.worldgen.stages.elevation.stage import ElevationStage
@@ -14,8 +14,16 @@ from src.worldgen.stages.hydrology import HydrologyStage
 from src.worldgen.stages.landmass import LandmassStage
 from src.worldgen.stages.mesh import MeshStage
 from src.worldgen.stages.river_rasterize import RiverRasterizeStage
-from src.worldgen.stages.savagery import SavageryStage
+from src.worldgen.stages.scalar_field import ScalarFieldStage
 from src.worldgen.stages.sea_level import SeaLevelStage
+
+
+def _set_savagery(env: CellEnvironment, value: float) -> None:
+    env.ecology.savagery = value
+
+
+def _set_alignment(env: CellEnvironment, value: float) -> None:
+    env.ecology.alignment = value
 
 
 def _build_stages(config: WorldgenConfig) -> list[Stage]:
@@ -28,8 +36,12 @@ def _build_stages(config: WorldgenConfig) -> list[Stage]:
         LandmassStage(config.landmass),
         HydrologyStage(config.hydrology),
         ClimateStage(config.climate),
-        SavageryStage(config.savagery),
-        AlignmentStage(config.alignment),
+        ScalarFieldStage(
+            config.savagery, FIELD_SAVAGERY, signed=False, assign=_set_savagery
+        ),
+        ScalarFieldStage(
+            config.alignment, FIELD_ALIGNMENT, signed=True, assign=_set_alignment
+        ),
         GridStage(),
         GridDeriveStage(),
         RiverRasterizeStage(config.hydrology),
@@ -56,5 +68,5 @@ class WorldgenPipeline:
     def run(self, spec: WorldSpec) -> WorldData:
         ctx = WorldContext.build(spec, self._config)
         for stage in _build_stages(ctx.config):
-            ctx = stage.run(ctx)
+            stage.run(ctx)
         return ctx.data

@@ -10,9 +10,8 @@ class GridStage:
     Pipeline position: after ``AlignmentStage``.
     """
 
-    def run(self, ctx: WorldContext) -> WorldContext:
+    def run(self, ctx: WorldContext) -> None:
         ctx.data.grid.clear()
 
         grid_index = GridIndex(ctx.config.size)
-        ctx.data = grid_index.build_base_grid(ctx.data)
-        return ctx
+        grid_index.build_base_grid(ctx.data)

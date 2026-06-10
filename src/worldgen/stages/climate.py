@@ -32,13 +32,13 @@ class ClimateStage:
     def __init__(self, config: ClimateConfig) -> None:
         self._config = config
 
-    def run(self, ctx: WorldContext) -> WorldContext:
+    def run(self, ctx: WorldContext) -> None:
+        mesh_index = VoronoiMeshIndex(ctx.data.mesh)
         self._generate_wind(ctx)
         self._generate_climate(ctx)
-        self._apply_orographic(ctx)
+        self._apply_orographic(ctx, mesh_index)
         if self._config.moisture_advection > 0.0:
-            self._advect_moisture(ctx)
-        return ctx
+            self._advect_moisture(ctx, mesh_index)
 
     # ------------------------------------------------------------------
     # Wind
@@ -119,10 +119,11 @@ class ClimateStage:
     # Orographic uplift
     # ------------------------------------------------------------------
 
-    def _apply_orographic(self, ctx: WorldContext) -> None:
+    def _apply_orographic(
+        self, ctx: WorldContext, mesh_index: VoronoiMeshIndex
+    ) -> None:
         cfg = self._config
         mesh = ctx.data.mesh
-        mesh_index = VoronoiMeshIndex(mesh)
 
         for cell in mesh.cells:
             climate = cell.env.climate
@@ -146,10 +147,9 @@ class ClimateStage:
         upwind_id = mesh_index.nearest_cell_id(upwind_x, upwind_y)
         return None if upwind_id == cell.id else upwind_id
 
-    def _advect_moisture(self, ctx: WorldContext) -> None:
+    def _advect_moisture(self, ctx: WorldContext, mesh_index: VoronoiMeshIndex) -> None:
         cfg = self._config
         mesh = ctx.data.mesh
-        mesh_index = VoronoiMeshIndex(mesh)
 
         advected = [cell.env.climate.precipitation for cell in mesh.cells]
         for cell in mesh.cells:

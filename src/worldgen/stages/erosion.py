@@ -26,9 +26,9 @@ class ErosionStage:
         self._config = config
         self._sea_level = sea_level
 
-    def run(self, ctx: WorldContext) -> WorldContext:
+    def run(self, ctx: WorldContext) -> None:
         if not self._config.enabled:
-            return ctx
+            return
 
         mesh = ctx.data.mesh
         for _ in range(self._config.iterations):
@@ -44,8 +44,6 @@ class ErosionStage:
         sea_level = sorted_z[idx]
         for cell in cells:
             cell.env.terrain.is_land = cell.env.terrain.z >= sea_level
-
-        return ctx
 
     # ------------------------------------------------------------------
 

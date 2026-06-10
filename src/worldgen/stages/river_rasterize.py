@@ -18,9 +18,9 @@ class RiverRasterizeStage:
     def __init__(self, config: HydrologyConfig) -> None:
         self._config = config
 
-    def run(self, ctx: WorldContext) -> WorldContext:
+    def run(self, ctx: WorldContext) -> None:
         if not ctx.data.rivers:
-            return ctx
+            return
 
         size = ctx.config.size
         mesh = ctx.data.mesh
@@ -67,5 +67,3 @@ class RiverRasterizeStage:
                         hydrology.is_river = True
                         if flux > hydrology.river_flux:
                             hydrology.river_flux = flux
-
-        return ctx

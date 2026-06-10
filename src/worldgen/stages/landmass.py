@@ -27,13 +27,12 @@ class LandmassStage:
     def __init__(self, config: LandmassConfig) -> None:
         self._config: LandmassConfig = config
 
-    def run(self, ctx: WorldContext) -> WorldContext:
+    def run(self, ctx: WorldContext) -> None:
         mesh = ctx.data.mesh
         self._reset_labels(mesh.cells)
         sizes = self._label_components(mesh, ctx)
         self._classify_sizes(mesh, sizes)
         self._compute_coast_distance(mesh)
-        return ctx
 
     def _reset_labels(self, cells: list[MeshCell]) -> None:
         for cell in cells:

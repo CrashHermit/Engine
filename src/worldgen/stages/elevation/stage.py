@@ -33,7 +33,7 @@ class ElevationStage:
     def __init__(self, config: ElevationConfig) -> None:
         self._config: ElevationConfig = config
 
-    def run(self, ctx: WorldContext) -> WorldContext:
+    def run(self, ctx: WorldContext) -> None:
         cfg = self._config
         mesh = ctx.data.mesh
         provider = _build_provider(cfg, ctx)
@@ -61,5 +61,3 @@ class ElevationStage:
         for cell, value in zip(mesh.cells, raw):
             norm = (value - raw_min) / span_val
             cell.env.terrain.z = norm**cfg.redistribution_power
-
-        return ctx

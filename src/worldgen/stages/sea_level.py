@@ -18,7 +18,7 @@ class SeaLevelStage:
     def __init__(self, config: SeaLevelConfig) -> None:
         self._config = config
 
-    def run(self, ctx: WorldContext) -> WorldContext:
+    def run(self, ctx: WorldContext) -> None:
         cfg = self._config
         cells = ctx.data.mesh.cells
 
@@ -32,5 +32,3 @@ class SeaLevelStage:
             terrain = cell.env.terrain
             terrain.is_land = terrain.z >= sea_level
             terrain.z = (terrain.z - sea_level) * scale
-
-        return ctx
