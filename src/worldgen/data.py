@@ -50,6 +50,8 @@ class MeshCell:
     river_flux: float = 0.0
     is_lake: bool = False
     is_river: bool = False
+    savagery: float = 0.0
+    alignment: float = 0.0
     biome_weights: list[BiomeWeights] = field(default_factory=list)
 
 
@@ -78,6 +80,8 @@ class GridPositionData:
     river_flux: float = 0.0
     is_lake: bool = False
     is_river: bool = False
+    savagery: float = 0.0
+    alignment: float = 0.0
     biome_weights: list[BiomeWeights] = field(default_factory=list)
 
 

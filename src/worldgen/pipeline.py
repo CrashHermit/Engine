@@ -4,6 +4,7 @@ from src.worldgen.config.biome_centers import BIOME_CENTERS
 from src.worldgen.config.worldgen_config import WorldgenConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.data import WorldData
+from src.worldgen.stages.alignment import AlignmentStage
 from src.worldgen.stages.base import Stage
 from src.worldgen.stages.biomes import BiomeStage
 from src.worldgen.stages.climate import ClimateStage
@@ -15,6 +16,7 @@ from src.worldgen.stages.hydrology import HydrologyStage
 from src.worldgen.stages.landmass import LandmassStage
 from src.worldgen.stages.mesh import MeshStage
 from src.worldgen.stages.river_rasterize import RiverRasterizeStage
+from src.worldgen.stages.savagery import SavageryStage
 from src.worldgen.stages.sea_level import SeaLevelStage
 
 
@@ -28,6 +30,8 @@ def _build_stages(config: WorldgenConfig) -> list[Stage]:
         LandmassStage(config.landmass),
         HydrologyStage(config.hydrology),
         ClimateStage(config.climate),
+        SavageryStage(config.savagery),
+        AlignmentStage(config.alignment),
         BiomeStage(BIOME_CENTERS, config.biome),
         GridStage(),
         GridDeriveStage(),
