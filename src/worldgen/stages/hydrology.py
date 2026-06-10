@@ -39,7 +39,7 @@ class HydrologyStage:
                 not cell.env.terrain.is_land or cell.env.hydrology.is_lake
             ),
         )
-        threshold: float = self._config.river_flux_threshold
+        threshold: float = self._river_threshold(mesh, flux)
         ctx.data.rivers.clear()
         for cell in mesh.cells:
             flux_val = flux[cell.id]
@@ -52,6 +52,21 @@ class HydrologyStage:
                 ctx.data.rivers.append(
                     self._make_segment(mesh, cell.id, downstream_id, flux_val)
                 )
+
+    def _river_threshold(self, mesh: VoronoiMesh, flux: list[float]) -> float:
+        """Channelisation threshold from a percentile of the land-flux spread.
+
+        Rivers are the top ``1 - river_percentile`` of land cells by drainage
+        flux, floored at ``river_flux_threshold`` so faint trickles never count.
+        """
+        cfg = self._config
+        land_flux = sorted(
+            flux[cell.id] for cell in mesh.cells if cell.env.terrain.is_land
+        )
+        if not land_flux:
+            return cfg.river_flux_threshold
+        idx = min(len(land_flux) - 1, int(cfg.river_percentile * len(land_flux)))
+        return max(cfg.river_flux_threshold, land_flux[idx])
 
     def _make_segment(
         self,

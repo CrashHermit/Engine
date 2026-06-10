@@ -123,6 +123,11 @@ class LandmassConfig:
 class HydrologyConfig:
     """River routing and rasterisation parameters."""
 
+    # Channelisation threshold. ``river_percentile`` selects rivers as the
+    # top fraction of the land drainage-flux distribution (0.96 => top 4%),
+    # which adapts to mesh density and land fraction; ``river_flux_threshold``
+    # is an absolute floor so trickles never count regardless of percentile.
+    river_percentile: float = 0.90
     river_flux_threshold: float = 3.0
     river_min_width: float = 1.0
     river_width_scale: float = 0.25
