@@ -14,7 +14,11 @@ from src.worldgen.stages.hydrology import HydrologyStage
 from src.worldgen.stages.landmass import LandmassStage
 from src.worldgen.stages.mesh import MeshStage
 from src.worldgen.stages.river_rasterize import RiverRasterizeStage
-from src.worldgen.stages.scalar_field import ScalarFieldStage
+from src.worldgen.stages.scalar_field import (
+    ScalarFieldStage,
+    signed_field,
+    unit_field,
+)
 from src.worldgen.stages.sea_level import SeaLevelStage
 
 
@@ -37,10 +41,10 @@ def _build_stages(config: WorldgenConfig) -> list[Stage]:
         HydrologyStage(config.hydrology),
         ClimateStage(config.climate),
         ScalarFieldStage(
-            config.savagery, FIELD_SAVAGERY, signed=False, assign=_set_savagery
+            config.savagery, FIELD_SAVAGERY, shape=unit_field, assign=_set_savagery
         ),
         ScalarFieldStage(
-            config.alignment, FIELD_ALIGNMENT, signed=True, assign=_set_alignment
+            config.alignment, FIELD_ALIGNMENT, shape=signed_field, assign=_set_alignment
         ),
         GridStage(),
         GridDeriveStage(),

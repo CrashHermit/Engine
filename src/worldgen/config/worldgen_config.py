@@ -162,20 +162,30 @@ class ClimateConfig:
 
 @dataclass
 class SavageryConfig:
-    """Savagery field parameters (0 = tame, 1 = savage)."""
+    """Savagery field parameters (0 = tame, 1 = savage).
+
+    ``source`` selects the ``FieldSource`` flavour: ``"fractal"`` (smooth fbm,
+    the default), ``"ridged"`` (clustered hotspots), or ``"billow"``.
+    """
 
     noise_scale: float = 2.0
     blend_weight: float = 0.7
     amplitude: float = 1.0
+    source: str = "fractal"
 
 
 @dataclass
 class AlignmentConfig:
-    """Alignment field parameters (-1 = chaotic, +1 = ordered)."""
+    """Alignment field parameters (-1 = chaotic, +1 = ordered).
+
+    ``source`` selects the ``FieldSource`` flavour: ``"fractal"`` (smooth fbm,
+    the default), ``"ridged"`` (clustered hotspots), or ``"billow"``.
+    """
 
     noise_scale: float = 2.0
     blend_weight: float = 0.7
     amplitude: float = 1.0
+    source: str = "fractal"
 
 
 # ---------------------------------------------------------------------------
