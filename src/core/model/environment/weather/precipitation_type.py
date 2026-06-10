@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
-from src.core.model.environment.temperature import TemperatureEnum
+from src.core.model.environment.temperature import TemperatureBand
 from src.core.model.environment.weather.precipitation_intensity import (
-    PrecipitationIntensityEnum,
+    PrecipitationIntensityBand,
 )
 
 
@@ -19,228 +19,297 @@ class PrecipitationTypeEnum(StrEnum):
     HAIL = "hail"
 
 
-@dataclass
-class PrecipitationTypeData:
-    precipitation_type: PrecipitationTypeEnum
+@dataclass(frozen=True)
+class PrecipitationTypeInfo:
+    label: str
+    description: str
+    flavor: list[str]
 
 
-class PrecipitationType:
-    """Map weather temperature and precipitation intensity to a precipitation type."""
+INFO: dict[PrecipitationTypeEnum, PrecipitationTypeInfo] = {
+    PrecipitationTypeEnum.NONE: PrecipitationTypeInfo(
+        label="None",
+        description="No precipitation falling.",
+        flavor=[
+            "The sky offers nothing wet.",
+            "Ground stays as it was.",
+            "Gear remains dry.",
+            "Only wind or stillness fills the air.",
+            "Pools hold their last level.",
+        ],
+    ),
+    PrecipitationTypeEnum.RAIN: PrecipitationTypeInfo(
+        label="Rain",
+        description="Liquid water falling from the clouds.",
+        flavor=[
+            "Rhythm on stone and leaf.",
+            "Petrichor rises from soil.",
+            "Cloth darkens at the shoulders.",
+            "Rivulets find the lowest path.",
+            "Puddles spread by degrees.",
+        ],
+    ),
+    PrecipitationTypeEnum.SNOW: PrecipitationTypeInfo(
+        label="Snow",
+        description="Frozen crystals drifting down.",
+        flavor=[
+            "Flakes melt on exposed skin.",
+            "Sound muffles under fresh cover.",
+            "Breath hangs in the air.",
+            "Edges soften under white.",
+            "Footsteps crunch or sink.",
+        ],
+    ),
+    PrecipitationTypeEnum.SLEET: PrecipitationTypeInfo(
+        label="Sleet",
+        description="Ice pellets mixed with rain.",
+        flavor=[
+            "Tiny impacts rattle on metal.",
+            "Surfaces glaze dangerously.",
+            "Each gust stings exposed skin.",
+            "Neither fully rain nor snow.",
+            "Footing turns treacherous fast.",
+        ],
+    ),
+    PrecipitationTypeEnum.FREEZING_RAIN: PrecipitationTypeInfo(
+        label="Freezing rain",
+        description="Rain that freezes on contact.",
+        flavor=[
+            "Branches gleam with ice.",
+            "Every step risks a fall.",
+            "A cold skin coats stone.",
+            "Warmth cannot reach the ground.",
+            "The world turns slick and sharp.",
+        ],
+    ),
+    PrecipitationTypeEnum.GRAUPEL: PrecipitationTypeInfo(
+        label="Graupel",
+        description="Soft, rimed pellets of snow.",
+        flavor=[
+            "Small white beads bounce on impact.",
+            "Less dense than hail, colder than rain.",
+            "Drifts look rough and granular.",
+            "Melts quickly on skin.",
+            "Skies feel unsettled.",
+        ],
+    ),
+    PrecipitationTypeEnum.HAIL: PrecipitationTypeInfo(
+        label="Hail",
+        description="Hard ice stones falling from storm clouds.",
+        flavor=[
+            "Impacts drum on roofs.",
+            "Animals flee for cover.",
+            "Leaves shred under strikes.",
+            "White stones bounce and roll.",
+            "Shelter becomes urgent.",
+        ],
+    ),
+}
 
-    precipitation_type_grid: dict[
-        tuple[TemperatureEnum, PrecipitationIntensityEnum], PrecipitationTypeEnum
-    ] = {
-        # ── FRIGID ────────────────────────────────────────────────────────────
+PRECIPITATION_TYPE_GRID: dict[
+    tuple[TemperatureBand, PrecipitationIntensityBand], PrecipitationTypeEnum
+] = {
+        # â”€â”€ FRIGID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         (
-            TemperatureEnum.FRIGID,
-            PrecipitationIntensityEnum.NONE,
+            TemperatureBand.FRIGID,
+            PrecipitationIntensityBand.NONE,
         ): PrecipitationTypeEnum.NONE,
         (
-            TemperatureEnum.FRIGID,
-            PrecipitationIntensityEnum.DRIZZLE,
+            TemperatureBand.FRIGID,
+            PrecipitationIntensityBand.DRIZZLE,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.FRIGID,
-            PrecipitationIntensityEnum.LIGHT,
+            TemperatureBand.FRIGID,
+            PrecipitationIntensityBand.LIGHT,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.FRIGID,
-            PrecipitationIntensityEnum.STEADY,
+            TemperatureBand.FRIGID,
+            PrecipitationIntensityBand.STEADY,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.FRIGID,
-            PrecipitationIntensityEnum.HEAVY,
+            TemperatureBand.FRIGID,
+            PrecipitationIntensityBand.HEAVY,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.FRIGID,
-            PrecipitationIntensityEnum.TORRENTIAL,
+            TemperatureBand.FRIGID,
+            PrecipitationIntensityBand.TORRENTIAL,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.FRIGID,
-            PrecipitationIntensityEnum.CLOUDBURST,
+            TemperatureBand.FRIGID,
+            PrecipitationIntensityBand.CLOUDBURST,
         ): PrecipitationTypeEnum.SNOW,
-        # ── FREEZING ──────────────────────────────────────────────────────────
+        # â”€â”€ FREEZING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         (
-            TemperatureEnum.FREEZING,
-            PrecipitationIntensityEnum.NONE,
+            TemperatureBand.FREEZING,
+            PrecipitationIntensityBand.NONE,
         ): PrecipitationTypeEnum.NONE,
         (
-            TemperatureEnum.FREEZING,
-            PrecipitationIntensityEnum.DRIZZLE,
+            TemperatureBand.FREEZING,
+            PrecipitationIntensityBand.DRIZZLE,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.FREEZING,
-            PrecipitationIntensityEnum.LIGHT,
+            TemperatureBand.FREEZING,
+            PrecipitationIntensityBand.LIGHT,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.FREEZING,
-            PrecipitationIntensityEnum.STEADY,
+            TemperatureBand.FREEZING,
+            PrecipitationIntensityBand.STEADY,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.FREEZING,
-            PrecipitationIntensityEnum.HEAVY,
+            TemperatureBand.FREEZING,
+            PrecipitationIntensityBand.HEAVY,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.FREEZING,
-            PrecipitationIntensityEnum.TORRENTIAL,
+            TemperatureBand.FREEZING,
+            PrecipitationIntensityBand.TORRENTIAL,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.FREEZING,
-            PrecipitationIntensityEnum.CLOUDBURST,
+            TemperatureBand.FREEZING,
+            PrecipitationIntensityBand.CLOUDBURST,
         ): PrecipitationTypeEnum.SNOW,
-        # ── COOL ──────────────────────────────────────────────────────────────
+        # â”€â”€ COOL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         (
-            TemperatureEnum.COOL,
-            PrecipitationIntensityEnum.NONE,
+            TemperatureBand.COOL,
+            PrecipitationIntensityBand.NONE,
         ): PrecipitationTypeEnum.NONE,
         (
-            TemperatureEnum.COOL,
-            PrecipitationIntensityEnum.DRIZZLE,
+            TemperatureBand.COOL,
+            PrecipitationIntensityBand.DRIZZLE,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.COOL,
-            PrecipitationIntensityEnum.LIGHT,
+            TemperatureBand.COOL,
+            PrecipitationIntensityBand.LIGHT,
         ): PrecipitationTypeEnum.SLEET,
         (
-            TemperatureEnum.COOL,
-            PrecipitationIntensityEnum.STEADY,
+            TemperatureBand.COOL,
+            PrecipitationIntensityBand.STEADY,
         ): PrecipitationTypeEnum.GRAUPEL,
         (
-            TemperatureEnum.COOL,
-            PrecipitationIntensityEnum.HEAVY,
+            TemperatureBand.COOL,
+            PrecipitationIntensityBand.HEAVY,
         ): PrecipitationTypeEnum.GRAUPEL,
         (
-            TemperatureEnum.COOL,
-            PrecipitationIntensityEnum.TORRENTIAL,
+            TemperatureBand.COOL,
+            PrecipitationIntensityBand.TORRENTIAL,
         ): PrecipitationTypeEnum.SNOW,
         (
-            TemperatureEnum.COOL,
-            PrecipitationIntensityEnum.CLOUDBURST,
+            TemperatureBand.COOL,
+            PrecipitationIntensityBand.CLOUDBURST,
         ): PrecipitationTypeEnum.SNOW,
-        # ── MILD ──────────────────────────────────────────────────────────────
+        # â”€â”€ MILD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         (
-            TemperatureEnum.MILD,
-            PrecipitationIntensityEnum.NONE,
+            TemperatureBand.MILD,
+            PrecipitationIntensityBand.NONE,
         ): PrecipitationTypeEnum.NONE,
         (
-            TemperatureEnum.MILD,
-            PrecipitationIntensityEnum.DRIZZLE,
+            TemperatureBand.MILD,
+            PrecipitationIntensityBand.DRIZZLE,
         ): PrecipitationTypeEnum.SLEET,
         (
-            TemperatureEnum.MILD,
-            PrecipitationIntensityEnum.LIGHT,
+            TemperatureBand.MILD,
+            PrecipitationIntensityBand.LIGHT,
         ): PrecipitationTypeEnum.FREEZING_RAIN,
         (
-            TemperatureEnum.MILD,
-            PrecipitationIntensityEnum.STEADY,
+            TemperatureBand.MILD,
+            PrecipitationIntensityBand.STEADY,
         ): PrecipitationTypeEnum.FREEZING_RAIN,
         (
-            TemperatureEnum.MILD,
-            PrecipitationIntensityEnum.HEAVY,
+            TemperatureBand.MILD,
+            PrecipitationIntensityBand.HEAVY,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.MILD,
-            PrecipitationIntensityEnum.TORRENTIAL,
+            TemperatureBand.MILD,
+            PrecipitationIntensityBand.TORRENTIAL,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.MILD,
-            PrecipitationIntensityEnum.CLOUDBURST,
+            TemperatureBand.MILD,
+            PrecipitationIntensityBand.CLOUDBURST,
         ): PrecipitationTypeEnum.HAIL,
-        # ── WARM ──────────────────────────────────────────────────────────────
+        # â”€â”€ WARM â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         (
-            TemperatureEnum.WARM,
-            PrecipitationIntensityEnum.NONE,
+            TemperatureBand.WARM,
+            PrecipitationIntensityBand.NONE,
         ): PrecipitationTypeEnum.NONE,
         (
-            TemperatureEnum.WARM,
-            PrecipitationIntensityEnum.DRIZZLE,
+            TemperatureBand.WARM,
+            PrecipitationIntensityBand.DRIZZLE,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.WARM,
-            PrecipitationIntensityEnum.LIGHT,
+            TemperatureBand.WARM,
+            PrecipitationIntensityBand.LIGHT,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.WARM,
-            PrecipitationIntensityEnum.STEADY,
+            TemperatureBand.WARM,
+            PrecipitationIntensityBand.STEADY,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.WARM,
-            PrecipitationIntensityEnum.HEAVY,
+            TemperatureBand.WARM,
+            PrecipitationIntensityBand.HEAVY,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.WARM,
-            PrecipitationIntensityEnum.TORRENTIAL,
+            TemperatureBand.WARM,
+            PrecipitationIntensityBand.TORRENTIAL,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.WARM,
-            PrecipitationIntensityEnum.CLOUDBURST,
+            TemperatureBand.WARM,
+            PrecipitationIntensityBand.CLOUDBURST,
         ): PrecipitationTypeEnum.HAIL,
-        # ── HOT ───────────────────────────────────────────────────────────────
+        # â”€â”€ HOT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         (
-            TemperatureEnum.HOT,
-            PrecipitationIntensityEnum.NONE,
+            TemperatureBand.HOT,
+            PrecipitationIntensityBand.NONE,
         ): PrecipitationTypeEnum.NONE,
         (
-            TemperatureEnum.HOT,
-            PrecipitationIntensityEnum.DRIZZLE,
+            TemperatureBand.HOT,
+            PrecipitationIntensityBand.DRIZZLE,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.HOT,
-            PrecipitationIntensityEnum.LIGHT,
+            TemperatureBand.HOT,
+            PrecipitationIntensityBand.LIGHT,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.HOT,
-            PrecipitationIntensityEnum.STEADY,
+            TemperatureBand.HOT,
+            PrecipitationIntensityBand.STEADY,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.HOT,
-            PrecipitationIntensityEnum.HEAVY,
+            TemperatureBand.HOT,
+            PrecipitationIntensityBand.HEAVY,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.HOT,
-            PrecipitationIntensityEnum.TORRENTIAL,
+            TemperatureBand.HOT,
+            PrecipitationIntensityBand.TORRENTIAL,
         ): PrecipitationTypeEnum.HAIL,
         (
-            TemperatureEnum.HOT,
-            PrecipitationIntensityEnum.CLOUDBURST,
+            TemperatureBand.HOT,
+            PrecipitationIntensityBand.CLOUDBURST,
         ): PrecipitationTypeEnum.HAIL,
-        # ── SCORCHING ───────────────────────────────────────────────────────
+        # â”€â”€ SCORCHING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         (
-            TemperatureEnum.SCORCHING,
-            PrecipitationIntensityEnum.NONE,
+            TemperatureBand.SCORCHING,
+            PrecipitationIntensityBand.NONE,
         ): PrecipitationTypeEnum.NONE,
         (
-            TemperatureEnum.SCORCHING,
-            PrecipitationIntensityEnum.DRIZZLE,
+            TemperatureBand.SCORCHING,
+            PrecipitationIntensityBand.DRIZZLE,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.SCORCHING,
-            PrecipitationIntensityEnum.LIGHT,
+            TemperatureBand.SCORCHING,
+            PrecipitationIntensityBand.LIGHT,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.SCORCHING,
-            PrecipitationIntensityEnum.STEADY,
+            TemperatureBand.SCORCHING,
+            PrecipitationIntensityBand.STEADY,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.SCORCHING,
-            PrecipitationIntensityEnum.HEAVY,
+            TemperatureBand.SCORCHING,
+            PrecipitationIntensityBand.HEAVY,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.SCORCHING,
-            PrecipitationIntensityEnum.TORRENTIAL,
+            TemperatureBand.SCORCHING,
+            PrecipitationIntensityBand.TORRENTIAL,
         ): PrecipitationTypeEnum.RAIN,
         (
-            TemperatureEnum.SCORCHING,
-            PrecipitationIntensityEnum.CLOUDBURST,
+            TemperatureBand.SCORCHING,
+            PrecipitationIntensityBand.CLOUDBURST,
         ): PrecipitationTypeEnum.RAIN,
     }
-
-    def get_precipitation_type(
-        self,
-        temperature_enum: TemperatureEnum,
-        intensity_enum: PrecipitationIntensityEnum,
-    ) -> PrecipitationTypeEnum:
-        """Look up the precipitation type for a temperature and intensity pair."""
-        return self.precipitation_type_grid.get(
-            (temperature_enum, intensity_enum), PrecipitationTypeEnum.NONE
-        )

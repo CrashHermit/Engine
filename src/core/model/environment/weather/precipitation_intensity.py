@@ -1,118 +1,199 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import IntEnum
+from enum import StrEnum
 
-from src.core.model.environment.weather.cloud_cover import CloudCoverEnum
-from src.core.model.environment.weather.humidity import HumidityEnum
-
-
-class PrecipitationIntensityEnum(IntEnum):
-    NONE = 0
-    DRIZZLE = 1
-    LIGHT = 2
-    STEADY = 3
-    HEAVY = 4
-    TORRENTIAL = 5
-    CLOUDBURST = 6
+from src.core.model.environment.weather.cloud_cover import CloudCoverBand
+from src.core.model.environment.weather.humidity import HumidityBand
 
 
-@dataclass
-class PrecipitationIntensityData:
-    precipitation_intensity: PrecipitationIntensityEnum
+class PrecipitationIntensityBand(StrEnum):
+    NONE = "none"
+    DRIZZLE = "drizzle"
+    LIGHT = "light"
+    STEADY = "steady"
+    HEAVY = "heavy"
+    TORRENTIAL = "torrential"
+    CLOUDBURST = "cloudburst"
 
 
-class PrecipitationIntensity:
-    """Map cloud cover and humidity to a precipitation intensity."""
+@dataclass(frozen=True)
+class PrecipitationIntensityBandInfo:
+    label: str
+    description: str
+    flavor: list[str]
 
-    precipitation_intensity_grid: dict[
-        tuple[CloudCoverEnum, HumidityEnum], PrecipitationIntensityEnum
-    ] = {
-        # ── CLEAR ─────────────────────────────────────────────────────────────
-        (CloudCoverEnum.CLEAR, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.CLEAR, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.CLEAR, HumidityEnum.CRISP): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.CLEAR, HumidityEnum.MILD): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.CLEAR, HumidityEnum.HUMID): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.CLEAR, HumidityEnum.MUGGY): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.CLEAR, HumidityEnum.SOAKING): PrecipitationIntensityEnum.NONE,
-        # ── FEW ─────────────────────────────────────────────────────────────────
-        (CloudCoverEnum.FEW, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.FEW, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.FEW, HumidityEnum.CRISP): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.FEW, HumidityEnum.MILD): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.FEW, HumidityEnum.HUMID): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.FEW, HumidityEnum.MUGGY): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.FEW, HumidityEnum.SOAKING): PrecipitationIntensityEnum.NONE,
-        # ── SCATTERED ───────────────────────────────────────────────────────────
-        (CloudCoverEnum.SCATTERED, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.SCATTERED, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.SCATTERED, HumidityEnum.CRISP): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.SCATTERED, HumidityEnum.MILD): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.SCATTERED, HumidityEnum.HUMID): PrecipitationIntensityEnum.NONE,
+
+ORDER: tuple[PrecipitationIntensityBand, ...] = (
+    PrecipitationIntensityBand.NONE,
+    PrecipitationIntensityBand.DRIZZLE,
+    PrecipitationIntensityBand.LIGHT,
+    PrecipitationIntensityBand.STEADY,
+    PrecipitationIntensityBand.HEAVY,
+    PrecipitationIntensityBand.TORRENTIAL,
+    PrecipitationIntensityBand.CLOUDBURST,
+)
+
+BREAKPOINTS: tuple[float, ...] = (1 / 7, 2 / 7, 3 / 7, 4 / 7, 5 / 7, 6 / 7)
+
+INFO: dict[PrecipitationIntensityBand, PrecipitationIntensityBandInfo] = {
+    PrecipitationIntensityBand.NONE: PrecipitationIntensityBandInfo(
+        label="None",
+        description="No falling precipitation.",
+        flavor=[
+            "Ground stays as it was.",
+            "Sky may still threaten.",
+            "Dust remains airborne.",
+            "Footsteps sound normal.",
+            "Gear stays dry.",
+        ],
+    ),
+    PrecipitationIntensityBand.DRIZZLE: PrecipitationIntensityBandInfo(
+        label="Drizzle",
+        description="Fine, persistent mist.",
+        flavor=[
+            "Moisture beads on hair.",
+            "Stone darkens slowly.",
+            "Umbrellas seem excessive.",
+            "Paths turn slick over time.",
+            "Mood turns inward.",
+        ],
+    ),
+    PrecipitationIntensityBand.LIGHT: PrecipitationIntensityBandInfo(
+        label="Light",
+        description="Gentle rain or snow that patters softly.",
+        flavor=[
+            "Rhythm on roofs soothes.",
+            "Puddles form in low spots.",
+            "Scent of wet earth rises.",
+            "Visibility holds.",
+            "Cloaks darken at the hem.",
+        ],
+    ),
+    PrecipitationIntensityBand.STEADY: PrecipitationIntensityBandInfo(
+        label="Steady",
+        description="Continuous fall that soaks through patience.",
+        flavor=[
+            "Streams rise audibly.",
+            "Boots squelch by afternoon.",
+            "Fires struggle outdoors.",
+            "Conversation moves indoors.",
+            "The world softens.",
+        ],
+    ),
+    PrecipitationIntensityBand.HEAVY: PrecipitationIntensityBandInfo(
+        label="Heavy",
+        description="Hard rain or snow that reshapes plans.",
+        flavor=[
+            "Drains overflow.",
+            "Hearing narrows to weather.",
+            "Travel slows sharply.",
+            "Cold finds every gap.",
+            "Umbrellas invert.",
+        ],
+    ),
+    PrecipitationIntensityBand.TORRENTIAL: PrecipitationIntensityBandInfo(
+        label="Torrential",
+        description="Violent downpour — visibility and footing suffer.",
+        flavor=[
+            "Sheets of water blur sight.",
+            "Floods form in minutes.",
+            "Thunder may accompany.",
+            "Shelter becomes urgent.",
+            "Dry cloth is fantasy.",
+        ],
+    ),
+    PrecipitationIntensityBand.CLOUDBURST: PrecipitationIntensityBandInfo(
+        label="Cloudburst",
+        description="Catastrophic rainfall in a short span.",
+        flavor=[
+            "The sky seems to empty.",
+            "Gullies become rivers.",
+            "Stone channels roar.",
+            "Exposure risks drowning.",
+            "Aftermath mud everywhere.",
+        ],
+    ),
+}
+
+INTENSITY_GRID: dict[
+    tuple[CloudCoverBand, HumidityBand], PrecipitationIntensityBand
+] = {
+        # â”€â”€ CLEAR â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (CloudCoverBand.CLEAR, HumidityBand.ARID): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.CLEAR, HumidityBand.DRY): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.CLEAR, HumidityBand.CRISP): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.CLEAR, HumidityBand.MILD): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.CLEAR, HumidityBand.HUMID): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.CLEAR, HumidityBand.MUGGY): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.CLEAR, HumidityBand.SOAKING): PrecipitationIntensityBand.NONE,
+        # â”€â”€ FEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (CloudCoverBand.FEW, HumidityBand.ARID): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.FEW, HumidityBand.DRY): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.FEW, HumidityBand.CRISP): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.FEW, HumidityBand.MILD): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.FEW, HumidityBand.HUMID): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.FEW, HumidityBand.MUGGY): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.FEW, HumidityBand.SOAKING): PrecipitationIntensityBand.NONE,
+        # â”€â”€ SCATTERED â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (CloudCoverBand.SCATTERED, HumidityBand.ARID): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.SCATTERED, HumidityBand.DRY): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.SCATTERED, HumidityBand.CRISP): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.SCATTERED, HumidityBand.MILD): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.SCATTERED, HumidityBand.HUMID): PrecipitationIntensityBand.NONE,
         (
-            CloudCoverEnum.SCATTERED,
-            HumidityEnum.MUGGY,
-        ): PrecipitationIntensityEnum.DRIZZLE,
+            CloudCoverBand.SCATTERED,
+            HumidityBand.MUGGY,
+        ): PrecipitationIntensityBand.DRIZZLE,
         (
-            CloudCoverEnum.SCATTERED,
-            HumidityEnum.SOAKING,
-        ): PrecipitationIntensityEnum.LIGHT,
-        # ── BROKEN ──────────────────────────────────────────────────────────────
-        (CloudCoverEnum.BROKEN, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.BROKEN, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.BROKEN, HumidityEnum.CRISP): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.BROKEN, HumidityEnum.MILD): PrecipitationIntensityEnum.DRIZZLE,
-        (CloudCoverEnum.BROKEN, HumidityEnum.HUMID): PrecipitationIntensityEnum.LIGHT,
-        (CloudCoverEnum.BROKEN, HumidityEnum.MUGGY): PrecipitationIntensityEnum.LIGHT,
+            CloudCoverBand.SCATTERED,
+            HumidityBand.SOAKING,
+        ): PrecipitationIntensityBand.LIGHT,
+        # â”€â”€ BROKEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (CloudCoverBand.BROKEN, HumidityBand.ARID): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.BROKEN, HumidityBand.DRY): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.BROKEN, HumidityBand.CRISP): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.BROKEN, HumidityBand.MILD): PrecipitationIntensityBand.DRIZZLE,
+        (CloudCoverBand.BROKEN, HumidityBand.HUMID): PrecipitationIntensityBand.LIGHT,
+        (CloudCoverBand.BROKEN, HumidityBand.MUGGY): PrecipitationIntensityBand.LIGHT,
         (
-            CloudCoverEnum.BROKEN,
-            HumidityEnum.SOAKING,
-        ): PrecipitationIntensityEnum.STEADY,
-        # ── MOSTLY ──────────────────────────────────────────────────────────────
-        (CloudCoverEnum.MOSTLY, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.MOSTLY, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.MOSTLY, HumidityEnum.CRISP): PrecipitationIntensityEnum.DRIZZLE,
-        (CloudCoverEnum.MOSTLY, HumidityEnum.MILD): PrecipitationIntensityEnum.LIGHT,
-        (CloudCoverEnum.MOSTLY, HumidityEnum.HUMID): PrecipitationIntensityEnum.STEADY,
-        (CloudCoverEnum.MOSTLY, HumidityEnum.MUGGY): PrecipitationIntensityEnum.STEADY,
-        (CloudCoverEnum.MOSTLY, HumidityEnum.SOAKING): PrecipitationIntensityEnum.HEAVY,
-        # ── OVERCAST ────────────────────────────────────────────────────────────
-        (CloudCoverEnum.OVERCAST, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.OVERCAST, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
+            CloudCoverBand.BROKEN,
+            HumidityBand.SOAKING,
+        ): PrecipitationIntensityBand.STEADY,
+        # â”€â”€ MOSTLY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (CloudCoverBand.MOSTLY, HumidityBand.ARID): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.MOSTLY, HumidityBand.DRY): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.MOSTLY, HumidityBand.CRISP): PrecipitationIntensityBand.DRIZZLE,
+        (CloudCoverBand.MOSTLY, HumidityBand.MILD): PrecipitationIntensityBand.LIGHT,
+        (CloudCoverBand.MOSTLY, HumidityBand.HUMID): PrecipitationIntensityBand.STEADY,
+        (CloudCoverBand.MOSTLY, HumidityBand.MUGGY): PrecipitationIntensityBand.STEADY,
+        (CloudCoverBand.MOSTLY, HumidityBand.SOAKING): PrecipitationIntensityBand.HEAVY,
+        # â”€â”€ OVERCAST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (CloudCoverBand.OVERCAST, HumidityBand.ARID): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.OVERCAST, HumidityBand.DRY): PrecipitationIntensityBand.NONE,
         (
-            CloudCoverEnum.OVERCAST,
-            HumidityEnum.CRISP,
-        ): PrecipitationIntensityEnum.DRIZZLE,
-        (CloudCoverEnum.OVERCAST, HumidityEnum.MILD): PrecipitationIntensityEnum.LIGHT,
-        (CloudCoverEnum.OVERCAST, HumidityEnum.HUMID): PrecipitationIntensityEnum.HEAVY,
-        (CloudCoverEnum.OVERCAST, HumidityEnum.MUGGY): PrecipitationIntensityEnum.HEAVY,
+            CloudCoverBand.OVERCAST,
+            HumidityBand.CRISP,
+        ): PrecipitationIntensityBand.DRIZZLE,
+        (CloudCoverBand.OVERCAST, HumidityBand.MILD): PrecipitationIntensityBand.LIGHT,
+        (CloudCoverBand.OVERCAST, HumidityBand.HUMID): PrecipitationIntensityBand.HEAVY,
+        (CloudCoverBand.OVERCAST, HumidityBand.MUGGY): PrecipitationIntensityBand.HEAVY,
         (
-            CloudCoverEnum.OVERCAST,
-            HumidityEnum.SOAKING,
-        ): PrecipitationIntensityEnum.TORRENTIAL,
-        # ── LEADEN ──────────────────────────────────────────────────────────────
-        (CloudCoverEnum.LEADEN, HumidityEnum.ARID): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.LEADEN, HumidityEnum.DRY): PrecipitationIntensityEnum.NONE,
-        (CloudCoverEnum.LEADEN, HumidityEnum.CRISP): PrecipitationIntensityEnum.DRIZZLE,
-        (CloudCoverEnum.LEADEN, HumidityEnum.MILD): PrecipitationIntensityEnum.STEADY,
-        (CloudCoverEnum.LEADEN, HumidityEnum.HUMID): PrecipitationIntensityEnum.HEAVY,
+            CloudCoverBand.OVERCAST,
+            HumidityBand.SOAKING,
+        ): PrecipitationIntensityBand.TORRENTIAL,
+        # â”€â”€ LEADEN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        (CloudCoverBand.LEADEN, HumidityBand.ARID): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.LEADEN, HumidityBand.DRY): PrecipitationIntensityBand.NONE,
+        (CloudCoverBand.LEADEN, HumidityBand.CRISP): PrecipitationIntensityBand.DRIZZLE,
+        (CloudCoverBand.LEADEN, HumidityBand.MILD): PrecipitationIntensityBand.STEADY,
+        (CloudCoverBand.LEADEN, HumidityBand.HUMID): PrecipitationIntensityBand.HEAVY,
         (
-            CloudCoverEnum.LEADEN,
-            HumidityEnum.MUGGY,
-        ): PrecipitationIntensityEnum.TORRENTIAL,
+            CloudCoverBand.LEADEN,
+            HumidityBand.MUGGY,
+        ): PrecipitationIntensityBand.TORRENTIAL,
         (
-            CloudCoverEnum.LEADEN,
-            HumidityEnum.SOAKING,
-        ): PrecipitationIntensityEnum.CLOUDBURST,
+            CloudCoverBand.LEADEN,
+            HumidityBand.SOAKING,
+        ): PrecipitationIntensityBand.CLOUDBURST,
     }
-
-    def get_precipitation_intensity(
-        self,
-        cloud_cover_enum: CloudCoverEnum,
-        humidity_enum: HumidityEnum,
-    ) -> PrecipitationIntensityEnum:
-        """Look up the precipitation intensity for a cloud cover and humidity pair."""
-        return self.precipitation_intensity_grid.get(
-            (cloud_cover_enum, humidity_enum), PrecipitationIntensityEnum.NONE
-        )
