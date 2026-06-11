@@ -1,21 +1,22 @@
-Here is a formatted reference document. You can copy and paste this directly into a Google Doc, Notion, or Obsidian vault for your game.
-
-***
-
-# SYSTEM REFERENCE: DOMAINS, SPHERES, & THE BODY
+# SYSTEM REFERENCE: DOMAINS, SPHERES, & CONSEQUENCES
 *A Forged in the Dark ruleset for dark fantasy, mutation, and corruption.*
 
 ## 1. THE CORE PHILOSOPHY
+
 In this system, actions are defined by two things: **Domains** and **Spheres**.
-*   **Domains (The 9 Actions):** *How* you approach a problem. This is your active dice pool.
+
+*   **Domains (The 9 Approaches):** *How* you engage with a problem. This is your active dice pool and your method — independent of what power you draw on or who you are affecting. Domains are pure approach: a character with high ratings in certain domains habitually solves problems that way regardless of channel.
 *   **Spheres (The 3 Power Sources):** *Where* the power comes from. This determines your narrative permission (what you can affect) and is what you roll to **Resist** consequences.
 
 When you take an action, you combine them:
-> *"I overcome this obstacle by means of **[Domain]**, channeled through my **[Sphere]**."*
+> *"I engage with this problem by means of **[Domain]**, channeled through my **[Sphere]**."*
+
+The target — yourself, another agent, or the world around you — is determined by the fiction, not a separate mechanical axis.
 
 ---
 
 ## 2. THE THREE SPHERES (Power & Resistance)
+
 The Spheres represent the three metaphysical layers of the world. You roll your Sphere rating to Resist consequences and stave off Trauma, Submission, or Corruption.
 
 *   **CORPUS (The Flesh & Biology)**
@@ -33,10 +34,14 @@ The Spheres represent the three metaphysical layers of the world. You roll your 
 
 ---
 
-## 3. THE NINE DOMAINS (Action Styles)
+## 3. THE NINE DOMAINS (Approaches)
 
-### 💥 The Aggressive Domains (Imposing Your Will)
-*Used to break barriers, alter the state of things, and dominate.*
+The nine domains are pure approaches — **how** a character engages with a problem, regardless of what power they are drawing on. Any domain can be channeled through any sphere; the sphere colors *what* is happening, the domain determines *how*.
+
+They are organized into three stances toward a situation:
+
+### The Assertive Domains (Imposing on the Situation)
+*Used to push something into the world — force, reaction, or change.*
 
 *   **FORCE** *(To overwhelm, crush, or overpower)*
     *   *Corpus:* Swinging a heavy weapon; pinning an enemy to the floor.
@@ -51,8 +56,8 @@ The Spheres represent the three metaphysical layers of the world. You roll your 
     *   *Mens:* Brewing alchemical potions; rewriting an elemental matrix.
     *   *Anima:* Flesh-crafting (inducing or curing mutations); soul-binding.
 
-### 🛡️ The Reactive Domains (Enduring & Yielding)
-*Used to endure, yield, bond, or protect yourself and others.*
+### The Adaptive Domains (Working With What's There)
+*Used to endure, move, or bond — meeting the situation on its own terms.*
 
 *   **WARD** *(To protect, block, endure, or seal)*
     *   *Corpus:* Flexing to endure a painful/pleasurable strike without breaking.
@@ -67,7 +72,7 @@ The Spheres represent the three metaphysical layers of the world. You roll your 
     *   *Mens:* Telepathically sharing memories to build trust; logical negotiation.
     *   *Anima:* Singing a resonant hymn to calm spirits; willingly accepting a pact.
 
-### 🧠 The Tactical Domains (Outsmarting the World)
+### The Discerning Domains (Precision and Information)
 *Used to analyze, deceive, and strike with perfect timing.*
 
 *   **FINESSE** *(To act with precision, timing, and exactness)*
@@ -85,29 +90,50 @@ The Spheres represent the three metaphysical layers of the world. You roll your 
 
 ---
 
-## 4. THE BODY MAP & CONSEQUENCES
-Instead of a standard Harm track, characters have a **Body Map** (Head, Torso, Arms, Legs, Appendages). When you roll a 4-5 (Mixed Success) or 1-3 (Failure), the GM inflicts a consequence on a specific Body Part. 
+## 4. CONSEQUENCES
 
-There are three types of consequences:
+When a roll produces a consequence, two things define it: **which channel it comes from** and **how long it lasts**.
 
-**1. Wounds (Physical Damage)**
-*   *Effect:* Reduces physical effectiveness (e.g., *Slashed, Broken, Burned*).
-*   *Endgame:* Taking too many Wounds leads to **Trauma** (Bleeding out, unconsciousness, maiming).
+### Channel Flavor
 
-**2. Lust (Arousal & Sensory Overload)**
-*   *Effect:* Fogs the mind and pushes the body toward submission (e.g., *Hypersensitive, Flushed, Weak-Kneed*).
-*   *Endgame:* Maxing out Lust leads to **Submission** (Surrendering, collapsing in ecstasy, or losing your mind to corruption).
+Consequences are colored by the sphere that inflicted them:
 
-**3. Mutations (Permanent Alteration)**
-*   *Effect:* A severe consequence from magical or demonic sources permanently alters a body part (e.g., *Demonic Claws, Furred Legs, Succubus Horns*).
-*   *Impact:* Mutations change your Fictional Positioning. Demonic claws give you *Great Effect* on Corpus+Force attacks, but *Zero Effect* on Corpus+Finesse lockpicking.
+*   **Corpus consequences** — physical harm, bodily alteration, exhaustion, sensation.
+*   **Mens consequences** — mental strain, psychic pressure, cognitive disruption, compulsion.
+*   **Anima consequences** — spiritual erosion, essence damage, overwhelming arousal, taint.
+
+### The Three Classes
+
+**Timed** — resolves automatically after a set period. The fiction determines the window: a turn, a scene, a week of rest. No action required.
+
+**Conditional** — persists until a specific named condition is met. The GM states what removes it: *a flesh-crafter must treat it*, *a purification ritual must be performed*, *the debt must be repaid*. It will not resolve on its own.
+
+**Permanent** — no removal path. It becomes part of the character and alters their fictional positioning from that point forward.
+
+|  | Timed | Conditional | Permanent |
+|--|--|--|--|
+| **Corpus** | Winded, grazed, numbed | Wound needing treatment; physical binding | Mutation |
+| **Mens** | Foggy, distracted, static | Curse or obsession until condition met | Permanent mental alteration |
+| **Anima** | Flushed, lust overload, overwhelmed | Spiritual taint or debt until ritual | Permanent spiritual alteration |
+
+### Mutations
+
+Mutations are the **Corpus / Permanent** consequence — a body part is physically and irreversibly altered by magical or demonic force. Mutations change fictional positioning directly: demonic claws give *Great Effect* on Corpus+Force attacks but *Zero Effect* on Corpus+Finesse lockpicking.
+
+### Endgame States
+
+When consequences in a channel accumulate beyond what a character can bear, each sphere has an endgame:
+
+*   **Corpus overload → Trauma** — bleeding out, unconsciousness, permanent maiming.
+*   **Mens overload → [unnamed]** — losing grip on reality, collapse of will, permanent compulsion.
+*   **Anima overload → Submission** — surrendering to corruption, collapsing in ecstasy, essence consumed.
 
 ---
 
 ## 5. THE CORE GAMEPLAY LOOP
 
-1.  **The Action:** The player states their goal, chooses a **Domain**, and channels it through a **Sphere**.
-2.  **The Stakes:** The GM looks at the character's Body Map (and any Mutations) to determine **Position** (How dangerous is it?) and **Effect** (How much will it accomplish?).
+1.  **The Action:** The player states their goal, chooses a **Domain** (how they engage), and channels it through a **Sphere** (what power they draw on).
+2.  **The Stakes:** The GM determines **Position** (how dangerous is it?) and **Effect** (how much will it accomplish?), informed by the character's domains, sphere ratings, and any mutations.
 3.  **The Roll:** The player rolls d6s equal to their Domain rating.
-4.  **The Consequence:** On a 4-5 or 1-3, the GM inflicts a consequence (Wound, Lust, or Mutation) on a specific Body Part, themed to the Sphere the enemy attacked with.
-5.  **The Resistance:** The player may choose to Resist the consequence by rolling the appropriate **Sphere** (Corpus, Mens, or Anima), taking Stress to reduce or negate the effect.
+4.  **The Consequence:** On a 4-5 or 1-3, the GM inflicts a consequence — choosing its **channel** (Corpus, Mens, or Anima) and its **class** (Timed, Conditional, or Permanent) to match what the fiction demands.
+5.  **The Resistance:** The player may Resist the consequence by rolling the appropriate **Sphere**, taking Stress to reduce or negate the effect.
