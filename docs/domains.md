@@ -98,9 +98,9 @@ When a roll produces a consequence, two things define it: **which channel it com
 
 Consequences are colored by the sphere that inflicted them:
 
-*   **Corpus consequences** — physical harm, bodily alteration, exhaustion, sensation.
-*   **Mens consequences** — mental strain, psychic pressure, cognitive disruption, compulsion.
-*   **Anima consequences** — spiritual erosion, essence damage, overwhelming arousal, taint.
+*   **Corpus** — physical harm, bodily alteration, exhaustion, sensation.
+*   **Mens** — mental strain, psychic pressure, cognitive disruption, compulsion.
+*   **Anima** — spiritual erosion, essence damage, overwhelming arousal, taint.
 
 ### The Three Classes
 
@@ -112,13 +112,13 @@ Consequences are colored by the sphere that inflicted them:
 
 |  | Timed | Conditional | Permanent |
 |--|--|--|--|
-| **Corpus** | Winded, grazed, numbed | Wound needing treatment; physical binding | Mutation |
-| **Mens** | Foggy, distracted, static | Curse or obsession until condition met | Permanent mental alteration |
-| **Anima** | Flushed, lust overload, overwhelmed | Spiritual taint or debt until ritual | Permanent spiritual alteration |
+| **Corpus** | Physical harm that fades with time | Physical harm requiring specific treatment | Irreversible physical alteration |
+| **Mens** | Mental disruption that fades with time | Mental effect requiring specific remedy | Irreversible mental alteration |
+| **Anima** | Spiritual disruption that fades with time | Spiritual effect requiring specific remedy | Irreversible spiritual alteration |
 
-### Mutations
+### Permanent Consequences and Fictional Positioning
 
-Mutations are the **Corpus / Permanent** consequence — a body part is physically and irreversibly altered by magical or demonic force. Mutations change fictional positioning directly: demonic claws give *Great Effect* on Corpus+Force attacks but *Zero Effect* on Corpus+Finesse lockpicking.
+A permanent consequence in any channel irreversibly alters what the character is and what they can do. The fiction determines the shape: a body part physically changed, a belief permanently installed, an essence permanently marked. These alter **Position** and **Effect** for relevant actions going forward — an altered limb may give great effect on some approaches and zero effect on others.
 
 ### Endgame States
 
@@ -133,7 +133,7 @@ When consequences in a channel accumulate beyond what a character can bear, each
 ## 5. THE CORE GAMEPLAY LOOP
 
 1.  **The Action:** The player states their goal, chooses a **Domain** (how they engage), and channels it through a **Sphere** (what power they draw on).
-2.  **The Stakes:** The GM determines **Position** (how dangerous is it?) and **Effect** (how much will it accomplish?), informed by the character's domains, sphere ratings, and any mutations.
+2.  **The Stakes:** The GM determines **Position** (how dangerous is it?) and **Effect** (how much will it accomplish?), informed by the character's domains, sphere ratings, and any permanent consequences already in play.
 3.  **The Roll:** The player rolls d6s equal to their Domain rating.
 4.  **The Consequence:** On a 4-5 or 1-3, the GM inflicts a consequence — choosing its **channel** (Corpus, Mens, or Anima) and its **class** (Timed, Conditional, or Permanent) to match what the fiction demands.
 5.  **The Resistance:** The player may Resist the consequence by rolling the appropriate **Sphere**, taking Stress to reduce or negate the effect.
