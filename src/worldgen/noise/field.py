@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from src.worldgen.noise.sampler import PeriodicSampler, field_offset
+from src.worldgen.noise.rng import NoiseSource, field_offset
+from src.worldgen.noise.sampler import PeriodicSampler
 
 
 class FractalField:
-    """Fractal noise field over a ``PeriodicSampler``.
+    """Fractal noise field over a ``NoiseSource`` or legacy ``PeriodicSampler``.
 
     Generates FBm, ridged, or billow noise by summing ``octaves`` samples at
     geometrically increasing frequencies (controlled by ``lacunarity``) with
     geometrically decreasing amplitudes (controlled by ``gain``).
 
     Args:
-        sampler: Shared ``PeriodicSampler`` for the current world.
+        sampler: Shared noise source for the current world.
         field_id: Unique integer ID selecting the domain offset (use the
             ``FIELD_*`` constants from ``sampler`` module).
         octaves: Number of noise layers to sum.
@@ -22,7 +23,7 @@ class FractalField:
 
     def __init__(
         self,
-        sampler: PeriodicSampler,
+        sampler: NoiseSource | PeriodicSampler,
         field_id: int,
         octaves: int = 4,
         lacunarity: float = 2.0,
@@ -66,7 +67,7 @@ class DomainWarp:
 
     def __init__(
         self,
-        sampler: PeriodicSampler,
+        sampler: NoiseSource | PeriodicSampler,
         field_id_x: int,
         field_id_y: int,
         amplitude: float,
