@@ -122,11 +122,7 @@ A permanent consequence in any channel irreversibly alters what the character is
 
 ### Endgame States
 
-When consequences in a channel accumulate beyond what a character can bear, each sphere has an endgame:
-
-*   **Corpus overload → Trauma** — bleeding out, unconsciousness, permanent maiming.
-*   **Mens overload → [unnamed]** — losing grip on reality, collapse of will, permanent compulsion.
-*   **Anima overload → Submission** — surrendering to corruption, collapsing in ecstasy, essence consumed.
+When consequences in a channel accumulate beyond what a character can bear, that channel reaches an endgame state. Each sphere has its own endgame — the specific nature of each is to be determined.
 
 ---
 
