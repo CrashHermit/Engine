@@ -112,9 +112,9 @@ Consequences are colored by the sphere that inflicted them:
 
 |  | Timed | Conditional | Permanent |
 |--|--|--|--|
-| **Corpus** | Physical harm that fades with time | Physical harm requiring specific treatment | Irreversible physical alteration |
-| **Mens** | Mental disruption that fades with time | Mental effect requiring specific remedy | Irreversible mental alteration |
-| **Anima** | Spiritual disruption that fades with time | Spiritual effect requiring specific remedy | Irreversible spiritual alteration |
+| **Corpus** | ✓ | ✓ | ✓ |
+| **Mens** | ✓ | ✓ | ✓ |
+| **Anima** | ✓ | ✓ | ✓ |
 
 ### Permanent Consequences and Fictional Positioning
 
