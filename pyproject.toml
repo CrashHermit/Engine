@@ -19,6 +19,7 @@ dependencies = [
     "opensimplex>=0.4.5",
     "scipy>=1.14.0",
     "pillow>=11.0.0",
+    "numpy>=2.4.6",
 ]
 
 [dependency-groups]
