@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from src.worldgen.context import WorldContext
-from src.worldgen.types import Float64Array
+from src.worldgen.types import BoolArray, Float64Array
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.sampler import FIELD_LAYER_BASE
 
@@ -32,4 +32,4 @@ class PlaceholderElevationStage:
         z_min: np.float64 = z.min()
         z_max: np.float64 = z.max()
         ctx.fields.elevation: Float64Array = (z - z_min) / (z_max - z_min)
-        ctx.fields.is_land: bool = ctx.fields.elevation > 0.6
+        ctx.fields.is_land: BoolArray = ctx.fields.elevation > 0.6
