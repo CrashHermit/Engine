@@ -25,8 +25,8 @@ class GridFields:
     is_land: BoolArray | None = field(default=None, metadata={"dtype": bool})
 
     @classmethod
-    def allocate(cls, n: int) -> MeshFields:
-        """Create zeroed per-cell field arrays of length n."""
+    def allocate(cls, n: int) -> GridFields:
+        """Create zeroed per-tile field arrays of length n."""
         return cls(**{
             f.name: np.zeros(n, dtype=f.metadata["dtype"])
             for f in fields(class_or_instance=cls)

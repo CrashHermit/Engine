@@ -10,18 +10,18 @@ from src.worldgen.types import Float64Array, Int32Array
 
 
 def nearest_cell_per_tile(geometry: MeshGeometry, size: int) -> Int32Array:
-    """Return the nearest Voroni cell id for each grid tile center
-    
-    Tile cneters sit at ((x + 0.5 / size * width, (y + 0.5) / size * height).
-    Use scipy's periodic ckdtree to left-edge tiles can match right-edge cells.
+    """Return the nearest Voronoi cell id for each grid tile center.
+
+    Tile centers sit at ((x + 0.5) / size * width, (y + 0.5) / size * height).
+    Uses scipy's periodic cKDTree so left-edge tiles can match right-edge cells.
     """
-    xs: Float64Array = np.arange(start=0, stop=size, dtype=np.float64) # start is default 0 and start is n - 1 so size - 1 in this case
+    xs: Float64Array = np.arange(start=0, stop=size, dtype=np.float64)
     ys: Float64Array = np.arange(start=0, stop=size, dtype=np.float64)
     xx, yy = np.meshgrid(xs, ys, indexing="ij")
 
     fx: Float64Array = (xx + 0.5) / size * geometry.width
     fy: Float64Array = (yy + 0.5) / size * geometry.height
-    centers: Float64Array = np.column_stack(tup=[fx.ravel(), fy.ravel()]) # ravel here puts all of these in a line, all x coords in order and all y coords in the same order, 1d
+    centers: Float64Array = np.column_stack(tup=[fx.ravel(), fy.ravel()])
 
     tree: cKDTree = cKDTree(
         data=geometry.sites,
