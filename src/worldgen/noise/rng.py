@@ -8,12 +8,7 @@ import opensimplex
 
 from src.worldgen.types import Float64Array
 
-# Each logical field samples a different region of 4D noise space.
-_OFFSET_STEP: float = 97.3
-_OFFSET_PHASE: tuple[float, float, float, float] = (0.0, 31.7, 67.1, 43.9)
-
 FIELD_ELEVATION: int = 0
-
 
 def subseed(seed: int, name: str) -> int:
     """Derive a deterministic sub-seed for a named stage or field purpose."""
@@ -22,12 +17,9 @@ def subseed(seed: int, name: str) -> int:
 
 def field_offset(field_id: int) -> tuple[float, float, float, float]:
     """Return a stable 4D offset so fields sharing one NoiseSource stay independent."""
-    base: float = field_id * _OFFSET_STEP
-    return (
-        base + _OFFSET_PHASE[0],
-        base + _OFFSET_PHASE[1],
-        base + _OFFSET_PHASE[2],
-        base + _OFFSET_PHASE[3],
+    return tuple(
+        float(zlib.crc32(f"field_offset:{field_id}:{axis}".encode()) % 1_000_000) / 1000.0
+        for axis in range(4)
     )
 
 
