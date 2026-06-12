@@ -24,11 +24,7 @@ class WorldContext:
 
     def noise_for(self, name: str) -> NoiseSource:
         """NoiseSource scoped to this world's torus and sub-seed."""
-        return NoiseSource(
-            seed=self.seed_for(name),
-            width=self.geometry.height,
-            height=self.geometry.width,
-        )
+        return NoiseSource(seed=self.seed_for(name), width=self.geometry.width, height=self.geometry.height,)
 
     @staticmethod
     def resolve_config(seed: int, size: int, config: WorldgenConfig | None = None) -> WorldgenConfig:
