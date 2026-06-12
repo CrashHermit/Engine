@@ -16,10 +16,10 @@ from scripts.worldgen_render import (
     LAYER_ORDER,
     RGB,
     Layer,
+    Phase0World,
     generate_world,
     rasterize_grid,
 )
-from src.worldgen.data import WorldData
 
 
 def _draw_grid_lines(pixels: list[list[RGB]], scale: int) -> Image.Image:
@@ -48,19 +48,19 @@ def _draw_scaled(pixels: list[list[RGB]], scale: int) -> Image.Image:
 
 
 def export_layer(
-    world_data: WorldData,
+    world: Phase0World,
     layer: Layer,
     output: Path,
     scale: int,
     grid: bool,
 ) -> None:
-    pixels = rasterize_grid(world_data, layer)
+    pixels = rasterize_grid(world, layer)
     if grid or scale > 1:
         image = _draw_grid_lines(pixels, scale) if grid else _draw_scaled(pixels, scale)
     else:
-        image = Image.new("RGB", (world_data.size, world_data.size))
-        for y in range(world_data.size):
-            for x in range(world_data.size):
+        image = Image.new("RGB", (world.size, world.size))
+        for y in range(world.size):
+            for x in range(world.size):
                 image.putpixel((x, y), pixels[y][x])
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -113,17 +113,17 @@ def main() -> None:
         raise SystemExit("--scale must be >= 1")
 
     print(f"Generating world (seed={args.seed}, size={args.size})...")
-    world_data = generate_world(args.size, args.seed)
+    world = generate_world(args.size, args.seed)
 
     if args.all_layers:
         out_dir = args.output if args.output.suffix == "" else args.output.parent
         out_dir.mkdir(parents=True, exist_ok=True)
         for layer in LAYER_ORDER:
             path = out_dir / f"{layer.value}.png"
-            export_layer(world_data, layer, path, args.scale, args.grid)
+            export_layer(world, layer, path, args.scale, args.grid)
     else:
         layer = Layer(args.layer)
-        export_layer(world_data, layer, args.output, args.scale, args.grid)
+        export_layer(world, layer, args.output, args.scale, args.grid)
 
 
 if __name__ == "__main__":

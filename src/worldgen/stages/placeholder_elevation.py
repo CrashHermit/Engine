@@ -5,7 +5,7 @@ import numpy as np
 from src.worldgen.context import WorldContext
 from src.worldgen.types import BoolArray, Float64Array
 from src.worldgen.noise.field import FractalField
-from src.worldgen.noise.sampler import FIELD_LAYER_BASE
+from src.worldgen.noise.rng import FIELD_ELEVATION
 
 
 class PlaceholderElevationStage:
@@ -17,7 +17,7 @@ class PlaceholderElevationStage:
 
         field: FractalField = FractalField(
             sampler=ctx.noise_for(name="elevation"),
-            field_id=FIELD_LAYER_BASE,
+            field_id=FIELD_ELEVATION,
             octaves=3,
         )
 

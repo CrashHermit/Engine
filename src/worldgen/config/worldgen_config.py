@@ -151,29 +151,6 @@ class ClimateConfig:
 
 
 # ---------------------------------------------------------------------------
-# Savagery and alignment
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class SavageryConfig:
-    """Savagery field parameters (0 = tame, 1 = savage)."""
-
-    noise_scale: float = 2.0
-    blend_weight: float = 0.7
-    amplitude: float = 1.0
-
-
-@dataclass
-class AlignmentConfig:
-    """Alignment field parameters (-1 = chaotic, +1 = ordered)."""
-
-    noise_scale: float = 2.0
-    blend_weight: float = 0.7
-    amplitude: float = 1.0
-
-
-# ---------------------------------------------------------------------------
 # Biomes
 # ---------------------------------------------------------------------------
 
@@ -184,29 +161,6 @@ class BiomeConfig:
 
     blend_sharpness: float = 2.0
     weight_cutoff: float = 0.05
-
-
-# ---------------------------------------------------------------------------
-# Anchor-based continent provider
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class AnchorConfig:
-    """Parameters for the ``"anchors"`` elevation provider.
-
-    Continent seeds are placed with minimum toroidal spacing and radial
-    falloff masks.  Organic coastlines come from the shared domain warp in
-    ``ElevationConfig``.  A separate island pass adds smaller land masses
-    scattered through the ocean.
-    """
-
-    num_continents: int = 3
-    continent_radius: float = 0.35
-    min_continent_spacing: float = 0.40
-    island_count: int = 8
-    island_radius: float = 0.08
-    island_weight: float = 0.35
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +181,4 @@ class WorldgenConfig:
     landmass: LandmassConfig = field(default_factory=LandmassConfig)
     hydrology: HydrologyConfig = field(default_factory=HydrologyConfig)
     climate: ClimateConfig = field(default_factory=ClimateConfig)
-    savagery: SavageryConfig = field(default_factory=SavageryConfig)
-    alignment: AlignmentConfig = field(default_factory=AlignmentConfig)
     biome: BiomeConfig = field(default_factory=BiomeConfig)
-    anchor: AnchorConfig = field(default_factory=AnchorConfig)

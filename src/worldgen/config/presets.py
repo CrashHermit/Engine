@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from src.worldgen.config.worldgen_config import (
-    AnchorConfig,
     ElevationConfig,
     NoiseLayerConfig,
     SeaLevelConfig,
@@ -60,24 +59,8 @@ def pangaea() -> WorldgenConfig:
     )
 
 
-def directed_continents(num: int = 3) -> WorldgenConfig:
-    """Directed placement of ``num`` continents via the anchor provider."""
-    return WorldgenConfig(
-        elevation=ElevationConfig(provider="anchors"),
-        sea_level=SeaLevelConfig(target_land_fraction=0.30),
-        anchor=AnchorConfig(
-            num_continents=num,
-            continent_radius=0.30,
-            min_continent_spacing=0.40,
-            island_count=6,
-            island_radius=0.08,
-        ),
-    )
-
-
 PRESETS: dict[str, WorldgenConfig] = {
     "earthlike": earthlike(),
     "archipelago": archipelago(),
     "pangaea": pangaea(),
-    "directed_continents": directed_continents(),
 }

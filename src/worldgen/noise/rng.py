@@ -8,10 +8,11 @@ import opensimplex
 
 from src.worldgen.types import Float64Array
 
-# Stable domain offsets per logical field ID so multiple independent noise
-# fields can share one NoiseSource without colliding in 4D space.
-_OFFSET_STEP = 97.3
-_OFFSET_PHASE = (0.0, 31.7, 67.1, 43.9)
+# Each logical field samples a different region of 4D noise space.
+_OFFSET_STEP: float = 97.3
+_OFFSET_PHASE: tuple[float, float, float, float] = (0.0, 31.7, 67.1, 43.9)
+
+FIELD_ELEVATION: int = 0
 
 
 def subseed(seed: int, name: str) -> int:
@@ -20,8 +21,8 @@ def subseed(seed: int, name: str) -> int:
 
 
 def field_offset(field_id: int) -> tuple[float, float, float, float]:
-    """Return a deterministic 4D domain offset for the given field ID."""
-    base = field_id * _OFFSET_STEP
+    """Return a stable 4D offset so fields sharing one NoiseSource stay independent."""
+    base: float = field_id * _OFFSET_STEP
     return (
         base + _OFFSET_PHASE[0],
         base + _OFFSET_PHASE[1],
@@ -31,12 +32,12 @@ def field_offset(field_id: int) -> tuple[float, float, float, float]:
 
 
 class NoiseSource:
-    """Instance-based seamless torus noise; replaces global opensimplex.seed()."""
+    """Seamless torus noise via a per-world OpenSimplex instance (no global seed)."""
 
     def __init__(self, seed: int, width: float, height: float) -> None:
-        self._width = width
-        self._height = height
-        self._noise = opensimplex.OpenSimplex(seed)
+        self._width: float = width
+        self._height: float = height
+        self._noise: opensimplex.OpenSimplex = opensimplex.OpenSimplex(seed)
 
     def sample(
         self,
@@ -46,14 +47,14 @@ class NoiseSource:
         offset: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0),
     ) -> float:
         """Return noise in [-1, 1] at world position (x, y) on the torus."""
-        ax = 2.0 * math.pi * x / self._width
-        ay = 2.0 * math.pi * y / self._height
-        radius = frequency
+        ax: float = 2.0 * math.pi * x / self._width
+        ay: float = 2.0 * math.pi * y / self._height
+        radius: float = frequency
         return self._noise.noise4(
-            radius * math.cos(ax) + offset[0],
-            radius * math.sin(ax) + offset[1],
-            radius * math.cos(ay) + offset[2],
-            radius * math.sin(ay) + offset[3],
+            x=radius * math.cos(ax) + offset[0],
+            y=radius * math.sin(ax) + offset[1],
+            z=radius * math.cos(ay) + offset[2],
+            w=radius * math.sin(ay) + offset[3],
         )
 
     def sample_array(
@@ -64,16 +65,19 @@ class NoiseSource:
         offset: tuple[float, float, float, float] = (0.0, 0.0, 0.0, 0.0),
     ) -> Float64Array:
         """Sample noise at many (x, y) pairs; same semantics as sample()."""
-        xs_array = np.asarray(xs, dtype=np.float64)
-        ys_array = np.asarray(ys, dtype=np.float64)
+        xs_array: Float64Array = np.asarray(xs, dtype=np.float64)
+        ys_array: Float64Array = np.asarray(ys, dtype=np.float64)
         if xs_array.shape != ys_array.shape:
             msg = "xs and ys must have the same shape"
             raise ValueError(msg)
 
-        flat_x = xs_array.ravel()
-        flat_y = ys_array.ravel()
-        values = np.fromiter(
-            (self.sample(float(x), float(y), frequency, offset) for x, y in zip(flat_x, flat_y)),
+        flat_x: Float64Array = xs_array.ravel()
+        flat_y: Float64Array = ys_array.ravel()
+        values: Float64Array = np.fromiter(
+            (
+                self.sample(x=x, y=y, frequency=frequency, offset=offset)
+                for x, y in zip(flat_x, flat_y)
+            ),
             dtype=np.float64,
             count=flat_x.size,
         )

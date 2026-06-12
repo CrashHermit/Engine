@@ -23,17 +23,17 @@ from scripts.worldgen_render import (
     LAYER_LABELS,
     LAYER_ORDER,
     Layer,
+    Phase0World,
     generate_world,
     rasterize,
 )
-from src.worldgen.data import WorldData
 
 # Re-export for backwards compatibility if anything imported from view_worldgen
-__all__ = ["Layer", "generate_world", "rasterize"]
+__all__ = ["Layer", "Phase0World", "generate_world", "rasterize"]
 
 
-def draw_layer(canvas: Canvas, world_data: WorldData, layer: Layer) -> None:
-    pixels = rasterize(world_data, layer)
+def draw_layer(canvas: Canvas, world: Phase0World, layer: Layer) -> None:
+    pixels = rasterize(world, layer)
     with canvas.batch_refresh():
         canvas.clear()
         for rgb, locations in pixels.items():
@@ -92,15 +92,8 @@ class WorldgenViewerApp(App[None]):
         Binding("q", "quit", "Quit"),
         Binding("r", "reroll", "Re-roll"),
         Binding("1", "layer('elevation')", "Elevation"),
-        Binding("2", "layer('temperature')", "Temperature"),
-        Binding("3", "layer('precipitation')", "Precipitation"),
-        Binding("4", "layer('savagery')", "Savagery"),
-        Binding("5", "layer('alignment')", "Alignment"),
-        Binding("6", "layer('biomes')", "Biomes"),
-        Binding("7", "layer('hydrology')", "Hydrology"),
-        Binding("8", "layer('rivers')", "Rivers"),
-        Binding("9", "layer('landmasses')", "Landmasses"),
-        Binding("0", "layer('mesh')", "Mesh"),
+        Binding("2", "layer('land')", "Land"),
+        Binding("3", "layer('mesh')", "Mesh"),
     ]
 
     def __init__(self, grid_size: int, seed: int) -> None:
@@ -142,7 +135,7 @@ class WorldgenViewerApp(App[None]):
         self.query_one("#info-title", Static).update(LAYER_LABELS[self._layer])
         self.query_one("#info-desc", Static).update(LAYER_DESCRIPTIONS[self._layer])
         self.query_one("#info-meta", Static).update(
-            "Press 1-9, 0 or click a layer.\n[r] re-roll  [q] quit"
+            "Press 1-3 or click a layer.\n[r] re-roll  [q] quit"
         )
         for layer in LAYER_ORDER:
             button = self.query_one(f"#btn-{layer.value}", Button)
