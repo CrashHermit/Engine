@@ -7,6 +7,7 @@ from src.worldgen.config.worldgen_config import MeshConfig
 from src.worldgen.fields import MeshFields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed
+from src.worldgen.terrain.plate_personalities import PlateProperties
 
 
 
@@ -17,6 +18,7 @@ class WorldContext:
     config: WorldgenConfig
     geometry: MeshGeometry
     fields: MeshFields
+    plate_properties: PlateProperties | None = None
 
     def seed_for(self, name: str) -> int:
         """Deterministic sub-seed for a named stage or purpose."""

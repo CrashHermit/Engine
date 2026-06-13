@@ -36,13 +36,14 @@ class Layer(StrEnum):
     LAND = "land"
     MESH = "mesh"
     PLATES = "plates"
-
+    UPLIFT = "uplift"
 
 LAYER_ORDER: tuple[Layer, ...] = (
     Layer.ELEVATION,
     Layer.LAND,
     Layer.MESH,
     Layer.PLATES,
+    Layer.UPLIFT,
 )
 
 LAYER_LABELS: dict[Layer, str] = {
@@ -50,15 +51,15 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.LAND: "Land",
     Layer.MESH: "Mesh debug",
     Layer.PLATES: "Plates",
+    Layer.UPLIFT: "Uplift",
 }
 
 LAYER_DESCRIPTIONS: dict[Layer, str] = {
-    Layer.ELEVATION: (
-        "Terrain height. Dark blue = ocean, green = low land, tan = high land."
-    ),
+    Layer.ELEVATION: "Terrain height. Dark blue = ocean, green = low land, tan = high land.",
     Layer.LAND: "Land vs ocean.",
     Layer.MESH: "Debug: each color is a Voronoi cell id (verify periodic sampling).",
     Layer.PLATES: "Tectonic plates; each color is a plate id (ragged Voronoi partition).",
+    Layer.UPLIFT: "Base tectonic uplift before boundary belts. Bright = continental plates, dark = oceanic."
 }
 
 
@@ -126,6 +127,12 @@ def _tile_color(
         hue: float = (cell_id * 0.6180339887) % 1.0
         red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.7, v=0.9)
         return int(red * 255), int(green * 255), int(blue * 255)
+
+    if layer == Layer.UPLIFT:
+        u: float = float(grid.uplift[tile_index])
+        # continental_uplift defaults to 1.0, oceanic to 0.0
+        t: float = max(0.0, min(1.0, u))
+        return _lerp_color(low=(30, 40, 80), high=(220, 200, 160), t=t)
 
     return (0, 0, 0)
 

@@ -5,6 +5,7 @@ from src.worldgen.context import WorldContext
 from src.worldgen.stages.base import Stage
 from src.worldgen.stages.placeholder_elevation import PlaceholderElevationStage
 from src.worldgen.stages.plate import PlatesStage
+from src.worldgen.stages.plate_personality import PlatePersonalityStage
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.fields import MeshFields
 
@@ -13,6 +14,7 @@ def _build_stages() -> list[Stage]:
     """Return the ordered list of pipeline stages for the given config."""
     return [
         PlatesStage(),
+        PlatePersonalityStage(),
         PlaceholderElevationStage(),
     ]
 
