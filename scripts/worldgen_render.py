@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import colorsys
+from typing import TypeAlias
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -11,7 +12,8 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.pipeline import WorldgenPipeline
 from src.worldgen.types import Int32Array
 
-RGB = tuple[int, int, int]
+
+RGB: TypeAlias = tuple[int, int, int]
 
 WATER_COLOR: RGB = (20, 60, 140)
 LAND_COLOR: RGB = (30, 80, 40)
@@ -33,18 +35,21 @@ class Layer(StrEnum):
     ELEVATION = "elevation"
     LAND = "land"
     MESH = "mesh"
+    PLATES = "plates"
 
 
 LAYER_ORDER: tuple[Layer, ...] = (
     Layer.ELEVATION,
     Layer.LAND,
     Layer.MESH,
+    Layer.PLATES,
 )
 
 LAYER_LABELS: dict[Layer, str] = {
     Layer.ELEVATION: "Elevation",
     Layer.LAND: "Land",
     Layer.MESH: "Mesh debug",
+    Layer.PLATES: "Plates",
 }
 
 LAYER_DESCRIPTIONS: dict[Layer, str] = {
@@ -53,6 +58,7 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     ),
     Layer.LAND: "Land vs ocean.",
     Layer.MESH: "Debug: each color is a Voronoi cell id (verify periodic sampling).",
+    Layer.PLATES: "Tectonic plates; each color is a plate id (ragged Voronoi partition).",
 }
 
 
@@ -96,7 +102,7 @@ def _tile_color(
     z_span: float,
 ) -> RGB:
     """Map one baked grid tile to an RGB color for the requested layer."""
-    grid = world.grid
+    grid: GridFields = world.grid
 
     if not grid.is_land[tile_index]:
         if layer in {Layer.ELEVATION, Layer.LAND}:
@@ -106,13 +112,19 @@ def _tile_color(
         return LAND_COLOR
 
     if layer == Layer.ELEVATION:
-        t = (float(grid.elevation[tile_index]) - z_min) / z_span
-        return _lerp_color(LAND_COLOR, (220, 210, 180), t)
+        t: float = (float(grid.elevation[tile_index]) - z_min) / z_span
+        return _lerp_color(low=LAND_COLOR, high=(220, 210, 180), t=t)
+
+    if layer == Layer.PLATES:
+        plate_id: int = int(grid.plate_id[tile_index])
+        hue: float = (plate_id * 0.6180339887) % 1.0
+        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.7, v=0.9)
+        return int(red * 255), int(green * 255), int(blue * 255)
 
     if layer == Layer.MESH:
-        cell_id = int(world.nearest[tile_index])
-        hue = (cell_id * 0.6180339887) % 1.0
-        red, green, blue = colorsys.hsv_to_rgb(hue, 0.7, 0.9)
+        cell_id: int = int(world.nearest[tile_index])
+        hue: float = (cell_id * 0.6180339887) % 1.0
+        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.7, v=0.9)
         return int(red * 255), int(green * 255), int(blue * 255)
 
     return (0, 0, 0)
@@ -120,20 +132,42 @@ def _tile_color(
 
 def rasterize(world: Phase0World, layer: Layer) -> dict[RGB, list[tuple[int, int]]]:
     """Group canvas pixels by color for sparse canvas updates."""
-    size = world.size
-    grid = world.grid
-    pixels: dict[RGB, list[tuple[int, int]]] = {}
-    z_min = float(grid.elevation.min())
-    z_max = float(grid.elevation.max())
-    z_span = z_max - z_min if z_max > z_min else 1.0
+    return rasterize_display(world=world, layer=layer, display_size=world.size)
 
-    y: int
-    x: int
-    for y in range(size):
-        for x in range(size):
-            tile_index = _tile_index(x, y, size)
-            color = _tile_color(world, layer, tile_index, z_min, z_span)
-            pixels.setdefault(color, []).append((x, y))
+
+def rasterize_display(
+    world: Phase0World,
+    layer: Layer,
+    display_size: int,
+) -> dict[RGB, list[tuple[int, int]]]:
+    """Rasterize a layer onto a display_size x display_size canvas.
+
+    Downsamples when display_size < world.size (zoom out) and upsamples with
+    nearest-neighbour when display_size > world.size (zoom in).
+    """
+    world_size: int = world.size
+    display_size = max(1, min(display_size, world_size * 8))
+    grid: GridFields = world.grid
+    pixels: dict[RGB, list[tuple[int, int]]] = {}
+    z_min: float = float(grid.elevation.min())
+    z_max: float = float(grid.elevation.max())
+    z_span: float = z_max - z_min if z_max > z_min else 1.0
+
+    display_y: int
+    display_x: int
+    for display_y in range(display_size):
+        for display_x in range(display_size):
+            tile_x: int = display_x * world_size // display_size
+            tile_y: int = display_y * world_size // display_size
+            tile_index: int = _tile_index(x=tile_x, y=tile_y, size=world_size)
+            color: RGB = _tile_color(
+                world=world,
+                layer=layer,
+                tile_index=tile_index,
+                z_min=z_min,
+                z_span=z_span,
+            )
+            pixels.setdefault(color, []).append((display_x, display_y))
 
     return pixels
 
