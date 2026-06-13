@@ -6,7 +6,7 @@ import random
 import numpy as np
 
 from src.worldgen.geometry.mesh import MeshGeometry
-from src.worldgen.types import Int32Array
+from src.worldgen.types import BoolArray, Float64Array, Int32Array
 
 UNCLAIMED: int = -1
 
