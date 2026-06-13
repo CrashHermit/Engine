@@ -11,67 +11,50 @@ from dataclasses import dataclass, field
 class MeshConfig:
     """Parameters for the Voronoi mesh that underpins all simulation layers."""
 
-    cell_count: int = 12000
-    lloyd_iterations: int = 2
-    width: float = 0.0  # 0 → use float(world_size)
-    height: float = 0.0  # 0 → use float(world_size)
+    cell_count: int = 12000  # Target number of Voronoi cells (sites)
+    lloyd_iterations: int = 2  # Lloyd relaxation passes for more uniform cell sizes
+    width: float = 0.0  # Torus width in world units; 0 uses float(world size)
+    height: float = 0.0  # Torus height in world units; 0 uses float(world size)
 
 
 # ---------------------------------------------------------------------------
-# Elevation
+# Plates
 # ---------------------------------------------------------------------------
 
 
 @dataclass
-class NoiseLayerConfig:
-    """One spectral band in the layered elevation system.
+class PlatesConfig:
+    """Tectonic plate partitioning and boundary uplift."""
 
-    Attributes:
-        frequency: Circle radius used for the 4D torus mapping; controls
-            spatial scale of features.  Low values = large continents,
-            high values = small islands.
-        weight: Relative contribution of this layer to the combined field
-            (weights are normalised before summing).
-        octaves: Number of FBm octave summations.
-        kind: ``"fbm"`` (default), ``"ridged"``, or ``"billow"``.
-    """
-
-    frequency: float
-    weight: float
-    octaves: int = 4
-    kind: str = "fbm"
+    n_plates: int = 12  # Number of seed plates grown across the mesh
+    growth_raggedness: float = 2.0  # Random cost added to heap priority for organic borders; 0 = round blobs
+    continental_fraction: float = 0.45  # Probability each plate is continental vs oceanic
+    continental_uplift: float = 1.0  # Base uplift rate assigned to continental plates
+    oceanic_uplift: float = 0.0  # Base uplift rate assigned to oceanic plates
+    belt_width: int = 4  # BFS hops to smear boundary collision/rift intensity into mountain belts
+    belt_strength: float = 0.8  # Multiplier on convergent (collision) boundary uplift
+    rift_strength: float = 0.3  # Multiplier on divergent (rift) boundary uplift reduction
+    belt_noise_scale: float = 0.5  # Amplitude of noise modulating smeared belt intensity
+    uplift_noise_floor: float = 0.05  # Minimum fbm noise multiplier so oceanic plates are not perfectly flat
 
 
-def _default_three_bands() -> list[NoiseLayerConfig]:
-    return [
-        NoiseLayerConfig(frequency=0.22, weight=0.50, octaves=4, kind="fbm"),
-        NoiseLayerConfig(frequency=0.80, weight=0.35, octaves=4, kind="fbm"),
-        NoiseLayerConfig(frequency=2.00, weight=0.15, octaves=3, kind="fbm"),
-    ]
+# ---------------------------------------------------------------------------
+# Erosion
+# ---------------------------------------------------------------------------
 
 
 @dataclass
-class ElevationConfig:
-    """Controls how the base elevation field is generated.
+class ErosionConfig:
+    """Stream-power erosion and hillslope diffusion on the mesh."""
 
-    Attributes:
-        provider: Which ``ElevationProvider`` to use.
-            ``"layered_noise"`` (default) – emergent N-band FBm.
-            ``"anchors"`` – directed continent seeds.
-        layers: Band list for the ``"layered_noise"`` provider.
-        warp_amplitude: Domain-warp displacement strength.
-        warp_frequency: Frequency of the domain-warp noise.
-        redistribution_power: Exponent applied after normalisation;
-            values > 1 push ocean lower and peaks higher.
-        elevation_scale: Final multiplier on the remapped height values.
-    """
-
-    provider: str = "layered_noise"
-    layers: list[NoiseLayerConfig] = field(default_factory=_default_three_bands)
-    warp_amplitude: float = 0.18
-    warp_frequency: float = 0.5
-    redistribution_power: float = 1.35
-    elevation_scale: float = 1.0
+    iterations: int = 50  # Number of flood-route-erode-diffuse passes
+    dt: float = 0.1  # Implicit solver timestep; stable at large values unlike explicit erosion
+    K: float = 0.3  # Stream-power erosion coefficient (higher = more valley carving)
+    m: float = 0.5  # Drainage-area exponent in the stream-power law
+    diffusion: float = 0.08  # Hillslope relaxation toward neighbour mean per pass
+    base_level_fraction: float = 0.1  # Lowest elevation percentile treated as provisional ocean for routing
+    initial_scale: float = 1.0  # Scales uplift when seeding terrain height before the erosion loop
+    initial_noise_amplitude: float = 0.05  # Small noise added to the initial height field
 
 
 # ---------------------------------------------------------------------------
@@ -81,24 +64,9 @@ class ElevationConfig:
 
 @dataclass
 class SeaLevelConfig:
-    """Percentile cut that converts raw elevation to ``is_land``."""
+    """Percentile cut that converts raw elevation to is_land."""
 
-    target_land_fraction: float = 0.32
-
-
-# ---------------------------------------------------------------------------
-# Erosion (optional post-sea-level pass)
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class ErosionConfig:
-    """Optional stream-power and thermal erosion applied on the mesh."""
-
-    enabled: bool = False
-    iterations: int = 3
-    stream_power: float = 0.30
-    thermal_talus: float = 0.05
+    target_land_fraction: float = 0.32  # Desired fraction of land cells after sea-level placement
 
 
 # ---------------------------------------------------------------------------
@@ -110,57 +78,8 @@ class ErosionConfig:
 class LandmassConfig:
     """Size thresholds for classifying connected land components."""
 
-    island_min_fraction: float = 0.005
-    landmass_min_fraction: float = 0.08
-
-
-# ---------------------------------------------------------------------------
-# Hydrology
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class HydrologyConfig:
-    """River routing and rasterisation parameters."""
-
-    river_flux_threshold: float = 3.0
-    river_min_width: float = 1.0
-    river_width_scale: float = 0.25
-    river_max_width: float = 4.0
-
-
-# ---------------------------------------------------------------------------
-# Climate
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class ClimateConfig:
-    """Temperature, precipitation, and wind field parameters."""
-
-    warp_amplitude: float = 8.0
-    lapse_rate: float = 1.0
-    orographic_multiplier: float = 3.0
-    precip_latitude_bands: float = 2.5
-    band_weight: float = 0.5
-    temperature_bands: float = 1.0
-    moisture_advection: float = 0.3
-    noise_scale: float = 2.0
-    wind_turbulence: float = 0.7
-    wind_noise_scale_factor: float = 0.5
-
-
-# ---------------------------------------------------------------------------
-# Biomes
-# ---------------------------------------------------------------------------
-
-
-@dataclass
-class BiomeConfig:
-    """Biome soft-assignment parameters."""
-
-    blend_sharpness: float = 2.0
-    weight_cutoff: float = 0.05
+    island_min_fraction: float = 0.005  # Minimum land fraction to count as an island (class 1)
+    landmass_min_fraction: float = 0.08  # Minimum land fraction to count as a major landmass (class 2+)
 
 
 # ---------------------------------------------------------------------------
@@ -172,13 +91,10 @@ class BiomeConfig:
 class WorldgenConfig:
     """Top-level config for the entire worldgen pipeline."""
 
-    seed: int = 0
-    size: int = 100
-    mesh: MeshConfig = field(default_factory=MeshConfig)
-    elevation: ElevationConfig = field(default_factory=ElevationConfig)
-    sea_level: SeaLevelConfig = field(default_factory=SeaLevelConfig)
-    erosion: ErosionConfig = field(default_factory=ErosionConfig)
-    landmass: LandmassConfig = field(default_factory=LandmassConfig)
-    hydrology: HydrologyConfig = field(default_factory=HydrologyConfig)
-    climate: ClimateConfig = field(default_factory=ClimateConfig)
-    biome: BiomeConfig = field(default_factory=BiomeConfig)
+    seed: int = 0  # Master RNG seed; sub-seeds are derived per stage
+    size: int = 100  # Gameplay grid edge length in tiles
+    mesh: MeshConfig = field(default_factory=MeshConfig)  # Voronoi simulation mesh
+    plates: PlatesConfig = field(default_factory=PlatesConfig)  # Plate partitioning and boundary uplift
+    sea_level: SeaLevelConfig = field(default_factory=SeaLevelConfig)  # Land/ocean split and normalisation
+    erosion: ErosionConfig = field(default_factory=ErosionConfig)  # Stream-power erosion loop
+    landmass: LandmassConfig = field(default_factory=LandmassConfig)  # Connected-component land classification

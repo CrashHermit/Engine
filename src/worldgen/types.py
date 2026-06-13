@@ -8,3 +8,4 @@ from numpy.typing import NDArray
 Float64Array: TypeAlias = NDArray[np.float64]
 Int32Array: TypeAlias = NDArray[np.int32]
 BoolArray: TypeAlias = NDArray[np.bool_]
+Int8Array: TypeAlias = NDArray[np.int8]
