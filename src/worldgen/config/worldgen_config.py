@@ -26,17 +26,17 @@ class MeshConfig:
 class PlatesConfig:
     """Tectonic plate partitioning and boundary uplift."""
 
-    n_plates: int = 12  # Number of seed plates grown across the mesh
-    growth_raggedness: float = 2.0  # Random cost added to heap priority for organic borders; 0 = round blobs
-    continental_fraction: float = 0.45  # Probability each plate is continental vs oceanic
-    continental_uplift: float = 1.0  # Base uplift rate assigned to continental plates
-    oceanic_uplift: float = 0.0  # Base uplift rate assigned to oceanic plates
-    belt_width: int = 4  # BFS hops to smear boundary collision/rift intensity into mountain belts
-    belt_strength: float = 0.8  # Multiplier on convergent (collision) boundary uplift
-    rift_strength: float = 0.3  # Multiplier on divergent (rift) boundary uplift reduction
-    belt_noise_scale: float = 0.5  # Amplitude of noise modulating smeared belt intensity
-    uplift_noise_floor: float = 0.05  # Minimum fbm noise multiplier so oceanic plates are not perfectly flat
-
+    n_plates: int = 12                      # Number of seed plates grown across the mesh
+    growth_raggedness: float = 2.0          # Random cost added to heap priority for organic borders; 0 = round blobs
+    continental_fraction: float = 0.45      # Probability each plate is continental vs oceanic
+    continental_uplift: float = 1.0         # Base uplift rate assigned to continental plates
+    oceanic_uplift: float = 0.0             # Base uplift rate assigned to oceanic plates
+    belt_width: int = 4                     # BFS hops to smear boundary collision/rift intensity into mountain belts
+    belt_strength: float = 0.8              # Multiplier on convergent (collision) boundary uplift
+    belt_falloff: float = 0.6               # intensity multiplier per BFS hop
+    rift_strength: float = 0.3              # Multiplier on divergent (rift) boundary uplift reduction
+    belt_noise_scale: float = 0.5           # Amplitude of noise modulating smeared belt intensity
+    uplift_noise_floor: float = 0.05        # Minimum fbm noise multiplier so oceanic plates are not perfectly flat
 
 # ---------------------------------------------------------------------------
 # Erosion
@@ -47,14 +47,14 @@ class PlatesConfig:
 class ErosionConfig:
     """Stream-power erosion and hillslope diffusion on the mesh."""
 
-    iterations: int = 50  # Number of flood-route-erode-diffuse passes
-    dt: float = 0.1  # Implicit solver timestep; stable at large values unlike explicit erosion
-    K: float = 0.3  # Stream-power erosion coefficient (higher = more valley carving)
-    m: float = 0.5  # Drainage-area exponent in the stream-power law
-    diffusion: float = 0.08  # Hillslope relaxation toward neighbour mean per pass
-    base_level_fraction: float = 0.1  # Lowest elevation percentile treated as provisional ocean for routing
-    initial_scale: float = 1.0  # Scales uplift when seeding terrain height before the erosion loop
-    initial_noise_amplitude: float = 0.05  # Small noise added to the initial height field
+    iterations: int = 50                    # Number of flood-route-erode-diffuse passes
+    dt: float = 0.1                         # Implicit solver timestep; stable at large values unlike explicit erosion
+    K: float = 0.3                          # Stream-power erosion coefficient (higher = more valley carving)
+    m: float = 0.5                          # Drainage-area exponent in the stream-power law
+    diffusion: float = 0.08                 # Hillslope relaxation toward neighbour mean per pass
+    base_level_fraction: float = 0.1        # Lowest elevation percentile treated as provisional ocean for routing
+    initial_scale: float = 1.0              # Scales uplift when seeding terrain height before the erosion loop
+    initial_noise_amplitude: float = 0.05   # Small noise added to the initial height field
 
 
 # ---------------------------------------------------------------------------
@@ -66,7 +66,7 @@ class ErosionConfig:
 class SeaLevelConfig:
     """Percentile cut that converts raw elevation to is_land."""
 
-    target_land_fraction: float = 0.32  # Desired fraction of land cells after sea-level placement
+    target_land_fraction: float = 0.32      # Desired fraction of land cells after sea-level placement
 
 
 # ---------------------------------------------------------------------------
