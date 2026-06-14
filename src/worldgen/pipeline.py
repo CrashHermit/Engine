@@ -6,6 +6,7 @@ from src.worldgen.stages.base import Stage
 from src.worldgen.stages.placeholder_elevation import PlaceholderElevationStage
 from src.worldgen.stages.plate import PlatesStage
 from src.worldgen.stages.plate_personality import PlatePersonalityStage
+from src.worldgen.stages.boundary_uplift import BoundaryUpliftStage
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.fields import MeshFields
 
@@ -15,6 +16,7 @@ def _build_stages() -> list[Stage]:
     return [
         PlatesStage(),
         PlatePersonalityStage(),
+        BoundaryUpliftStage(),
         PlaceholderElevationStage(),
     ]
 
