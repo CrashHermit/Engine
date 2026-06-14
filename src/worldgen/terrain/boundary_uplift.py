@@ -13,7 +13,41 @@ from src.worldgen.types import Float64Array, Int32Array
 
 def _compute_boundary_intensity(*, geometry: MeshGeometry, plate_id: Int32Array, drift: Float64Array) -> tuple[Float64Array, Float64Array]:
     """Return per-cell raw collision and rift intensity on plate borders."""
-    pass
+    n_cells: int = geometry.n_cells
+    collision: Float64Array = np.zeros(n_cells, dtype=np.float64)
+    rift: Float64Array = np.zeros(n_cells, dtype=np.float64)
+
+    width: float = geometry.width
+    height: float = geometry.height
+    sites: Float64Array = geometry.sites
+
+    cell_id: int
+    for cell_id in range(n_cells):
+        plate_i: int = int(plate_id[cell_id])
+        drift_i: Float64Array = drift[plate_i]
+        site_i: Float64Array = sites[cell_id]
+
+        for neighbor_id in geometry.neighbors_of(cell_id=cell_id):
+            neighbor_id: int = int(neighbor_id)
+            if plate_id[neighbor_id] == plate_id:
+                continue
+
+            plate_j: int = int(plate_id[neighbor_id])
+            drift_j: Float64Array = drift[plate_j]
+            delta: Float64Array = torus_delta(a=site_i, b=sites[neighbor_id], width=width, height=height)
+            dist: float = float(np.linalg.norm(x=delta))
+            if dist == 0.0:
+                continue
+
+            direction: Float64Array = delta / dist
+            convergence: float = float(np.dot(a=drift_i - drift_j, b=direction))
+
+            if convergence > 0.0:
+                collision[cell_id] = max(collision[cell_id], convergence)
+            elif convergence < 0.0:
+                rift[cell_id] = max(rift[cell_id], -convergence)
+
+    return collision, rift
 
 def _smear_intensity(*, geometry: MeshGeometry, raw: Float64Array, belt_width: int, falloff: float) -> Float64Array:
     """Multi-source BFS smear with max-combine and per-hop falloff."""
