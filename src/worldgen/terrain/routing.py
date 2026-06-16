@@ -5,6 +5,7 @@ import heapq
 
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array, IntPArray
+from worldgen.config.worldgen_config import ErosionConfig
 
 
 def priority_flood(
@@ -157,3 +158,16 @@ def accumulate_drainage(
             drainage[r] += drainage[cell_id]
 
     return drainage
+
+
+def stream_power_pass(
+    *,
+    z: Float64Array,
+    z_route: Float64Array,
+    receiver: Int32Array,
+    drainage: Float64Array,
+    uplift: Float64Array,
+    geometry: MeshGeometry,
+    cfg: ErosionConfig,
+) -> None:
+    pass
