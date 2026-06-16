@@ -56,4 +56,5 @@ def compute_receivers(
     z_route: Float64Array,
 ) -> Int32Array:
     """Return receiver array: downstream cell id for each cell, -1 = base level."""
-    pass
+    for cell_id in z_route:
+        neighbors = geometry.neighbors_of(cell_id=cell_id)
