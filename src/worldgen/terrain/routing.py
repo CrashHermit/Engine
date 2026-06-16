@@ -4,7 +4,7 @@ import numpy as np
 import heapq
 
 from src.worldgen.geometry.mesh import MeshGeometry
-from src.worldgen.types import BoolArray, Float64Array, Int32Array
+from src.worldgen.types import BoolArray, Float64Array, Int32Array, IntPArray
 
 
 def priority_flood(
@@ -108,7 +108,7 @@ def compute_receivers(
     receiver: Int32Array = np.full(n, -1, dtype=np.int32)
 
     for cell_id in range(n):
-        lowest_z: float = float('inf')
+        lowest_z: float = float("inf")
         lowest_neighbor: int = -1
         neighbors: Int32Array = geometry.neighbors_of(cell_id=cell_id)
         for neighbor_id in neighbors:
@@ -121,3 +121,39 @@ def compute_receivers(
             receiver[cell_id] = lowest_neighbor
 
     return receiver
+
+
+def accumulate_drainage(
+    *,
+    receiver: Int32Array,
+    z_route: Float64Array,
+) -> Float64Array:
+    """Accumulate upstream cell count along the receiver flow tree.
+
+    Every cell contributes 1 (its own "raindrop") and passes its
+    accumulated total downstream to its receiver.  Processing from
+    highest to lowest ``z_route`` guarantees every donor is complete
+    before it hands off its total, so each cell is visited exactly
+    once.
+
+    Args:
+        receiver: Per-cell downstream cell id; ``-1`` = base level.
+        z_route: Per-cell water-surface elevation from
+            ``priority_flood`` (float64).  Used only for
+            topological ordering.
+
+    Returns:
+        drainage: Per-cell upstream count (float64).  Raw values
+            span 1 to thousands; use ``log(drainage)`` for
+            visualisation.
+    """
+    n: int = len(receiver)
+    drainage: Float64Array = np.ones(shape=n, dtype=np.float64)
+    order: IntPArray = np.argsort(a=z_route)[::-1]
+
+    for cell_id in order:
+        r: int = int(receiver[cell_id])
+        if r >= 0:
+            drainage[r] += drainage[cell_id]
+
+    return drainage
