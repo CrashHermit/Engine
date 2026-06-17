@@ -1,0 +1,6 @@
+{
+  "packages": [
+    "npm:@catdaemon/pi-code-intelligence",
+    "npm:@majorgilles/pi-learning-tutor"
+  ]
+}
