@@ -3,26 +3,26 @@ from __future__ import annotations
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.stages.base import Stage
-from src.worldgen.stages.placeholder_elevation import PlaceholderElevationStage
+from src.worldgen.stages.boundary_uplift import BoundaryUpliftStage
+from src.worldgen.stages.erosion import ErosionStage
 from src.worldgen.stages.plate import PlatesStage
 from src.worldgen.stages.plate_personality import PlatePersonalityStage
-from src.worldgen.stages.boundary_uplift import BoundaryUpliftStage
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.fields import MeshFields
 
 
 def _build_stages() -> list[Stage]:
-    """Return the ordered list of pipeline stages for the given config."""
+    """Return the ordered list of pipeline stages."""
     return [
         PlatesStage(),
         PlatePersonalityStage(),
         BoundaryUpliftStage(),
-        PlaceholderElevationStage(),
+        ErosionStage(),
     ]
 
 
 class WorldgenPipeline:
-    """Phase 0 pipeline: mesh + placeholder elevation."""
+    """Phase 1 pipeline: plates, boundary uplift, and erosion."""
     def __init__(self, config: WorldgenConfig | None = None) -> None:
         self._config: WorldgenConfig | None = config
 

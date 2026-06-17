@@ -11,6 +11,7 @@ from src.worldgen.types import Float64Array
 FIELD_ELEVATION: int = 0
 FIELD_BOUNDARY_UPLIFT: int = 1
 FIELD_UPLIFT_FLOOR: int = 2
+FIELD_EROSION_INIT: int = 3
 
 def subseed(seed: int, name: str) -> int:
     """Derive a deterministic sub-seed for a named stage or field purpose."""
