@@ -35,6 +35,70 @@ class Lake:
 
 ---
 
+## Before you start (house style — read `CONVENTIONS.md`)
+
+> **All code in this phase must match `docs/worldgen-guide/CONVENTIONS.md`.**
+> Pure functions in a new `src/worldgen/water/` package; thin `Stage` wrappers in
+> `stages/`. This phase also introduces **feature objects** (`River`, `Lake`) and
+> a **river rasterizer** — both have a designated home below.
+
+**Files you will create:**
+
+```
+src/worldgen/features.py           # @dataclass River, Lake (and Landmass if not already)
+src/worldgen/water/
+    discharge.py                   # pure: accumulate_discharge(...)
+    rivers.py                      # pure: classify_rivers(...), extract_rivers(...)
+    lakes.py                       # pure: extract_lakes(...)
+    flow.py                        # pure: compute_flow(...)
+src/worldgen/stages/
+    discharge.py                   # DischargeStage
+    rivers.py                      # RiversStage
+    lakes.py                       # LakesStage
+    flow.py                        # FlowStage
+src/worldgen/bake/rivers.py        # stamp_rivers(...) — see step 6
+```
+
+> The `River`/`Lake` dataclasses follow the same `@dataclass` style as
+> `PlateProperties` (`terrain/plate_personalities.py`): plain dataclass, typed
+> fields, `np.ndarray` where appropriate. They are **not** mesh fields; they live
+> on the eventual `WorldData` (Phase 5) and are carried on the context meanwhile
+> (e.g. `ctx.rivers`, `ctx.lakes` — add these `list[...] | None` slots to
+> `WorldContext` the same way `plate_properties` was added).
+
+**Fields to add** (both `MeshFields` and `GridFields`, `dtype` metadata + `#`):
+
+```python
+discharge: Float64Array | None = field(default=None, metadata={"dtype": np.float64})   # Rain-weighted water flow
+is_river: BoolArray | None = field(default=None, metadata={"dtype": bool})              # Cell carries a river
+river_id: Int32Array | None = field(default=None, metadata={"dtype": np.int32})         # River object id; -1 = none
+flow_u: Float64Array | None = field(default=None, metadata={"dtype": np.float64})       # unit flow direction x
+flow_v: Float64Array | None = field(default=None, metadata={"dtype": np.float64})       # unit flow direction y
+flow_speed: Float64Array | None = field(default=None, metadata={"dtype": np.float64})   # [0,1] stylized speed
+is_lake: BoolArray | None = field(default=None, metadata={"dtype": bool})               # Cell is under lake water
+lake_id: Int32Array | None = field(default=None, metadata={"dtype": np.int32})          # Lake object id; -1 = none
+```
+
+> `river_id`/`lake_id` should default to `-1`, not `0`, so "no feature" is
+> distinct from "feature #0". The generic `allocate` zeroes arrays — so **set them
+> to `-1` explicitly** in the stage that writes them (e.g.
+> `ctx.fields.river_id = np.full(n, -1, dtype=np.int32)` before stamping).
+
+**Config to add:** `RiverConfig` (`river_fraction`, rasterizer `w_scale`,
+`min_w`, `max_w`), `LakeConfig` (`epsilon`). Register on `WorldgenConfig`.
+
+**The reusable BFS:** this phase needs connected components a fourth time. Factor
+`components(geometry, mask) -> Int32Array` into `water/lakes.py` (or a small
+`geometry/graph.py`) and reuse it; mirror the BFS shape in
+`terrain/finalize.py::label_landmasses` exactly (queue = `deque`, visited mask,
+`int(neighbor_id)` conversion).
+
+**Pipeline** — append in order: `DischargeStage(), RiversStage(), LakesStage(),
+FlowStage()`. The grid bake + `stamp_rivers` run after the pipeline (viewer/Phase
+5 territory).
+
+---
+
 ## Step 1 — Discharge: rain-weighted accumulation (1 h)
 
 ### The lesson first
@@ -59,6 +123,33 @@ discharge is a land concept.
 against `drainage`: same tree shapes, different weights — branches in wet
 regions should glow brighter.
 
+### Implementation scaffold (house style)
+
+Reuse Phase 1's routing trio on **final** terrain. `water/discharge.py`:
+
+```python
+def accumulate_discharge(
+    *,
+    receiver: Int32Array,
+    z_route: Float64Array,
+    precipitation: Float64Array,
+    is_land: BoolArray,
+) -> Float64Array:
+    """Like Phase 1 drainage, but each cell contributes precipitation[i]; ocean zeroed."""
+```
+
+`DischargeStage.run`: re-run `priority_flood → compute_receivers` on
+`ctx.fields.elevation` (final terrain), then call `accumulate_discharge(...)`.
+Store the fresh `z_route`/`receiver` back on `ctx.fields` — steps 3–5 depend on
+them matching the final terrain, not the last erosion iteration's.
+
+**Definition of done:** `discharge` is the drainage loop with one line changed
+(`drainage[:] = precipitation` instead of `1.0`); ocean cells zeroed.
+
+**Pitfalls:** do **not** reuse Phase 1's `drainage` array — it was uniform-rain
+for erosion. Recompute the flow tree on final elevation so river cells line up
+with the carved valleys.
+
 ---
 
 ## Step 2 — Which cells are rivers (30 min)
@@ -73,6 +164,29 @@ step 4; use `z < z_route` meanwhile — same thing.)
 **Check (viewer):** overlay river cells on elevation. Branching networks
 hugging your valleys — they *will* hug them, because erosion carved the
 valleys along the same flow tree. That agreement was the point of Phase 1.
+
+### Implementation scaffold (house style)
+
+`water/rivers.py`:
+
+```python
+def classify_rivers(
+    *,
+    discharge: Float64Array,
+    is_land: BoolArray,
+    is_lake: BoolArray,
+    cfg: RiverConfig,
+) -> BoolArray:
+    """is_river = land & not-lake-water & discharge >= percentile threshold."""
+```
+
+`RiverConfig.river_fraction` is the **percentile** (e.g. `0.05` → top 5% of land
+discharge are rivers), passed to
+`np.quantile(a=discharge[is_land], q=1.0 - cfg.river_fraction)`.
+
+**Definition of done:** threshold is a percentile of *land* discharge (self-
+adjusting), not an absolute number; `is_lake` may not exist yet — use
+`z < z_route` as the stand-in (same thing) and rewire to `is_lake` after step 4.
 
 ---
 
@@ -115,6 +229,39 @@ river (water only accumulates downstream — *the* invariant for this step;
 make it a pytest); `tributary_of` never points at a river with smaller
 maximum discharge.
 
+### Implementation scaffold (house style)
+
+`water/rivers.py`:
+
+```python
+def extract_rivers(
+    *,
+    geometry: MeshGeometry,
+    receiver: Int32Array,
+    discharge: Float64Array,
+    z_route: Float64Array,
+    is_river: BoolArray,
+    is_lake: BoolArray,
+) -> tuple[list[River], Int32Array]:
+    """Build downstream-first River objects; return (rivers, river_id per cell, -1 = none)."""
+```
+
+`River` (in `features.py`): `id: int`, `cells: list[int]`,
+`discharge: Float64Array`, `mouth: int`, `tributary_of: int | None`.
+
+Algorithm order (per prose): compute in-river-degree, process river cells in
+**descending `z_route`** (the Phase 1 topological trick), larger-discharge inflow
+keeps the river identity, others record `tributary_of`. Write `river_id` as you
+go; non-river cells stay `-1`.
+
+**Definition of done:** the discharge-monotone invariant is a pytest, not just a
+REPL check (Phase 5 `test_water.py` needs it).
+
+**Pitfalls:** "in-river-degree" counts only **river** cells flowing in (a cell
+whose `receiver` is this cell **and** `is_river`); a river ends when its receiver
+is ocean, a lake cell, or non-river. Break discharge ties at junctions by cell id
+so the result is deterministic.
+
 ---
 
 ## Step 4 — Lakes with outlets (2–3 h)
@@ -150,6 +297,35 @@ mountain-bowl and rift locations, each with a river leaving from one edge.
 Test: every non-terminal lake's outlet chain reaches the ocean (follow
 receiver from outlet; bounded steps).
 
+### Implementation scaffold (house style)
+
+`water/lakes.py`:
+
+```python
+def extract_lakes(
+    *,
+    geometry: MeshGeometry,
+    z: Float64Array,
+    z_route: Float64Array,
+    is_land: BoolArray,
+    cfg: LakeConfig,
+) -> tuple[list[Lake], Int32Array, BoolArray]:
+    """Connected components of (is_land & z_route > z + eps); return (lakes, lake_id, is_lake)."""
+```
+
+`Lake` (in `features.py`): `id: int`, `cells: list[int]`,
+`surface_level: float`, `outlet_cell: int | None`.
+
+**Definition of done:** uses the shared `components(geometry, mask)` helper;
+`surface_level` = `z_route` of any member; outlet = boundary cell whose **outside**
+neighbor has the lowest `z_route`; all-higher → `outlet_cell = None` (terminal).
+`is_lake` written; `lake_id` defaults `-1`.
+
+**Pitfalls:** the lake mask is `is_land & (z_route > z + cfg.epsilon)` — the
+epsilon avoids labeling numerically-flat-but-not-bowl cells. Stitch rivers
+through lakes (step 4.4) only as far as the rasterizer/tests need; do not
+over-model.
+
 ---
 
 ## Step 5 — Direction and speed (1–2 h)
@@ -167,6 +343,31 @@ Per river/land cell:
 
 **Check (viewer):** speed layer — bright fast headwaters in the mountains,
 broad dim lowland trunks. If it's inverted, an exponent sign is wrong.
+
+### Implementation scaffold (house style)
+
+`water/flow.py`:
+
+```python
+def compute_flow(
+    *,
+    geometry: MeshGeometry,
+    receiver: Int32Array,
+    elevation: Float64Array,
+    discharge: Float64Array,
+    is_lake: BoolArray,
+) -> tuple[Float64Array, Float64Array, Float64Array]:
+    """Return (flow_u, flow_v, flow_speed): unit direction to receiver + stylized Manning speed."""
+```
+
+**Definition of done:** direction = unit `torus_delta(site[i] → site[receiver])`;
+`flow_speed = normalize(slope_along_flow**0.3 * discharge**0.2)` with
+`slope_along_flow = (z[i] - z[receiver]) / dist`, floored at a tiny epsilon inside
+lakes; normalize by percentile (like precipitation). Non-river cells may be zeroed.
+
+**Pitfalls:** `receiver == -1` cells have no direction — leave them zero; use
+`torus_distance` for `dist`; keep the `0.3`/`0.2` exponents in config-free form
+only because they are part of the stylized formula (document them).
 
 ---
 
@@ -196,6 +397,48 @@ already — no special pass needed.
 **Check (viewer):** switch the viewer's river layer from mesh cells to grid
 tiles. Continuous rivers (no gaps where mesh cells were sparse), tapering
 widths, lakes intact.
+
+### Implementation scaffold (house style)
+
+`bake/rivers.py` — runs **after** the generic `bake_to_grid` (it overwrites
+river tiles), not as a `Stage`:
+
+```python
+def stamp_rivers(
+    *,
+    grid: GridFields,
+    rivers: list[River],
+    geometry: MeshGeometry,
+    size: int,
+    cfg: RiverConfig,
+) -> None:
+    """Walk each river's site-to-site segments, stamping disks onto grid tiles in place."""
+```
+
+**Definition of done:** segment endpoints via `torus_delta` (minimum-image),
+stamped tile coords via `% size`; `radius = clip(w_scale * sqrt(discharge),
+min_w, max_w)`; on contested tiles the **larger discharge** wins `river_id` and
+`flow_*`. Lakes need no special pass — they bake through the generic path.
+
+**Pitfalls:** `sqrt(discharge)` (sub-linear width), not linear; a segment that
+crosses the seam draws as two partial segments (or stamp in torus space then
+`% size`); do not forget to seed `is_river`/`river_id` tiles to `False`/`-1`
+before stamping.
+
+### Test scaffold (house style)
+
+`test/worldgen/test_water.py` (Phase 5 keeps this name), fast fixture,
+parameterized by seed:
+
+```python
+@pytest.mark.parametrize("seed", [1, 7, 42])
+def test_discharge_monotone_along_rivers(seed: int) -> None:
+    """Water only accumulates downstream."""
+
+@pytest.mark.parametrize("seed", [1, 7, 42])
+def test_lake_outlets_reach_ocean(seed: int) -> None:
+    """Following receiver from each non-terminal outlet hits base level in bounded steps."""
+```
 
 ## Exit criteria
 

@@ -14,6 +14,10 @@ landmasses, coast distance, slope) producing the elevation contract
 priority queues (heaps), topological ordering on a flow tree, implicit vs
 explicit numerical solvers, and the art of tuning a simulation by eye.
 
+> **Style note:** the modules you write here (`terrain/`, `stages/`) are the
+> reference implementation that `docs/worldgen-guide/CONVENTIONS.md` was
+> extracted from. Phases 2–5 must match this code — so write it carefully.
+
 ---
 
 ## Step 1 — New fields (15 min)

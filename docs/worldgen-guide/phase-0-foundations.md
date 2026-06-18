@@ -20,6 +20,11 @@ KD-trees for nearest-neighbor lookup.
 Keep the old code around while you work — we build the new package alongside
 it and delete the old one at the end of the phase.
 
+> **Style note:** the code you write in Phases 0–1 becomes the house style every
+> later phase copies. `docs/worldgen-guide/CONVENTIONS.md` codifies it (type
+> annotations everywhere, keyword-arg calls, the pure-function/`Stage` split,
+> determinism rules). Skim it before you start so the conventions are deliberate.
+
 ---
 
 ## Step 0 — Housekeeping (15 min)

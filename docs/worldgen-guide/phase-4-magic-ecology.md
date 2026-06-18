@@ -20,6 +20,69 @@ New fields: `savagery`, `magic_strength`, `magic_valence` ([-1, 1]),
 
 ---
 
+## Before you start (house style — read `CONVENTIONS.md`)
+
+> **All code in this phase must match `docs/worldgen-guide/CONVENTIONS.md`.**
+> Pure functions in `src/worldgen/magic/` and `src/worldgen/ecology/`; thin
+> `Stage` wrappers in `stages/`. This phase has **two 2-D fields**
+> (`magic_channels` `(n, 3)`, `biome_weights` `(n, n_biomes)`) that do not fit
+> the generic 1-D allocator — handle them per §"2-D fields" below.
+
+**Files you will create:**
+
+```
+src/worldgen/magic/
+    savagery.py        # pure: compute_savagery(...)
+    nexus.py           # pure: place_nexuses(...)
+    web.py             # pure: build_web(...)  (Kruskal + union-find + loops)
+    aspects.py         # pure: assign_aspects(...)  (valence + channels)
+    fields.py          # pure: rasterize_magic(...)  (strength/valence/channels)
+src/worldgen/ecology/
+    biomes.py          # pure: derive_centers(...), biome_weights(...)
+src/worldgen/stages/
+    savagery.py        # SavageryStage
+    leylines.py        # LeylinesStage  (nexus + web + aspects + rasterize)
+    biomes.py          # BiomeStage
+src/worldgen/features.py   # add @dataclass LeylineNetwork
+```
+
+**1-D fields** (both `MeshFields` and `GridFields`):
+
+```python
+savagery: Float64Array | None = field(default=None, metadata={"dtype": np.float64})        # [0,1] danger/wildness
+magic_strength: Float64Array | None = field(default=None, metadata={"dtype": np.float64})   # [0,1] leyline intensity
+magic_valence: Float64Array | None = field(default=None, metadata={"dtype": np.float64})    # [-1,1] corrupt..pure
+```
+
+**2-D fields** (`magic_channels` `(n, 3)`, `biome_weights` `(n, n_biomes)`): the
+generic `allocate`/`bake_to_grid` assume shape `(n,)`. Do **not** hack the generic
+path. Instead allocate these explicitly in their stage
+(`np.zeros((n, 3))`) and bake them with the same fancy-index trick the generic
+bake uses but along axis 0: `grid_channels = mesh_channels[nearest]` (shape
+`(size*size, 3)`). Add them as explicit columns the bake handles separately —
+follow whatever Phase 5's `WorldData` assembly settles on, and leave a one-line
+comment in `bake.py` pointing at the 2-D fields so the next reader knows.
+
+**Configs:** `SavageryConfig` (component weights), `LeylineConfig` (nexus count,
+spacing, edge `k`, loops, falloff reaches, purity exponents), `BiomeConfig`
+(`blend_sharpness`, `weight_cutoff`). Register all three on `WorldgenConfig`.
+
+**Noise constants** — append to `noise/rng.py`: `FIELD_SAVAGERY`,
+`FIELD_NEXUS_SCORE`, `FIELD_VALENCE`, `FIELD_MAGIC_FLOOR`.
+
+**External source of truth (do not re-declare):** biomes come from
+`src/core/model/environment/ecology/biome.py`:
+`BIOME_GRID: dict[tuple[TemperatureBand, PrecipitationBand], BiomeEnum]`, and the
+band `BREAKPOINTS` in `core/model/environment/shared/temperature.py` /
+`climate/precipitation.py`. Temperature/precip bands are **sevenths** (6
+breakpoints → 7 bands; band `i` midpoint `(i + 0.5) / 7`). Phase 4 **derives**
+biome centers from these; it must not reintroduce `config/biome_centers.py`
+(deleted in Phase 0).
+
+**Pipeline** — append in order: `SavageryStage(), LeylinesStage(), BiomeStage()`.
+
+---
+
 ## Step 1 — Savagery from geography (1–2 h)
 
 ### The lesson first
@@ -47,6 +110,45 @@ config slot at weight 0.0; wire it after step 5 if you want it.)
 
 **Check (viewer):** `savagery` layer. Predict before looking: bright deep
 interiors, bright deserts and frostbelt, bright ranges, calm temperate coasts.
+
+### Implementation scaffold (house style)
+
+`magic/savagery.py`:
+
+```python
+def compute_savagery(
+    *,
+    coast_distance: Float64Array,
+    temperature: Float64Array,
+    precipitation: Float64Array,
+    slope: Float64Array,
+    noise: Float64Array,
+    cfg: SavageryConfig,
+) -> Float64Array:
+    """Weighted blend of remoteness, harshness, ruggedness, and noise; clipped to [0, 1]."""
+```
+
+`SavageryConfig`:
+
+```python
+@dataclass
+class SavageryConfig:
+    """Legible danger as a weighted blend of named geography components."""
+
+    remoteness_weight: float = 0.35   # coast_distance, max-normalized
+    harshness_weight: float = 0.30    # climate distance from comfort (0.55, 0.5)
+    ruggedness_weight: float = 0.15   # slope, percentile-normalized
+    noise_weight: float = 0.20        # FBm surprise
+    magic_weight: float = 0.0         # corrupt zones breed savagery (wire after step 5)
+```
+
+**Definition of done:** every component **normalized** to `[0, 1]` before
+weighting (remoteness by its max, ruggedness by percentile, harshness by its
+max); whole stage is array math, **zero loops**; `np.clip(…, 0, 1)`.
+
+**Pitfalls:** harshness is `dist((temperature, precipitation), (0.55, 0.5))` then
+normalized — forgetting the normalize makes one component dominate. Weights are
+config, not literals.
 
 ---
 
@@ -79,6 +181,32 @@ def place_nexuses(geometry, fields, lakes, cfg, rng) -> list[int]   # cell ids
 
 **Check (viewer):** `leylines` layer, nexuses as bright dots. They should sit
 on peaks, lake mouths, river forks — places that *mean* something.
+
+### Implementation scaffold (house style)
+
+`magic/nexus.py`:
+
+```python
+def place_nexuses(
+    *,
+    geometry: MeshGeometry,
+    fields: MeshFields,
+    lakes: list[Lake],
+    cfg: LeylineConfig,
+    rng: random.Random,
+) -> list[int]:
+    """Score every land cell, then greedily accept the best with torus-spacing >= min_spacing."""
+```
+
+**Definition of done:** scoring is array math (peak/lake-outlet/confluence/ring
+bonuses + score noise); greedy spacing uses `torus_distance` against accepted
+nexuses; `rng = random.Random(ctx.seed_for("leylines"))` from the stage (passed
+in — pure function does not derive its own seed).
+
+**Pitfalls:** `min_spacing` is a fraction of world span, not raw units; reuse the
+confluence info from Phase 3 step 3 (river cells with ≥2 river inflows) rather
+than recomputing; sort candidates by score **descending** and break ties by cell
+id for determinism.
 
 ---
 
@@ -122,6 +250,40 @@ class LeylineNetwork:
 cell sites; remember minimum-image when it crosses the seam — draw two
 partial segments). One connected web, a few loops, no spaghetti.
 
+### Implementation scaffold (house style)
+
+`magic/web.py`:
+
+```python
+def build_web(
+    *,
+    geometry: MeshGeometry,
+    nexus_cells: list[int],
+    cfg: LeylineConfig,
+) -> list[tuple[int, int]]:
+    """Kruskal MST over k-nearest nexus edges (torus distance) + a few shortest loop edges."""
+```
+
+Include a small union-find — keep it as module-level helpers in `web.py`:
+
+```python
+def _find(parent: list[int], x: int) -> int: ...
+def _union(parent: list[int], rank: list[int], a: int, b: int) -> None: ...
+```
+
+`LeylineNetwork` (in `features.py`): `nexus_cells: list[int]`,
+`nexus_valence: Float64Array`, `nexus_channels: Float64Array` (`(k, 3)`),
+`edges: list[tuple[int, int]]` (indices into `nexus_cells`).
+
+**Definition of done:** candidate edges = each nexus to its `cfg.edge_k` nearest
+fellows (deduplicated, sorted by torus length); Kruskal accepts an edge iff
+endpoints are in different sets; then accept the `cfg.extra_loops` shortest
+rejected edges.
+
+**Pitfalls:** edges store **indices into `nexus_cells`**, not cell ids; sort the
+candidate list deterministically (length, then endpoint indices) so the MST is
+reproducible.
+
 ---
 
 ## Step 4 — Aspects: clustered valence, mingling channels (1–2 h)
@@ -143,6 +305,31 @@ channel without being pure.
 
 **Check (REPL/viewer):** color nexus dots by valence (e.g. red↔blue). You
 should *see* a corrupt cluster and a pure cluster, not salt-and-pepper.
+
+### Implementation scaffold (house style)
+
+`magic/aspects.py`:
+
+```python
+def assign_aspects(
+    *,
+    geometry: MeshGeometry,
+    nexus_cells: list[int],
+    cfg: LeylineConfig,
+    valence_noise: FractalField,
+    rng: random.Random,
+) -> tuple[Float64Array, Float64Array]:
+    """Return (nexus_valence (k,), nexus_channels (k, 3)): low-freq-sampled valence, sharpened channels."""
+```
+
+**Definition of done:** valence = `valence_noise.sample` at each nexus site (low
+frequency → spatial clustering for free), then `v = sign(v) * |v|**(1/purity)`;
+channels = 3 random positive weights per nexus, normalized, raised to
+`channel_purity`, renormalized. `valence_noise` from `ctx.noise_for("valence")` /
+`FIELD_VALENCE`.
+
+**Pitfalls:** low frequency is what makes clustering emerge — a high-frequency
+field gives salt-and-pepper. Sharpen valence toward the poles, not toward 0.
 
 ---
 
@@ -181,6 +368,41 @@ web), `magic_valence` (diverging palette: corrupt color ↔ pure color),
 `magic_channels` (map the 3 weights straight to RGB; it's a 3-composition,
 RGB is a free visualization). The valence layer should show *regions*, the
 channel layer mottled variety inside them.
+
+### Implementation scaffold (house style)
+
+`magic/fields.py`:
+
+```python
+def rasterize_magic(
+    *,
+    geometry: MeshGeometry,
+    network: LeylineNetwork,
+    cfg: LeylineConfig,
+    floor_noise: FractalField,
+) -> tuple[Float64Array, Float64Array, Float64Array]:
+    """Per-cell (magic_strength [0,1], magic_valence [-1,1], magic_channels (n, 3)) from segment distance + IDW."""
+```
+
+Add a torus-aware point-to-segment helper to `geometry/torus.py` (next to
+`torus_delta`):
+
+```python
+def torus_point_segment(
+    *, p: Float64Array, a: Float64Array, b: Float64Array, width: float, height: float
+) -> tuple[float, float]:
+    """Return (distance, t) from point p to segment a→b under minimum-image."""
+```
+
+**Definition of done:** clamp `t` to `[0, 1]`; vectorize cells-per-segment with a
+running min/argmin (n × segments, **not** n²); `magic_strength =
+exp(-dist/line_reach) + nexus_boost + floor_noise`, clipped; valence/channels are
+IDW over the `k` nearest segments, faded to neutral (valence→0, channels→⅓ each)
+where strength is near the floor.
+
+**Pitfalls:** the `n²` trap — loop over **segments** (≈35), broadcasting all cells
+against one segment at a time. Run minimum-image relative to `a`. `floor_noise`
+from `ctx.noise_for("magic_floor")` / `FIELD_MAGIC_FLOOR`.
 
 ---
 
@@ -225,6 +447,48 @@ hot zones, desert in rain shadows, tundra-equivalents along the frostbelt.
 Test: every land row sums to 1; argmax biome equals
 `BIOME_GRID[(temp_band, precip_band)]` for a sample of cells — the
 "two views never disagree" guarantee, now enforced.
+
+### Implementation scaffold (house style)
+
+`ecology/biomes.py`:
+
+```python
+def derive_centers() -> tuple[Float64Array, Float64Array, list[BiomeEnum]]:
+    """Return (center_temp (49,), center_precip (49,), biome_order): ideal points from BIOME_GRID band midpoints."""
+
+
+def biome_weights(
+    *,
+    temperature: Float64Array,
+    precipitation: Float64Array,
+    is_land: BoolArray,
+    center_temp: Float64Array,
+    center_precip: Float64Array,
+    cfg: BiomeConfig,
+) -> Float64Array:
+    """IDW soft weights over biome centers; shape (n, n_biomes); rows sum to 1 on land, 0 on water."""
+```
+
+**Definition of done:** `derive_centers` reads `BIOME_GRID` and the band
+`BREAKPOINTS` from `core/model` — band `i` midpoint is `(i + 0.5) / 7`;
+`biome_order` is the one place column index ↔ `BiomeEnum` is defined. The IDW is
+the vectorized broadcast from the prose (`T[:, None] - ct[None, :]`), with
+`weight_cutoff` + renormalize; ocean/lake rows zeroed.
+
+**Pitfalls:** do **not** recreate `biome_centers.py`. Keep the `(n, 49)` matrix —
+no per-cell Python loop. Land rows must sum to 1 *after* the cutoff renormalize.
+
+### Test scaffold (house style)
+
+```python
+@pytest.mark.parametrize("seed", [1, 7, 42])
+def test_biome_rows_sum_to_one_on_land(seed: int) -> None:
+    """Every land cell's biome weights form a distribution."""
+
+@pytest.mark.parametrize("seed", [1, 7, 42])
+def test_argmax_biome_matches_grid(seed: int) -> None:
+    """Dominant biome equals BIOME_GRID[(temp_band, precip_band)] — the 'two views agree' guarantee."""
+```
 
 ## Exit criteria
 

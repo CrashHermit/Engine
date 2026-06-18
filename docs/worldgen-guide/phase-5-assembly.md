@@ -10,6 +10,30 @@ suite, and an honest docs pass.
 
 ---
 
+## Before you start (house style — read `CONVENTIONS.md`)
+
+> **All code in this phase must match `docs/worldgen-guide/CONVENTIONS.md`.**
+> No new algorithms — this phase is contract-hardening, so the style rules
+> matter *more*, not less. `WorldData` is a plain `@dataclass` in
+> `src/worldgen/features.py` (alongside `River`/`Lake`/`Landmass`/`LeylineNetwork`).
+
+**Files you will touch:**
+
+```
+src/worldgen/features.py          # add @dataclass WorldData, Landmass (if missing)
+src/worldgen/pipeline.py          # run() -> WorldData ; add run_debug() -> (WorldData, WorldContext)
+src/worldgen/config/presets.py    # rewrite presets in the new vocabulary (+ optional wildlands)
+scripts/census.py                 # NEW: one-paragraph world census (regression eyeball)
+test/worldgen/                    # consolidate into the 5 subject files below
+src/worldgen/README.md            # NEW: pipeline order + field glossary
+docs/worldgen-redesign-plan.md    # mark implemented; note divergences
+```
+
+There is no new `Stage`, no new field, and no new config dataclass in this
+phase. If you find yourself adding one, you are doing Phase 1–4 work that leaked.
+
+---
+
 ## Step 1 — The final `WorldData` (1–2 h)
 
 Assemble the output contract exactly as the redesign plan §2 specifies:
@@ -47,6 +71,40 @@ census: land %, landmass count by class, river count (and longest), lake
 count, nexus count, dominant-biome histogram top 5. Keep it — it's your
 regression eyeball and your bragging artifact.
 
+### Implementation scaffold (house style)
+
+`WorldData` in `features.py` — plain `@dataclass`, typed fields, matching the
+existing dataclass style:
+
+```python
+@dataclass
+class WorldData:
+    seed: int
+    size: int
+    config: WorldgenConfig
+    grid: GridFields
+    rivers: list[River]
+    lakes: list[Lake]
+    leylines: LeylineNetwork
+    landmasses: list[Landmass]
+```
+
+Pipeline entry points (`pipeline.py`):
+
+```python
+def run(self, seed: int, size: int) -> WorldData: ...
+def run_debug(self, seed: int, size: int) -> tuple[WorldData, WorldContext]: ...
+```
+
+**Definition of done:** `run` builds the mesh internally and lets it die — the
+mesh does **not** ship on `WorldData`; the viewer uses `run_debug` for mesh
+intermediates. `GridFields` carries `region_id` as a column of `-1`s (the
+persistence socket). Features stay in **mesh coordinates** (sites are world-space,
+valid over the grid); tile-side lookup is the baked `river_id`/`lake_id`.
+
+**Pitfalls:** resist inventing a tile-path river representation; resist fattening
+`WorldData` with debug/mesh state. One product type, one debug door.
+
 ---
 
 ## Step 2 — Presets, rewritten in the new vocabulary (1–2 h)
@@ -65,6 +123,30 @@ each one; a preset that hasn't been looked at is a lie waiting for a user.
 
 **Check:** census script over all presets × 3 seeds — no crashes, land
 fractions near targets, qualitative character visible in the viewer.
+
+### Implementation scaffold (house style)
+
+Extend the existing `config/presets.py` (it already has `earthlike`,
+`archipelago`, `pangaea` as `WorldgenConfig` factories) in the **same shape** —
+each preset is a function returning a `WorldgenConfig`, registered in the
+`PRESETS` dict. Now that Phases 2–4 added configs, tune across groups:
+
+```python
+def wildlands() -> WorldgenConfig:
+    """Demonstrate the fantasy knobs: savage, leyline-dense, corruption-leaning."""
+    return WorldgenConfig(
+        savagery=SavageryConfig(noise_weight=0.35, remoteness_weight=0.4),
+        leyline=LeylineConfig(count=30),
+        # valence pushed corrupt, etc.
+    )
+```
+
+**Definition of done:** each preset is ~10 lines, registered in `PRESETS`, and has
+been **looked at** in the viewer. Land fractions land near `target_land_fraction`.
+
+**Pitfalls:** a preset never opened in the viewer is a lie — generate and eyeball
+each one. Keep them factories (not module-level frozen instances baked at import)
+if any preset needs per-call freshness.
 
 ---
 
@@ -95,6 +177,41 @@ passes for one seed tests one world); keep the whole suite under ~30 s
 **Check:** `uv run pytest test/worldgen -q` green; then mutate one constant
 (flip an exponent sign in flow speed) and confirm something fails. A suite
 that can't fail isn't testing.
+
+### Implementation scaffold (house style)
+
+Shared fixtures at the top of each file (or a `conftest.py`), matching
+`test_foundations.py`:
+
+```python
+FAST_CONFIG: WorldgenConfig = WorldgenConfig(mesh=MeshConfig(cell_count=500))
+FAST_SIZE: int = 40
+SEEDS: list[int] = [1, 7, 42]
+```
+
+The determinism test (the most valuable file) compares **every** array and
+**every** feature list across two runs, parameterized over seeds and presets:
+
+```python
+@pytest.mark.parametrize("seed", SEEDS)
+@pytest.mark.parametrize("preset", ["earthlike", "pangaea"])
+def test_same_seed_same_world(seed: int, preset: str) -> None:
+    """WorldgenPipeline is a pure function of (seed, size, config)."""
+    a = WorldgenPipeline(PRESETS[preset]).run(seed=seed, size=FAST_SIZE)
+    b = WorldgenPipeline(PRESETS[preset]).run(seed=seed, size=FAST_SIZE)
+    # every GridFields array equal; rivers/lakes/leylines/landmasses equal
+```
+
+**Definition of done:** the five subject files exist (`test_determinism`,
+`test_geometry`, `test_terrain`, `test_water`, `test_climate_ecology`); every
+test takes `seed` as a parameter; suite runs under ~30 s; the deliberate-mutation
+check actually turns something red.
+
+**Note for this repo:** Phases 1–4 each specified invariant tests that may have
+been verified by eye rather than committed (e.g. the Phase 1 downhill / land-
+fraction / elevation-contract checks). Phase 5 is where those become permanent
+pytests — audit each phase's "Check" lines and make sure every one has a home
+here. A "Check" that never became a test is a regression waiting to happen.
 
 ---
 
@@ -132,6 +249,28 @@ within budget already, skip this step without guilt.
 - **The known-broken note**: the next round (persistence) starts at
   `service/world.py` + `TileRepository` schema for the new fields. Write that
   sentence at the bottom of the plan doc so future-you starts warm.
+
+### Implementation scaffold (house style)
+
+`src/worldgen/README.md` — short, three sections:
+
+1. **Pipeline order** — the `_build_stages()` list with a one-line job per stage.
+2. **Field glossary** — a table: field name → meaning → range/dtype. Generate the
+   rows straight from the `#` comments already on `MeshFields`/`GridFields` (that
+   is why `CONVENTIONS.md` §7 requires them).
+3. **How to run** — the viewer (`scripts/view_worldgen.py`) and census
+   (`scripts/census.py`) commands.
+
+The sweep is a literal command — run it and expect zero hits in `src/`:
+
+```bash
+uv run python -c "pass"  # sanity
+grep -rn "MeshCell\|GridPositionData\|BiomeCenter\|LakeBasin\|biome_centers" src/
+```
+
+**Definition of done:** grep comes back empty in `src/`; `service/world.py` carries
+a one-line module docstring saying it is known-broken and out of scope; the plan
+doc is marked *implemented* with a divergences note.
 
 ## Exit criteria
 
