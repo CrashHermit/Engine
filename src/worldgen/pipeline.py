@@ -5,6 +5,7 @@ from src.worldgen.context import WorldContext
 from src.worldgen.stages.base import Stage
 from src.worldgen.stages.boundary_uplift import BoundaryUpliftStage
 from src.worldgen.stages.erosion import ErosionStage
+from src.worldgen.stages.finalize import FinalizeStage
 from src.worldgen.stages.plate import PlatesStage
 from src.worldgen.stages.plate_personality import PlatePersonalityStage
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
@@ -18,6 +19,7 @@ def _build_stages() -> list[Stage]:
         PlatePersonalityStage(),
         BoundaryUpliftStage(),
         ErosionStage(),
+        FinalizeStage(),
     ]
 
 

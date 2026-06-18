@@ -61,6 +61,10 @@ class ErosionStage:
         z: Float64Array = uplift * cfg.initial_scale + noise * cfg.initial_noise_amplitude
 
         # --- erosion loop ---
+        if cfg.iterations <= 0:
+            msg: str = "ErosionConfig.iterations must be > 0"
+            raise ValueError(msg)
+
         for _iteration in range(cfg.iterations):
             # Determine provisional ocean cells (lowest percentile by current z).
             n_base: int = max(1, int(cfg.base_level_fraction * n))
@@ -94,5 +98,10 @@ class ErosionStage:
                 cfg=cfg,
             )
 
-        # --- write output ---
+        # --- store on ctx.fields before the last-iteration locals are dropped ---
+        # (z_route, receiver, drainage are used inside the loop; the final
+        # iteration's values are what flow downstream to FinalizeStage.)
         ctx.fields.elevation = z
+        ctx.fields.z_route = z_route
+        ctx.fields.receiver = receiver
+        ctx.fields.drainage = drainage

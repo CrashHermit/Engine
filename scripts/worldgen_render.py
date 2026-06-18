@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import colorsys
+import math
 from typing import TypeAlias
 from dataclasses import dataclass
 from enum import StrEnum
@@ -37,6 +38,7 @@ class Layer(StrEnum):
     MESH = "mesh"
     PLATES = "plates"
     UPLIFT = "uplift"
+    DRAINAGE = "drainage"
 
 LAYER_ORDER: tuple[Layer, ...] = (
     Layer.ELEVATION,
@@ -44,6 +46,7 @@ LAYER_ORDER: tuple[Layer, ...] = (
     Layer.MESH,
     Layer.PLATES,
     Layer.UPLIFT,
+    Layer.DRAINAGE,
 )
 
 LAYER_LABELS: dict[Layer, str] = {
@@ -52,6 +55,7 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.MESH: "Mesh debug",
     Layer.PLATES: "Plates",
     Layer.UPLIFT: "Uplift",
+    Layer.DRAINAGE: "Drainage",
 }
 
 LAYER_DESCRIPTIONS: dict[Layer, str] = {
@@ -59,7 +63,8 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.LAND: "Land vs ocean.",
     Layer.MESH: "Debug: each color is a Voronoi cell id (verify periodic sampling).",
     Layer.PLATES: "Tectonic plates; each color is a plate id (ragged Voronoi partition).",
-    Layer.UPLIFT: "Base tectonic uplift before boundary belts. Bright = continental plates, dark = oceanic."
+    Layer.UPLIFT: "Base tectonic uplift before boundary belts. Bright = continental plates, dark = oceanic.",
+    Layer.DRAINAGE: "Upstream drainage area per cell (log). Brighter = more flow. River valleys visible as bright veins.",
 }
 
 
@@ -133,6 +138,15 @@ def _tile_color(
         # continental_uplift defaults to 1.0, oceanic to 0.0
         t: float = max(0.0, min(1.0, u))
         return _lerp_color(low=(30, 40, 80), high=(220, 200, 160), t=t)
+
+    if layer == Layer.DRAINAGE:
+        d: float = float(grid.drainage[tile_index])
+        if d <= 0.0 or not grid.is_land[tile_index]:
+            return (10, 20, 30)  # dark background for ocean / sinks
+        # log scale: drainage spans 1 to thousands
+        log_d: float = math.log(d) / math.log(1000.0)  # normalize so d=1000 -> 1
+        t: float = max(0.0, min(1.0, log_d))
+        return _lerp_color(low=(30, 60, 100), high=(255, 240, 200), t=t)
 
     return (0, 0, 0)
 

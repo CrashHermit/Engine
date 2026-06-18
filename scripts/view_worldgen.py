@@ -122,6 +122,7 @@ class WorldgenViewerApp(App[None]):
         Binding("3", "layer('mesh')", "Mesh"),
         Binding("4", "layer('plates')", "Plates"),
         Binding("5", "layer('uplift')", "Uplift"),
+        Binding("6", "layer('drainage')", "Drainage"),
 
     ]
 
