@@ -24,11 +24,6 @@ def _character() -> CharacterData:
         corpus=2,
         mens=1,
         anima=1,
-        extraversion=2,
-        openness=2,
-        agreeableness=2,
-        neuroticism=2,
-        conscientiousness=2,
     )
 
 

@@ -14,12 +14,6 @@ _OWNED_EDGES: list[EdgeType] = [
     EdgeType.HAS_ANIMA,
     EdgeType.HAS_STRESS,
     EdgeType.HAS_TRAUMA,
-    EdgeType.HAS_PERSONALITY,
-    EdgeType.HAS_EXTRAVERSION,
-    EdgeType.HAS_OPENNESS,
-    EdgeType.HAS_NEUROTICISM,
-    EdgeType.HAS_AGREEABLENESS,
-    EdgeType.HAS_CONSCIENTIOUSNESS,
     EdgeType.HAS_ATTRIBUTE,
 ]
 
@@ -76,10 +70,6 @@ class CharacterRepository:
     def get_anima(self, character: Vertex) -> Vertex:
         return character.get_out_edges(EdgeType.HAS_ANIMA)[0].get_in()
 
-    def get_personality(self, character: Vertex) -> Vertex:
-        mens: Vertex = self.get_mens(character)
-        return mens.get_out_edges(EdgeType.HAS_PERSONALITY)[0].get_in()
-
     def get_attribute_value(self, node: Vertex) -> int:
         attribute: Vertex = node.get_out_edges(EdgeType.HAS_ATTRIBUTE)[0].get_in()
         return attribute.get(name="value")
@@ -87,10 +77,6 @@ class CharacterRepository:
     def set_attribute_value(self, node: Vertex, value: int) -> None:
         attribute: Vertex = node.get_out_edges(EdgeType.HAS_ATTRIBUTE)[0].get_in()
         self._base.update_vertex(vertex=attribute, value=value)
-
-    def get_trait_value(self, personality: Vertex, edge_type: EdgeType) -> int:
-        trait = personality.get_out_edges(edge_type)[0].get_in()
-        return self.get_attribute_value(trait)
 
     def get_current_location(self, character: Vertex) -> Vertex | None:
         edges: list[Edge] = character.get_out_edges(EdgeType.LOCATED_AT)

@@ -465,24 +465,13 @@ CharacterSheetModal > Vertical {
 #condition-title,
 #equipment-title,
 #inventory-title,
-#personality-title,
 #attrs-title {
     color: $da-gold;
     text-style: bold;
     margin-bottom: 1;
 }
 
-#personality-traits {
-    margin-bottom: 2;
-    height: auto;
-}
-
-#personality-traits PipSelector {
-    width: 1fr;
-}
-
-#char-attributes-section,
-#char-personality-section {
+#char-attributes-section {
     border: solid $da-muted;
     padding: 1 2;
     margin: 1 0 2 0;
@@ -490,16 +479,14 @@ CharacterSheetModal > Vertical {
     background: $da-bg;
 }
 
-#char-attributes-section #attr-label,
-#char-personality-section #trait-label {
+#char-attributes-section #attr-label {
     color: $da-gold;
     text-style: bold;
     margin-top: 0;
     margin-bottom: 1;
 }
 
-#attr-label,
-#trait-label {
+#attr-label {
     color: $da-gold;
     text-style: bold;
     margin-top: 1;

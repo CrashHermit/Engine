@@ -21,11 +21,6 @@ def _character(stress: int = 0, trauma: int = 0) -> CharacterData:
         corpus=2,
         mens=1,
         anima=1,
-        extraversion=2,
-        openness=2,
-        agreeableness=2,
-        neuroticism=2,
-        conscientiousness=2,
         stress=stress,
         trauma=trauma,
     )

@@ -101,11 +101,6 @@ class WorldDetailScreen(Screen):
                 corpus=int(result.get("corpus", 0)),
                 mens=int(result.get("mens", 0)),
                 anima=int(result.get("anima", 0)),
-                extraversion=int(result.get("extraversion", 1)),
-                openness=int(result.get("openness", 1)),
-                agreeableness=int(result.get("agreeableness", 1)),
-                neuroticism=int(result.get("neuroticism", 1)),
-                conscientiousness=int(result.get("conscientiousness", 1)),
             )
             self._characters = self._services.character.list_characters()
             self._refresh_character_list()

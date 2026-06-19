@@ -16,15 +16,6 @@ _ATTRIBUTES = [
     (VertexType.ANIMA, EdgeType.HAS_ANIMA),
 ]
 
-# (VertexType, EdgeType) for the big-five personality traits.
-_TRAITS = [
-    (VertexType.EXTRAVERSION, EdgeType.HAS_EXTRAVERSION),
-    (VertexType.OPENNESS, EdgeType.HAS_OPENNESS),
-    (VertexType.AGREEABLENESS, EdgeType.HAS_AGREEABLENESS),
-    (VertexType.NEUROTICISM, EdgeType.HAS_NEUROTICISM),
-    (VertexType.CONSCIENTIOUSNESS, EdgeType.HAS_CONSCIENTIOUSNESS),
-]
-
 
 class CharacterService:
     def __init__(
@@ -55,23 +46,11 @@ class CharacterService:
         corpus: int,
         mens: int,
         anima: int,
-        extraversion: int,
-        openness: int,
-        agreeableness: int,
-        neuroticism: int,
-        conscientiousness: int,
     ) -> CharacterData:
         attribute_values = {
             VertexType.CORPUS: corpus,
             VertexType.MENS: mens,
             VertexType.ANIMA: anima,
-        }
-        trait_values = {
-            VertexType.EXTRAVERSION: extraversion,
-            VertexType.OPENNESS: openness,
-            VertexType.AGREEABLENESS: agreeableness,
-            VertexType.NEUROTICISM: neuroticism,
-            VertexType.CONSCIENTIOUSNESS: conscientiousness,
         }
 
         with self._base.transaction():
@@ -82,15 +61,6 @@ class CharacterService:
             for vertex_type, edge_type in _ATTRIBUTES:
                 node = self._characters.add_node(character, vertex_type, edge_type)
                 self._characters.add_attribute(node, attribute_values[vertex_type])
-
-            mens_node = self._characters.get_mens(character)
-            personality = self._characters.add_node(
-                mens_node, VertexType.PERSONALITY, EdgeType.HAS_PERSONALITY
-            )
-
-            for vertex_type, edge_type in _TRAITS:
-                node = self._characters.add_node(personality, vertex_type, edge_type)
-                self._characters.add_attribute(node, trait_values[vertex_type])
 
             self._characters.add_economy(character)
 
@@ -121,7 +91,6 @@ class CharacterService:
         return character
 
     def _to_data(self, character: Vertex) -> CharacterData:
-        personality = self._characters.get_personality(character)
         return CharacterData(
             id=character.get(name="id"),
             name=character.get(name="name") or "",
@@ -134,21 +103,6 @@ class CharacterService:
             ),
             anima=self._characters.get_attribute_value(
                 self._characters.get_anima(character)
-            ),
-            extraversion=self._characters.get_trait_value(
-                personality, EdgeType.HAS_EXTRAVERSION
-            ),
-            openness=self._characters.get_trait_value(
-                personality, EdgeType.HAS_OPENNESS
-            ),
-            agreeableness=self._characters.get_trait_value(
-                personality, EdgeType.HAS_AGREEABLENESS
-            ),
-            neuroticism=self._characters.get_trait_value(
-                personality, EdgeType.HAS_NEUROTICISM
-            ),
-            conscientiousness=self._characters.get_trait_value(
-                personality, EdgeType.HAS_CONSCIENTIOUSNESS
             ),
             stress=self._characters.get_stress(character),
             trauma=self._characters.get_trauma(character),
