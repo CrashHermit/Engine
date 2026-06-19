@@ -80,15 +80,18 @@ The grid does not encode *manner* (overpowering vs. delicate, open vs. covert). 
 
 ---
 
-## 4. CONSEQUENCES
+## 4. CONSEQUENCES & MARKS
 
-> **⚠ Pending revision.** §4–§5 still describe the earlier Forged-in-the-Dark resolution (d6 Domain pool, Position/Effect, resist with Stress) and refer to "Domains." They predate the Skill grid (§3) and the move to opposed, two-axis resolution. They will be rewritten once the outcome structure (graded bands vs. binary vs. margin) is settled. The channel/duration model below still holds; only the dice procedure is stale.
+Every contest that does not end in a clean success writes a **mark** — the single currency through which characters *and* the world change. A mark is defined by four things:
 
-When a roll produces a consequence, two things define it: **which channel it comes from** and **how long it lasts**.
+*   **Direction** — a mark cuts *down* (harm: a wound, a compulsion, a taint) or *up* (growth: a hard-won gain that raises a skill). The loser of a contest takes a harm mark; ordeal and crit write growth marks. Harm and growth are the same machinery cutting both ways.
+*   **Channel** — which trunk it lands on: the contest's **target sphere** (the column of the skill rolled).
+*   **Magnitude** — how heavy, set by the situation's **danger** (MINOR / STANDARD / SEVERE / FATAL). Danger sizes the mark; it does not change the odds.
+*   **Duration** — how it resolves: Timed, Conditional, or Permanent (below).
 
 ### Channel Flavor
 
-Consequences are colored by the sphere that inflicted them:
+A mark is colored by the trunk it lands on:
 
 *   **Corpus** — physical harm, bodily alteration, exhaustion, sensation.
 *   **Mens** — mental strain, psychic pressure, cognitive disruption, compulsion.
@@ -114,14 +117,21 @@ A permanent consequence in any channel irreversibly alters what the character is
 
 ### Endgame States
 
-When consequences in a channel accumulate beyond what a character can bear, that channel reaches an endgame state. Each sphere has its own endgame — the specific nature of each is to be determined.
+When marks in a channel accumulate beyond what a character can bear, that channel reaches an endgame state. Each sphere has its own endgame — the specific nature of each, and whether the existing stress/trauma economy survives as that accumulation or is replaced by mark-counting, is still to be determined.
 
 ---
 
 ## 5. THE CORE GAMEPLAY LOOP
 
-1.  **The Action:** The player states their goal, chooses a **Domain** (how they engage), and channels it through a **Sphere** (what power they draw on).
-2.  **The Stakes:** The GM determines **Position** (how dangerous is it?) and **Effect** (how much will it accomplish?), informed by the character's domains, sphere ratings, and any permanent consequences already in play.
-3.  **The Roll:** The player rolls d6s equal to their Domain rating.
-4.  **The Consequence:** On a 4-5 or 1-3, the GM inflicts a consequence — choosing its **channel** (Corpus, Mens, or Anima) and its **class** (Timed, Conditional, or Permanent) to match what the fiction demands.
-5.  **The Resistance:** The player may Resist the consequence by rolling the appropriate **Sphere**, taking Stress to reduce or negate the effect.
+Acting on the world and resisting the world acting on you are the **same contest**, run in either direction.
+
+1.  **The Action:** Someone acts. The actor declares a goal and a **Skill** — the grid cell naming which sphere they channel *through* and which sphere they act *upon*. The target is whoever or whatever the fiction points at.
+2.  **The Stakes:** The situation carries a **danger** (MINOR → FATAL), read from the fiction and the actors involved. Danger sizes any mark; it does not change the odds.
+3.  **The Contest:** Both sides roll take-highest d6 pools. The actor rolls their **Skill cell** rating; the target opposes with its **resisting Sphere** (the row aggregate — its strongest skill in that sphere's row). A pool of 0 rolls 2d6 and takes the worst.
+4.  **The Band:** Compare the highest dice.
+    *   **Actor wins → Clean success:** the effect lands on the target's channel; no mark on the actor. *(Winner rolling 2+ sixes = crit: clean, plus a benefit and a growth mark.)*
+    *   **Tie → Success with consequence:** the effect lands, *and* the actor takes a mark.
+    *   **Actor loses → Failure with consequence:** no effect; the actor takes a mark (and the defender may earn a growth mark for turning it away).
+5.  **The Mark:** Any mark lands on the contested channel at the danger's magnitude, in the direction the band dictates (§4). This is the only way characters and the world change, and it accumulates per channel toward that sphere's endgame.
+
+When the world acts on the character, the same five steps run with the roles reversed: the threat is the actor, the character opposes with the relevant Sphere, and a mark lands on the character on a tie or loss.
