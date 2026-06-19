@@ -104,6 +104,10 @@ A part holds a **condition** (pristine → marked → broken/lost), never a comp
 
 A trunk's resistance (§2) erodes alongside, since it is the row aggregate of those same skills.
 
+### Targeting a part
+
+A skill already names the target *trunk* (its column). Within that trunk the actor declares **which aspect** they go for — Substance, Pattern, or Drive — and that is where the mark lands. The choice is **fiction-gated**: you can only reach a part your skill and the situation plausibly allow (a blade goes at Corpus **Substance**; it cannot reach the mind's **Pattern** — but a taunt, a spell, or a horror can). Targeting shapes *where* the mark lands and its flavor; it does **not** change the odds (the contest is still your skill vs. the trunk's resisting sphere) or the magnitude (still set by danger). Because a part gates the skills routing through its trunk, choosing a part is how you choose *which of an enemy's capabilities to take apart* — you never attack a skill directly, you damage the part that powers it.
+
 ### Corruption is native
 
 The three aspects are the three faces of transformation, so corruption needs no separate system — its flavor falls out of which aspect a mark hits:
@@ -121,7 +125,7 @@ Growth marks run the same three ways: hardened substance, sharpened pattern, ste
 Every contest that does not end in a clean success writes a **mark** — the single currency through which characters *and* the world change. A mark is defined by four things:
 
 *   **Direction** — a mark cuts *down* (harm: a wound, a compulsion, a taint) or *up* (growth: a hard-won gain that raises a skill). The loser of a contest takes a harm mark; ordeal and crit write growth marks. Harm and growth are the same machinery cutting both ways.
-*   **Channel** — which trunk it lands on: the contest's **target sphere** (the column of the skill rolled). Within that trunk it settles on one **part** — Substance, Pattern, or Drive (§4) — as the fiction dictates, and that part's condition is what changes.
+*   **Channel** — which trunk it lands on: the contest's **target sphere** (the column of the skill rolled). Within that trunk it settles on the **part** the actor targeted — Substance, Pattern, or Drive (§4, fiction-gated) — and that part's condition is what changes.
 *   **Magnitude** — how heavy, set by the situation's **danger** (MINOR / STANDARD / SEVERE / FATAL). Danger sizes the mark; it does not change the odds.
 *   **Duration** — how it resolves: Timed, Conditional, or Permanent (below).
 
@@ -161,7 +165,7 @@ When marks in a channel accumulate beyond what a character can bear, that channe
 
 Acting on the world and resisting the world acting on you are the **same contest**, run in either direction.
 
-1.  **The Action:** Someone acts. The actor declares a goal and a **Skill** — the grid cell naming which sphere they channel *through* and which sphere they act *upon*. The target is whoever or whatever the fiction points at.
+1.  **The Action:** Someone acts. The actor declares a goal, a **Skill** — the grid cell naming which sphere they channel *through* and which sphere they act *upon* — and which **part** of the target trunk they go for (Substance, Pattern, or Drive; §4, fiction-gated). The target is whoever or whatever the fiction points at.
 2.  **The Stakes:** The situation carries a **danger** (MINOR → FATAL), read from the fiction and the actors involved. Danger sizes any mark; it does not change the odds.
 3.  **The Contest:** Both sides roll take-highest d6 pools. The actor rolls their **Skill cell** rating; the target opposes with its **resisting Sphere** (the row aggregate — its strongest skill in that sphere's row). A pool of 0 rolls 2d6 and takes the worst.
 4.  **The Band:** Compare the highest dice.
