@@ -9,12 +9,11 @@ from textual.widgets import Button, Input, Label, Static, TextArea
 from src.tui.widgets.value_stepper import ValueStepper
 
 _POOL_TOTAL: int = 5
-_TRAIT_MAX: int = 5
 _ATTR_IDS: tuple[str, str, str] = ("step-corpus", "step-mens", "step-anima")
 
 
 class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
-    """Build a character-creation form with attribute pool and personality ratings."""
+    """Build a character-creation form with an attribute pool."""
 
     BINDINGS: list[BindingType] = [
         Binding(key="escape", action="dismiss_cancel", description="Cancel")
@@ -47,44 +46,6 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
                 )
                 yield ValueStepper(
                     label="Anima", min_val=0, max_val=4, value=0, id="step-anima"
-                )
-
-            with Vertical(id="char-personality-section"):
-                yield Label(content="Personality  (rate each 1–5)", id="trait-label")
-                yield ValueStepper(
-                    label="Extraversion",
-                    min_val=1,
-                    max_val=_TRAIT_MAX,
-                    value=1,
-                    id="step-extra",
-                )
-                yield ValueStepper(
-                    label="Openness",
-                    min_val=1,
-                    max_val=_TRAIT_MAX,
-                    value=1,
-                    id="step-open",
-                )
-                yield ValueStepper(
-                    label="Agreeableness",
-                    min_val=1,
-                    max_val=_TRAIT_MAX,
-                    value=1,
-                    id="step-agree",
-                )
-                yield ValueStepper(
-                    label="Neuroticism",
-                    min_val=1,
-                    max_val=_TRAIT_MAX,
-                    value=1,
-                    id="step-neuro",
-                )
-                yield ValueStepper(
-                    label="Conscientiousness",
-                    min_val=1,
-                    max_val=_TRAIT_MAX,
-                    value=1,
-                    id="step-consc",
                 )
 
             with Vertical(id="char-body-section"):
@@ -138,13 +99,6 @@ class CreateCharacterModal(ModalScreen[dict[str, int | str] | None]):
                     "corpus": self.query_one("#step-corpus", ValueStepper).value,
                     "mens": self.query_one("#step-mens", ValueStepper).value,
                     "anima": self.query_one("#step-anima", ValueStepper).value,
-                    "extraversion": self.query_one("#step-extra", ValueStepper).value,
-                    "openness": self.query_one("#step-open", ValueStepper).value,
-                    "agreeableness": self.query_one("#step-agree", ValueStepper).value,
-                    "neuroticism": self.query_one("#step-neuro", ValueStepper).value,
-                    "conscientiousness": self.query_one(
-                        "#step-consc", ValueStepper
-                    ).value,
                 }
             )
 

@@ -1,23 +1,31 @@
-# SYSTEM REFERENCE: DOMAINS, SPHERES, & CONSEQUENCES
-*A Forged in the Dark ruleset for dark fantasy, mutation, and corruption.*
+# SYSTEM REFERENCE: SPHERES, SKILLS, & CONSEQUENCES
+*A ruleset for dark fantasy, mutation, and corruption.*
 
 ## 1. THE CORE PHILOSOPHY
 
-In this system, actions are defined by two things: **Domains** and **Spheres**.
+Everything in this system is generated from **three Spheres** — `CORPUS` (body), `MENS` (mind), `ANIMA` (spirit). They are the three layers of every being and of the world, and nothing is invented on top of them.
 
-*   **Domains (The 9 Approaches):** *How* you engage with a problem. This is your active dice pool and your method — independent of what power you draw on or who you are affecting. Domains are pure approach: a character with high ratings in certain domains habitually solves problems that way regardless of channel.
-*   **Spheres (The 3 Power Sources):** *Where* the power comes from. This determines your narrative permission (what you can affect) and is what you roll to **Resist** consequences.
+A **Skill** is a pairing of two spheres: the faculty you act *through* and the faculty you act *upon*.
 
-When you take an action, you combine them:
-> *"I engage with this problem by means of **[Domain]**, channeled through my **[Sphere]**."*
+> *"I channel my **[Sphere]** to affect their **[Sphere]**."*
 
-The target — yourself, another agent, or the world around you — is determined by the fiction, not a separate mechanical axis.
+That single choice (one cell of a 3×3 grid) does three jobs at once:
+
+*   **The row** — the sphere you channel *through* — is your active pool, and the sphere you roll to **Resist** blowback.
+*   **The column** — the sphere you act *upon* — is the channel any consequence **lands and marks** on (the target's, the world's, or your own).
+*   **The cell** — the (through × upon) pairing — is the named skill you roll, with its own rating.
+
+The target — yourself, another agent, or the world around you — is determined by the fiction; the *kind* of trunk it lands on (its column) is mechanical.
+
+There is no separate class, approach, or progression system. A character's "flavor" is simply **where they have invested across the grid**, and how they change over a run emerges from the marks consequences leave on their trunks.
 
 ---
 
 ## 2. THE THREE SPHERES (Power & Resistance)
 
-The Spheres represent the three metaphysical layers of the world. You roll your Sphere rating to Resist consequences and stave off Trauma, Submission, or Corruption.
+The Spheres represent the three metaphysical layers of the world. They are the two axes of the Skill grid (§3) and the trunks that consequences mark.
+
+To **Resist** a consequence, you roll the Sphere it lands on. A Sphere has no rating of its own — its resistance value is the **row aggregate**: your *strongest* skill in that sphere's row (the best cell among the three skills you channel *through* that faculty). A strong body both strikes hard and endures; a sharp mind both deceives and resists deception.
 
 *   **CORPUS (The Flesh & Biology)**
     *   *What it is:* Muscle, bone, physical stamina, and bodily mutations.
@@ -34,69 +42,96 @@ The Spheres represent the three metaphysical layers of the world. You roll your 
 
 ---
 
-## 3. THE NINE DOMAINS (Approaches)
+## 3. THE NINE SKILLS (The Grid)
 
-The nine domains are pure approaches — **how** a character engages with a problem, regardless of what power they are drawing on. Any domain can be channeled through any sphere; the sphere colors *what* is happening, the domain determines *how*.
+A skill is one cell of the 3×3 grid: the sphere you channel **through** (the row) acting **upon** a sphere (the column). The nine cells are generated entirely from the three spheres — there is no separate list to memorize.
 
-They are organized into three stances toward a situation:
+| through ↓ \ upon → | **CORPUS** (body / matter) | **MENS** (mind) | **ANIMA** (spirit) |
+|---|---|---|---|
+| **CORPUS** (body) | **PROWESS** | **PRESENCE** | **CARNALITY** |
+| **MENS** (mind) | **CRAFT** | **WITS** | **ARCANA** |
+| **ANIMA** (spirit) | **CHANNELING** | **GLAMOUR** | **COMMUNION** |
 
-### The Assertive Domains (Imposing on the Situation)
-*Used to push something into the world — force, reaction, or change.*
+Reading the cells:
 
-*   **FORCE** *(To overwhelm, crush, or overpower)*
-    *   *Corpus:* Swinging a heavy weapon; pinning an enemy to the floor.
-    *   *Mens:* A telekinetic crush; shattering a magical ward with brute mana.
-    *   *Anima:* Blasting an enemy with blinding holy light or demonic pressure.
-*   **PROVOKE** *(To incite a reaction, tease, or intimidate)*
-    *   *Corpus:* Aggressive physical teasing; releasing intoxicating pheromones.
-    *   *Mens:* Whispering intrusive fantasies or fears directly into a target's mind.
-    *   *Anima:* Flaring a succubus/incubus aura that demands worship and submission.
-*   **SHAPE** *(To craft, alter, mend, or mutate)*
-    *   *Corpus:* Blacksmithing; stitching physical wounds; building traps.
-    *   *Mens:* Brewing alchemical potions; rewriting an elemental matrix.
-    *   *Anima:* Flesh-crafting (inducing or curing mutations); soul-binding.
+*   **PROWESS** *(body → matter)* — strike, climb, lift, dodge, force a door, pick a lock.
+*   **PRESENCE** *(body → mind)* — intimidate, seduce, perform, command a room by sheer bearing.
+*   **CARNALITY** *(body → spirit)* — ecstasy, pain, dance, sacrament; the flesh touching the soul.
+*   **CRAFT** *(mind → matter)* — build, mend, engineer, aim, apply precise technique.
+*   **WITS** *(mind → mind)* — reason, deduce, persuade, deceive, recall, strategize.
+*   **ARCANA** *(mind → spirit)* — theory of the supernatural, ritual lore, reading spirits.
+*   **CHANNELING** *(spirit → matter)* — miracles, channeled force, biomancy, divine/demonic might.
+*   **GLAMOUR** *(spirit → mind)* — awe, dread, inspiration, enchantment of the mind.
+*   **COMMUNION** *(spirit → spirit)* — faith, pacts, corruption, exorcism, soul-to-soul.
 
-### The Adaptive Domains (Working With What's There)
-*Used to endure, move, or bond — meeting the situation on its own terms.*
+The **diagonal** (PROWESS / WITS / COMMUNION) is acting purely within a single faculty. The **off-diagonal** cells reach across faculties — the body swaying minds, the spirit moving matter — so the cross-faculty richness is built into the grid itself.
 
-*   **WARD** *(To protect, block, endure, or seal)*
-    *   *Corpus:* Flexing to endure a painful/pleasurable strike without breaking.
-    *   *Mens:* Conjuring an arcane barrier; locking your mind in a mental vault.
-    *   *Anima:* Projecting a holy sanctuary to hold back corruptive magic.
-*   **FLOW** *(To reposition, evade, or yield to momentum)*
-    *   *Corpus:* Parkour; dodging; going limp to slip out of a monster's grapple.
-    *   *Mens:* Accelerating your perception; letting a mind-control spell wash past you.
-    *   *Anima:* Turning your aura intangible to phase through a physical wall.
-*   **CONNECT** *(To bond, soothe, empathize, or yield)*
-    *   *Corpus:* A soothing physical embrace to calm a beast; offering vulnerability.
-    *   *Mens:* Telepathically sharing memories to build trust; logical negotiation.
-    *   *Anima:* Singing a resonant hymn to calm spirits; willingly accepting a pact.
+### Ratings and Flavor
 
-### The Discerning Domains (Precision and Information)
-*Used to analyze, deceive, and strike with perfect timing.*
+Each cell carries its own rating; you invest per cell. A character's archetype is not a class but a *pattern of investment* — a fighter lights up the CORPUS row, a dancer the cross-faculty cells (CARNALITY, GLAMOUR), a priest the ANIMA row. The grid generates every build.
 
-*   **FINESSE** *(To act with precision, timing, and exactness)*
-    *   *Corpus:* Striking a nerve cluster; picking a lock; delicate, paralyzing touch.
-    *   *Mens:* Unweaving a spell thread-by-thread; telekinetically plucking a key.
-    *   *Anima:* Placing a pinpoint curse; severing a specific spiritual tether.
-*   **GUILE** *(To deceive, misdirect, or act unseen)*
-    *   *Corpus:* Hiding in shadows; sleight of hand; playing coy to lure an enemy in.
-    *   *Mens:* Bending light to turn invisible; planting false memories.
-    *   *Anima:* Masking your demonic aura so holy magic detects you as "Pure."
-*   **INSIGHT** *(To observe, analyze, or understand)*
-    *   *Corpus:* Tracking footprints; tasting blood to identify a beast's mutation.
-    *   *Mens:* Speed-reading a grimoire; logical deduction; reading surface thoughts.
-    *   *Anima:* Smelling the invisible scent of lust; reading a target's secret fetishes.
+### One Action, One Cell
+
+A single action rolls a single cell. There is no combo mechanic — the off-diagonal cells already combine two faculties in one roll, and chained effects come from sequencing actions across turns (pin with PROWESS, then corrupt with COMMUNION), each resolved normally. The same goal still admits many approaches, because *which faculties you bring* is itself the choice: get past the guard by shoving (PROWESS), menacing (PRESENCE), tricking (WITS), or awing (GLAMOUR).
+
+### Approach Texture
+
+The grid does not encode *manner* (overpowering vs. delicate, open vs. covert). A smashed door and a picked lock are both PROWESS/CRAFT; the difference lives in the fiction and in the situation's difficulty as read at the table. The sheet stays minimal; texture comes from play.
 
 ---
 
-## 4. CONSEQUENCES
+## 4. PARTS (The Anatomy of Each Trunk)
 
-When a roll produces a consequence, two things define it: **which channel it comes from** and **how long it lasts**.
+Where skills are what a character can *do*, **parts** are what they are *made of* — the loci that marks attach to. Every trunk is built from the same three parts, found by recursing the spheres' own three-fold cut (what a thing is made of, how it is arranged, what animates it) one level down. The recursion stops here: three trunks × three aspects = **nine parts**.
+
+*   **Substance** — the raw material of the trunk.
+*   **Pattern** — how that material is organized.
+*   **Drive** — the force that animates it.
+
+| | **Substance** (made of) | **Pattern** (arranged) | **Drive** (animated by) |
+|---|---|---|---|
+| **Corpus** (body) | flesh & bone | shape, coordination | vitality, libido |
+| **Mens** (mind) | memory, knowledge | reasoning, logic | sanity, curiosity |
+| **Anima** (spirit) | essence | identity, creed | faith, passion |
+
+### Parts carry condition, not rating
+
+A part holds a **condition** (pristine → marked → broken/lost), never a competence score. Skills carry the ratings you roll (§3); parts carry what has *happened* to you. A mark changes a part's condition, and a degraded part **gates** the skills routing through its trunk — cutting across the row by aspect, not by target:
+
+*   A broken **Substance** saps raw power and endurance.
+*   A scrambled **Pattern** ruins precision, coordination, and clarity.
+*   A drained **Drive** leaves you unable — or unwilling — to push.
+
+A trunk's resistance (§2) erodes alongside, since it is the row aggregate of those same skills.
+
+### Targeting a part
+
+A skill already names the target *trunk* (its column). Within that trunk the actor declares **which aspect** they go for — Substance, Pattern, or Drive — and that is where the mark lands. The choice is **fiction-gated**: you can only reach a part your skill and the situation plausibly allow (a blade goes at Corpus **Substance**; it cannot reach the mind's **Pattern** — but a taunt, a spell, or a horror can). Targeting shapes *where* the mark lands and its flavor; it does **not** change the odds (the contest is still your skill vs. the trunk's resisting sphere) or the magnitude (still set by danger). Because a part gates the skills routing through its trunk, choosing a part is how you choose *which of an enemy's capabilities to take apart* — you never attack a skill directly, you damage the part that powers it.
+
+### Corruption is native
+
+The three aspects are the three faces of transformation, so corruption needs no separate system — its flavor falls out of which aspect a mark hits:
+
+*   Corrupted **Substance** → mutation, rot; the reshaping of flesh, memory, or essence.
+*   Corrupted **Pattern** → madness, obsession, heresy, a false self.
+*   Corrupted **Drive** → depravity, frenzy, zealotry — or, drained, despair and emptiness.
+
+Growth marks run the same three ways: hardened substance, sharpened pattern, steeled drive.
+
+---
+
+## 5. CONSEQUENCES & MARKS
+
+Every contest that does not end in a clean success writes a **mark** — the single currency through which characters *and* the world change. A mark is defined by four things:
+
+*   **Direction** — a mark cuts *down* (harm: a wound, a compulsion, a taint) or *up* (growth: a hard-won gain that raises a skill). The loser of a contest takes a harm mark; ordeal and crit write growth marks. Harm and growth are the same machinery cutting both ways.
+*   **Channel** — which trunk it lands on: the contest's **target sphere** (the column of the skill rolled). Within that trunk it settles on the **part** the actor targeted — Substance, Pattern, or Drive (§4, fiction-gated) — and that part's condition is what changes.
+*   **Magnitude** — how heavy, set by the situation's **danger** (MINOR / STANDARD / SEVERE / FATAL). Danger sizes the mark; it does not change the odds.
+*   **Duration** — how it resolves: Timed, Conditional, or Permanent (below).
 
 ### Channel Flavor
 
-Consequences are colored by the sphere that inflicted them:
+A mark is colored by the trunk it lands on:
 
 *   **Corpus** — physical harm, bodily alteration, exhaustion, sensation.
 *   **Mens** — mental strain, psychic pressure, cognitive disruption, compulsion.
@@ -122,14 +157,21 @@ A permanent consequence in any channel irreversibly alters what the character is
 
 ### Endgame States
 
-When consequences in a channel accumulate beyond what a character can bear, that channel reaches an endgame state. Each sphere has its own endgame — the specific nature of each is to be determined.
+When marks in a channel accumulate beyond what a character can bear, that channel reaches an endgame state. Each sphere has its own endgame — the specific nature of each, and whether the existing stress/trauma economy survives as that accumulation or is replaced by mark-counting, is still to be determined.
 
 ---
 
-## 5. THE CORE GAMEPLAY LOOP
+## 6. THE CORE GAMEPLAY LOOP
 
-1.  **The Action:** The player states their goal, chooses a **Domain** (how they engage), and channels it through a **Sphere** (what power they draw on).
-2.  **The Stakes:** The GM determines **Position** (how dangerous is it?) and **Effect** (how much will it accomplish?), informed by the character's domains, sphere ratings, and any permanent consequences already in play.
-3.  **The Roll:** The player rolls d6s equal to their Domain rating.
-4.  **The Consequence:** On a 4-5 or 1-3, the GM inflicts a consequence — choosing its **channel** (Corpus, Mens, or Anima) and its **class** (Timed, Conditional, or Permanent) to match what the fiction demands.
-5.  **The Resistance:** The player may Resist the consequence by rolling the appropriate **Sphere**, taking Stress to reduce or negate the effect.
+Acting on the world and resisting the world acting on you are the **same contest**, run in either direction.
+
+1.  **The Action:** Someone acts. The actor declares a goal, a **Skill** — the grid cell naming which sphere they channel *through* and which sphere they act *upon* — and which **part** of the target trunk they go for (Substance, Pattern, or Drive; §4, fiction-gated). The target is whoever or whatever the fiction points at.
+2.  **The Stakes:** The situation carries a **danger** (MINOR → FATAL), read from the fiction and the actors involved. Danger sizes any mark; it does not change the odds.
+3.  **The Contest:** Both sides roll take-highest d6 pools. The actor rolls their **Skill cell** rating; the target opposes with its **resisting Sphere** (the row aggregate — its strongest skill in that sphere's row). A pool of 0 rolls 2d6 and takes the worst.
+4.  **The Band:** Compare the highest dice.
+    *   **Actor wins → Clean success:** the effect lands on the target's channel; no mark on the actor. *(Winner rolling 2+ sixes = crit: clean, plus a benefit and a growth mark.)*
+    *   **Tie → Success with consequence:** the effect lands, *and* the actor takes a mark.
+    *   **Actor loses → Failure with consequence:** no effect; the actor takes a mark (and the defender may earn a growth mark for turning it away).
+5.  **The Mark:** Any mark settles on one **part** of the contested trunk — Substance, Pattern, or Drive (§4) — at the danger's magnitude, in the direction the band dictates, changing that part's condition. This is the only way characters and the world change, and it accumulates per trunk toward that sphere's endgame.
+
+When the world acts on the character, the same five steps run with the roles reversed: the threat is the actor, the character opposes with the relevant Sphere, and a mark lands on the character on a tie or loss.

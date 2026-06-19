@@ -51,49 +51,6 @@ class CharacterSheetModal(ModalScreen[None]):
             yield Label("Inventory", id="inventory-title")
             yield Static("—", id="sheet-inventory")
 
-            yield Label("Personality", id="personality-title")
-            with Horizontal(id="personality-traits"):
-                yield PipSelector(
-                    "Extraversion",
-                    min_val=1,
-                    max_val=5,
-                    value=1,
-                    readonly=True,
-                    id="pip-extra",
-                )
-                yield PipSelector(
-                    "Openness",
-                    min_val=1,
-                    max_val=5,
-                    value=1,
-                    readonly=True,
-                    id="pip-open",
-                )
-                yield PipSelector(
-                    "Agreeableness",
-                    min_val=1,
-                    max_val=5,
-                    value=1,
-                    readonly=True,
-                    id="pip-agree",
-                )
-                yield PipSelector(
-                    "Neuroticism",
-                    min_val=1,
-                    max_val=5,
-                    value=1,
-                    readonly=True,
-                    id="pip-neuro",
-                )
-                yield PipSelector(
-                    "Conscientiousness",
-                    min_val=1,
-                    max_val=5,
-                    value=1,
-                    readonly=True,
-                    id="pip-consc",
-                )
-
             yield Button("Close", id="btn-close", variant="default")
 
     def on_mount(self) -> None:
@@ -110,14 +67,6 @@ class CharacterSheetModal(ModalScreen[None]):
         self.query_one("#pip-corpus", PipSelector).value = self._character.corpus
         self.query_one("#pip-mens", PipSelector).value = self._character.mens
         self.query_one("#pip-anima", PipSelector).value = self._character.anima
-
-        self.query_one("#pip-extra", PipSelector).value = self._character.extraversion
-        self.query_one("#pip-open", PipSelector).value = self._character.openness
-        self.query_one("#pip-agree", PipSelector).value = self._character.agreeableness
-        self.query_one("#pip-neuro", PipSelector).value = self._character.neuroticism
-        self.query_one(
-            "#pip-consc", PipSelector
-        ).value = self._character.conscientiousness
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "btn-close":
