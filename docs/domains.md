@@ -80,12 +80,48 @@ The grid does not encode *manner* (overpowering vs. delicate, open vs. covert). 
 
 ---
 
-## 4. CONSEQUENCES & MARKS
+## 4. PARTS (The Anatomy of Each Trunk)
+
+Where skills are what a character can *do*, **parts** are what they are *made of* — the loci that marks attach to. Every trunk is built from the same three parts, found by recursing the spheres' own three-fold cut (what a thing is made of, how it is arranged, what animates it) one level down. The recursion stops here: three trunks × three aspects = **nine parts**.
+
+*   **Substance** — the raw material of the trunk.
+*   **Pattern** — how that material is organized.
+*   **Drive** — the force that animates it.
+
+| | **Substance** (made of) | **Pattern** (arranged) | **Drive** (animated by) |
+|---|---|---|---|
+| **Corpus** (body) | flesh & bone | shape, coordination | vitality, libido |
+| **Mens** (mind) | memory, knowledge | reasoning, logic | sanity, curiosity |
+| **Anima** (spirit) | essence | identity, creed | faith, passion |
+
+### Parts carry condition, not rating
+
+A part holds a **condition** (pristine → marked → broken/lost), never a competence score. Skills carry the ratings you roll (§3); parts carry what has *happened* to you. A mark changes a part's condition, and a degraded part **gates** the skills routing through its trunk — cutting across the row by aspect, not by target:
+
+*   A broken **Substance** saps raw power and endurance.
+*   A scrambled **Pattern** ruins precision, coordination, and clarity.
+*   A drained **Drive** leaves you unable — or unwilling — to push.
+
+A trunk's resistance (§2) erodes alongside, since it is the row aggregate of those same skills.
+
+### Corruption is native
+
+The three aspects are the three faces of transformation, so corruption needs no separate system — its flavor falls out of which aspect a mark hits:
+
+*   Corrupted **Substance** → mutation, rot; the reshaping of flesh, memory, or essence.
+*   Corrupted **Pattern** → madness, obsession, heresy, a false self.
+*   Corrupted **Drive** → depravity, frenzy, zealotry — or, drained, despair and emptiness.
+
+Growth marks run the same three ways: hardened substance, sharpened pattern, steeled drive.
+
+---
+
+## 5. CONSEQUENCES & MARKS
 
 Every contest that does not end in a clean success writes a **mark** — the single currency through which characters *and* the world change. A mark is defined by four things:
 
 *   **Direction** — a mark cuts *down* (harm: a wound, a compulsion, a taint) or *up* (growth: a hard-won gain that raises a skill). The loser of a contest takes a harm mark; ordeal and crit write growth marks. Harm and growth are the same machinery cutting both ways.
-*   **Channel** — which trunk it lands on: the contest's **target sphere** (the column of the skill rolled).
+*   **Channel** — which trunk it lands on: the contest's **target sphere** (the column of the skill rolled). Within that trunk it settles on one **part** — Substance, Pattern, or Drive (§4) — as the fiction dictates, and that part's condition is what changes.
 *   **Magnitude** — how heavy, set by the situation's **danger** (MINOR / STANDARD / SEVERE / FATAL). Danger sizes the mark; it does not change the odds.
 *   **Duration** — how it resolves: Timed, Conditional, or Permanent (below).
 
@@ -121,7 +157,7 @@ When marks in a channel accumulate beyond what a character can bear, that channe
 
 ---
 
-## 5. THE CORE GAMEPLAY LOOP
+## 6. THE CORE GAMEPLAY LOOP
 
 Acting on the world and resisting the world acting on you are the **same contest**, run in either direction.
 
@@ -132,6 +168,6 @@ Acting on the world and resisting the world acting on you are the **same contest
     *   **Actor wins → Clean success:** the effect lands on the target's channel; no mark on the actor. *(Winner rolling 2+ sixes = crit: clean, plus a benefit and a growth mark.)*
     *   **Tie → Success with consequence:** the effect lands, *and* the actor takes a mark.
     *   **Actor loses → Failure with consequence:** no effect; the actor takes a mark (and the defender may earn a growth mark for turning it away).
-5.  **The Mark:** Any mark lands on the contested channel at the danger's magnitude, in the direction the band dictates (§4). This is the only way characters and the world change, and it accumulates per channel toward that sphere's endgame.
+5.  **The Mark:** Any mark settles on one **part** of the contested trunk — Substance, Pattern, or Drive (§4) — at the danger's magnitude, in the direction the band dictates, changing that part's condition. This is the only way characters and the world change, and it accumulates per trunk toward that sphere's endgame.
 
 When the world acts on the character, the same five steps run with the roles reversed: the threat is the actor, the character opposes with the relevant Sphere, and a mark lands on the character on a tie or loss.
