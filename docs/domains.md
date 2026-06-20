@@ -175,3 +175,77 @@ Acting on the world and resisting the world acting on you are the **same contest
 5.  **The Mark:** Any mark settles on one **part** of the contested trunk — Substance, Pattern, or Drive (§4) — at the danger's magnitude, in the direction the band dictates, changing that part's condition. This is the only way characters and the world change, and it accumulates per trunk toward that sphere's endgame.
 
 When the world acts on the character, the same five steps run with the roles reversed: the threat is the actor, the character opposes with the relevant Sphere, and a mark lands on the character on a tie or loss.
+
+---
+
+## 7. CONCRETE PARTS & THE SLOT SPACE
+
+§4 gives every trunk its three **abstract parts** — the aspect-loci (Substance / Pattern / Drive) that carry condition and gate skills. This section gives the **concrete parts**: the actual components a being is built from — organs, limbs, orifices; memories, beliefs; desires, bonds — and the single uniform way any effect reaches them.
+
+A concrete part is cheap and fiction-first:
+
+```
+Part { label, parent, slots, attributes }
+```
+
+*   **label** — its fictional name ("left breast", "tail-tip maw", "a guarded secret"). Mechanically inert; the engine never reasons about the name.
+*   **parent** — its place in the body / mind / spirit tree.
+*   **slots** — what it can *do* (below). This is the only thing an effect targets.
+*   **attributes** — its scalars (size, capacity, sensitivity, integrity…).
+
+Parts are mostly narration. A part earns tracked state only when something acts on it, and whatever lands rolls up into its trunk's §4 aspect — a wounded orifice degrades Corpus, a shattered belief degrades Mens. **Concrete parts are *where* things happen; the nine aspects are *what it costs*.**
+
+### The slot space: Stance × Medium
+
+A part is fully described by two questions, on the same trinity that runs everything else:
+
+*   **Stance** — its role in a transaction: **EMIT** (push out), **ABSORB** (draw in), **HOLD** (retain).
+*   **Medium** — what it transacts, the three Spheres turned inward: **Corpus** (matter & force), **Mens** (information), **Anima** (will & feeling).
+
+A slot is one **Stance × Medium** cell. Nine slots, generated — not a list to memorize.
+
+| | **Corpus** (matter / force) | **Mens** (information) | **Anima** (will / feeling) |
+|---|---|---|---|
+| **EMIT** | ejaculate, lactate, strike, penetrate | speak, signal, express | project presence, exert will, exude lust |
+| **ABSORB** | be filled, take a blow, feel (erogenous / pain) | perceive, listen, learn | yield, be charmed, drink in emotion |
+| **HOLD** | store fluid, maintain integrity | remember, know | sustain conviction, identity, composure |
+
+A part occupies one or more slots: a cock is `EMIT·Corpus`; an orifice is `ABSORB·Corpus` + `HOLD·Corpus`; a nipple is `ABSORB·Corpus` (feels) + `EMIT·Corpus` (lactates); a guarded secret is `HOLD·Mens`; a proud heart is `HOLD·Anima`.
+
+The grid is a uniform **address space**, not a checklist. Not every cell is populated in every being — a mind rarely has `Corpus` parts, a stone has no `Anima` parts — and that is expected. An effect simply lands on whatever is there.
+
+### Targeting by slot
+
+An effect never names a part. It names a **verb + a slot**, and lands on every part at that slot that is **receptive**:
+
+| effect | targets | lands on |
+|---|---|---|
+| Stimulate | `ABSORB·Corpus` | every erogenous zone / pain point |
+| Fill | `ABSORB` / `HOLD·Corpus` | any orifice and its store |
+| Charm | `ABSORB·Anima` | a yielding heart, a weak ego |
+| Confound | `ABSORB·Mens` | an attentive mind |
+| Silence | `EMIT·Mens` | shut a mouth — or a telepath |
+| Drain | `HOLD·Corpus` / `HOLD·Anima` | siphon fluid, or sap resolve |
+
+So one spell works across any anatomy: `Stimulate` lights up all receptive `ABSORB·Corpus` parts at once — six nipples, a clit, a tail-maw — because it addressed the *slot*, not the body. **Receptivity** is the only extra gate: an `ABSORB` / `HOLD` slot must be reachable, and an `EMIT·Anima` guard-stance or a sealed opening can deny it — the same check whether it is a clenched body, a closed mind, or a warded soul.
+
+### The Project / Receive polarity
+
+Read across any medium, **EMIT ↔ ABSORB** is the axis of *acting upon* versus *being taken* — and it unifies the game's central transactions:
+
+*   fucking — `EMIT·Corpus → ABSORB·Corpus`
+*   convincing — `EMIT·Mens → ABSORB·Mens`
+*   seducing / dominating — `EMIT·Anima → ABSORB·Anima`
+
+Penetration, persuasion, and domination are **one transaction in three media**. The grammar of taking someone is the same whether you take their body, their mind, or their spirit.
+
+### Bodies change
+
+A being is a mutable **tree** of parts. All anatomy — growth, loss, mutation, count — is four operations, emitted from the narration rather than authored in advance:
+
+```
+ADD_PART(parent, label, slots, attrs)     REMOVE_PART(part)
+ADJUST(part.attr, ±)                       SET_SLOT(part, slot, on|off)
+```
+
+Count is just instances: four breasts are four parts, each with its own state; "growing extra" is simply `ADD_PART`. A newly added part drops straight into the slot space, so every existing effect already knows how to reach it. No body type is special-cased — human, succubus, broodmother, and horror are all trees of slotted parts.
