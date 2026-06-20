@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.model.environment.weather.cloud_cover import (
     BREAKPOINTS,
     ORDER,

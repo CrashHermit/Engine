@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dspy import InputField, OutputField, Predict, Prediction, Signature
 
 from src.core.mechanic.duration import Duration, Unit

@@ -9,8 +9,6 @@ ticks). Each rung maps to an exact tick total via `TICKS`.
 This module is pure: no randomness, no I/O.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from enum import StrEnum
 

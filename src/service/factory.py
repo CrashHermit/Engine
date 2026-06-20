@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from langgraph.checkpoint.base import BaseCheckpointSaver
 
 from src.database.connection import DatabaseConnection

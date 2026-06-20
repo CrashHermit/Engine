@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import arcadedb_embedded as arcadedb
 from arcadedb_embedded.core import Database
 from arcadedb_embedded.schema import Schema

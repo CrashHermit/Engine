@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.terrain.plates import build_plates

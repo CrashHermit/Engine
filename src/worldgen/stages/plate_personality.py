@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.terrain.plate_personalities import (
@@ -18,7 +16,9 @@ class PlatePersonalityStage:
         cfg: PlatesConfig = ctx.config.plates
         plate_id_field: Int32Array | None = ctx.fields.plate_id
         if plate_id_field is None:
-            msg: str = "plate_id must be set by PlatesStage before PlatePersonalityStage"
+            msg: str = (
+                "plate_id must be set by PlatesStage before PlatePersonalityStage"
+            )
             raise RuntimeError(msg)
         plate_id: Int32Array = plate_id_field
 

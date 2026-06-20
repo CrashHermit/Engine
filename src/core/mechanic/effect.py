@@ -12,8 +12,6 @@ pool against the target's danger — so a rat and a dragon don't take the same h
 from the same roll. A miss (BAD tier) lands nothing regardless of potency.
 """
 
-from __future__ import annotations
-
 from src.core.mechanic.dice import RollTier
 from src.core.model.entity import Danger, ThreatPillar
 from src.core.model.resolution import Effect

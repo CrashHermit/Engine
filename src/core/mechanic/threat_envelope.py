@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.mechanic.magnitude import Magnitude
 from src.core.mechanic.scaling import Position
 from src.core.model.entity import Danger

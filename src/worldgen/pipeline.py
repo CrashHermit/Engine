@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.stages.base import Stage
@@ -25,11 +23,14 @@ def _build_stages() -> list[Stage]:
 
 class WorldgenPipeline:
     """Phase 1 pipeline: plates, boundary uplift, and erosion."""
+
     def __init__(self, config: WorldgenConfig | None = None) -> None:
         self._config: WorldgenConfig | None = config
 
     def run(self, seed: int, size: int) -> WorldContext:
-        cfg: WorldgenConfig = WorldContext.resolve_config(seed=seed, size=size, config=self._config)
+        cfg: WorldgenConfig = WorldContext.resolve_config(
+            seed=seed, size=size, config=self._config
+        )
         mesh_cfg: MeshConfig = cfg.mesh
 
         geometry: MeshGeometry = build_mesh(

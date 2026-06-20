@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from enum import StrEnum
 
 from src.core.model.environment.weather.cloud_cover import CloudCoverBand
@@ -78,7 +76,10 @@ INTENSITY_GRID: dict[
     (CloudCoverBand.OVERCAST, HumidityBand.MILD): PrecipitationIntensityBand.LIGHT,
     (CloudCoverBand.OVERCAST, HumidityBand.HUMID): PrecipitationIntensityBand.HEAVY,
     (CloudCoverBand.OVERCAST, HumidityBand.MUGGY): PrecipitationIntensityBand.HEAVY,
-    (CloudCoverBand.OVERCAST, HumidityBand.SOAKING): PrecipitationIntensityBand.TORRENTIAL,
+    (
+        CloudCoverBand.OVERCAST,
+        HumidityBand.SOAKING,
+    ): PrecipitationIntensityBand.TORRENTIAL,
     # -- LEADEN --
     (CloudCoverBand.LEADEN, HumidityBand.ARID): PrecipitationIntensityBand.NONE,
     (CloudCoverBand.LEADEN, HumidityBand.DRY): PrecipitationIntensityBand.NONE,
@@ -86,5 +87,8 @@ INTENSITY_GRID: dict[
     (CloudCoverBand.LEADEN, HumidityBand.MILD): PrecipitationIntensityBand.STEADY,
     (CloudCoverBand.LEADEN, HumidityBand.HUMID): PrecipitationIntensityBand.HEAVY,
     (CloudCoverBand.LEADEN, HumidityBand.MUGGY): PrecipitationIntensityBand.TORRENTIAL,
-    (CloudCoverBand.LEADEN, HumidityBand.SOAKING): PrecipitationIntensityBand.CLOUDBURST,
+    (
+        CloudCoverBand.LEADEN,
+        HumidityBand.SOAKING,
+    ): PrecipitationIntensityBand.CLOUDBURST,
 }

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.worldgen.noise.rng import NoiseSource, field_offset
 
 
@@ -31,7 +29,9 @@ class FractalField:
         raw: float
 
         for _ in range(self._octaves):
-            raw: float = self._sampler.sample(x=x, y=y, frequency=freq, offset=self._offset)
+            raw: float = self._sampler.sample(
+                x=x, y=y, frequency=freq, offset=self._offset
+            )
             if self._kind == "ridged":
                 raw: float = 1.0 - abs(raw)
             elif self._kind == "billow":

@@ -6,8 +6,6 @@ inferred from imperative `add_conditional_edges` calls. These are pure functions
 of `GraphState`; the builder in `resolution_graph.py` only wires them.
 """
 
-from __future__ import annotations
-
 from langgraph.types import Send
 
 from src.core.model.entity import EntityKind, EntityStance, EntityStatus

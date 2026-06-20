@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.worldgen.config.worldgen_config import (
     PlatesConfig,
     SeaLevelConfig,

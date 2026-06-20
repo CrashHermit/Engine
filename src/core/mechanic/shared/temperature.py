@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.model.environment.shared.temperature import (
     BREAKPOINTS,
     ORDER,

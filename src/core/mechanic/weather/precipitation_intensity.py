@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.model.environment.weather.cloud_cover import CloudCoverBand
 from src.core.model.environment.weather.humidity import HumidityBand
 from src.core.model.environment.weather.precipitation_intensity import (

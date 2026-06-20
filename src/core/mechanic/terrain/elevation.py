@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.model.environment.terrain.elevation import (
     BREAKPOINTS,
     ORDER,

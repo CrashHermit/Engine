@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from langgraph.types import interrupt
 
 from src.core.model.message import Message

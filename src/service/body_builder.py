@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from arcadedb_embedded.graph import Vertex
 
 from src.core.model.part import Shape, SizeScale, Status

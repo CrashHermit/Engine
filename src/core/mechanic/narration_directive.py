@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.model.resist import FinalScaffold, HeldScaffold, ResistAction
 
 

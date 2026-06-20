@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.model.environment.weather.humidity import (
     BREAKPOINTS,
     ORDER,

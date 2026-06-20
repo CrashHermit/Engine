@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import replace
 
 from dspy import InputField, OutputField, Predict, Prediction, Signature

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import heapq
 import random
 
@@ -26,7 +24,9 @@ def build_plates(
         msg: str = "n_plates must be at least 1"
         raise ValueError(msg)
     if n_plates > geometry.n_cells:
-        msg: str = f"n_plates ({n_plates}) cannot exceed cell count ({geometry.n_cells})"
+        msg: str = (
+            f"n_plates ({n_plates}) cannot exceed cell count ({geometry.n_cells})"
+        )
         raise ValueError(msg)
 
     rng: random.Random = random.Random(seed)

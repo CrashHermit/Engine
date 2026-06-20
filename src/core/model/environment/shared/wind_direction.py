@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from enum import StrEnum
 
 
@@ -25,4 +23,12 @@ ORDER: tuple[WindDirectionBand, ...] = (
     WindDirectionBand.NORTH_WEST,
 )
 
-BREAKPOINTS: tuple[float, ...] = (1 / 8, 2 / 8, 3 / 8, 4 / 8, 5 / 8, 6 / 8, 7 / 8,)
+BREAKPOINTS: tuple[float, ...] = (
+    1 / 8,
+    2 / 8,
+    3 / 8,
+    4 / 8,
+    5 / 8,
+    6 / 8,
+    7 / 8,
+)

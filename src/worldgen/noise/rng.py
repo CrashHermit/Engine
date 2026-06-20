@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import math
 import zlib
 
@@ -13,6 +11,7 @@ FIELD_BOUNDARY_UPLIFT: int = 1
 FIELD_UPLIFT_FLOOR: int = 2
 FIELD_EROSION_INIT: int = 3
 
+
 def subseed(seed: int, name: str) -> int:
     """Derive a deterministic sub-seed for a named stage or field purpose."""
     return zlib.crc32(f"{seed}:{name}".encode()) & 0x7FFFFFFF
@@ -21,7 +20,8 @@ def subseed(seed: int, name: str) -> int:
 def field_offset(field_id: int) -> tuple[float, float, float, float]:
     """Return a stable 4D offset so fields sharing one NoiseSource stay independent."""
     return tuple(
-        float(zlib.crc32(f"field_offset:{field_id}:{axis}".encode()) % 1_000_000) / 1000.0
+        float(zlib.crc32(f"field_offset:{field_id}:{axis}".encode()) % 1_000_000)
+        / 1000.0
         for axis in range(4)
     )
 

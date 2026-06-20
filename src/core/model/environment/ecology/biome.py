@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from enum import StrEnum
 
 from src.core.model.environment.climate.precipitation import PrecipitationBand
@@ -58,7 +56,6 @@ class BiomeEnum(StrEnum):
     FLOODED_JUNGLE = "flooded_jungle"
 
 
-
 BIOME_GRID: dict[tuple[TemperatureBand, PrecipitationBand], BiomeEnum] = {
     # -- FRIGID --
     (TemperatureBand.FRIGID, PrecipitationBand.HYPER_ARID): BiomeEnum.ICE_SHEET,
@@ -90,7 +87,10 @@ BIOME_GRID: dict[tuple[TemperatureBand, PrecipitationBand], BiomeEnum] = {
     (TemperatureBand.MILD, PrecipitationBand.SEMI_ARID): BiomeEnum.WOODLAND_SAVANNA,
     (TemperatureBand.MILD, PrecipitationBand.SUB_HUMID): BiomeEnum.EVERGREEN_OAK_FOREST,
     (TemperatureBand.MILD, PrecipitationBand.HUMID): BiomeEnum.LAUREL_FOREST,
-    (TemperatureBand.MILD, PrecipitationBand.HYPER_HUMID): BiomeEnum.TEMPERATE_RAINFOREST,
+    (
+        TemperatureBand.MILD,
+        PrecipitationBand.HYPER_HUMID,
+    ): BiomeEnum.TEMPERATE_RAINFOREST,
     (TemperatureBand.MILD, PrecipitationBand.SATURATED): BiomeEnum.PEAT_MARSH,
     # -- WARM --
     (TemperatureBand.WARM, PrecipitationBand.HYPER_ARID): BiomeEnum.SEMI_ARID_SHRUBLAND,
@@ -109,11 +109,17 @@ BIOME_GRID: dict[tuple[TemperatureBand, PrecipitationBand], BiomeEnum] = {
     (TemperatureBand.HOT, PrecipitationBand.HYPER_HUMID): BiomeEnum.WET_RAINFOREST,
     (TemperatureBand.HOT, PrecipitationBand.SATURATED): BiomeEnum.MANGROVE_SWAMP,
     # -- SCORCHING --
-    (TemperatureBand.SCORCHING, PrecipitationBand.HYPER_ARID): BiomeEnum.SCORCHING_WASTELAND,
+    (
+        TemperatureBand.SCORCHING,
+        PrecipitationBand.HYPER_ARID,
+    ): BiomeEnum.SCORCHING_WASTELAND,
     (TemperatureBand.SCORCHING, PrecipitationBand.ARID): BiomeEnum.DRY_SAVANNA,
     (TemperatureBand.SCORCHING, PrecipitationBand.SEMI_ARID): BiomeEnum.MONSOON_FOREST,
     (TemperatureBand.SCORCHING, PrecipitationBand.SUB_HUMID): BiomeEnum.MOIST_FOREST,
     (TemperatureBand.SCORCHING, PrecipitationBand.HUMID): BiomeEnum.LOWLAND_RAINFOREST,
-    (TemperatureBand.SCORCHING, PrecipitationBand.HYPER_HUMID): BiomeEnum.EQUATORIAL_RAINFOREST,
+    (
+        TemperatureBand.SCORCHING,
+        PrecipitationBand.HYPER_HUMID,
+    ): BiomeEnum.EQUATORIAL_RAINFOREST,
     (TemperatureBand.SCORCHING, PrecipitationBand.SATURATED): BiomeEnum.FLOODED_JUNGLE,
 }

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from arcadedb_embedded.graph import Edge, Vertex
 
 from src.core.model.database import EdgeType, VertexType

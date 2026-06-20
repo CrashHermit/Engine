@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.model.environment.ecology.alignment import (
     BREAKPOINTS,
     ORDER,

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.model.message import Message
 from src.database.repository.base import BaseRepository
 from src.database.repository.message import MessageRepository

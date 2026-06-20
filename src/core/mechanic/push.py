@@ -12,8 +12,6 @@ the highest die of the push roll:
     1-3  -> 3
 """
 
-from __future__ import annotations
-
 from src.core.mechanic.dice import RollTier
 from src.core.mechanic.magnitude import clamp_magnitude
 

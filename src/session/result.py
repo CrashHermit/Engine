@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 # Typed turn events yielded by GameCoordinator.submit. Each carries plain

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from src.worldgen.config.worldgen_config import ErosionConfig
@@ -70,7 +68,7 @@ def stream_power_pass(
         )
 
         # Stream-power weight: f = dt * K * A^m / L
-        f: float = cfg.dt * cfg.K * (d_i ** cfg.m) / dist
+        f: float = cfg.dt * cfg.K * (d_i**cfg.m) / dist
 
         # Implicit update: weighted average of the uplifted height
         # and the receiver's already-computed new height.

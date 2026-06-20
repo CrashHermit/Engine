@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import math
 import random
 import numpy as np
@@ -14,7 +12,7 @@ class PlateProperties:
     """Per-plate tectonic metadata."""
 
     is_continental: BoolArray  # shape (n_plates,)
-    drift: Float64Array        # shape (n_plates, 2), unit vectors
+    drift: Float64Array  # shape (n_plates, 2), unit vectors
     base_uplift: Float64Array  # shape (n_plates,)
 
 
@@ -42,7 +40,9 @@ def assign_plate_personalities(
     for plate in range(n_plates):
         continental: bool = rng.random() < config.continental_fraction
         is_continental[plate] = continental
-        base_uplift[plate] = (config.continental_uplift if continental else config.oceanic_uplift)
+        base_uplift[plate] = (
+            config.continental_uplift if continental else config.oceanic_uplift
+        )
 
         theta: float = rng.random() * 2.0 * math.pi
         drift[plate, 0] = math.cos(theta)

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.model.environment.shared.temperature import TemperatureBand
 from src.core.model.environment.weather.precipitation_intensity import (
     PrecipitationIntensityBand,

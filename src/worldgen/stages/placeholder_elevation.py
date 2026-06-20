@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from src.worldgen.context import WorldContext
@@ -24,7 +22,10 @@ class PlaceholderElevationStage:
         xs: Float64Array = ctx.geometry.sites[:, 0]
         ys: Float64Array = ctx.geometry.sites[:, 1]
         z: Float64Array = np.fromiter(
-            iter=(field.sample(x=float(x), y=float(y), frequency=frequency) for x, y in zip(xs, ys)),
+            iter=(
+                field.sample(x=float(x), y=float(y), frequency=frequency)
+                for x, y in zip(xs, ys)
+            ),
             dtype=np.float64,
             count=ctx.geometry.n_cells,
         )

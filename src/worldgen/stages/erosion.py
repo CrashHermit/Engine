@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 
 from src.worldgen.config.worldgen_config import ErosionConfig
@@ -58,7 +56,9 @@ class ErosionStage:
             count=n,
         )
 
-        z: Float64Array = uplift * cfg.initial_scale + noise * cfg.initial_noise_amplitude
+        z: Float64Array = (
+            uplift * cfg.initial_scale + noise * cfg.initial_noise_amplitude
+        )
 
         # --- erosion loop ---
         if cfg.iterations <= 0:
@@ -68,7 +68,9 @@ class ErosionStage:
         for _iteration in range(cfg.iterations):
             # Determine provisional ocean cells (lowest percentile by current z).
             n_base: int = max(1, int(cfg.base_level_fraction * n))
-            base_cells: Int32Array = np.argpartition(z, n_base)[:n_base].astype(np.int32)
+            base_cells: Int32Array = np.argpartition(z, n_base)[:n_base].astype(
+                np.int32
+            )
 
             z_route: Float64Array = priority_flood(
                 geometry=ctx.geometry,

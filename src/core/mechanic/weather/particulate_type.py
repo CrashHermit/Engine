@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.core.model.environment.ecology.biome import BiomeEnum
 from src.core.model.environment.shared.wind_intensity import WindIntensityBand
 from src.core.model.environment.weather.particulate_type import (

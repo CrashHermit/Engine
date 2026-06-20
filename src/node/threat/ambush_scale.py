@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import replace
 
 from src.core.mechanic.magnitude import clamp_magnitude

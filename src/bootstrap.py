@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.database.connection import DatabaseConnection
 from src.database.server import Server
 from src.service.checkpoint import CheckpointService

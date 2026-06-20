@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from arcadedb_embedded.graph import Vertex
 
 from src.database.repository.base import BaseRepository

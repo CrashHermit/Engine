@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass, replace
 
 from src.worldgen.config.worldgen_config import WorldgenConfig
@@ -8,7 +6,6 @@ from src.worldgen.fields import MeshFields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed
 from src.worldgen.terrain.plate_personalities import PlateProperties
-
 
 
 @dataclass
@@ -26,14 +23,21 @@ class WorldContext:
 
     def noise_for(self, name: str) -> NoiseSource:
         """NoiseSource scoped to this world's torus and sub-seed."""
-        return NoiseSource(seed=self.seed_for(name), width=self.geometry.width, height=self.geometry.height,)
+        return NoiseSource(
+            seed=self.seed_for(name),
+            width=self.geometry.width,
+            height=self.geometry.height,
+        )
 
     @staticmethod
-    def resolve_config(seed: int, size: int, config: WorldgenConfig | None = None) -> WorldgenConfig:
+    def resolve_config(
+        seed: int, size: int, config: WorldgenConfig | None = None
+    ) -> WorldgenConfig:
         """Apply seed/size and resolve mesh width/height from config."""
         cfg: WorldgenConfig = config or WorldgenConfig()
         mesh_width: float = cfg.mesh.width or float(size)
         mesh_height: float = cfg.mesh.height or float(size)
-        resolved_mesh: MeshConfig = replace(cfg.mesh, width=mesh_width, height=mesh_height)
+        resolved_mesh: MeshConfig = replace(
+            cfg.mesh, width=mesh_width, height=mesh_height
+        )
         return replace(cfg, seed=seed, size=size, mesh=resolved_mesh)
-

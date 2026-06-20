@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from rich.markup import escape
 from textual import work
 from textual.app import ComposeResult

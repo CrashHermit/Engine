@@ -1,4 +1,3 @@
-from __future__ import annotations
 from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.noise.field import FractalField
@@ -6,8 +5,11 @@ from src.worldgen.noise.rng import FIELD_BOUNDARY_UPLIFT, FIELD_UPLIFT_FLOOR
 from src.worldgen.terrain.boundary_uplift import apply_boundary_uplift
 from src.worldgen.terrain.plate_personalities import PlateProperties
 from src.worldgen.types import Float64Array, Int32Array
+
+
 class BoundaryUpliftStage:
     """Smear convergent/divergent plate-boundary intensity into ``uplift``."""
+
     def run(self, ctx: WorldContext) -> None:
         """Mutate ``ctx.fields.uplift`` with mountain belts and rift seams."""
         cfg: PlatesConfig = ctx.config.plates

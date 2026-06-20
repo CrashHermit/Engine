@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import numpy as np
 from dataclasses import fields as dataclass_fields
 from scipy.spatial import cKDTree
@@ -29,6 +27,7 @@ def nearest_cell_per_tile(geometry: MeshGeometry, size: int) -> Int32Array:
     )
     _, indices = tree.query(x=centers)
     return np.asarray(a=indices, dtype=np.int32)
+
 
 def bake_to_grid(fields: MeshFields, nearest: Int32Array) -> GridFields:
     """Copy every mesh field onto the grid via nearest-cell fancy indexing."""

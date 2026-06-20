@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from enum import StrEnum
 
 from src.core.model.environment.ecology.biome import BiomeEnum
@@ -143,10 +141,16 @@ PARTICULATE_TYPE_GRID: dict[
     (BiomeEnum.SHORTGRASS_PRAIRIE, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.SHORTGRASS_PRAIRIE, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
     (BiomeEnum.SHORTGRASS_PRAIRIE, WindIntensityBand.BREEZY): ParticulateTypeEnum.DUST,
-    (BiomeEnum.SHORTGRASS_PRAIRIE, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.DUST,
+    (
+        BiomeEnum.SHORTGRASS_PRAIRIE,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.DUST,
     (BiomeEnum.SHORTGRASS_PRAIRIE, WindIntensityBand.GALE): ParticulateTypeEnum.DUST,
     (BiomeEnum.SHORTGRASS_PRAIRIE, WindIntensityBand.STORM): ParticulateTypeEnum.DUST,
-    (BiomeEnum.SHORTGRASS_PRAIRIE, WindIntensityBand.HURRICANE): ParticulateTypeEnum.DUST,
+    (
+        BiomeEnum.SHORTGRASS_PRAIRIE,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.DUST,
     # -- MIXED_PRAIRIE --
     (BiomeEnum.MIXED_PRAIRIE, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.MIXED_PRAIRIE, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
@@ -159,18 +163,45 @@ PARTICULATE_TYPE_GRID: dict[
     (BiomeEnum.DECIDUOUS_FOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.DECIDUOUS_FOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
     (BiomeEnum.DECIDUOUS_FOREST, WindIntensityBand.BREEZY): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.DECIDUOUS_FOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.DECIDUOUS_FOREST,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.POLLEN,
     (BiomeEnum.DECIDUOUS_FOREST, WindIntensityBand.GALE): ParticulateTypeEnum.POLLEN,
     (BiomeEnum.DECIDUOUS_FOREST, WindIntensityBand.STORM): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.DECIDUOUS_FOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.DECIDUOUS_FOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.POLLEN,
     # -- MOIST_TEMPERATE_FOREST --
-    (BiomeEnum.MOIST_TEMPERATE_FOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
-    (BiomeEnum.MOIST_TEMPERATE_FOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
-    (BiomeEnum.MOIST_TEMPERATE_FOREST, WindIntensityBand.BREEZY): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.MOIST_TEMPERATE_FOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.MOIST_TEMPERATE_FOREST, WindIntensityBand.GALE): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.MOIST_TEMPERATE_FOREST, WindIntensityBand.STORM): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.MOIST_TEMPERATE_FOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.MOIST_TEMPERATE_FOREST,
+        WindIntensityBand.CALM,
+    ): ParticulateTypeEnum.NONE,
+    (
+        BiomeEnum.MOIST_TEMPERATE_FOREST,
+        WindIntensityBand.GENTLE,
+    ): ParticulateTypeEnum.NONE,
+    (
+        BiomeEnum.MOIST_TEMPERATE_FOREST,
+        WindIntensityBand.BREEZY,
+    ): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.MOIST_TEMPERATE_FOREST,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.MOIST_TEMPERATE_FOREST,
+        WindIntensityBand.GALE,
+    ): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.MOIST_TEMPERATE_FOREST,
+        WindIntensityBand.STORM,
+    ): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.MOIST_TEMPERATE_FOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.POLLEN,
     # -- COOL_RAINFOREST --
     (BiomeEnum.COOL_RAINFOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.COOL_RAINFOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
@@ -178,7 +209,10 @@ PARTICULATE_TYPE_GRID: dict[
     (BiomeEnum.COOL_RAINFOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SPORES,
     (BiomeEnum.COOL_RAINFOREST, WindIntensityBand.GALE): ParticulateTypeEnum.SPORES,
     (BiomeEnum.COOL_RAINFOREST, WindIntensityBand.STORM): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.COOL_RAINFOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.COOL_RAINFOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SPORES,
     # -- FEN_WETLAND --
     (BiomeEnum.FEN_WETLAND, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.FEN_WETLAND, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
@@ -207,18 +241,42 @@ PARTICULATE_TYPE_GRID: dict[
     (BiomeEnum.WOODLAND_SAVANNA, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.WOODLAND_SAVANNA, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
     (BiomeEnum.WOODLAND_SAVANNA, WindIntensityBand.BREEZY): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.WOODLAND_SAVANNA, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.WOODLAND_SAVANNA,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.POLLEN,
     (BiomeEnum.WOODLAND_SAVANNA, WindIntensityBand.GALE): ParticulateTypeEnum.POLLEN,
     (BiomeEnum.WOODLAND_SAVANNA, WindIntensityBand.STORM): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.WOODLAND_SAVANNA, WindIntensityBand.HURRICANE): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.WOODLAND_SAVANNA,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.POLLEN,
     # -- EVERGREEN_OAK_FOREST --
     (BiomeEnum.EVERGREEN_OAK_FOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
-    (BiomeEnum.EVERGREEN_OAK_FOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
-    (BiomeEnum.EVERGREEN_OAK_FOREST, WindIntensityBand.BREEZY): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.EVERGREEN_OAK_FOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.EVERGREEN_OAK_FOREST, WindIntensityBand.GALE): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.EVERGREEN_OAK_FOREST, WindIntensityBand.STORM): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.EVERGREEN_OAK_FOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.EVERGREEN_OAK_FOREST,
+        WindIntensityBand.GENTLE,
+    ): ParticulateTypeEnum.NONE,
+    (
+        BiomeEnum.EVERGREEN_OAK_FOREST,
+        WindIntensityBand.BREEZY,
+    ): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.EVERGREEN_OAK_FOREST,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.EVERGREEN_OAK_FOREST,
+        WindIntensityBand.GALE,
+    ): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.EVERGREEN_OAK_FOREST,
+        WindIntensityBand.STORM,
+    ): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.EVERGREEN_OAK_FOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.POLLEN,
     # -- LAUREL_FOREST --
     (BiomeEnum.LAUREL_FOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.LAUREL_FOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
@@ -229,12 +287,30 @@ PARTICULATE_TYPE_GRID: dict[
     (BiomeEnum.LAUREL_FOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SPORES,
     # -- TEMPERATE_RAINFOREST --
     (BiomeEnum.TEMPERATE_RAINFOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
-    (BiomeEnum.TEMPERATE_RAINFOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
-    (BiomeEnum.TEMPERATE_RAINFOREST, WindIntensityBand.BREEZY): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.TEMPERATE_RAINFOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.TEMPERATE_RAINFOREST, WindIntensityBand.GALE): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.TEMPERATE_RAINFOREST, WindIntensityBand.STORM): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.TEMPERATE_RAINFOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.TEMPERATE_RAINFOREST,
+        WindIntensityBand.GENTLE,
+    ): ParticulateTypeEnum.NONE,
+    (
+        BiomeEnum.TEMPERATE_RAINFOREST,
+        WindIntensityBand.BREEZY,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.TEMPERATE_RAINFOREST,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.TEMPERATE_RAINFOREST,
+        WindIntensityBand.GALE,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.TEMPERATE_RAINFOREST,
+        WindIntensityBand.STORM,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.TEMPERATE_RAINFOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SPORES,
     # -- PEAT_MARSH --
     (BiomeEnum.PEAT_MARSH, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.PEAT_MARSH, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
@@ -246,11 +322,20 @@ PARTICULATE_TYPE_GRID: dict[
     # -- SEMI_ARID_SHRUBLAND --
     (BiomeEnum.SEMI_ARID_SHRUBLAND, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.SEMI_ARID_SHRUBLAND, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
-    (BiomeEnum.SEMI_ARID_SHRUBLAND, WindIntensityBand.BREEZY): ParticulateTypeEnum.SMOKE,
-    (BiomeEnum.SEMI_ARID_SHRUBLAND, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SMOKE,
+    (
+        BiomeEnum.SEMI_ARID_SHRUBLAND,
+        WindIntensityBand.BREEZY,
+    ): ParticulateTypeEnum.SMOKE,
+    (
+        BiomeEnum.SEMI_ARID_SHRUBLAND,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.SMOKE,
     (BiomeEnum.SEMI_ARID_SHRUBLAND, WindIntensityBand.GALE): ParticulateTypeEnum.SMOKE,
     (BiomeEnum.SEMI_ARID_SHRUBLAND, WindIntensityBand.STORM): ParticulateTypeEnum.SMOKE,
-    (BiomeEnum.SEMI_ARID_SHRUBLAND, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SMOKE,
+    (
+        BiomeEnum.SEMI_ARID_SHRUBLAND,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SMOKE,
     # -- THORN_SCRUB --
     (BiomeEnum.THORN_SCRUB, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.THORN_SCRUB, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
@@ -271,18 +356,45 @@ PARTICULATE_TYPE_GRID: dict[
     (BiomeEnum.MARITIME_WOODLAND, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.MARITIME_WOODLAND, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
     (BiomeEnum.MARITIME_WOODLAND, WindIntensityBand.BREEZY): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.MARITIME_WOODLAND, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.MARITIME_WOODLAND,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.POLLEN,
     (BiomeEnum.MARITIME_WOODLAND, WindIntensityBand.GALE): ParticulateTypeEnum.POLLEN,
     (BiomeEnum.MARITIME_WOODLAND, WindIntensityBand.STORM): ParticulateTypeEnum.POLLEN,
-    (BiomeEnum.MARITIME_WOODLAND, WindIntensityBand.HURRICANE): ParticulateTypeEnum.POLLEN,
+    (
+        BiomeEnum.MARITIME_WOODLAND,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.POLLEN,
     # -- SUBTROPICAL_RAINFOREST --
-    (BiomeEnum.SUBTROPICAL_RAINFOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
-    (BiomeEnum.SUBTROPICAL_RAINFOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
-    (BiomeEnum.SUBTROPICAL_RAINFOREST, WindIntensityBand.BREEZY): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.SUBTROPICAL_RAINFOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.SUBTROPICAL_RAINFOREST, WindIntensityBand.GALE): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.SUBTROPICAL_RAINFOREST, WindIntensityBand.STORM): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.SUBTROPICAL_RAINFOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.SUBTROPICAL_RAINFOREST,
+        WindIntensityBand.CALM,
+    ): ParticulateTypeEnum.NONE,
+    (
+        BiomeEnum.SUBTROPICAL_RAINFOREST,
+        WindIntensityBand.GENTLE,
+    ): ParticulateTypeEnum.NONE,
+    (
+        BiomeEnum.SUBTROPICAL_RAINFOREST,
+        WindIntensityBand.BREEZY,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.SUBTROPICAL_RAINFOREST,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.SUBTROPICAL_RAINFOREST,
+        WindIntensityBand.GALE,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.SUBTROPICAL_RAINFOREST,
+        WindIntensityBand.STORM,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.SUBTROPICAL_RAINFOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SPORES,
     # -- WARM_RAINFOREST --
     (BiomeEnum.WARM_RAINFOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.WARM_RAINFOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
@@ -290,7 +402,10 @@ PARTICULATE_TYPE_GRID: dict[
     (BiomeEnum.WARM_RAINFOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SPORES,
     (BiomeEnum.WARM_RAINFOREST, WindIntensityBand.GALE): ParticulateTypeEnum.SPORES,
     (BiomeEnum.WARM_RAINFOREST, WindIntensityBand.STORM): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.WARM_RAINFOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.WARM_RAINFOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SPORES,
     # -- SWAMP_FOREST --
     (BiomeEnum.SWAMP_FOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.SWAMP_FOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
@@ -322,23 +437,47 @@ PARTICULATE_TYPE_GRID: dict[
     (BiomeEnum.SEASONAL_FOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SPORES,
     (BiomeEnum.SEASONAL_FOREST, WindIntensityBand.GALE): ParticulateTypeEnum.SPORES,
     (BiomeEnum.SEASONAL_FOREST, WindIntensityBand.STORM): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.SEASONAL_FOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.SEASONAL_FOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SPORES,
     # -- MONSOON_RAINFOREST --
     (BiomeEnum.MONSOON_RAINFOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.MONSOON_RAINFOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
-    (BiomeEnum.MONSOON_RAINFOREST, WindIntensityBand.BREEZY): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.MONSOON_RAINFOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.MONSOON_RAINFOREST,
+        WindIntensityBand.BREEZY,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.MONSOON_RAINFOREST,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.SPORES,
     (BiomeEnum.MONSOON_RAINFOREST, WindIntensityBand.GALE): ParticulateTypeEnum.SPORES,
     (BiomeEnum.MONSOON_RAINFOREST, WindIntensityBand.STORM): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.MONSOON_RAINFOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.MONSOON_RAINFOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SPORES,
     # -- TROPICAL_RAINFOREST --
     (BiomeEnum.TROPICAL_RAINFOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.TROPICAL_RAINFOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
-    (BiomeEnum.TROPICAL_RAINFOREST, WindIntensityBand.BREEZY): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.TROPICAL_RAINFOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.TROPICAL_RAINFOREST,
+        WindIntensityBand.BREEZY,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.TROPICAL_RAINFOREST,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.SPORES,
     (BiomeEnum.TROPICAL_RAINFOREST, WindIntensityBand.GALE): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.TROPICAL_RAINFOREST, WindIntensityBand.STORM): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.TROPICAL_RAINFOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.TROPICAL_RAINFOREST,
+        WindIntensityBand.STORM,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.TROPICAL_RAINFOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SPORES,
     # -- WET_RAINFOREST --
     (BiomeEnum.WET_RAINFOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.WET_RAINFOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
@@ -359,10 +498,16 @@ PARTICULATE_TYPE_GRID: dict[
     (BiomeEnum.SCORCHING_WASTELAND, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.SCORCHING_WASTELAND, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
     (BiomeEnum.SCORCHING_WASTELAND, WindIntensityBand.BREEZY): ParticulateTypeEnum.SAND,
-    (BiomeEnum.SCORCHING_WASTELAND, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SAND,
+    (
+        BiomeEnum.SCORCHING_WASTELAND,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.SAND,
     (BiomeEnum.SCORCHING_WASTELAND, WindIntensityBand.GALE): ParticulateTypeEnum.SAND,
     (BiomeEnum.SCORCHING_WASTELAND, WindIntensityBand.STORM): ParticulateTypeEnum.SAND,
-    (BiomeEnum.SCORCHING_WASTELAND, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SAND,
+    (
+        BiomeEnum.SCORCHING_WASTELAND,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SAND,
     # -- DRY_SAVANNA --
     (BiomeEnum.DRY_SAVANNA, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.DRY_SAVANNA, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
@@ -390,19 +535,46 @@ PARTICULATE_TYPE_GRID: dict[
     # -- LOWLAND_RAINFOREST --
     (BiomeEnum.LOWLAND_RAINFOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.LOWLAND_RAINFOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
-    (BiomeEnum.LOWLAND_RAINFOREST, WindIntensityBand.BREEZY): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.LOWLAND_RAINFOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.LOWLAND_RAINFOREST,
+        WindIntensityBand.BREEZY,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.LOWLAND_RAINFOREST,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.SPORES,
     (BiomeEnum.LOWLAND_RAINFOREST, WindIntensityBand.GALE): ParticulateTypeEnum.SPORES,
     (BiomeEnum.LOWLAND_RAINFOREST, WindIntensityBand.STORM): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.LOWLAND_RAINFOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.LOWLAND_RAINFOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SPORES,
     # -- EQUATORIAL_RAINFOREST --
     (BiomeEnum.EQUATORIAL_RAINFOREST, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
-    (BiomeEnum.EQUATORIAL_RAINFOREST, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,
-    (BiomeEnum.EQUATORIAL_RAINFOREST, WindIntensityBand.BREEZY): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.EQUATORIAL_RAINFOREST, WindIntensityBand.BLUSTERY): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.EQUATORIAL_RAINFOREST, WindIntensityBand.GALE): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.EQUATORIAL_RAINFOREST, WindIntensityBand.STORM): ParticulateTypeEnum.SPORES,
-    (BiomeEnum.EQUATORIAL_RAINFOREST, WindIntensityBand.HURRICANE): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.EQUATORIAL_RAINFOREST,
+        WindIntensityBand.GENTLE,
+    ): ParticulateTypeEnum.NONE,
+    (
+        BiomeEnum.EQUATORIAL_RAINFOREST,
+        WindIntensityBand.BREEZY,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.EQUATORIAL_RAINFOREST,
+        WindIntensityBand.BLUSTERY,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.EQUATORIAL_RAINFOREST,
+        WindIntensityBand.GALE,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.EQUATORIAL_RAINFOREST,
+        WindIntensityBand.STORM,
+    ): ParticulateTypeEnum.SPORES,
+    (
+        BiomeEnum.EQUATORIAL_RAINFOREST,
+        WindIntensityBand.HURRICANE,
+    ): ParticulateTypeEnum.SPORES,
     # -- FLOODED_JUNGLE --
     (BiomeEnum.FLOODED_JUNGLE, WindIntensityBand.CALM): ParticulateTypeEnum.NONE,
     (BiomeEnum.FLOODED_JUNGLE, WindIntensityBand.GENTLE): ParticulateTypeEnum.NONE,

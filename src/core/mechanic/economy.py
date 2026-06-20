@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from dataclasses import dataclass
 
 DEFAULT_STRESS_MAX: int = 9
