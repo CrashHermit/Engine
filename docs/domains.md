@@ -249,3 +249,52 @@ ADJUST(part.attr, ±)                       SET_SLOT(part, slot, on|off)
 ```
 
 Count is just instances: four breasts are four parts, each with its own state; "growing extra" is simply `ADD_PART`. A newly added part drops straight into the slot space, so every existing effect already knows how to reach it. No body type is special-cased — human, succubus, broodmother, and horror are all trees of slotted parts.
+
+---
+
+## 8. THE RUNTIME — ONE SUBSTRATE, TWO CLOCKS
+
+§§4–7 describe *what* changes; this describes the single mechanism that runs all of it. The model is borrowed wholesale from RimWorld's *hediff* system: there is no separate "status-effect system" and "body simulation." A wound, a compulsion, arousal, a poison, a slow corruption, and fluid pooling in an orifice are **the same kind of object**, living in **one list**, obeying **one set of rules**.
+
+### One substrate
+
+Every persistent change is a **meter** (a sliding magnitude) or a **state** (a binary fact) attached to a part or aspect. A mark (§5) is simply what one looks like at runtime. Each meter carries a **severity** (its current value, 0 → cap), a **decay class** (how it resolves over time), and the **part/aspect** it sits on (where it gates).
+
+Capacities are never stored — they are **derived**. An aspect's condition is computed from the meters on it, and skills read that condition (§4). Damage the parts and the capacity falls out of the math; heal them and it returns.
+
+### The generic track engine
+
+One engine runs every meter the fiction ever invents:
+
+*   **Accumulate** — `ADJUST` adds segments (intensity slight / moderate / strong → 1 / 2 / 3). An aspect's **load** is the sum of its meters, capped.
+*   **Gate** — load derives the condition ladder (pristine → marked → broken), which is a dice penalty on that aspect's skills. Many different meters on one aspect compound into one penalty.
+*   **Threshold** — at the cap, the aspect's **terminal state** fires (and may cascade into further changes).
+*   **Decay** — `FAST` (fades in a turn or scene), `SLOW` (heals only in downtime), `STICKY` (never, without specific fiction). Decay class is the *only* thing that makes arousal behave differently from a wound.
+*   **Accelerate** *(optional flag)* — a meter whose own rise lowers resistance to itself fills faster as it climbs: the corruption / arousal **spiral**, bounded because the cap still stops it.
+
+### Two clocks write to it
+
+The substrate has exactly two writers, and that is the whole bridge between challenge and simulation:
+
+*   **The contest clock** *(event-driven)* — a contest resolves (§6) and writes a meter or state. *"He cuts her" → `ADJUST(Corpus, gash, +)`.*
+*   **The sim clock** *(time-driven)* — each tick, standing **processes** write meters on their own. This is where the body-simulation lives, and it needs no special machinery:
+
+| simulation concept | is just… |
+|---|---|
+| storage | a meter with a capacity |
+| production rate | a standing per-tick `ADJUST(+rate)` (a source) |
+| consumption / absorption | a per-tick `ADJUST(−rate)` (a sink) |
+| flow from A to B | a paired adjust (drain here, fill there) |
+
+So cum pooling in an orifice and slowly absorbing is the *same kind of object* as a sword-wound — one written by a process tick, the other by a contest roll, both in the same list.
+
+### Two readers consume it
+
+*   **Gating** *(sim → challenge)* — meter levels and states alter contest dice, Position, and Effect. An aroused or wounded character rolls worse and can do less; this is how the simulation's state feeds back into the core loop (§6).
+*   **Drives** *(sim → new challenges)* — a meter crossing a threshold generates a **pressure**, not merely a penalty: rising arousal demands release, a filling womb, draining stamina. The simulation *creates stakes*, turning bodily state into situations the fiction must answer.
+
+### The two verbs
+
+The narrator only ever emits two primitives — **`ADJUST`** (move a meter) and **`SET`** (flip a state) — against the fixed slot / aspect address space (§4, §7). The engine validates them and runs everything above. Meters **slide** (graded gating); states **flip** (binary gating by presence). Nothing else is authored per-effect.
+
+> Simulation and challenge are not two systems joined by a bridge. They are **one substrate, written by two clocks, and read two ways.**
