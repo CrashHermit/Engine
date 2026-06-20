@@ -107,6 +107,14 @@ class LandmassConfig:
     )
 
 
+@dataclass
+class InsolationConfig:
+    """Authored energy pattern (no latitude on a torus)."""
+
+    bands: int = 1          # Number of hot/cold ring pairs around the torus
+    contrast: float = 1.0   # Spread of climate zones; <1 flattens, >1 sharpens
+    wobble: float = 0.0     # Low-freq noise warp on the ring lines; 0 = laser-straight
+
 # ---------------------------------------------------------------------------
 # Top-level config
 # ---------------------------------------------------------------------------

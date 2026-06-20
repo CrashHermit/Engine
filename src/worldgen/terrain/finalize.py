@@ -11,8 +11,7 @@ def apply_sea_level(
     *,
     elevation: Float64Array,
     target_land_fraction: float,
-    n_cells: int,
-) -> Float64Array:
+) -> BoolArray:
     """Piecewise-normalise elevation to ``[-1, 1]`` with sea level at 0.
 
     Sea level is placed at the elevation percentile that leaves
