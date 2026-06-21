@@ -116,6 +116,33 @@ class InsolationConfig:
     wobble: float = 0.0     # Low-freq noise warp on the ring lines; 0 = laser-straight
 
 # ---------------------------------------------------------------------------
+# Temperature
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TemperatureConfig:
+    """Lapse rate and maritime moderation on top of insolation."""
+
+    lapse_rate: float = 0.5         # Cooling per unit land elevation
+    maritime_reach: float = 4.0     # Coast-distance decay length for ocean moderation
+    maritime_strength: float = 0.4  # How strongly coasts pull toward sea temperature
+
+# ---------------------------------------------------------------------------
+# Wind
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class WindConfig:
+    """Prevailing wind belts and terrain deflection."""
+
+    belt_count: int = 3                # Zonal belts around the ring
+    meridional_strength: float = 0.3   # North-south component amplitude
+    turbulence: float = 0.4            # FBm wobble amplitude on each component
+    deflection: float = 0.5            # How hard wind bends away from uphill (step 4)
+
+# ---------------------------------------------------------------------------
 # Top-level config
 # ---------------------------------------------------------------------------
 
@@ -127,15 +154,9 @@ class WorldgenConfig:
     seed: int = 0  # Master RNG seed; sub-seeds are derived per stage
     size: int = 100  # Gameplay grid edge length in tiles
     mesh: MeshConfig = field(default_factory=MeshConfig)  # Voronoi simulation mesh
-    plates: PlatesConfig = field(
-        default_factory=PlatesConfig
-    )  # Plate partitioning and boundary uplift
-    sea_level: SeaLevelConfig = field(
-        default_factory=SeaLevelConfig
-    )  # Land/ocean split and normalisation
-    erosion: ErosionConfig = field(
-        default_factory=ErosionConfig
-    )  # Stream-power erosion loop
-    landmass: LandmassConfig = field(
-        default_factory=LandmassConfig
-    )  # Connected-component land classification
+    plates: PlatesConfig = field(default_factory=PlatesConfig)  # Plate partitioning and boundary uplift
+    sea_level: SeaLevelConfig = field(default_factory=SeaLevelConfig)  # Land/ocean split and normalisation
+    erosion: ErosionConfig = field(default_factory=ErosionConfig)  # Stream-power erosion loop
+    landmass: LandmassConfig = field(default_factory=LandmassConfig)  # Connected-component land classification
+    insolation: InsolationConfig = field(default_factory=InsolationConfig)  # Authored energy pattern
+    temperature: TemperatureConfig = field(default_factory=TemperatureConfig)  # Lapse rate + maritime moderation

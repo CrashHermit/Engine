@@ -26,7 +26,6 @@ def apply_sea_level(
             (mutated in place).
         target_land_fraction: Desired fraction of cells above sea
             level (0.0--1.0).
-        n_cells: Number of mesh cells (``geometry.n_cells``).
 
     Returns:
         ``is_land``: Boolean mask, True where elevation is at or

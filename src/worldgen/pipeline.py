@@ -6,6 +6,8 @@ from src.worldgen.stages.erosion import ErosionStage
 from src.worldgen.stages.finalize import FinalizeStage
 from src.worldgen.stages.plate import PlatesStage
 from src.worldgen.stages.plate_personality import PlatePersonalityStage
+from src.worldgen.stages.insolation import InsolationStage
+from src.worldgen.stages.temperature import TemperatureStage
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.fields import MeshFields
 
@@ -46,4 +48,12 @@ class WorldgenPipeline:
         for stage in _build_stages():
             stage.run(ctx)
 
+        # --- Phase 2: Climate ---
+        self._run_climate(ctx)
+
         return ctx
+
+    def _run_climate(self, ctx: WorldContext) -> None:
+        """Run the climate stages after the terrain pipeline."""
+        InsolationStage().run(ctx)
+        TemperatureStage().run(ctx)

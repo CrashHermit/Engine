@@ -38,7 +38,6 @@ class FinalizeStage:
         is_land: BoolArray = apply_sea_level(
             elevation=elevation,
             target_land_fraction=sea_cfg.target_land_fraction,
-            n_cells=n,
         )
         ctx.fields.is_land = is_land
 

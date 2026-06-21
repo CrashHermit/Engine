@@ -41,11 +41,22 @@ class MeshFields:
     landmass_class: Int8Array | None = field(
         default=None, metadata={"dtype": np.int8}
     )  # 0 = ocean, 1 = island, 2 = landmass, 3 = major
-    temperature: Float64Array | None = field(default=None, metadata={"dtype": np.float64})     # [0,1] warmth; 1 = sunband
-    precipitation: Float64Array | None = field(default=None, metadata={"dtype": np.float64})    # [0,1] rainfall
-    wind_u: Float64Array | None = field(default=None, metadata={"dtype": np.float64})           # unit wind direction x
-    wind_v: Float64Array | None = field(default=None, metadata={"dtype": np.float64})           # unit wind direction y
-    wind_magnitude: Float64Array | None = field(default=None, metadata={"dtype": np.float64})   # [0,1] wind speed
+    temperature: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] warmth; 1 = sunband
+    precipitation: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] rainfall
+    wind_u: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # unit wind direction x
+    wind_v: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # unit wind direction y
+    wind_magnitude: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] wind speed
+
     @classmethod
     def allocate(cls, n: int) -> Self:
         """Create zeroed per-cell field arrays of length n."""
@@ -92,6 +103,21 @@ class GridFields:
     landmass_class: Int8Array | None = field(
         default=None, metadata={"dtype": np.int8}
     )  # 0 = ocean, 1 = island, 2 = landmass, 3 = major
+    temperature: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] warmth; 1 = sunband
+    precipitation: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] rainfall
+    wind_u: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # unit wind direction x
+    wind_v: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # unit wind direction y
+    wind_magnitude: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] wind speed
 
     @classmethod
     def allocate(cls, n: int) -> Self:

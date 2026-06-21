@@ -53,7 +53,6 @@ def test_sea_level_normalization_range() -> None:
     apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     assert elevation.min() >= -1.0 - 1e-10
@@ -69,7 +68,6 @@ def test_sea_level_zero_at_sea_level_boundary() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     # Sea-level boundary cells should be exactly 0.
@@ -93,7 +91,6 @@ def test_sea_level_land_fraction() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=target,
-        n_cells=geometry.n_cells,
     )
 
     actual: float = float(is_land.mean())
@@ -111,7 +108,6 @@ def test_sea_level_land_is_positive() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     if np.any(is_land):
@@ -127,7 +123,6 @@ def test_sea_level_ocean_is_negative() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     if np.any(~is_land):
@@ -147,7 +142,6 @@ def test_landmass_ids_nonzero_for_land() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     landmass_id, _ = label_landmasses(
@@ -173,7 +167,6 @@ def test_ocean_landmass_id_zero() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     landmass_id, _ = label_landmasses(
@@ -199,7 +192,6 @@ def test_landmass_classes_valid() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     _landmass_id: Int32Array
@@ -226,7 +218,6 @@ def test_landmass_class_consistent_with_id() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     landmass_id, landmass_class = label_landmasses(
@@ -258,7 +249,6 @@ def test_coast_distance_nonnegative() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     coast_distance: Float64Array = compute_coast_distance(
@@ -278,7 +268,6 @@ def test_coastal_cells_have_zero_distance() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     coast_distance: Float64Array = compute_coast_distance(
@@ -313,7 +302,6 @@ def test_ocean_cells_have_zero_distance() -> None:
     is_land: BoolArray = apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     coast_distance: Float64Array = compute_coast_distance(
@@ -340,7 +328,6 @@ def test_slope_nonnegative() -> None:
     apply_sea_level(
         elevation=elevation,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
 
     slope: Float64Array = compute_slope(
@@ -396,7 +383,6 @@ def test_finalize_deterministic() -> None:
     is_land_a: BoolArray = apply_sea_level(
         elevation=elevation_a,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
     landmass_id_a, landmass_class_a = label_landmasses(
         is_land=is_land_a,
@@ -419,7 +405,6 @@ def test_finalize_deterministic() -> None:
     is_land_b: BoolArray = apply_sea_level(
         elevation=elevation_b,
         target_land_fraction=0.32,
-        n_cells=geometry.n_cells,
     )
     landmass_id_b, landmass_class_b = label_landmasses(
         is_land=is_land_b,
