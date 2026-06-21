@@ -23,6 +23,10 @@ There is no separate class, approach, or progression system. A character's "flav
 
 There is only **one** resolution path: channel a sphere through a cell to mark a part of a trunk (§6). "Combat," "social," "mental," "sexual," and "corruption" are not separate subsystems or modes — they are only flavor on *which cell is rolled* and *which trunk is marked*. A duel is PROWESS marking Corpus; a seduction is PRESENCE or CARNALITY marking Mens or Anima; a corrupting pact is COMMUNION marking Anima — all the same roll, the same bands, the same marks. Because they share one engine, they **blend freely in a single scene**: a guard can hammer your Corpus while a spirit works your Anima in the same exchange, marks piling onto different trunks. Every rule in this document must read identically across all three spheres; none may assume a "type" of opposition.
 
+### Computation is Free; Favor Fidelity
+
+This is a software engine, not a tabletop. The usual reason to abstract — sparing human players from rolling fistfuls of dice and tracking bookkeeping — does not apply here; the machine resolves any number of contests instantly. So whenever **granular per-entity simulation** and **table-friendly shorthand** diverge, this system takes the granular path. Five foes are five contests, not one scaled "group" roll. "Too many rolls" is never an objection; fidelity is the default and abstraction must justify itself. This tenet is a sibling to *One Contest, Never Typed* — together they keep the engine simple in *kind* (one resolution path) while letting it run rich in *volume* (every entity simulated in full).
+
 ---
 
 ## 2. THE THREE SPHERES (Power & Resistance)
@@ -191,3 +195,42 @@ Acting on the world and resisting the world acting on you are the **same contest
     *   **Brace (optional, before the mark settles):** the target may spend their **tempo** — forfeiting their next action / their answer to the exchange — to **Brace**. Bracing steps the incoming mark **down one band** (e.g. SEVERE → STANDARD) and lets the target **relocate it to a different part of the same trunk** (never to a different trunk). It cannot erase the hit: you trade your initiative and accept a chosen wound to avoid a worse one. Brace is the losing side's agency, and it works against a word or a rite exactly as against a blade.
 
 When the world acts on the character, the same five steps run with the roles reversed: the threat is the actor, the character opposes with the relevant Sphere, and a mark lands on the character on a tie or loss.
+
+---
+
+## 7. FRONTS & MULTIPLE FOES
+
+A scene rarely has one threat. The engine resolves every threat **in full** — there is no "mob" abstraction that folds many foes into a single scaled roll (see *Computation is Free; Favor Fidelity*, §1). Each distinct foe or hazard is its own **front**: its own trunks, its own contests, every beat. The machine runs them all.
+
+### Each Foe, Its Own Contest
+
+A **beat** is one exchange. In it:
+
+*   **You drive one front.** Your action is a single cell (§3, *One Action, One Cell*) aimed where you choose.
+*   **Every *live* foe runs its own contest against you.** Each is a full §6 resolution on its own trunk — its own roll, its own band, its own mark. Five live foes means five contests landing on you this beat, each resisted separately.
+*   **Brace covers one.** Forfeiting tempo to Brace (§6, step 5) softens a *single* incoming mark; the rest land in full. Bracing against a swarm protects you from the worst blow, not all of them.
+
+Numbers are dangerous because they multiply *contests*, not because they hit harder. Being outnumbered means more marks, faster — the volume *is* the threat.
+
+### Danger Is Not Double-Counted
+
+Being outnumbered does **not** raise the danger (magnitude) of each foe's mark. Danger stays each individual threat's own lethality (§2–§5): a lone thug is STANDARD whether he fights alone or in a pack of six. Numbers bite through the count of contests, never through inflated magnitude — stacking both would make any crowd an instant kill.
+
+### The Fiction Gates Which Fronts Are Live
+
+Not every foe gets a contest every beat. A front is **live** only when the fiction lets that threat plausibly reach you this beat — the same fiction-gating that governs targeting (§4) and targeting a part, now applied to *front activation*. Position is therefore the player's primary defense against numbers:
+
+*   Fight in a doorway, a corridor, or with your back to a wall, and only the foes who can physically engage are live — you face two fronts instead of six.
+*   Reach, line of sight, cover, a grapple, or being prone can each remove a foe from the live set for a beat.
+*   **Positioning, not a dice abstraction, is how you manage being outnumbered.** Choosing your ground is a real tactical lever, resolved entirely in the fiction.
+
+### Wide Actions: One Cell, Many Contests, Breadth Costs Depth
+
+Your one action may be **focused** (one foe) or **wide** (a greatsword arc, a cone of flame, a dread GLAMOUR sweeping the room). A wide action stays *one action, one cell, one roll* (§3) — you do not roll once per foe. Instead:
+
+*   You roll your cell **once**.
+*   **Each foe in the fiction's reach resists separately** — its own resisting Sphere, its own band — all compared against your single roll. One offensive roll adjudicated against many defenders; the machine does this for free.
+*   **Breadth costs depth.** A wide action lands at **one band below** a focused strike's magnitude per foe. You trade depth for breadth: thin a crowd *or* drop one foe hard, never both in the same beat.
+*   **The risk is symmetric.** Each foe you sweep resolves as a full contest, so each tie or loss can mark you back (and a defender's crit can Riposte, §5). Committing to a wide action against many foes exposes you to many returns.
+
+This is the counter to being swarmed: when too many fronts are live, go wide to step several of them down at once — accepting reduced effect per foe and broader exposure as the price. Focus-fire stays the way to break a single dangerous front fast.
