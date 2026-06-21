@@ -87,7 +87,7 @@ def elevation_gradient(
     """
     sites: Float64Array = geometry.sites
     width: float = geometry.width
-    height: float = height = geometry.height
+    height: float = geometry.height
     n: int = geometry.n_cells
 
     grad_x: Float64Array = np.zeros(shape=n, dtype=np.float64)

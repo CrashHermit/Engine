@@ -1,4 +1,7 @@
+import numpy as np
+
 from src.worldgen.noise.rng import NoiseSource, field_offset
+from src.worldgen.types import Float64Array
 
 
 class FractalField:
@@ -42,3 +45,43 @@ class FractalField:
             freq *= self._lacunarity
 
         return value / norm if norm > 0.0 else 0.0
+
+    def sample_array(
+        self,
+        xs: Float64Array,
+        ys: Float64Array,
+        frequency: float,
+    ) -> Float64Array:
+        """Sample noise at many ``(x, y)`` pairs; same semantics as :meth:`sample`.
+
+        ``xs`` and ``ys`` must have the same shape; the result has that
+        same shape.
+
+        Args:
+            xs: X coordinates.
+            ys: Y coordinates.
+            frequency: Spatial frequency multiplier (passed to
+                :meth:`sample`).
+
+
+        Returns:
+            Noise array with the same shape as ``xs`` / ``ys``.
+        """
+        xs_array: Float64Array = np.asarray(xs, dtype=np.float64)
+        ys_array: Float64Array = np.asarray(ys, dtype=np.float64)
+        if xs_array.shape != ys_array.shape:
+            msg = "xs and ys must have the same shape"
+            raise ValueError(msg)
+
+        flat_x: Float64Array = xs_array.ravel()
+        flat_y: Float64Array = ys_array.ravel()
+        values: Float64Array = np.fromiter(
+            (
+                self.sample(x=float(x), y=float(y), frequency=frequency)
+                for x, y in zip(flat_x, flat_y)
+            ),
+            dtype=np.float64,
+            count=flat_x.size,
+        )
+
+        return values.reshape(xs_array.shape)

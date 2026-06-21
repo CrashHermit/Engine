@@ -160,3 +160,4 @@ class WorldgenConfig:
     landmass: LandmassConfig = field(default_factory=LandmassConfig)  # Connected-component land classification
     insolation: InsolationConfig = field(default_factory=InsolationConfig)  # Authored energy pattern
     temperature: TemperatureConfig = field(default_factory=TemperatureConfig)  # Lapse rate + maritime moderation
+    wind: WindConfig = field(default_factory=WindConfig)
