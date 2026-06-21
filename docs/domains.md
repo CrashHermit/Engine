@@ -19,6 +19,10 @@ The target — yourself, another agent, or the world around you — is determine
 
 There is no separate class, approach, or progression system. A character's "flavor" is simply **where they have invested across the grid**, and how they change over a run emerges from the marks consequences leave on their trunks.
 
+### One Contest, Never Typed
+
+There is only **one** resolution path: channel a sphere through a cell to mark a part of a trunk (§6). "Combat," "social," "mental," "sexual," and "corruption" are not separate subsystems or modes — they are only flavor on *which cell is rolled* and *which trunk is marked*. A duel is PROWESS marking Corpus; a seduction is PRESENCE or CARNALITY marking Mens or Anima; a corrupting pact is COMMUNION marking Anima — all the same roll, the same bands, the same marks. Because they share one engine, they **blend freely in a single scene**: a guard can hammer your Corpus while a spirit works your Anima in the same exchange, marks piling onto different trunks. Every rule in this document must read identically across all three spheres; none may assume a "type" of opposition.
+
 ---
 
 ## 2. THE THREE SPHERES (Power & Resistance)
@@ -124,7 +128,7 @@ Growth marks run the same three ways: hardened substance, sharpened pattern, ste
 
 Every contest that does not end in a clean success writes a **mark** — the single currency through which characters *and* the world change. A mark is defined by four things:
 
-*   **Direction** — a mark cuts *down* (harm: a wound, a compulsion, a taint) or *up* (growth: a hard-won gain that raises a skill). The loser of a contest takes a harm mark; ordeal and crit write growth marks. Harm and growth are the same machinery cutting both ways.
+*   **Direction** — a mark cuts *down* (harm: a wound, a compulsion, a taint) or *up* (growth: a hard-won gain that raises a skill). The loser of a contest takes a harm mark; enduring an ordeal (**Temper**) and a winner's crit write growth marks (see *The Consequence Levers* below). Harm and growth are the same machinery cutting both ways.
 *   **Channel** — which trunk it lands on: the contest's **target sphere** (the column of the skill rolled). Within that trunk it settles on the **part** the actor targeted — Substance, Pattern, or Drive (§4, fiction-gated) — and that part's condition is what changes.
 *   **Magnitude** — how heavy, set by the situation's **danger** (MINOR / STANDARD / SEVERE / FATAL). Danger sizes the mark; it does not change the odds.
 *   **Duration** — how it resolves: Timed, Conditional, or Permanent (below).
@@ -155,6 +159,16 @@ A mark is colored by the trunk it lands on:
 
 A permanent consequence in any channel irreversibly alters what the character is and what they can do. The fiction determines the shape: a body part physically changed, a belief permanently installed, an essence permanently marked. These alter **Position** and **Effect** for relevant actions going forward — an altered limb may give great effect on some approaches and zero effect on others.
 
+### The Consequence Levers
+
+Three levers sit on top of the basic mark so that a contest is never a flat exchange — they give the winner a reason to press, the loser a way to fight back, and endurance a long-term payoff. All three read identically across spheres.
+
+*   **Temper** *(endure → grow)* — when a **SEVERE or FATAL** harm mark resolves and its channel is *not* broken, it leaves a **growth mark** behind on the same trunk: the scar that strengthens. This is the engine of the long game — you climb on a sphere precisely by surviving what nearly took it from you. MINOR and STANDARD marks do not temper; only the heavy ones forge.
+*   **Riposte** *(turn → bite back)* — when a defender **crits their resistance** (2+ sixes on the resisting roll), they do more than turn the blow aside: they mark the attacker back. The harm mark lands on the attacker's **channeling trunk** — the row they acted *through*, since they overcommitted and it cost them — at **one band below** the incoming danger.
+*   **Brace** *(spend tempo → soften)* — before a mark settles, the target may forfeit their tempo to step it down and steer it; defined in the loop (§6, step 5).
+
+You temper a soul as you temper a body, riposte a seduction as you riposte a blade, and brace against a word as you brace against a blow.
+
 ### Endgame States
 
 When marks in a channel accumulate beyond what a character can bear, that channel reaches an endgame state. Each sphere has its own endgame — the specific nature of each, and whether the existing stress/trauma economy survives as that accumulation or is replaced by mark-counting, is still to be determined.
@@ -171,7 +185,9 @@ Acting on the world and resisting the world acting on you are the **same contest
 4.  **The Band:** Compare the highest dice.
     *   **Actor wins → Clean success:** the effect lands on the target's channel; no mark on the actor. *(Winner rolling 2+ sixes = crit: clean, plus a benefit and a growth mark.)*
     *   **Tie → Success with consequence:** the effect lands, *and* the actor takes a mark.
-    *   **Actor loses → Failure with consequence:** no effect; the actor takes a mark (and the defender may earn a growth mark for turning it away).
+    *   **Actor loses → Failure with consequence:** no effect; the actor takes a mark. If the defender **crit** their resistance, they **Riposte** — marking the attacker back on its channeling trunk, one band below the incoming danger (§5).
 5.  **The Mark:** Any mark settles on one **part** of the contested trunk — Substance, Pattern, or Drive (§4) — at the danger's magnitude, in the direction the band dictates, changing that part's condition. This is the only way characters and the world change, and it accumulates per trunk toward that sphere's endgame.
+
+    *   **Brace (optional, before the mark settles):** the target may spend their **tempo** — forfeiting their next action / their answer to the exchange — to **Brace**. Bracing steps the incoming mark **down one band** (e.g. SEVERE → STANDARD) and lets the target **relocate it to a different part of the same trunk** (never to a different trunk). It cannot erase the hit: you trade your initiative and accept a chosen wound to avoid a worse one. Brace is the losing side's agency, and it works against a word or a rite exactly as against a blade.
 
 When the world acts on the character, the same five steps run with the roles reversed: the threat is the actor, the character opposes with the relevant Sphere, and a mark lands on the character on a tie or loss.
