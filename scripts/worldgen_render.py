@@ -46,6 +46,7 @@ class Layer(StrEnum):
     TEMPERATURE = "temperature"
     WIND = "wind"
     PRECIPITATION = "precipitation"
+    DISCHARGE = "discharge"
 
 LAYER_ORDER: tuple[Layer, ...] = (
     Layer.ELEVATION,
@@ -58,6 +59,7 @@ LAYER_ORDER: tuple[Layer, ...] = (
     Layer.TEMPERATURE,
     Layer.WIND,
     Layer.PRECIPITATION,
+    Layer.DISCHARGE,
 )
 
 LAYER_LABELS: dict[Layer, str] = {
@@ -71,6 +73,7 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.TEMPERATURE: "Temperature",
     Layer.WIND: "Wind",
     Layer.PRECIPITATION: "Precipitation",
+    Layer.DISCHARGE: "Discharge",
 }
 
 LAYER_DESCRIPTIONS: dict[Layer, str] = {
@@ -84,6 +87,7 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.TEMPERATURE: "Warmth [0,1]. Cold frostbelt and mountain peaks blue; hot sunband red; mild coasts.",
     Layer.WIND: "Wind: hue = direction (atan2 v,u), brightness = speed. Belts deflect around ranges.",
     Layer.PRECIPITATION: "Rainfall [0,1]. Wet windward coasts bright; dry interiors and rain shadows dark.",
+    Layer.DISCHARGE: "Rain-weighted water flow (log). Brighter = more water. River valleys glow brighter in wet regions.",
 }
 
 
@@ -199,6 +203,15 @@ def _tile_color(
         hue: float = (math.atan2(wind_v, wind_u) / (2.0 * math.pi)) % 1.0
         red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.8, v=0.2 + 0.8 * mag)
         return int(red * 255), int(green * 255), int(blue * 255)
+
+    if layer == Layer.DISCHARGE:
+        d: float = float(grid.discharge[tile_index])
+        if d <= 0.0 or not grid.is_land[tile_index]:
+            return (10, 20, 30)  # dark background for ocean / sinks
+        # log scale: discharge spans small to very large values
+        log_d: float = math.log(d) / math.log(10000.0)  # normalize so d=10000 -> 1
+        t: float = max(0.0, min(1.0, log_d))
+        return _lerp_color(low=(30, 60, 120), high=(100, 200, 255), t=t)
 
     return (0, 0, 0)
 

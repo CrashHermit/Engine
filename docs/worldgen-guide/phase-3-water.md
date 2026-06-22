@@ -190,6 +190,15 @@ adjusting), not an absolute number; `is_lake` may not exist yet — use
 
 ---
 
+## Step 2 — Done
+
+- `water/rivers.py::classify_rivers` — percentile threshold on land discharge
+- `stages/rivers.py::RiversStage` — wires discharge + is_land + is_lake → is_river
+- Registered on pipeline after DischargeStage
+- Lake exclusion uses empty mask until step 4 populates is_lake
+
+---
+
 ## Step 3 — Rivers as objects (3–4 h)
 
 ### The lesson first

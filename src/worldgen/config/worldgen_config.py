@@ -159,6 +159,28 @@ class MoistureConfig:
 
 
 # ---------------------------------------------------------------------------
+# Water (Phase 3)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class RiverConfig:
+    """River extraction and tile rasterization."""
+
+    river_fraction: float = 0.05  # Percentile of land discharge that qualifies as a river
+    w_scale: float = 0.3          # Visual width scale factor on the tile grid
+    min_w: float = 0.5            # Minimum river width in tiles
+    max_w: float = 8.0            # Maximum river width in tiles
+
+
+@dataclass
+class LakeConfig:
+    """Lake extraction parameters."""
+
+    epsilon: float = 1e-6  # Minimum depth for a lake cell (avoids noise)
+
+
+# ---------------------------------------------------------------------------
 # Top-level config
 # ---------------------------------------------------------------------------
 
@@ -178,3 +200,5 @@ class WorldgenConfig:
     temperature: TemperatureConfig = field(default_factory=TemperatureConfig)  # Lapse rate + maritime moderation
     wind: WindConfig = field(default_factory=WindConfig)
     moisture: MoistureConfig = field(default_factory=MoistureConfig)
+    river: RiverConfig = field(default_factory=RiverConfig)
+    lake: LakeConfig = field(default_factory=LakeConfig)

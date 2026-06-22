@@ -59,6 +59,30 @@ class MeshFields:
     wind_magnitude: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] wind speed
+    discharge: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # Rain-weighted water flow volume
+    is_river: BoolArray | None = field(
+        default=None, metadata={"dtype": bool}
+    )  # Cell carries a river
+    river_id: Int32Array | None = field(
+        default=None, metadata={"dtype": np.int32}
+    )  # River object id; -1 = none
+    flow_u: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # Unit flow direction x
+    flow_v: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # Unit flow direction y
+    flow_speed: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] stylized flow speed
+    is_lake: BoolArray | None = field(
+        default=None, metadata={"dtype": bool}
+    )  # Cell is under lake water
+    lake_id: Int32Array | None = field(
+        default=None, metadata={"dtype": np.int32}
+    )  # Lake object id; -1 = none
 
     @classmethod
     def allocate(cls, n: int) -> Self:
@@ -121,6 +145,30 @@ class GridFields:
     wind_magnitude: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] wind speed
+    discharge: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # Rain-weighted water flow volume
+    is_river: BoolArray | None = field(
+        default=None, metadata={"dtype": bool}
+    )  # Cell carries a river
+    river_id: Int32Array | None = field(
+        default=None, metadata={"dtype": np.int32}
+    )  # River object id; -1 = none
+    flow_u: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # Unit flow direction x
+    flow_v: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # Unit flow direction y
+    flow_speed: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] stylized flow speed
+    is_lake: BoolArray | None = field(
+        default=None, metadata={"dtype": bool}
+    )  # Cell is under lake water
+    lake_id: Int32Array | None = field(
+        default=None, metadata={"dtype": np.int32}
+    )  # Lake object id; -1 = none
 
     @classmethod
     def allocate(cls, n: int) -> Self:

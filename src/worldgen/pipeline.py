@@ -2,6 +2,7 @@ from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.stages.base import Stage
 from src.worldgen.stages.boundary_uplift import BoundaryUpliftStage
+from src.worldgen.stages.discharge import DischargeStage
 from src.worldgen.stages.erosion import ErosionStage
 from src.worldgen.stages.finalize import FinalizeStage
 from src.worldgen.stages.plate import PlatesStage
@@ -10,6 +11,7 @@ from src.worldgen.stages.insolation import InsolationStage
 from src.worldgen.stages.temperature import TemperatureStage
 from src.worldgen.stages.wind import WindStage
 from src.worldgen.stages.moisture import MoistureStage
+from src.worldgen.stages.rivers import RiversStage
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.fields import MeshFields
 
@@ -61,3 +63,7 @@ class WorldgenPipeline:
         TemperatureStage().run(ctx)
         WindStage().run(ctx)
         MoistureStage().run(ctx)
+
+        # --- Phase 3: Water ---
+        DischargeStage().run(ctx)
+        RiversStage().run(ctx)
