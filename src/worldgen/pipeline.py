@@ -14,6 +14,9 @@ from src.worldgen.stages.moisture import MoistureStage
 from src.worldgen.stages.rivers import RiversStage
 from src.worldgen.stages.lakes import LakesStage
 from src.worldgen.stages.flow import FlowStage
+from src.worldgen.stages.savagery import SavageryStage
+from src.worldgen.stages.leylines import LeylinesStage
+from src.worldgen.stages.biomes import BiomeStage
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.fields import MeshFields
 
@@ -71,3 +74,8 @@ class WorldgenPipeline:
         RiversStage().run(ctx)
         LakesStage().run(ctx)
         FlowStage().run(ctx)
+
+        # --- Phase 4: Magic & Ecology ---
+        SavageryStage().run(ctx)
+        LeylinesStage().run(ctx)
+        BiomeStage().run(ctx)

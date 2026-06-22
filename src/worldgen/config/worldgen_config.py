@@ -181,6 +181,71 @@ class LakeConfig:
 
 
 # ---------------------------------------------------------------------------
+# Savagery (Phase 4)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class SavageryConfig:
+    """Legible danger as a weighted blend of named geography components."""
+
+    remoteness_weight: float = 0.35   # coast_distance, max-normalized
+    harshness_weight: float = 0.30    # climate distance from comfort (0.55, 0.5)
+    ruggedness_weight: float = 0.15   # slope, percentile-normalized
+    noise_weight: float = 0.20        # FBm surprise
+    magic_weight: float = 0.0         # corrupt zones breed savagery (wire after step 5)
+    comfort_temperature: float = 0.55  # Most-comfortable temperature (harshness origin)
+    comfort_precipitation: float = 0.5  # Most-comfortable precipitation (harshness origin)
+    ruggedness_percentile: float = 95.0  # Percentile that normalizes slope to 1.0
+    noise_frequency: float = 3.0      # Surprise-noise spatial frequency (relative to span)
+
+
+# ---------------------------------------------------------------------------
+# Leylines (Phase 4)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class LeylineConfig:
+    """Nexus placement, the leyline web, and magic-field rasterization."""
+
+    count: int = 18              # Target number of nexuses to place
+    min_spacing: float = 0.18    # Greedy spacing as a fraction of world span
+    peak_percentile: float = 90.0  # Elevation percentile that counts as a peak
+    peak_bonus: float = 1.0      # Score bonus for peak cells
+    lake_outlet_bonus: float = 0.8  # Score bonus for lake-outlet cells
+    confluence_bonus: float = 0.9   # Score bonus for river confluences (>=2 inflows)
+    ring_bonus: float = 0.5      # Score bonus near the hot/cold ring lines
+    score_noise: float = 0.4     # FBm jitter so similar terrain still varies
+    edge_k: int = 4              # Candidate edges: each nexus to its k nearest fellows
+    extra_loops: int = 3         # Shortest rejected edges added back as loops
+    purity: float = 2.0          # Valence sharpening toward the poles (sign*|v|^(1/purity))
+    channel_purity: float = 2.0  # Channel-weight sharpening exponent
+    line_reach: float = 0.08     # Strength falloff length from a leyline (fraction of span)
+    nexus_reach: float = 0.03    # Tighter falloff length of the nexus bump
+    nexus_boost: float = 0.6     # Extra strength right at a nexus
+    idw_k: int = 4               # Nearest segments blended for valence/channels
+    idw_epsilon: float = 1e-3    # IDW distance floor
+    score_frequency: float = 3.0    # Nexus-score FBm frequency (cycles around the torus)
+    valence_frequency: float = 1.5  # Valence FBm frequency; low = clustered regions
+    floor_frequency: float = 2.0    # Magic-floor FBm frequency
+    floor_strength: float = 0.1     # Magic-floor amplitude so dead zones still flicker
+
+
+# ---------------------------------------------------------------------------
+# Biomes (Phase 4)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class BiomeConfig:
+    """Soft biome weighting from climate via inverse-distance weighting."""
+
+    blend_sharpness: float = 4.0   # IDW exponent; higher = sharper single-biome dominance
+    weight_cutoff: float = 0.02    # Drop biome weights below this, then renormalize
+
+
+# ---------------------------------------------------------------------------
 # Top-level config
 # ---------------------------------------------------------------------------
 
@@ -202,3 +267,6 @@ class WorldgenConfig:
     moisture: MoistureConfig = field(default_factory=MoistureConfig)
     river: RiverConfig = field(default_factory=RiverConfig)
     lake: LakeConfig = field(default_factory=LakeConfig)
+    savagery: SavageryConfig = field(default_factory=SavageryConfig)  # Legible danger blend
+    leyline: LeylineConfig = field(default_factory=LeylineConfig)  # Nexuses + magic web
+    biome: BiomeConfig = field(default_factory=BiomeConfig)  # Soft biome weights from climate

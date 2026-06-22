@@ -1,7 +1,7 @@
-"""Feature objects for Phase 3 water layer.
+"""Feature objects for the Phase 3 water and Phase 4 magic layers.
 
 These dataclasses ship inside ``WorldData`` (Phase 5) and are carried on the
-context meanwhile (``ctx.rivers``, ``ctx.lakes``).
+context meanwhile (``ctx.rivers``, ``ctx.lakes``, ``ctx.leylines``).
 """
 
 from dataclasses import dataclass
@@ -40,3 +40,17 @@ class Lake:
     cells: list[int]  #: Mesh cell ids belonging to the lake.
     surface_level: float  #: Shared ``z_route`` value of lake cells.
     outlet_cell: int | None  #: Spill cell; ``None`` = terminal (endorheic) lake.
+
+
+@dataclass
+class LeylineNetwork:
+    """The magic web: scored nexus cells, their aspects, and the edges between.
+
+    Built in Phase 4 (nexus placement → MST + loops → aspect assignment).
+    ``edges`` index into ``nexus_cells``, not raw mesh cell ids.
+    """
+
+    nexus_cells: list[int]  #: Mesh cell ids of the placed nexuses.
+    nexus_valence: Float64Array  #: Per-nexus valence in [-1, 1] (corrupt..pure).
+    nexus_channels: Float64Array  #: Per-nexus channel weights, shape (k, 3).
+    edges: list[tuple[int, int]]  #: Leyline edges as index pairs into ``nexus_cells``.

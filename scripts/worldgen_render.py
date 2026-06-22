@@ -47,6 +47,11 @@ class Layer(StrEnum):
     WIND = "wind"
     PRECIPITATION = "precipitation"
     DISCHARGE = "discharge"
+    SAVAGERY = "savagery"
+    MAGIC_STRENGTH = "magic_strength"
+    MAGIC_VALENCE = "magic_valence"
+    MAGIC_CHANNELS = "magic_channels"
+    BIOMES = "biomes"
 
 LAYER_ORDER: tuple[Layer, ...] = (
     Layer.ELEVATION,
@@ -60,6 +65,11 @@ LAYER_ORDER: tuple[Layer, ...] = (
     Layer.WIND,
     Layer.PRECIPITATION,
     Layer.DISCHARGE,
+    Layer.SAVAGERY,
+    Layer.MAGIC_STRENGTH,
+    Layer.MAGIC_VALENCE,
+    Layer.MAGIC_CHANNELS,
+    Layer.BIOMES,
 )
 
 LAYER_LABELS: dict[Layer, str] = {
@@ -74,6 +84,11 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.WIND: "Wind",
     Layer.PRECIPITATION: "Precipitation",
     Layer.DISCHARGE: "Discharge",
+    Layer.SAVAGERY: "Savagery",
+    Layer.MAGIC_STRENGTH: "Magic strength",
+    Layer.MAGIC_VALENCE: "Magic valence",
+    Layer.MAGIC_CHANNELS: "Magic channels",
+    Layer.BIOMES: "Biomes",
 }
 
 LAYER_DESCRIPTIONS: dict[Layer, str] = {
@@ -88,6 +103,11 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.WIND: "Wind: hue = direction (atan2 v,u), brightness = speed. Belts deflect around ranges.",
     Layer.PRECIPITATION: "Rainfall [0,1]. Wet windward coasts bright; dry interiors and rain shadows dark.",
     Layer.DISCHARGE: "Rain-weighted water flow (log). Brighter = more water. River valleys glow brighter in wet regions.",
+    Layer.SAVAGERY: "Legible danger [0,1]. Bright deep interiors, deserts, frostbelt, and ranges; calm temperate coasts.",
+    Layer.MAGIC_STRENGTH: "Leyline intensity [0,1]. Bright web of lines between nexuses; dim floor elsewhere.",
+    Layer.MAGIC_VALENCE: "Magic valence [-1,1]. Diverging palette: corrupt (magenta) vs pure (cyan); neutral grey off the web.",
+    Layer.MAGIC_CHANNELS: "Channel composition (corpus/mens/anima) mapped straight to RGB.",
+    Layer.BIOMES: "Dominant biome per tile (argmax of the soft weights); one hue per biome.",
 }
 
 
@@ -212,6 +232,40 @@ def _tile_color(
         log_d: float = math.log(d) / math.log(10000.0)  # normalize so d=10000 -> 1
         t: float = max(0.0, min(1.0, log_d))
         return _lerp_color(low=(30, 60, 120), high=(100, 200, 255), t=t)
+
+    if layer == Layer.SAVAGERY:
+        t: float = max(0.0, min(1.0, float(grid.savagery[tile_index])))
+        # calm green -> dangerous crimson
+        return _lerp_color(low=(40, 90, 60), high=(200, 40, 40), t=t)
+
+    if layer == Layer.MAGIC_STRENGTH:
+        t: float = max(0.0, min(1.0, float(grid.magic_strength[tile_index])))
+        return _lerp_color(low=(15, 15, 30), high=(180, 120, 255), t=t)
+
+    if layer == Layer.MAGIC_VALENCE:
+        v: float = max(-1.0, min(1.0, float(grid.magic_valence[tile_index])))
+        # corrupt (-1) = magenta, neutral (0) = grey, pure (+1) = cyan
+        if v < 0.0:
+            return _lerp_color(low=(120, 120, 120), high=(210, 40, 160), t=-v)
+        return _lerp_color(low=(120, 120, 120), high=(40, 200, 210), t=v)
+
+    if layer == Layer.MAGIC_CHANNELS:
+        channels = grid.magic_channels[tile_index]
+        # corpus/mens/anima -> RGB; scale so the dominant channel is vivid
+        peak: float = max(float(channels.max()), 1e-6)
+        return (
+            int(255 * float(channels[0]) / peak),
+            int(255 * float(channels[1]) / peak),
+            int(255 * float(channels[2]) / peak),
+        )
+
+    if layer == Layer.BIOMES:
+        if not grid.is_land[tile_index]:
+            return WATER_COLOR
+        biome_col: int = int(np.argmax(grid.biome_weights[tile_index]))
+        hue: float = (biome_col * 0.6180339887) % 1.0
+        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.55, v=0.9)
+        return int(red * 255), int(green * 255), int(blue * 255)
 
     return (0, 0, 0)
 
