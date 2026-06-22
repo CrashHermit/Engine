@@ -297,6 +297,21 @@ Conduits ride the same condition ladder as parts (§4) — pristine → marked �
 
 Because there is always the innate floor (your own spheres), losing a Conduit drops you to baseline — never below it.
 
+### Where the Cost Lands: External vs Internal Conduits
+
+The wear-and-repair rules above are written for *gear* — but a known spell, bare fists, or your own voice are Conduits too, and none of them can be taken to a smith. The unifying question every Conduit answers is: when it costs you something, does the cost land on a **thing**, or on **you**?
+
+*   **External Conduits** (sword, plate, scroll, wand) interpose an **object** between consequence and self. That object is the buffer that wears, breaks, is sundered, or is consumed (above) — so it is the thing that gets repaired, recharged, or lost.
+*   **Internal Conduits** (a known spell, your bare hands, your own voice) interpose **nothing**. There is no object to dent or repair, so the cost lands on **you** — on the **channeling trunk** you route it through. This is not a new rule: it is exactly **blowback** (§2) and **Riposte** (§5), which already fall on the channeling trunk.
+
+A spell does not "repair" because there is nothing to repair — **the cost was always paid in you.** A spell's durability is your own durability in the sphere you channel it through. Overreaching magic marks your own Mens (mental strain) or Anima (essence erosion, taint, §5), and can corrupt your own Drive (frenzy, zealotry, despair, §4). It mends by the ordinary mark rules — rest, ritual, a healer — exactly like any other mark on your trunks. The dark-fantasy cost of power needs **no mana pool and no separate track**; it falls straight out of blowback and self-danger.
+
+**Casting within your means is free**, the same way a sword-swing within your means is free: a clean success (§6) leaves no self-mark. The cost of magic is **emergent**, not a flat tax — it appears when you **overreach** (reaching for higher magnitude or an exotic part raises the danger of blowback to *yourself*) or when you **tie or lose** (the mark lands on your channeling trunk). Martial and magical risk-profiles therefore differ naturally — the mage carries no buffer object, so blowback is always personal, and spells reach for heavier, stranger effects — without magic needing an economy of its own.
+
+**The bridge case — charged objects.** A scroll, a wand, or a bound talisman *is* an external object carrying a spell, so it follows the gear rules, not the innate ones: it has **charges** (a depletion track), can be **recharged or re-inscribed** (its "repair"), and a one-use scroll is **consumed** on use (its dramatic loss). Charged items let a non-caster wield a Conduit whose cost is pre-paid into the object rather than into their trunks.
+
+**Corollary — how you "disarm" a mage.** You cannot knock a known spell out of someone's hand. You suppress a caster the way §4 suppresses any capability: **mark the trunk their channeling routes through.** Break a sorcerer's Mens/Drive (sanity) or a zealot's Anima/Drive (faith) and their spells gate shut at the source — the same machinery that breaks a swordsman's arm, pointed at the will that powers the magic.
+
 ### Loadout — *open*
 
 The **loadout** is the set of Conduits you can currently act through. Whether it is freeform (whatever the fiction says is to hand) or a fixed slot count (Skyrim-style hands + worn + known), and whether **swapping a Conduit mid-scene costs tempo** (the way Brace does), is **still to be determined**. The rest of this section does not depend on that choice.
