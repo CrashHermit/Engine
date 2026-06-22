@@ -47,4 +47,8 @@ def accumulate_discharge(
         if r >= 0:
             discharge[r] += discharge[cell_id]
 
+    # Ocean cells accumulate the totals of land cells draining into them;
+    # zero them again — discharge is a land concept.
+    discharge[~is_land] = 0.0
+
     return discharge

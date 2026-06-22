@@ -100,17 +100,22 @@ def test_river_mouths_terminate(seed: int) -> None:
     """Every river's mouth is either -1 (ocean) or a cell that is not a river cell."""
     ctx, rivers, receiver, discharge, is_river, river_id = _run(seed)
 
+    is_lake = ctx.fields.is_lake
     for river in rivers:
         mouth = river.mouth
         if mouth < 0:
-            # Ocean mouth — valid
+            # Ocean mouth (receiver == -1) — valid termination.
             continue
-        # Mouth cell: if it's a river cell, the river should have continued
-        # (this would mean the river is a tributary and mouth = last cell)
-        # Either way, the mouth is a valid termination point
-        assert is_river[mouth] or mouth < 0 or receiver[mouth] < 0 or not is_river[mouth], (
-            f"river {river.id} mouth={mouth} is a river cell that continues — "
-            f"this river should be a tributary"
+        # A non-negative mouth must be a valid spill point: a lake cell, or a
+        # non-river cell.  A tributary's mouth is its own last cell, which is a
+        # river cell — but then its receiver is the trunk it feeds into.
+        is_lake_mouth = is_lake is not None and bool(is_lake[mouth])
+        is_tributary_last_cell = (
+            bool(is_river[mouth]) and river.tributary_of is not None
+        )
+        assert is_lake_mouth or not is_river[mouth] or is_tributary_last_cell, (
+            f"river {river.id} mouth={mouth} is a river cell but the river is "
+            f"not a tributary — it should have continued"
         )
 
 
