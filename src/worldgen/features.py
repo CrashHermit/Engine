@@ -6,7 +6,6 @@ context meanwhile (``ctx.rivers``, ``ctx.lakes``).
 
 from dataclasses import dataclass
 
-import numpy as np
 
 from src.worldgen.types import Float64Array
 

@@ -143,6 +143,38 @@ def test_river_id_stamped_on_field(seed: int) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Step 4 — Lake outlets reach the ocean
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_lake_outlets_reach_ocean(seed: int) -> None:
+    """Following receiver from each non-terminal outlet hits base level in bounded steps."""
+    ctx = WorldgenPipeline(FAST_CONFIG).run(seed=seed, size=FAST_SIZE)
+    receiver = ctx.fields.receiver
+    n = len(receiver)
+
+    for lake in ctx.lakes:
+        if lake.outlet_cell is None:
+            continue  # terminal (endorheic) lake — no outlet to trace
+
+        cell = int(lake.outlet_cell)
+        seen: set[int] = set()
+        steps = 0
+        while cell >= 0 and steps <= n:
+            assert cell not in seen, (
+                f"lake {lake.id} outlet chain cycled at cell {cell}"
+            )
+            seen.add(cell)
+            cell = int(receiver[cell])
+            steps += 1
+
+        assert cell == -1, (
+            f"lake {lake.id} outlet did not reach base level within {n} steps"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Determinism
 # ---------------------------------------------------------------------------
 

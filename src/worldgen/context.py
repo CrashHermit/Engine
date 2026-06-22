@@ -1,5 +1,4 @@
 from dataclasses import dataclass, replace
-from typing import Self
 
 from src.worldgen.config.worldgen_config import MeshConfig
 from src.worldgen.config.worldgen_config import WorldgenConfig

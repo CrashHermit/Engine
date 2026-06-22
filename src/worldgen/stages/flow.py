@@ -3,7 +3,6 @@
 Pipeline order: ``... → Discharge → Rivers → Lakes → Flow``
 """
 
-import numpy as np
 
 from src.worldgen.context import WorldContext
 from src.worldgen.water.flow import compute_flow
@@ -22,7 +21,6 @@ class FlowStage:
     def run(self, ctx: WorldContext) -> None:
         """Compute flow direction and speed; write flow_u, flow_v, flow_speed."""
         # --- prerequisites ---
-        site_field = ctx.geometry.sites
         receiver_field = ctx.fields.receiver
         if receiver_field is None:
             msg: str = "receiver must be set before FlowStage"
@@ -51,14 +49,12 @@ class FlowStage:
 
         # --- Compute flow ---
         flow_u, flow_v, flow_speed = compute_flow(
-            site=site_field,
+            geometry=ctx.geometry,
             receiver=receiver,
             elevation=elevation,
             discharge=discharge,
             is_lake=is_lake,
             is_river=is_river_field,
-            width=ctx.geometry.width,
-            height=ctx.geometry.height,
         )
 
         ctx.fields.flow_u = flow_u

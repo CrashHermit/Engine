@@ -18,6 +18,55 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 
 
+def components(
+    *,
+    geometry: MeshGeometry,
+    mask: BoolArray,
+) -> Int32Array:
+    """Label connected components of ``mask`` via BFS over CSR adjacency.
+
+    This is the one connected-components idiom in the codebase, factored out
+    of ``terrain/finalize.py::label_landmasses`` so the water layer reuses the
+    exact BFS shape (``deque`` queue, the label array doubles as the visited
+    mask, ``int(neighbor_id)`` conversion).  Cells outside ``mask`` get ``-1``;
+    in-mask cells get a 0-based component id.
+
+    Args:
+        geometry: Torus mesh with CSR adjacency.
+        mask: Boolean mask selecting the cells to label.
+
+    Returns:
+        labels: Per-cell 0-based component id; ``-1`` for cells outside
+            the mask.
+    """
+    n: int = len(mask)
+    labels: Int32Array = np.full(n, -1, dtype=np.int32)
+    component_id: int = -1
+
+    cell_id: int
+    for cell_id in range(n):
+        if not mask[cell_id] or labels[cell_id] >= 0:
+            continue
+
+        component_id += 1
+
+        # BFS from this unvisited masked cell.
+        queue: deque[int] = deque()
+        queue.append(cell_id)
+        labels[cell_id] = component_id
+
+        while queue:
+            current: int = queue.popleft()
+            for neighbor_id in geometry.neighbors_of(cell_id=current):
+                neighbor_id = int(neighbor_id)
+                if labels[neighbor_id] >= 0 or not mask[neighbor_id]:
+                    continue
+                labels[neighbor_id] = component_id
+                queue.append(neighbor_id)
+
+    return labels
+
+
 def extract_lakes(
     *,
     geometry: MeshGeometry,
@@ -57,44 +106,30 @@ def extract_lakes(
 
     # --- 1. Lake mask ---
     lake_mask: BoolArray = is_land & (z_route > z + epsilon)
+    is_lake: BoolArray = lake_mask
 
-    # --- 2. Connected components via BFS ---
-    lake_id: Int32Array = np.full(n, -1, dtype=np.int32)
-    is_lake: BoolArray = lake_mask.copy()
-    lakes: list[Lake] = []
-    component_id: int = 0
+    # --- 2. Connected components via the shared BFS helper ---
+    lake_id: Int32Array = components(geometry=geometry, mask=lake_mask)
+    n_lakes: int = int(lake_id.max()) + 1 if lake_id.size else 0
+    if n_lakes <= 0:
+        return [], lake_id, is_lake
 
-    # Pre-build lake membership set for O(1) lookup during outlet finding.
-    # We'll rebuild it per-component inside the loop; for large lakes this
-    # is still fast because we only iterate lake cells once.
-
+    # Group cell ids by component label in a single pass.
+    cells_by_lake: list[list[int]] = [[] for _ in range(n_lakes)]
+    cell_id: int
     for cell_id in range(n):
-        if not lake_mask[cell_id] or lake_id[cell_id] >= 0:
-            continue
+        label: int = int(lake_id[cell_id])
+        if label >= 0:
+            cells_by_lake[label].append(cell_id)
 
-        component_id += 1
-
-        # BFS from this unvisited lake cell.
-        queue: deque[int] = deque()
-        queue.append(cell_id)
-        lake_id[cell_id] = component_id
-
-        component_cells: list[int] = [cell_id]
-
-        while queue:
-            current: int = queue.popleft()
-            for neighbor_id in geometry.neighbors_of(cell_id=current):
-                neighbor_id = int(neighbor_id)
-                if lake_id[neighbor_id] >= 0 or not lake_mask[neighbor_id]:
-                    continue
-                lake_id[neighbor_id] = component_id
-                component_cells.append(neighbor_id)
-
-        # --- 3. Build Lake object and find outlet ---
+    # --- 3. Build Lake objects and find outlets ---
+    lakes: list[Lake] = []
+    lake_idx: int
+    component_cells: list[int]
+    for lake_idx, component_cells in enumerate(cells_by_lake):
+        # A filled lake shares one z_route surface; any member reports it.
         surface_level: float = float(z_route[component_cells[0]])
 
-        # Find the outlet cell: the boundary cell (has an outside neighbor)
-        # whose outside neighbor has the lowest z_route.
         outlet_cell: int | None = _find_outlet(
             component_cells=component_cells,
             geometry=geometry,
@@ -103,16 +138,12 @@ def extract_lakes(
 
         lakes.append(
             Lake(
-                id=component_id - 1,
+                id=lake_idx,
                 cells=component_cells,
                 surface_level=surface_level,
                 outlet_cell=outlet_cell,
             )
         )
-
-    # Convert component ids to 0-based lake ids for the array.
-    if lakes:
-        lake_id = np.where(lake_id >= 0, lake_id - 1, -1).astype(np.int32)
 
     return lakes, lake_id, is_lake
 

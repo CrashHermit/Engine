@@ -20,41 +20,19 @@ are intentionally config-free.
 
 import numpy as np
 
-from src.worldgen.geometry.torus import torus_delta
+from src.worldgen.geometry.mesh import MeshGeometry
+from src.worldgen.geometry.torus import torus_delta_batch
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
-
-
-def _torus_distance_batch(
-    src: Float64Array, dst: Float64Array, width: float, height: float
-) -> Float64Array:
-    """Vectorized torus distance for arrays of source/target pairs.
-
-    Args:
-        src: ``(N, 2)`` array of source coordinates.
-        dst: ``(N, 2)`` array of destination coordinates.
-        width: Torus width.
-        height: Torus height.
-
-    Returns:
-        Per-pair Euclidean distances, shape ``(N,)``.
-    """
-    delta: Float64Array = np.asanyarray(dst - src, dtype=np.float64)
-    # Apply minimum-image correction per axis.
-    delta[:, 0] -= width * np.round(delta[:, 0] / width)
-    delta[:, 1] -= height * np.round(delta[:, 1] / height)
-    return np.linalg.norm(delta, axis=1)
 
 
 def compute_flow(
     *,
-    site: Float64Array,
+    geometry: MeshGeometry,
     receiver: Int32Array,
     elevation: Float64Array,
     discharge: Float64Array,
     is_lake: BoolArray,
     is_river: BoolArray | None = None,
-    width: float = 1.0,
-    height: float = 1.0,
 ) -> tuple[Float64Array, Float64Array, Float64Array]:
     """Compute per-cell flow direction and stylized Manning speed.
 
@@ -66,21 +44,22 @@ def compute_flow(
     speed.  Non-river cells may be zeroed if ``is_river`` is provided.
 
     Args:
-        site: Per-cell ``(x, y)`` coordinates on the torus mesh.
+        geometry: Torus mesh providing site positions and dimensions.
         receiver: Per-cell downstream cell id; ``-1`` = base level.
         elevation: Per-cell terrain elevation (used for slope).
         discharge: Per-cell rain-weighted water flow.
         is_lake: Boolean mask identifying lake cells.
         is_river: Optional boolean mask identifying river cells.  When
             provided, non-river cells are zeroed in all outputs.
-        width: Torus width in world units.
-        height: Torus height in world units.
 
     Returns:
         flow_u: Per-cell unit flow direction, x-component.
         flow_v: Per-cell unit flow direction, y-component.
         flow_speed: Per-cell stylized speed, normalized to [0, 1].
     """
+    site: Float64Array = geometry.sites
+    width: float = geometry.width
+    height: float = geometry.height
     n: int = len(receiver)
 
     # --- 1. Compute direction vectors and distances ---
@@ -96,10 +75,10 @@ def compute_flow(
     src: Float64Array = site[valid_idx]
     dst: Float64Array = site[receiver[valid_idx]]
 
-    # Vectorized delta and distance.
-    deltas: Float64Array = np.asanyarray(dst - src, dtype=np.float64)
-    deltas[:, 0] -= width * np.round(deltas[:, 0] / width)
-    deltas[:, 1] -= height * np.round(deltas[:, 1] / height)
+    # Vectorized minimum-image delta and distance.
+    deltas: Float64Array = torus_delta_batch(
+        a=src, b=dst, width=width, height=height
+    )
     dist: Float64Array = np.linalg.norm(deltas, axis=1)
 
     # Normalize to unit vectors; skip zero-length segments.

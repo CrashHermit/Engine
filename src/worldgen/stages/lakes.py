@@ -3,7 +3,6 @@
 Pipeline order: ``... → Rivers → Lakes → Flow``
 """
 
-import numpy as np
 
 from src.worldgen.config.worldgen_config import LakeConfig
 from src.worldgen.context import WorldContext
