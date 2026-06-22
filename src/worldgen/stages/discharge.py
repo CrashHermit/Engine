@@ -47,8 +47,10 @@ class DischargeStage:
         precipitation: Float64Array = precipitation_field
 
         # --- 1. Re-run priority-flood on final terrain ---
-        # Determine base cells (lowest percentile by current z).
-        n_base: int = max(1, int(0.1 * n))
+        # Determine base cells (lowest percentile by current z).  Use the same
+        # base fraction the erosion loop used so the flow tree we route here
+        # matches the one that carved the valleys.
+        n_base: int = max(1, int(ctx.config.erosion.base_level_fraction * n))
         base_cells: Int32Array = np.argpartition(a=elevation, kth=n_base)[
             :n_base
         ].astype(np.int32)
