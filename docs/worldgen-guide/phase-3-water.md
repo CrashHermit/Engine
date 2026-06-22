@@ -382,6 +382,16 @@ only because they are part of the stylized formula (document them).
 
 ## Step 6 — Rasterize to the grid (2–3 h)
 
+### Step 6 — Done
+
+- `bake/rivers.py::stamp_rivers` — disk-stamp rasterizer with torus wrapping,
+  sub-linear width scaling, and "wetter stamp" contest logic
+- `bake/grid.py::bake_and_stamp` — convenience function
+  (`nearest_cell_per_tile` → `bake_to_grid` → `stamp_rivers`)
+- `GridFields` already has all water fields (`discharge`, `is_river`,
+  `river_id`, `flow_u`, `flow_v`, `flow_speed`, `is_lake`, `lake_id`)
+- `River`/`Lake` dataclasses in `features.py`
+
 ### The lesson first
 
 Rivers are mesh-space polylines; tiles are pixels. Stamping a line onto a grid

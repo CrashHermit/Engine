@@ -12,6 +12,8 @@ from src.worldgen.stages.temperature import TemperatureStage
 from src.worldgen.stages.wind import WindStage
 from src.worldgen.stages.moisture import MoistureStage
 from src.worldgen.stages.rivers import RiversStage
+from src.worldgen.stages.lakes import LakesStage
+from src.worldgen.stages.flow import FlowStage
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.fields import MeshFields
 
@@ -67,3 +69,5 @@ class WorldgenPipeline:
         # --- Phase 3: Water ---
         DischargeStage().run(ctx)
         RiversStage().run(ctx)
+        LakesStage().run(ctx)
+        FlowStage().run(ctx)

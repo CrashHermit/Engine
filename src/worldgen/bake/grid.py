@@ -1,3 +1,5 @@
+"""Mesh → grid rasterization via nearest-cell Voronoi mapping."""
+
 from dataclasses import fields as dataclass_fields
 
 import numpy as np
@@ -37,6 +39,49 @@ def bake_to_grid(fields: MeshFields, nearest: Int32Array) -> GridFields:
     mesh-side intermediates like ``insolation`` stay off the grid.
     """
     grid: GridFields = GridFields.allocate(n=nearest.shape[0])
-    for f in dataclass_fields(class_or_instance=GridFields):
-        setattr(grid, f.name, getattr(fields, f.name)[nearest])
+    for f in dataclass_fields(class_or_instance=grid):
+        value = getattr(fields, f.name, None)
+        if value is not None:
+            setattr(grid, f.name, value[nearest])
+        else:
+            setattr(grid, f.name, None)
+    return grid
+
+
+def bake_and_stamp(
+    *,
+    fields: MeshFields,
+    geometry: MeshGeometry,
+    rivers: list | None,
+    size: int,
+    cfg,
+) -> GridFields:
+    """Bake mesh to grid and stamp rivers on top.
+
+    Convenience function that calls
+    ``nearest_cell_per_tile`` → ``bake_to_grid`` → ``stamp_rivers``.
+
+    Args:
+        fields: Mesh-side fields.
+        geometry: Mesh geometry.
+        rivers: Extracted river objects (from ``RiversStage``).
+        size: Grid edge length in tiles.
+        cfg: River rasterizer config.
+
+    Returns:
+        Baked-and-stamped ``GridFields``.
+    """
+    from src.worldgen.bake.rivers import stamp_rivers
+
+    nearest: Int32Array = nearest_cell_per_tile(geometry, size)
+    grid: GridFields = bake_to_grid(fields, nearest)
+    if rivers:
+        stamp_rivers(
+            grid=grid,
+            rivers=rivers,
+            geometry=geometry,
+            fields=fields,
+            size=size,
+            cfg=cfg,
+        )
     return grid
