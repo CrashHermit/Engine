@@ -41,6 +41,9 @@ class MeshFields:
     landmass_class: Int8Array | None = field(
         default=None, metadata={"dtype": np.int8}
     )  # 0 = ocean, 1 = island, 2 = landmass, 3 = major
+    insolation: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] authored energy field; 1 = sunband (mesh-side intermediate)
     temperature: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] warmth; 1 = sunband

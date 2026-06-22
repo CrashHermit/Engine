@@ -6,12 +6,14 @@ from typing import TypeAlias
 from dataclasses import dataclass
 from enum import StrEnum
 
+import numpy as np
+
 from src.worldgen.bake import bake_to_grid, nearest_cell_per_tile
 from src.worldgen.context import WorldContext
 from src.worldgen.fields import GridFields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.pipeline import WorldgenPipeline
-from src.worldgen.types import Int32Array
+from src.worldgen.types import Float64Array, Int32Array
 
 
 RGB: TypeAlias = tuple[int, int, int]
@@ -30,6 +32,7 @@ class Phase0World:
     grid: GridFields
     geometry: MeshGeometry
     nearest: Int32Array
+    insolation: Float64Array  # mesh-side intermediate, baked per-tile for display only
 
 
 class Layer(StrEnum):
@@ -39,6 +42,10 @@ class Layer(StrEnum):
     PLATES = "plates"
     UPLIFT = "uplift"
     DRAINAGE = "drainage"
+    INSOLATION = "insolation"
+    TEMPERATURE = "temperature"
+    WIND = "wind"
+    PRECIPITATION = "precipitation"
 
 LAYER_ORDER: tuple[Layer, ...] = (
     Layer.ELEVATION,
@@ -47,6 +54,10 @@ LAYER_ORDER: tuple[Layer, ...] = (
     Layer.PLATES,
     Layer.UPLIFT,
     Layer.DRAINAGE,
+    Layer.INSOLATION,
+    Layer.TEMPERATURE,
+    Layer.WIND,
+    Layer.PRECIPITATION,
 )
 
 LAYER_LABELS: dict[Layer, str] = {
@@ -56,6 +67,10 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.PLATES: "Plates",
     Layer.UPLIFT: "Uplift",
     Layer.DRAINAGE: "Drainage",
+    Layer.INSOLATION: "Insolation",
+    Layer.TEMPERATURE: "Temperature",
+    Layer.WIND: "Wind",
+    Layer.PRECIPITATION: "Precipitation",
 }
 
 LAYER_DESCRIPTIONS: dict[Layer, str] = {
@@ -65,6 +80,10 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.PLATES: "Tectonic plates; each color is a plate id (ragged Voronoi partition).",
     Layer.UPLIFT: "Base tectonic uplift before boundary belts. Bright = continental plates, dark = oceanic.",
     Layer.DRAINAGE: "Upstream drainage area per cell (log). Brighter = more flow. River valleys visible as bright veins.",
+    Layer.INSOLATION: "Authored energy field. Bright = hot sunband, dark = cold frostbelt; wraps seamlessly.",
+    Layer.TEMPERATURE: "Warmth [0,1]. Cold frostbelt and mountain peaks blue; hot sunband red; mild coasts.",
+    Layer.WIND: "Wind: hue = direction (atan2 v,u), brightness = speed. Belts deflect around ranges.",
+    Layer.PRECIPITATION: "Rainfall [0,1]. Wet windward coasts bright; dry interiors and rain shadows dark.",
 }
 
 
@@ -76,12 +95,23 @@ def generate_world(size: int, seed: int) -> Phase0World:
         size=ctx.config.size,
     )
     grid: GridFields = bake_to_grid(fields=ctx.fields, nearest=nearest)
+
+    # insolation stays off the product grid (mesh-side intermediate); bake it
+    # per-tile here purely so the viewer can show the authored energy field.
+    insolation_field: Float64Array | None = ctx.fields.insolation
+    insolation: Float64Array = (
+        insolation_field[nearest]
+        if insolation_field is not None
+        else np.zeros(nearest.shape[0], dtype=float)
+    )
+
     return Phase0World(
         seed=seed,
         size=size,
         grid=grid,
         geometry=ctx.geometry,
         nearest=nearest,
+        insolation=insolation,
     )
 
 
@@ -147,6 +177,28 @@ def _tile_color(
         log_d: float = math.log(d) / math.log(1000.0)  # normalize so d=1000 -> 1
         t: float = max(0.0, min(1.0, log_d))
         return _lerp_color(low=(30, 60, 100), high=(255, 240, 200), t=t)
+
+    if layer == Layer.INSOLATION:
+        t: float = max(0.0, min(1.0, float(world.insolation[tile_index])))
+        return _lerp_color(low=(20, 30, 90), high=(255, 240, 180), t=t)
+
+    if layer == Layer.TEMPERATURE:
+        t: float = max(0.0, min(1.0, float(grid.temperature[tile_index])))
+        # cold = blue, mild = pale, hot = red
+        return _lerp_color(low=(40, 80, 200), high=(220, 60, 50), t=t)
+
+    if layer == Layer.PRECIPITATION:
+        t: float = max(0.0, min(1.0, float(grid.precipitation[tile_index])))
+        # dry = tan, wet = deep green-blue
+        return _lerp_color(low=(200, 180, 120), high=(20, 90, 130), t=t)
+
+    if layer == Layer.WIND:
+        wind_u: float = float(grid.wind_u[tile_index])
+        wind_v: float = float(grid.wind_v[tile_index])
+        mag: float = max(0.0, min(1.0, float(grid.wind_magnitude[tile_index])))
+        hue: float = (math.atan2(wind_v, wind_u) / (2.0 * math.pi)) % 1.0
+        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.8, v=0.2 + 0.8 * mag)
+        return int(red * 255), int(green * 255), int(blue * 255)
 
     return (0, 0, 0)
 

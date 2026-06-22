@@ -31,8 +31,12 @@ def nearest_cell_per_tile(geometry: MeshGeometry, size: int) -> Int32Array:
 
 
 def bake_to_grid(fields: MeshFields, nearest: Int32Array) -> GridFields:
-    """Copy every mesh field onto the grid via nearest-cell fancy indexing."""
+    """Copy every grid field onto the grid via nearest-cell fancy indexing.
+
+    Iterates ``GridFields`` (the product subset) rather than ``MeshFields`` so
+    mesh-side intermediates like ``insolation`` stay off the grid.
+    """
     grid: GridFields = GridFields.allocate(n=nearest.shape[0])
-    for f in dataclass_fields(class_or_instance=MeshFields):
+    for f in dataclass_fields(class_or_instance=GridFields):
         setattr(grid, f.name, getattr(fields, f.name)[nearest])
     return grid

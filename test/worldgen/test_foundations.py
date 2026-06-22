@@ -29,7 +29,9 @@ def _assert_field_arrays_equal(
     b: MeshFields | GridFields,
 ) -> None:
     """Assert every SoA field array matches between two field bundles."""
-    for f in dataclass_fields(MeshFields):
+    # Iterate the bundle's own fields: GridFields is a subset of MeshFields
+    # (mesh-side intermediates like insolation are not baked to the grid).
+    for f in dataclass_fields(type(a)):
         assert np.array_equal(getattr(a, f.name), getattr(b, f.name))
 
 
