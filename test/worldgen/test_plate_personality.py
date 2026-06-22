@@ -1,7 +1,5 @@
 """Plate personality invariants: uplift mapping, drift unit length, determinism."""
 
-from __future__ import annotations
-
 import numpy as np
 
 from src.worldgen.config.worldgen_config import PlatesConfig

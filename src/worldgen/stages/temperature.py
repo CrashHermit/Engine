@@ -1,9 +1,7 @@
-from __future__ import annotations
-
+from src.worldgen.climate.temperature import compute_temperature
 from src.worldgen.config.worldgen_config import TemperatureConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.types import BoolArray, Float64Array
-from src.worldgen.climate.temperature import compute_temperature
 
 
 class TemperatureStage:

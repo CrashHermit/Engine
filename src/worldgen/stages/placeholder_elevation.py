@@ -1,9 +1,9 @@
 import numpy as np
 
 from src.worldgen.context import WorldContext
-from src.worldgen.types import BoolArray, Float64Array
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import FIELD_ELEVATION
+from src.worldgen.types import BoolArray, Float64Array
 
 
 class PlaceholderElevationStage:

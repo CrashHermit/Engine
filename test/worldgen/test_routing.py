@@ -1,11 +1,7 @@
 """Routing invariants: priority flood, receivers, drainage accumulation."""
 
-from __future__ import annotations
-
 import numpy as np
-import pytest
 
-from src.worldgen.config.worldgen_config import WorldgenConfig
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.terrain.routing import (
     accumulate_drainage,

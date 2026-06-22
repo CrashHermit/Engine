@@ -1,7 +1,4 @@
-"""[TODO:description]
-
-[TODO:description]
-"""
+"""Boundary uplift from tectonic plate interactions."""
 
 from collections import deque
 

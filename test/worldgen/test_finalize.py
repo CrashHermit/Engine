@@ -1,10 +1,7 @@
 """Finalize invariants: sea level normalization, landmass labeling,
 coast distance, slope, determinism."""
 
-from __future__ import annotations
-
 import numpy as np
-import pytest
 
 from src.worldgen.config.worldgen_config import (
     LandmassConfig,

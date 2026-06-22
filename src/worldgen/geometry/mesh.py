@@ -1,8 +1,8 @@
 import math
 import random
+from dataclasses import dataclass
 
 import numpy as np
-from dataclasses import dataclass
 from scipy.spatial import Delaunay, Voronoi
 
 from src.worldgen.types import Float64Array, Int32Array

@@ -1,7 +1,5 @@
 """Phase 0 foundation invariants: determinism, mesh graph, torus noise."""
 
-from __future__ import annotations
-
 from dataclasses import fields as dataclass_fields
 
 import numpy as np

@@ -1,10 +1,8 @@
-from __future__ import annotations
-
+from src.worldgen.climate.insolation import insolation_field
 from src.worldgen.config.worldgen_config import InsolationConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import FIELD_INSOLATION_WOBBLE
-from src.worldgen.climate.insolation import insolation_field
 
 
 class InsolationStage:

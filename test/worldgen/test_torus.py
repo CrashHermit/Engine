@@ -1,7 +1,5 @@
 """Torus geometry helpers."""
 
-from __future__ import annotations
-
 import numpy as np
 
 from src.worldgen.geometry.torus import torus_delta, torus_distance

@@ -1,7 +1,8 @@
 import math
 import random
-import numpy as np
 from dataclasses import dataclass
+
+import numpy as np
 
 from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.types import BoolArray, Float64Array, Int32Array

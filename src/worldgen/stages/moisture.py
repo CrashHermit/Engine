@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 from src.worldgen.climate.moisture import build_downwind, transport_moisture
 from src.worldgen.config.worldgen_config import MoistureConfig
 from src.worldgen.context import WorldContext

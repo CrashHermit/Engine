@@ -1,7 +1,7 @@
 from dataclasses import dataclass, replace
 
-from src.worldgen.config.worldgen_config import WorldgenConfig
 from src.worldgen.config.worldgen_config import MeshConfig
+from src.worldgen.config.worldgen_config import WorldgenConfig
 from src.worldgen.fields import MeshFields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed

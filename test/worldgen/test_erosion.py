@@ -1,9 +1,6 @@
 """Erosion invariants: stream-power stability, diffusion, determinism."""
 
-from __future__ import annotations
-
 import numpy as np
-import pytest
 
 from src.worldgen.config.worldgen_config import ErosionConfig
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh

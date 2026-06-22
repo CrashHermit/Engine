@@ -1,9 +1,6 @@
 """Boundary uplift invariants: collision belts, rift seams, clamping, determinism."""
 
-from __future__ import annotations
-
 import numpy as np
-import pytest
 
 from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
@@ -11,7 +8,10 @@ from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import NoiseSource, subseed
 from src.worldgen.terrain.boundary_uplift import apply_boundary_uplift
 from src.worldgen.terrain.plates import build_plates
-from src.worldgen.terrain.plate_personalities import assign_plate_personalities, fill_uplift_from_plates
+from src.worldgen.terrain.plate_personalities import (
+    assign_plate_personalities,
+    fill_uplift_from_plates,
+)
 from src.worldgen.types import Float64Array, Int32Array
 
 MESH_SEED: int = 1

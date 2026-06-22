@@ -62,17 +62,9 @@ it.
 
 ## 2. File header and imports
 
-Every `.py` file starts with:
+Every file imports in three groups, blank-line separated, in this order:
 
 ```python
-from __future__ import annotations
-```
-
-Then imports in three groups, blank-line separated, in this order:
-
-```python
-from __future__ import annotations
-
 import heapq           # 1. stdlib
 import random
 from collections import deque
@@ -110,6 +102,7 @@ for cell_id in range(n):
 ```
 
 Rules:
+
 - Annotate every local with a meaningful type, including intermediates.
 - When you pull a scalar out of a numpy array, convert and annotate:
   `z_i: float = float(z[cell_id])`, `r: int = int(receiver[cell_id])`.
@@ -307,6 +300,7 @@ Plates → PlatePersonality → BoundaryUplift → Erosion → Finalize
 ## 14. Viewer layers
 
 When a step says "add an `X` layer", edit `scripts/worldgen_render.py`:
+
 1. add `X = "x"` to the `Layer` `StrEnum`,
 2. add `Layer.X` to `LAYER_ORDER`,
 3. add a label to `LAYER_LABELS`,
@@ -357,4 +351,5 @@ Before you mark a step complete:
 - [ ] `uv run pytest test/worldgen -q` green, **including determinism**.
 - [ ] The step's own "Check" passed (viewer eyeball or REPL/test assertion).
 </content>
+
 </invoke>

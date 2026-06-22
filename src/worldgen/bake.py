@@ -1,5 +1,6 @@
-import numpy as np
 from dataclasses import fields as dataclass_fields
+
+import numpy as np
 from scipy.spatial import cKDTree
 
 from src.worldgen.fields import GridFields, MeshFields

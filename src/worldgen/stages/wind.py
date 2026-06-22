@@ -1,8 +1,6 @@
-from __future__ import annotations
-
-from src.worldgen.climate.wind import wind_belts
-from src.worldgen.climate.wind import elevation_gradient
 from src.worldgen.climate.wind import deflect_wind
+from src.worldgen.climate.wind import elevation_gradient
+from src.worldgen.climate.wind import wind_belts
 from src.worldgen.config.worldgen_config import WindConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.noise.field import FractalField
