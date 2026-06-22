@@ -143,6 +143,22 @@ class WindConfig:
     deflection: float = 0.5            # How hard wind bends away from uphill (step 4)
 
 # ---------------------------------------------------------------------------
+# Moisture
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class MoistureConfig:
+    """Ocean-sourced moisture advected downwind and rained out."""
+
+    passes: int = 30           # Advection iterations
+    evaporation: float = 1.0   # Ocean moisture refill scale (x temperature)
+    base_rain: float = 0.05    # Fraction rained out per inland step (drying rate)
+    oro: float = 0.6           # Orographic (uphill) rainout multiplier
+    chill: float = 0.3         # Temperature-drop rainout multiplier
+
+
+# ---------------------------------------------------------------------------
 # Top-level config
 # ---------------------------------------------------------------------------
 
@@ -161,3 +177,4 @@ class WorldgenConfig:
     insolation: InsolationConfig = field(default_factory=InsolationConfig)  # Authored energy pattern
     temperature: TemperatureConfig = field(default_factory=TemperatureConfig)  # Lapse rate + maritime moderation
     wind: WindConfig = field(default_factory=WindConfig)
+    moisture: MoistureConfig = field(default_factory=MoistureConfig)

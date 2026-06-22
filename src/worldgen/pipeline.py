@@ -8,6 +8,8 @@ from src.worldgen.stages.plate import PlatesStage
 from src.worldgen.stages.plate_personality import PlatePersonalityStage
 from src.worldgen.stages.insolation import InsolationStage
 from src.worldgen.stages.temperature import TemperatureStage
+from src.worldgen.stages.wind import WindStage
+from src.worldgen.stages.moisture import MoistureStage
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.fields import MeshFields
 
@@ -57,3 +59,5 @@ class WorldgenPipeline:
         """Run the climate stages after the terrain pipeline."""
         InsolationStage().run(ctx)
         TemperatureStage().run(ctx)
+        WindStage().run(ctx)
+        MoistureStage().run(ctx)

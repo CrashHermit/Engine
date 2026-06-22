@@ -6,7 +6,7 @@ from src.worldgen.config.worldgen_config import WindConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta
 from src.worldgen.noise.field import FractalField
-from src.worldgen.types import Float64Array, Int32Array
+from src.worldgen.types import Float64Array
 
 
 def wind_belts(
