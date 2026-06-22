@@ -1,11 +1,14 @@
 """
 Persistent harm as a per-part damage pool (decision #19, model "C").
 
-DEFERRED / NOT YET WIRED: this is scaffolding for the player-body-harm system
-(§7 of docs/bitd_integration-design.md). It has no callers yet — harm landing
-on player parts (`apply_turn_effects`) is unbuilt, and NPCs use per-pillar
-clocks (mechanic/effect.py), not this pool. Kept because the feature is fully
-specced; wire it when player harm ships.
+DEFERRED / NOT YET WIRED: this is scaffolding for the player-body-harm system.
+It has no callers yet — harm landing on player parts (`apply_turn_effects`) is
+unbuilt, and NPCs use per-pillar clocks (mechanic/effect.py), not this pool.
+
+NOTE: this wound-box pool is the older Blades-derived harm model. The current
+gameplay design (docs/domains.md §4–§6) replaces it with marks on parts —
+a part carries a *condition* (pristine → marked → broken), not a box pool.
+Reconcile this module against domains.md before wiring player harm.
 
 Each body part carries a small **wound-box pool**; a `harm` threat fills
 `magnitude` boxes. The part's `Status` is *derived* from how full the pool is via
