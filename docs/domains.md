@@ -234,3 +234,69 @@ Your one action may be **focused** (one foe) or **wide** (a greatsword arc, a co
 *   **The risk is symmetric.** Each foe you sweep resolves as a full contest, so each tie or loss can mark you back (and a defender's crit can Riposte, §5). Committing to a wide action against many foes exposes you to many returns.
 
 This is the counter to being swarmed: when too many fronts are live, go wide to step several of them down at once — accepting reduced effect per foe and broader exposure as the price. Focus-fire stays the way to break a single dangerous front fast.
+
+---
+
+## 8. CONDUITS (Weapons, Spells, Armor, Tools)
+
+A weapon, a spell, a tool, a suit of armor, a ward — none of these is a separate system. They are one kind of object: a **Conduit**, a thing you channel a skill *through* that modifies the knobs of the one contest (§6). The doc already says a permanent consequence "alters Position and Effect" (§5); a Conduit is exactly that — **Position and Effect made into a thing you can equip, wield, and lose.**
+
+A sword and a firebolt are the *same data structure* with different field values; that is why they share a hand-slot. A Conduit **never adds a resolution path** — it only shifts knobs the contest already has. This keeps *One Contest, Never Typed* (§1) intact: "magic" and "martial" are flavor on which Conduit shaped the roll, nothing more.
+
+### Gear Shapes Consequences, Never Odds
+
+The engine splits *odds* (your skill) from *magnitude* (danger): "danger sizes the mark; it does not change the odds" (§5). Conduits live entirely on the **consequence** side of that line.
+
+> Your dice are **you**. A finer blade does not make you hit more *often* — it makes your hits land **harder, farther, and on parts you otherwise could not reach.**
+
+A Conduit shifts magnitude, reach, target shape, and part-access — never your pool. This keeps unarmed and innate action always *viable* (your odds never drop; you simply hit lighter and shorter — you can always claw, bite, or ward with your own spheres), removes any mandatory gear treadmill, and keeps *precision* a property of the wielder's skill rating, not the tool. Gear is **leverage on the world**, not a substitute for skill.
+
+### Offensive Conduits (weapon = spell = tool)
+
+One schema. Each field shifts an existing contest knob:
+
+| Field | What it sets |
+|---|---|
+| **Cell affinity** | which skill cell (§3) you channel it through |
+| **Reach** | which fronts it can make *live* — touch / melee / ranged / scene (§7 fiction-gating) |
+| **Shape** | single, or **wide-capable** (carries §7's *breadth costs depth*) |
+| **Part access** | which trunk + part it can reach (§4, fiction-gated) — *this is what makes a spell feel different from a sword* |
+| **Magnitude** | how heavy its marks are (its contribution to danger, §6 step 2) |
+
+Examples, all the same structure:
+
+*   **Greatsword** — PROWESS · melee · wide-capable · Corpus/Substance · high magnitude.
+*   **Rapier** — PROWESS · melee · single-only · Corpus/Pattern · lower magnitude.
+*   **Firebolt** — CHANNELING · ranged · single · Corpus/Substance · high magnitude.
+*   **Dread-hex** — GLAMOUR · ranged · wide-capable · Mens/Drive · standard magnitude.
+
+A spell "feels like magic" and a sword "feels martial" only because they declare different (cell × reach × shape × part) profiles — not because either runs a different engine.
+
+**Shape resolves the wide-action floor.** Because *wide* is a Conduit capability rather than a free per-beat toggle, the §7 "one band below" has a natural floor: a low-magnitude Conduit that goes wide drops to fiction-only / no-mark. A MINOR implement simply *cannot* meaningfully sweep — the gear answers the question.
+
+### Defensive Conduits (armor = ward = discipline) — Pre-Paid Brace
+
+A defensive Conduit operates on the **mark pipeline**, in the same family as Brace and Riposte (§5). Recall Brace: spend tempo → step a mark down → relocate it within your trunk. **Armor is Brace paid for in advance, and the mark relocates onto the gear instead of you.**
+
+| Field | What it sets |
+|---|---|
+| **Channel covered** | which trunk it guards (plate → Corpus, ward → Anima, discipline → Mens) |
+| **Step (the floor)** | steps an incoming mark in its channel **down one band** — reliable while worn |
+| **Condition** | its own pristine → marked → broken track (§4 ladder), recording wear |
+
+While worn, the step-down is a **reliable floor** that never lapses until the gear is destroyed. Heavy hits also leave **wear** on the gear's own condition (below). The trade is deliberately a good deal: gear converts hard-to-heal **body** marks into easy-to-fix **gear** marks. "Your plate took the blow that would have opened your gut" is the armor doing its job — the wear *is* the payoff.
+
+### Condition, Wear, and Loss
+
+Conduits ride the same condition ladder as parts (§4) — pristine → marked → broken — but tuned so that **wear is routine and loss is rare**, because losing your gear should be an earned story-beat, never a meter quietly draining.
+
+*   **Marked = repairable wear.** A dented breastplate or notched blade is a **Conditional** mark (§5); its removal condition is simply *repair / maintenance*. Battered gear still works — it just wants a smith. This is logistics texture, not punishment.
+*   **Broken = degraded, not destroyed.** A broken Conduit is reduced, not gone: broken armor still steps marks down (its floor) but loses any bonus absorb; a broken weapon still swings but loses a capability (its reach, or its wide-sweep).
+*   **Destruction is rare and dramatic.** Outright loss is reserved for the **FATAL-tier beat** — the shield that shatters to save your life — never an everyday outcome.
+*   **Weapons wear only when attacked.** An offensive Conduit takes marks only when a foe **spends their action to sunder it** — a real opportunity cost, since they did not strike *you* that beat. Weapons never degrade from use; passive wear lives on the defensive side, where it makes fictional sense.
+
+Because there is always the innate floor (your own spheres), losing a Conduit drops you to baseline — never below it.
+
+### Loadout — *open*
+
+The **loadout** is the set of Conduits you can currently act through. Whether it is freeform (whatever the fiction says is to hand) or a fixed slot count (Skyrim-style hands + worn + known), and whether **swapping a Conduit mid-scene costs tempo** (the way Brace does), is **still to be determined**. The rest of this section does not depend on that choice.
