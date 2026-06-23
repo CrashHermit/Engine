@@ -88,6 +88,12 @@ class SeaLevelConfig:
     target_land_fraction: float = (
         0.32  # Desired fraction of land cells after sea-level placement
     )
+    coast_smoothing_passes: int = (
+        2  # Laplacian relaxation passes on elevation before the cut (0 = off)
+    )
+    coast_smoothing_strength: float = (
+        0.5  # Blend toward neighbor mean per smoothing pass, in [0, 1]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +118,7 @@ class InsolationConfig:
     """Authored energy pattern (no latitude on a torus)."""
 
     bands: int = 1          # Number of hot/cold ring pairs around the torus
-    contrast: float = 1.0   # Spread of climate zones; <1 flattens, >1 sharpens
+    contrast: float = 0.8   # Spread of climate zones; <1 flattens, >1 sharpens
     wobble: float = 0.0     # Low-freq noise warp on the ring lines; 0 = laser-straight
 
 # ---------------------------------------------------------------------------
@@ -124,7 +130,7 @@ class InsolationConfig:
 class TemperatureConfig:
     """Lapse rate and maritime moderation on top of insolation."""
 
-    lapse_rate: float = 0.5         # Cooling per unit land elevation
+    lapse_rate: float = 0.3         # Cooling per unit land elevation
     maritime_reach: float = 4.0     # Coast-distance decay length for ocean moderation
     maritime_strength: float = 0.4  # How strongly coasts pull toward sea temperature
 
@@ -153,9 +159,15 @@ class MoistureConfig:
 
     passes: int = 30           # Advection iterations
     evaporation: float = 1.0   # Ocean moisture refill scale (x temperature)
-    base_rain: float = 0.05    # Fraction rained out per inland step (drying rate)
+    base_rain: float = 0.035   # Fraction rained out per inland step (drying rate)
     oro: float = 0.6           # Orographic (uphill) rainout multiplier
     chill: float = 0.3         # Temperature-drop rainout multiplier
+    wet_reference_percentile: float = (
+        99.0  # Land-precip percentile mapped to 1.0 (near-max; avoids top-band pile-up)
+    )
+    precip_gamma: float = (
+        0.5  # Wetness curve on normalized precip; <1 lifts dry/mid bands, =1 linear
+    )
 
 
 # ---------------------------------------------------------------------------

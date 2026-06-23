@@ -45,8 +45,8 @@ class MoistureStage:
             raise RuntimeError(msg)
         wind_v: Float64Array = wind_v_field
 
-        # --- step 5a: precompute downwind (once) ---
-        downwind: Int32Array = build_downwind(
+        # --- step 5a: precompute downwind fan (once) ---
+        downwind: tuple[Int32Array, Int32Array, Float64Array] = build_downwind(
             geometry=ctx.geometry,
             wind_u=wind_u,
             wind_v=wind_v,

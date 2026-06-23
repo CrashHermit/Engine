@@ -5,6 +5,7 @@ from src.worldgen.terrain.finalize import (
     compute_coast_distance,
     compute_slope,
     label_landmasses,
+    smooth_elevation,
 )
 from src.worldgen.types import BoolArray, Float64Array, Int32Array, Int8Array
 
@@ -33,6 +34,15 @@ class FinalizeStage:
             msg: str = "elevation must be set before FinalizeStage"
             raise RuntimeError(msg)
         elevation: Float64Array = elevation_field
+
+        # --- 0. Coastal de-speckle (relax high-frequency wiggle pre-cut) ---
+        elevation = smooth_elevation(
+            elevation=elevation,
+            geometry=ctx.geometry,
+            passes=sea_cfg.coast_smoothing_passes,
+            strength=sea_cfg.coast_smoothing_strength,
+        )
+        ctx.fields.elevation = elevation
 
         # --- 1. Sea level and piecewise normalisation ---
         is_land: BoolArray = apply_sea_level(
