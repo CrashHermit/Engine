@@ -54,6 +54,51 @@ def test_no_self_loops(seed: int) -> None:
         assert cell_id not in set(int(n) for n in geometry.neighbors_of(cell_id))
 
 
+@pytest.mark.parametrize("seed", SEEDS)
+def test_edge_geometry_parallel_and_well_formed(seed: int) -> None:
+    """Per-edge normals/lengths are parallel to the CSR edges, unit, and positive."""
+    geometry = _mesh(seed)
+    n_edges = geometry.neighbor_indices.shape[0]
+    assert geometry.edge_normals.shape == (n_edges, 2)
+    assert geometry.edge_lengths.shape == (n_edges,)
+
+    magnitude = np.hypot(geometry.edge_normals[:, 0], geometry.edge_normals[:, 1])
+    assert np.allclose(magnitude, 1.0), "edge normals must be unit length"
+    assert np.all(geometry.edge_lengths > 0.0), "face lengths must be positive"
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_edge_face_length_symmetric(seed: int) -> None:
+    """The shared face length is the same seen from either cell (i->j == j->i)."""
+    geometry = _mesh(seed)
+    n = geometry.n_cells
+    source = np.repeat(np.arange(n), np.diff(geometry.neighbor_offsets))
+    length_of: dict[tuple[int, int], float] = {
+        (int(source[k]), int(geometry.neighbor_indices[k])): float(
+            geometry.edge_lengths[k]
+        )
+        for k in range(geometry.neighbor_indices.shape[0])
+    }
+    for (a, b), length in length_of.items():
+        assert np.isclose(length, length_of[(b, a)]), "face length must be symmetric"
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_edge_geometry_is_conservative(seed: int) -> None:
+    """Sum of (face length x outward normal) over a cell's edges is ~0.
+
+    The discrete divergence theorem: a closed cell has zero net flux of a
+    uniform field through its faces. This is the precondition that makes
+    finite-volume advection on this mesh mass-conserving.
+    """
+    geometry = _mesh(seed)
+    n = geometry.n_cells
+    source = np.repeat(np.arange(n), np.diff(geometry.neighbor_offsets))
+    flux = np.zeros(shape=(n, 2), dtype=np.float64)
+    np.add.at(flux, source, geometry.edge_lengths[:, None] * geometry.edge_normals)
+    assert np.abs(flux).max() < 1e-6, "per-cell face vectors must sum to ~0"
+
+
 @pytest.mark.parametrize("frequency", [1.0, 4.0, 8.0])
 @pytest.mark.parametrize("field_id", [0, 1, 3])
 def test_noise_wraps_along_x(frequency: float, field_id: int) -> None:

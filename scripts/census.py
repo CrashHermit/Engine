@@ -23,6 +23,7 @@ if str(_ROOT) not in sys.path:
 # ruff: noqa: E402
 from src.worldgen.config.presets import PRESETS
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
+from src.worldgen.context import WorldContext
 from src.worldgen.ecology.biomes import derive_centers
 from src.worldgen.features import WorldData
 from src.worldgen.pipeline import WorldgenPipeline
@@ -73,6 +74,74 @@ def census(world: WorldData) -> str:
     )
 
 
+def coherence(ctx: WorldContext) -> str:
+    """Return a one-line biome-coherence diagnostic, measured on the mesh.
+
+    The instruments that caught (and will guard against) the biome speckle:
+    the adjacent-land flip rate, the connected-component count with its
+    single-cell tail, and the dominant-biome distribution. Measured on mesh
+    cells (not baked tiles) so the numbers track the real generation product.
+    """
+    geometry = ctx.geometry
+    fields = ctx.fields
+    n: int = geometry.n_cells
+    offsets: np.ndarray = geometry.neighbor_offsets
+    indices: np.ndarray = geometry.neighbor_indices
+
+    is_lake: np.ndarray = (
+        fields.is_lake if fields.is_lake is not None else np.zeros(n, dtype=bool)
+    )
+    land: np.ndarray = fields.is_land & ~is_lake
+    dominant: np.ndarray = np.argmax(fields.biome_weights, axis=1)
+
+    # --- adjacent-land flip rate ---
+    source: np.ndarray = np.repeat(np.arange(n), np.diff(offsets))
+    land_edge: np.ndarray = land[source] & land[indices]
+    total_edges: int = int(land_edge.sum()) or 1
+    flips: int = int(((dominant[source] != dominant[indices]) & land_edge).sum())
+    flip_rate: float = flips / total_edges
+
+    # --- connected components of one dominant biome over land (CSR BFS) ---
+    component: np.ndarray = np.full(n, -1, dtype=np.int32)
+    sizes: list[int] = []
+    start: int
+    for start in range(n):
+        if not land[start] or component[start] >= 0:
+            continue
+        biome: int = int(dominant[start])
+        component_id: int = len(sizes)
+        component[start] = component_id
+        stack: list[int] = [start]
+        size: int = 0
+        while stack:
+            cell: int = stack.pop()
+            size += 1
+            neighbor_id: int
+            for neighbor_id in indices[offsets[cell] : offsets[cell + 1]]:
+                neighbor: int = int(neighbor_id)
+                if (
+                    land[neighbor]
+                    and component[neighbor] < 0
+                    and int(dominant[neighbor]) == biome
+                ):
+                    component[neighbor] = component_id
+                    stack.append(neighbor)
+        sizes.append(size)
+
+    size_array: np.ndarray = np.array(sizes, dtype=np.int64)
+    land_cells: int = int(land.sum()) or 1
+    singletons: int = int((size_array == 1).sum())
+    big: int = int((size_array >= 0.01 * land_cells).sum())
+    distinct: int = int(np.unique(dominant[land]).size)
+    top_share: float = float(np.bincount(dominant[land]).max() / land_cells)
+
+    return (
+        f"coherence: flip {flip_rate:.2f}; {len(sizes)} biome regions "
+        f"({singletons} single-cell, {big} >=1% land); "
+        f"{distinct} biomes, top {100 * top_share:.0f}%"
+    )
+
+
 def main() -> None:
     """Print a census for every preset across the census seeds."""
     name: str
@@ -82,8 +151,11 @@ def main() -> None:
         print(f"== {name} ==")
         seed: int
         for seed in CENSUS_SEEDS:
-            world: WorldData = WorldgenPipeline(cfg).run(seed=seed, size=CENSUS_SIZE)
+            world: WorldData
+            ctx: WorldContext
+            world, ctx = WorldgenPipeline(cfg).run_debug(seed=seed, size=CENSUS_SIZE)
             print("  " + census(world))
+            print("    " + coherence(ctx))
 
 
 if __name__ == "__main__":
