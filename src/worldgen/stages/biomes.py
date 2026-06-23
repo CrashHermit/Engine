@@ -6,11 +6,12 @@ Pipeline order: ``... → Leylines → Biomes``
 from src.worldgen.config.worldgen_config import BiomeConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.ecology.biomes import (
+    assign_biome_regions,
     biome_weights,
     derive_centers,
     smooth_biome_weights,
 )
-from src.worldgen.types import BoolArray, Float64Array
+from src.worldgen.types import BoolArray, Float64Array, Int32Array
 
 
 class BiomeStage:
@@ -20,7 +21,7 @@ class BiomeStage:
     """
 
     def run(self, ctx: WorldContext) -> None:
-        """Compute ``biome_weights`` and write it to ``ctx.fields``."""
+        """Compute ``biome_weights`` and the ``region_id`` provinces it implies."""
         cfg: BiomeConfig = ctx.config.biome
 
         # --- prerequisites ---
@@ -62,9 +63,21 @@ class BiomeStage:
             cfg=cfg,
         )
         # Coherent regions instead of per-cell speckle (gradual ecotones).
-        ctx.fields.biome_weights = smooth_biome_weights(
+        smoothed: Float64Array = smooth_biome_weights(
             geometry=ctx.geometry,
             weights=weights,
             biome_mask=biome_mask,
             cfg=cfg,
         )
+        ctx.fields.biome_weights = smoothed
+
+        # Provinces: connected same-biome regions with the small ones merged
+        # away. The patchwork of per-cell biomes becomes a handful of coherent,
+        # nameable regions (region_id); the soft weights above are untouched.
+        region_id: Int32Array = assign_biome_regions(
+            geometry=ctx.geometry,
+            weights=smoothed,
+            biome_mask=biome_mask,
+            cfg=cfg,
+        )
+        ctx.fields.region_id = region_id

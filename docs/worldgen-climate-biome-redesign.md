@@ -1,6 +1,16 @@
 # Worldgen Climate & Biome Redesign
 
-Status: **design — interview-derived, evidence-backed, not yet implemented.**
+Status: **partially implemented — see §12 for the evidence-based course
+correction (the FV-advection centerpiece was prototyped and dropped).**
+
+> **§12 update (read first).** Prototyping the planned finite-volume advection
+> falsified its premise: it conserves mass perfectly but does *not* smooth
+> precipitation (first-order upwind switching adds its own noise). The two
+> changes that actually help are **eddy diffusion** (modest) and, dominantly,
+> the **province merge**. We implemented the cheap, high-leverage province
+> merge first (Phase 0 + the merge are landed); FV is dropped; eddy diffusion
+> and the climate reframe are deferred. The body below is the original design;
+> §12 records what actually shipped and why.
 
 Scope: `src/worldgen` climate and ecology only. Terrain and hydrology are
 **not** in scope — they were verified sane on current `HEAD` during the
@@ -279,3 +289,51 @@ These extend `scripts/census.py`, the existing "regression eyeball."
 | 10 | Keep the 49-biome grid; classify directly on the average; **delete the output-smoothing band-aid**. |
 | 11 | `region_id` provinces = **connected same-biome components, min-size merged** — derived *from* biomes. Merge threshold is the legibility knob (~2% land → ~20 provinces). |
 | 12 | Guardrails: **hard invariants** (mass balance, determinism, ranges) + **soft census metrics** (singletons, components, flip rate, distribution, provinces, livability, achieved centre/spread). |
+
+---
+
+## 12. Implementation log & course correction
+
+What actually happened when we started building, measured against the Phase 0
+instruments (12k-cell mesh, seed 7, biomes re-classified identically):
+
+| Scheme | mean Δprecip | adjacent-biome flip | single-cell biomes |
+|---|---|---|---|
+| Shipped scatter (baseline) | 0.039 | 0.280 | 108 |
+| **Finite-volume advection** (planned fix) | 0.061–0.064 | **0.35–0.38** | 242–295 |
+| Scatter + eddy diffusion | 0.024 | 0.226 | 54 |
+| + province merge (<2% land) | — | **0.07** | ~20 provinces |
+
+**FV advection was dropped.** It conserves mass exactly (verified: per-cell
+`Σ(face length × normal) = 0`, and pure-transport sum drift `0.00e+00`), but it
+does **not** smooth precipitation — it is *noisier* than the existing scatter,
+because first-order upwind *switching* (the upwind cell flips where the
+face-velocity crosses zero) injects cell-scale noise on an unstructured mesh.
+Conservation is a real property but not the one the biome speckle needed.
+
+**The province merge is the dominant lever** and is what we shipped:
+
+- **Phase 0 (landed):** mesh edge geometry (`edge_normals`, `edge_lengths`,
+  parallel to the CSR adjacency, verified conservative) + census coherence
+  instruments. The edge geometry still earns its place — it is what an eddy-
+  diffusion Laplacian would use if/when we add it.
+- **Province merge (landed):** `BiomeStage` now derives `region_id` provinces —
+  connected same-dominant-biome components with sub-`province_min_fraction`
+  regions absorbed into their largest-contact neighbour biome (an isolated
+  small island keeps its biome and stands alone). Soft `biome_weights` are
+  **untouched** (honest per-cell climate truth); `region_id` is the coherent
+  regional layer derived from them. A `regions` viewer/export layer shows it.
+  Result: ~20 coherent provinces from a ~325-region patchwork.
+
+**Deferred (the "large changes", parked at the user's direction):**
+
+- **Eddy diffusion** — a physical horizontal-diffusion term to make precip a
+  proper smooth average (flip 0.28→0.23, fewer single-cell biomes, better
+  biome balance). Modest, principled, uses the Phase 0 edge geometry. Do this
+  next if the merged map still reads too busy.
+- **Climate reframe** (latitude centre/spread, physical lapse calibration),
+  **wind-turbulence strip**, and **default span** — all unchanged from §5/§4;
+  not needed for the coherence win.
+
+The guardrails (§8) still apply: the census now reports flip rate, region/
+single-cell counts, and province count every run, so a regression is visible.

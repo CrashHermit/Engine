@@ -8,6 +8,8 @@ inverse-distance weighting over those centers, done as one ``(n, n_biomes)``
 matrix.
 """
 
+from collections import Counter, deque
+
 import numpy as np
 
 from src.core.model.environment.climate.precipitation import (
@@ -161,3 +163,159 @@ def smooth_biome_weights(
     row_sums: Float64Array = out.sum(axis=1, keepdims=True)
     out = np.divide(out, row_sums, out=np.zeros_like(out), where=row_sums > 0.0)
     return out
+
+
+def assign_biome_regions(
+    *,
+    geometry: MeshGeometry,
+    weights: Float64Array,
+    biome_mask: BoolArray,
+    cfg: BiomeConfig,
+) -> Int32Array:
+    """Label biome provinces: connected same-biome regions, small ones merged.
+
+    A hard argmax over the soft weights is a patchwork of hundreds of biome
+    blobs, many a single cell; real geography reads as a handful of coherent
+    regions.  So we (1) take the dominant biome per land cell, (2) flood-fill
+    connected same-biome components, and (3) repeatedly absorb any component
+    below ``cfg.province_min_fraction`` of land into the neighbouring biome it
+    shares the most border with.  A component with no cross-biome land
+    neighbour (a small whole island) keeps its biome and stands on its own.
+
+    The soft ``weights`` are read for their argmax only and never mutated — they
+    stay the honest per-cell climate truth for fine-grained consumers, while
+    ``region_id`` is the coherent regional layer derived from them.
+
+    Args:
+        geometry: Torus mesh with CSR adjacency.
+        weights: Soft biome weights, shape ``(n, n_biomes)``.
+        biome_mask: Cells that carry a biome (dry land).
+        cfg: Biome config (``province_min_fraction``).
+
+    Returns:
+        ``region_id``: province label per cell (0-based; -1 off the biome mask).
+    """
+    n: int = geometry.n_cells
+    dominant: Int32Array = np.argmax(weights, axis=1).astype(np.int32)
+    # ``biome`` is the working per-cell biome the merge mutates; off-mask = -1.
+    biome: Int32Array = np.where(biome_mask, dominant, -1).astype(np.int32)
+
+    land_count: int = int(np.count_nonzero(biome_mask))
+    min_size: int = max(1, int(cfg.province_min_fraction * land_count))
+
+    # Iterate: relabel components, absorb the small ones, repeat until stable.
+    # Absorbing only ever merges components, so the count strictly falls until
+    # none below the floor can merge; the ``n`` bound just guards pathology.
+    labels: Int32Array
+    sizes: list[int]
+    _iteration: int
+    for _iteration in range(n):
+        labels, sizes = _biome_components(
+            geometry=geometry, biome=biome, biome_mask=biome_mask
+        )
+        merged_any: bool = _absorb_small_components(
+            geometry=geometry,
+            biome=biome,
+            labels=labels,
+            sizes=sizes,
+            min_size=min_size,
+        )
+        if not merged_any:
+            break
+
+    region_id: Int32Array
+    region_id, _final = _biome_components(
+        geometry=geometry, biome=biome, biome_mask=biome_mask
+    )
+    return region_id
+
+
+def _biome_components(
+    *,
+    geometry: MeshGeometry,
+    biome: Int32Array,
+    biome_mask: BoolArray,
+) -> tuple[Int32Array, list[int]]:
+    """Flood-fill connected components of equal ``biome`` over the biome mask.
+
+    Returns ``(labels, sizes)``: a per-cell component id (0-based; -1 off the
+    mask) and the cell count of each component, indexed by id.
+    """
+    n: int = geometry.n_cells
+    labels: Int32Array = np.full(shape=n, fill_value=-1, dtype=np.int32)
+    sizes: list[int] = []
+
+    cell_id: int
+    for cell_id in range(n):
+        if not biome_mask[cell_id] or labels[cell_id] >= 0:
+            continue
+        component_id: int = len(sizes)
+        this_biome: int = int(biome[cell_id])
+        queue: deque[int] = deque()
+        queue.append(cell_id)
+        labels[cell_id] = component_id
+        size: int = 0
+        while queue:
+            current: int = queue.popleft()
+            size += 1
+            neighbor_id: int
+            for neighbor_id in geometry.neighbors_of(cell_id=current):
+                neighbor: int = int(neighbor_id)
+                if (
+                    biome_mask[neighbor]
+                    and labels[neighbor] < 0
+                    and int(biome[neighbor]) == this_biome
+                ):
+                    labels[neighbor] = component_id
+                    queue.append(neighbor)
+        sizes.append(size)
+
+    return labels, sizes
+
+
+def _absorb_small_components(
+    *,
+    geometry: MeshGeometry,
+    biome: Int32Array,
+    labels: Int32Array,
+    sizes: list[int],
+    min_size: int,
+) -> bool:
+    """Reassign each below-``min_size`` component to its most-bordered neighbour biome.
+
+    Mutates ``biome`` in place.  A component with no differently-labelled land
+    neighbour (an isolated small island) is left untouched.  Returns True if any
+    component was absorbed.
+    """
+    n: int = geometry.n_cells
+    # Group member cells by component id, smallest first so a tiny patch
+    # attaches to a real region instead of seeding a merge chain.
+    members: dict[int, list[int]] = {}
+    cell_id: int
+    for cell_id in range(n):
+        component_id: int = int(labels[cell_id])
+        if component_id < 0 or sizes[component_id] >= min_size:
+            continue
+        members.setdefault(component_id, []).append(cell_id)
+
+    merged_any: bool = False
+    for component_id in sorted(members, key=lambda c: (sizes[c], c)):
+        cells: list[int] = members[component_id]
+        # Tally border contact with each neighbouring biome.
+        contact: Counter[int] = Counter()
+        cell: int
+        for cell in cells:
+            neighbor_id: int
+            for neighbor_id in geometry.neighbors_of(cell_id=cell):
+                neighbor: int = int(neighbor_id)
+                if int(labels[neighbor]) != component_id and int(biome[neighbor]) >= 0:
+                    contact[int(biome[neighbor])] += 1
+        if not contact:
+            continue  # isolated small island: it is its own province
+        # Most border contact wins; ties break by smallest biome id (determinism).
+        target_biome: int = min(contact, key=lambda b: (-contact[b], b))
+        for cell in cells:
+            biome[cell] = target_biome
+        merged_any = True
+
+    return merged_any

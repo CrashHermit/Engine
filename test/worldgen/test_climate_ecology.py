@@ -253,3 +253,60 @@ def test_biome_smoothing_reduces_speckle(seed: int) -> None:
     raw_singletons = singleton_fraction(raw)
     smoothed_singletons = singleton_fraction(f.biome_weights)
     assert smoothed_singletons < raw_singletons
+
+
+# ---------------------------------------------------------------------------
+# Biome provinces (region_id)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_region_id_on_land_only(seed: int) -> None:
+    """Every dry-land cell gets a province id; ocean and lake cells get -1."""
+    _world, ctx = _debug(seed)
+    region_id = ctx.fields.region_id
+    assert region_id is not None
+    biome_mask = ctx.fields.is_land & ~ctx.fields.is_lake
+    assert bool(np.all(region_id[biome_mask] >= 0))
+    assert bool(np.all(region_id[~biome_mask] == -1))
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_provinces_are_connected(seed: int) -> None:
+    """Each province is a single connected component on the mesh."""
+    _world, ctx = _debug(seed)
+    region_id = ctx.fields.region_id
+    for province in np.unique(region_id[region_id >= 0]):
+        members = np.flatnonzero(region_id == province)
+        start = int(members[0])
+        seen = {start}
+        stack = [start]
+        while stack:
+            cell = stack.pop()
+            for neighbor in ctx.geometry.neighbors_of(cell_id=cell):
+                neighbor = int(neighbor)
+                if region_id[neighbor] == province and neighbor not in seen:
+                    seen.add(neighbor)
+                    stack.append(neighbor)
+        assert len(seen) == len(members), f"province {province} is not connected"
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_small_provinces_are_isolated_islands(seed: int) -> None:
+    """A below-floor province has no external land neighbour (nothing to merge into)."""
+    _world, ctx = _debug(seed)
+    region_id = ctx.fields.region_id
+    biome_mask = ctx.fields.is_land & ~ctx.fields.is_lake
+    land_count = int(biome_mask.sum())
+    min_size = max(1, int(FAST_CONFIG.biome.province_min_fraction * land_count))
+    for province in np.unique(region_id[region_id >= 0]):
+        members = np.flatnonzero(region_id == province)
+        if len(members) >= min_size:
+            continue
+        for cell in members:
+            for neighbor in ctx.geometry.neighbors_of(cell_id=int(cell)):
+                neighbor = int(neighbor)
+                if biome_mask[neighbor]:
+                    assert region_id[neighbor] == province, (
+                        "small province should have merged into its land neighbour"
+                    )

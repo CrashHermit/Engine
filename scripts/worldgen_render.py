@@ -51,6 +51,7 @@ class Layer(StrEnum):
     MAGIC_VALENCE = "magic_valence"
     MAGIC_CHANNELS = "magic_channels"
     BIOMES = "biomes"
+    REGIONS = "regions"
 
 LAYER_ORDER: tuple[Layer, ...] = (
     Layer.ELEVATION,
@@ -70,6 +71,7 @@ LAYER_ORDER: tuple[Layer, ...] = (
     Layer.MAGIC_VALENCE,
     Layer.MAGIC_CHANNELS,
     Layer.BIOMES,
+    Layer.REGIONS,
 )
 
 LAYER_LABELS: dict[Layer, str] = {
@@ -90,6 +92,7 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.MAGIC_VALENCE: "Magic valence",
     Layer.MAGIC_CHANNELS: "Magic channels",
     Layer.BIOMES: "Biomes",
+    Layer.REGIONS: "Biome regions",
 }
 
 LAYER_DESCRIPTIONS: dict[Layer, str] = {
@@ -110,6 +113,7 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.MAGIC_VALENCE: "Magic valence [-1,1]. Diverging palette: corrupt (magenta) vs pure (cyan); neutral grey off the web.",
     Layer.MAGIC_CHANNELS: "Channel composition (corpus/mens/anima) mapped straight to RGB.",
     Layer.BIOMES: "Dominant biome per tile (argmax of the soft weights); one hue per biome.",
+    Layer.REGIONS: "Biome provinces (region_id): coherent same-biome regions with small ones merged; each province a distinct color.",
 }
 
 
@@ -298,6 +302,14 @@ def _tile_color(
         red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.55, v=0.9)
         return int(red * 255), int(green * 255), int(blue * 255)
 
+    if layer == Layer.REGIONS:
+        province: int = int(grid.region_id[tile_index])
+        if province < 0:
+            return WATER_COLOR
+        hue: float = (province * 0.6180339887) % 1.0
+        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.65, v=0.9)
+        return int(red * 255), int(green * 255), int(blue * 255)
+
     return (0, 0, 0)
 
 
@@ -471,6 +483,15 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
         hue = (col * _PHI) % 1.0
         out = _hsv_to_rgb(hue, np.full(n, 0.55), np.full(n, 0.9))
         out[~is_land] = np.array(WATER_COLOR)
+
+    elif layer == Layer.REGIONS:
+        # Each biome province (region_id) gets a distinct hue: coherent blobs
+        # where BIOMES shows per-cell speckle.
+        region_id = grid.region_id.astype(np.float64)
+        valid = grid.region_id >= 0
+        hue = (region_id * _PHI) % 1.0
+        out = _hsv_to_rgb(hue, np.full(n, 0.65), np.full(n, 0.9))
+        out[~valid] = np.array(WATER_COLOR)
 
     return np.clip(out, 0.0, 255.0).astype(np.uint8)
 

@@ -135,10 +135,18 @@ def coherence(ctx: WorldContext) -> str:
     distinct: int = int(np.unique(dominant[land]).size)
     top_share: float = float(np.bincount(dominant[land]).max() / land_cells)
 
+    # Post-merge provinces (region_id): the coherent regional layer.
+    region_id: np.ndarray | None = fields.region_id
+    if region_id is not None:
+        provinces: int = int(np.unique(region_id[region_id >= 0]).size)
+        province_note: str = f"; {provinces} provinces"
+    else:
+        province_note = ""
+
     return (
         f"coherence: flip {flip_rate:.2f}; {len(sizes)} biome regions "
         f"({singletons} single-cell, {big} >=1% land); "
-        f"{distinct} biomes, top {100 * top_share:.0f}%"
+        f"{distinct} biomes, top {100 * top_share:.0f}%{province_note}"
     )
 
 

@@ -148,9 +148,6 @@ class WorldgenPipeline:
             cfg=ctx.config.river,
         )
 
-        # region_id is the persistence socket: present, schema-able, all -1.
-        grid.region_id = np.full(size * size, -1, dtype=np.int32)
-
         leylines: LeylineNetwork | None = ctx.leylines
         if leylines is None:
             msg: str = "leylines must be set before assembling WorldData"

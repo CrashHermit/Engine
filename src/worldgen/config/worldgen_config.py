@@ -332,6 +332,12 @@ class BiomeConfig:
     # with gradual ecotones, the way real biomes blend, without erasing variety.
     smoothing_passes: int = 4      # Laplacian passes on the soft weights (0 = off)
     smoothing_strength: float = 0.5  # Blend toward the land-neighbour mean per pass [0,1]
+    # Provinces (region_id): connected same-dominant-biome regions, with regions
+    # below this fraction of land merged into their largest-contact neighbour
+    # biome. Turns the per-cell biome patchwork into a handful of coherent,
+    # nameable regions. A whole island smaller than the floor stays its own
+    # region (it has no land neighbour to merge into).
+    province_min_fraction: float = 0.02  # Min province size as a fraction of land (0 = no merge)
 
 
 # ---------------------------------------------------------------------------
