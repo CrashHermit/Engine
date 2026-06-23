@@ -33,6 +33,9 @@ class PlatesConfig:
     )
     continental_uplift: float = 1.0  # Base uplift rate assigned to continental plates
     oceanic_uplift: float = 0.0  # Base uplift rate assigned to oceanic plates
+    density_jitter: float = (
+        0.5  # Per-plate density noise so same-type plates have a definite subducting side
+    )
     belt_width: int = (
         4  # BFS hops to smear boundary collision/rift intensity into mountain belts
     )

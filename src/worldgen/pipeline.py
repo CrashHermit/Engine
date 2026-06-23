@@ -8,6 +8,7 @@ from src.worldgen.fields import GridFields, MeshFields
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.stages.base import Stage
 from src.worldgen.stages.biomes import BiomeStage
+from src.worldgen.stages.boundary_classify import BoundaryClassifyStage
 from src.worldgen.stages.boundary_uplift import BoundaryUpliftStage
 from src.worldgen.stages.discharge import DischargeStage
 from src.worldgen.stages.erosion import ErosionStage
@@ -32,6 +33,7 @@ def _build_stages() -> list[Stage]:
         # Phase 1 — terrain
         PlatesStage(),
         PlatePersonalityStage(),
+        BoundaryClassifyStage(),
         BoundaryUpliftStage(),
         ErosionStage(),
         FinalizeStage(),

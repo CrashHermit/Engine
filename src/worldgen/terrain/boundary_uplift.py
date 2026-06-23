@@ -1,4 +1,11 @@
-"""Boundary uplift from tectonic plate interactions."""
+"""Boundary uplift from tectonic plate interactions.
+
+Mountain belts and rift valleys, smeared off the per-cell facts produced once by
+``terrain/boundaries.py``.  Collision belts rise on every convergent boundary
+(mountains form whether or not the boundary is volcanic); rift valleys carve on
+divergent boundaries *except* ocean-ocean spreading, which the vulcanism stage
+raises into a mid-ocean ridge instead.
+"""
 
 from collections import deque
 
@@ -6,52 +13,9 @@ import numpy as np
 
 from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.geometry.mesh import MeshGeometry
-from src.worldgen.geometry.torus import torus_delta
 from src.worldgen.noise.field import FractalField
-from src.worldgen.types import Float64Array, Int32Array
-
-
-def _compute_boundary_intensity(
-    *, geometry: MeshGeometry, plate_id: Int32Array, drift: Float64Array
-) -> tuple[Float64Array, Float64Array]:
-    """Return per-cell raw collision and rift intensity on plate borders."""
-    n_cells: int = geometry.n_cells
-    collision: Float64Array = np.zeros(n_cells, dtype=np.float64)
-    rift: Float64Array = np.zeros(n_cells, dtype=np.float64)
-
-    width: float = geometry.width
-    height: float = geometry.height
-    sites: Float64Array = geometry.sites
-
-    cell_id: int
-    for cell_id in range(n_cells):
-        plate_i: int = int(plate_id[cell_id])
-        drift_i: Float64Array = drift[plate_i]
-        site_i: Float64Array = sites[cell_id]
-
-        for neighbor_id in geometry.neighbors_of(cell_id=cell_id):
-            neighbor_id: int = int(neighbor_id)
-            if plate_id[neighbor_id] == plate_i:
-                continue
-
-            plate_j: int = int(plate_id[neighbor_id])
-            drift_j: Float64Array = drift[plate_j]
-            delta: Float64Array = torus_delta(
-                a=site_i, b=sites[neighbor_id], width=width, height=height
-            )
-            dist: float = float(np.linalg.norm(x=delta))
-            if dist == 0.0:
-                continue
-
-            direction: Float64Array = delta / dist
-            convergence: float = float(np.dot(a=drift_i - drift_j, b=direction))
-
-            if convergence > 0.0:
-                collision[cell_id] = max(collision[cell_id], convergence)
-            elif convergence < 0.0:
-                rift[cell_id] = max(rift[cell_id], -convergence)
-
-    return collision, rift
+from src.worldgen.terrain.boundaries import BoundaryFacts, BoundaryKind
+from src.worldgen.types import Float64Array
 
 
 def _smear_intensity(
@@ -112,29 +76,29 @@ def _sample_site_noise(
 def apply_boundary_uplift(
     *,
     geometry: MeshGeometry,
-    plate_id: Int32Array,
-    drift: Float64Array,
+    facts: BoundaryFacts,
     uplift: Float64Array,
     config: PlatesConfig,
     belt_noise: FractalField,
     uplift_noise: FractalField,
     frequency: float,
 ) -> None:
-    """Add collision belts and rift seams to ``uplift`` in place."""
-    raw_collision, raw_rift = _compute_boundary_intensity(
-        geometry=geometry,
-        plate_id=plate_id,
-        drift=drift,
+    """Add collision belts and (non-oceanic) rift seams to ``uplift`` in place."""
+    # Ocean-ocean spreading is left for the vulcanism stage to raise into a
+    # mid-ocean ridge; every other divergent boundary carves a rift valley here.
+    rift_raw: Float64Array = np.where(
+        facts.div_kind == int(BoundaryKind.DIV_OO), 0.0, facts.divergence
     )
+
     smeared_collision: Float64Array = _smear_intensity(
         geometry=geometry,
-        raw=raw_collision,
+        raw=facts.convergence,
         belt_width=config.belt_width,
         falloff=config.belt_falloff,
     )
     smeared_rift: Float64Array = _smear_intensity(
         geometry=geometry,
-        raw=raw_rift,
+        raw=rift_raw,
         belt_width=config.belt_width,
         falloff=config.belt_falloff,
     )

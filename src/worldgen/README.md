@@ -23,21 +23,22 @@ results back.
 | # | Stage | Job |
 |---|---|---|
 | 1 | `PlatesStage` | Grow tectonic plates across the mesh (ragged Voronoi). |
-| 2 | `PlatePersonalityStage` | Per-plate uplift rate and drift direction. |
-| 3 | `BoundaryUpliftStage` | Collision belts (mountains) and rift seams. |
-| 4 | `ErosionStage` | Stream-power erosion + hillslope diffusion. |
-| 5 | `FinalizeStage` | Sea level, landmass labels, coast distance, slope. |
-| 6 | `InsolationStage` | Authored hot/cold energy bands around the ring. |
-| 7 | `TemperatureStage` | Lapse rate + maritime moderation. |
-| 8 | `WindStage` | Zonal wind belts deflected by terrain. |
-| 9 | `MoistureStage` | Advect ocean moisture downwind, rain it out. |
-| 10 | `DischargeStage` | Re-route on final terrain; rain-weighted flow. |
-| 11 | `RiversStage` | Classify river cells; extract `River` objects. |
-| 12 | `LakesStage` | Connected depressions → `Lake` objects with outlets. |
-| 13 | `FlowStage` | Per-cell flow direction and stylized speed. |
-| 14 | `SavageryStage` | Legible danger from geography. |
-| 15 | `LeylinesStage` | Nexus placement, MST web, aspects, magic fields. |
-| 16 | `BiomeStage` | Soft biome weights from climate via `BIOME_GRID`. |
+| 2 | `PlatePersonalityStage` | Per-plate uplift rate, drift direction, and density. |
+| 3 | `BoundaryClassifyStage` | One plate-border walk → per-cell `BoundaryFacts` (the single source of truth for convergence/divergence, plate-pair type, and subduction polarity). |
+| 4 | `BoundaryUpliftStage` | Collision belts (mountains) and rift seams, from the facts. |
+| 5 | `ErosionStage` | Stream-power erosion + hillslope diffusion. |
+| 6 | `FinalizeStage` | Coastal de-speckle, sea level, landmass labels, coast distance, slope. |
+| 7 | `InsolationStage` | Authored hot/cold energy bands around the ring. |
+| 8 | `TemperatureStage` | Lapse rate + maritime moderation. |
+| 9 | `WindStage` | Zonal wind belts deflected by terrain. |
+| 10 | `MoistureStage` | Advect ocean moisture downwind (fan), rain it out. |
+| 11 | `DischargeStage` | Re-route on final terrain; rain-weighted flow. |
+| 12 | `RiversStage` | Classify river cells; extract `River` objects. |
+| 13 | `LakesStage` | Connected depressions → `Lake` objects with outlets. |
+| 14 | `FlowStage` | Per-cell flow direction and stylized speed. |
+| 15 | `SavageryStage` | Legible danger from geography. |
+| 16 | `LeylinesStage` | Nexus placement, MST web, aspects, magic fields. |
+| 17 | `BiomeStage` | Soft biome weights from climate via `BIOME_GRID`. |
 
 The grid bake (`bake/`) and river stamp run during assembly, after the stages.
 

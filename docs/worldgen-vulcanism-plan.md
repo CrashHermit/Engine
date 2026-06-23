@@ -286,7 +286,7 @@ Invariants (pytest, seed-parameterized):
 
 | Phase | Deliverable |
 |---|---|
-| VP0 | `terrain/boundaries.py` shared classifier; refactor `boundary_uplift.py` to consume it; plate `density`. Existing tests green (DIV_OO no-carve is the only intended terrain delta). |
+| VP0 | ✅ **Done.** `terrain/boundaries.py` shared classifier (`BoundaryFacts` + `BoundaryKind`); `BoundaryClassifyStage` writes `ctx.boundary_facts`; `boundary_uplift.py` refactored to consume it; plate `density` (subduction polarity) added in a second RNG pass so existing worlds stay bit-identical except the intended DIV_OO no-carve. Tests: `test_boundaries.py` (+5), suite green (170). |
 | VP1 | `VulcanismStage`: subduction arcs + hotspot trails + oceanic ridges into `uplift`; `volcanism`/`is_volcano`/`volcano_id` fields; `Volcano` object + `WorldData.volcanoes`; bake; viewer layers. |
 | VP2 | Caldera crater lakes (`LakesStage` injection); finalize kind/status/chain/activity off the assembled field. |
 | VP3 | Coupling — savagery `volcanism_weight`, nexus `volcano_bonus`; preset tuning. |

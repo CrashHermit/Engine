@@ -2,9 +2,9 @@ from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import FIELD_BOUNDARY_UPLIFT, FIELD_UPLIFT_FLOOR
+from src.worldgen.terrain.boundaries import BoundaryFacts
 from src.worldgen.terrain.boundary_uplift import apply_boundary_uplift
-from src.worldgen.terrain.plate_personalities import PlateProperties
-from src.worldgen.types import Float64Array, Int32Array
+from src.worldgen.types import Float64Array
 
 
 class BoundaryUpliftStage:
@@ -13,20 +13,16 @@ class BoundaryUpliftStage:
     def run(self, ctx: WorldContext) -> None:
         """Mutate ``ctx.fields.uplift`` with mountain belts and rift seams."""
         cfg: PlatesConfig = ctx.config.plates
-        plate_id_field: Int32Array | None = ctx.fields.plate_id
-        if plate_id_field is None:
-            msg: str = "plate_id must be set before BoundaryUpliftStage"
+        facts: BoundaryFacts | None = ctx.boundary_facts
+        if facts is None:
+            msg: str = "boundary_facts must be set before BoundaryUpliftStage"
             raise RuntimeError(msg)
-        plate_id: Int32Array = plate_id_field
         uplift_field: Float64Array | None = ctx.fields.uplift
         if uplift_field is None:
-            msg: str = "uplift must be set before BoundaryUpliftStage"
+            msg = "uplift must be set before BoundaryUpliftStage"
             raise RuntimeError(msg)
         uplift: Float64Array = uplift_field
-        properties: PlateProperties | None = ctx.plate_properties
-        if properties is None:
-            msg: str = "plate_properties must be set before BoundaryUpliftStage"
-            raise RuntimeError(msg)
+
         span: float = min(ctx.geometry.width, ctx.geometry.height)
         frequency: float = 4.0 / span
         belt_noise: FractalField = FractalField(
@@ -41,8 +37,7 @@ class BoundaryUpliftStage:
         )
         apply_boundary_uplift(
             geometry=ctx.geometry,
-            plate_id=plate_id,
-            drift=properties.drift,
+            facts=facts,
             uplift=uplift,
             config=cfg,
             belt_noise=belt_noise,
