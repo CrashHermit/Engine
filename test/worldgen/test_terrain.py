@@ -28,13 +28,13 @@ def test_elevation_contract(seed: int) -> None:
 
 
 @pytest.mark.parametrize("seed", SEEDS)
-def test_land_fraction_near_target(seed: int) -> None:
-    """Realized land fraction tracks the configured target within tolerance."""
+def test_land_fraction_within_clamp(seed: int) -> None:
+    """Emergent land fraction stays inside the configured clamp guardrails."""
     world, _ctx = _debug(seed)
-    target = world.config.sea_level.target_land_fraction
+    lo, hi = world.config.sea_level.land_fraction_clamp
     land_fraction = float(np.mean(world.grid.is_land))
-    assert abs(land_fraction - target) < 0.1, (
-        f"land fraction {land_fraction:.3f} far from target {target:.3f}"
+    assert lo - 1e-6 <= land_fraction <= hi + 1e-6, (
+        f"land fraction {land_fraction:.3f} outside clamp [{lo}, {hi}]"
     )
 
 

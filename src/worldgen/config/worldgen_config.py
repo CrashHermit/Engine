@@ -93,11 +93,16 @@ class ErosionConfig:
 
 @dataclass
 class SeaLevelConfig:
-    """Percentile cut that converts raw elevation to is_land."""
+    """Emergent sea level from the hypsometric (ocean/continent) datum."""
 
-    target_land_fraction: float = (
-        0.32  # Desired fraction of land cells after sea-level placement
-    )
+    # Sea level sits at the Otsu split between the oceanic and continental
+    # elevation modes, so land fraction *emerges* per seed rather than being
+    # forced to a quota.  ``datum_bias`` shifts it in elevation std-devs
+    # (+ raises sea level -> less land); presets bias this, not a quota.
+    datum_bias: float = 0.0
+    # Guardrails on the realized land fraction so no seed goes all-ocean or
+    # all-land.  Widen to (0.0, 1.0) to disable guardrails entirely.
+    land_fraction_clamp: tuple[float, float] = (0.25, 0.70)
     coast_smoothing_passes: int = (
         2  # Laplacian relaxation passes on elevation before the cut (0 = off)
     )

@@ -56,51 +56,142 @@ def smooth_elevation(
     return z
 
 
+def _normalize_at_sea_level(
+    *, elevation: Float64Array, sea_level: float
+) -> BoolArray:
+    """Piecewise-normalise elevation to ``[-1, 1]`` about a given sea level.
+
+    Land cells map to ``(0, 1]``, ocean cells to ``[-1, 0)``, sea level pinned
+    at exactly 0.  The input array is mutated in place.
+
+    Args:
+        elevation: Per-cell raw elevation (mutated in place).
+        sea_level: The elevation value treated as sea level.
+
+    Returns:
+        ``is_land``: Boolean mask, True where elevation is at or above sea level.
+    """
+    is_land: BoolArray = elevation >= sea_level
+
+    # Land:  (z - sea_level) / (land_max - sea_level)  ->  (0, 1]
+    land_mask: BoolArray = is_land
+    if np.any(land_mask):
+        land_max: float = float(elevation[land_mask].max())
+        land_range: float = land_max - sea_level
+        if land_range > 0.0:
+            elevation[land_mask] = (elevation[land_mask] - sea_level) / land_range
+
+    # Ocean:  (z - ocean_min) / (sea_level - ocean_min) - 1  ->  [-1, 0)
+    ocean_mask: BoolArray = ~is_land
+    if np.any(ocean_mask):
+        ocean_min: float = float(elevation[ocean_mask].min())
+        ocean_range: float = sea_level - ocean_min
+        if ocean_range > 0.0:
+            elevation[ocean_mask] = (
+                elevation[ocean_mask] - ocean_min
+            ) / ocean_range - 1.0
+
+    return is_land
+
+
 def apply_sea_level(
     *,
     elevation: Float64Array,
     target_land_fraction: float,
 ) -> BoolArray:
-    """Piecewise-normalise elevation to ``[-1, 1]`` with sea level at 0.
+    """Piecewise-normalise elevation with sea level at a land-fraction quota.
 
     Sea level is placed at the elevation percentile that leaves
-    ``target_land_fraction`` of cells above it (e.g. 0.32 -> 32 %
-    land).  Land cells are mapped to ``(0, 1]``, ocean cells to
-    ``[-1, 0)``, and sea level is pinned at exactly 0.
+    ``target_land_fraction`` of cells above it.  Retained as a utility (e.g.
+    the clamp bounds in :func:`apply_sea_level_datum` and direct tests); the
+    pipeline uses the emergent :func:`apply_sea_level_datum`.
 
-    The input array is mutated in place --- no copy is made.
+    The input array is mutated in place.
 
     Args:
-        elevation: Per-cell raw elevation from the erosion loop
-            (mutated in place).
-        target_land_fraction: Desired fraction of cells above sea
-            level (0.0--1.0).
+        elevation: Per-cell raw elevation (mutated in place).
+        target_land_fraction: Desired fraction of cells above sea level.
 
     Returns:
-        ``is_land``: Boolean mask, True where elevation is at or
-            above sea level.
+        ``is_land``: Boolean mask, True where elevation is at or above sea level.
     """
-    # --- sea level by percentile ---
     sea_level: float = float(np.quantile(a=elevation, q=1.0 - target_land_fraction))
+    return _normalize_at_sea_level(elevation=elevation, sea_level=sea_level)
 
-    is_land: BoolArray = elevation >= sea_level
 
-    # --- piecewise normalise ---
-    # Land:  (z - sea_level) / (land_max - sea_level)  ->  (0, 1]
-    land_mask: BoolArray = is_land
-    land_max: float = float(elevation[land_mask].max())
-    land_range: float = land_max - sea_level
-    if land_range > 0.0:
-        elevation[land_mask] = (elevation[land_mask] - sea_level) / land_range
+def _otsu_sea_level(elevation: Float64Array, bins: int = 256) -> float:
+    """Otsu threshold over the elevation histogram: the ocean/continent split.
 
-    # Ocean:  (z - ocean_min) / (sea_level - ocean_min) - 1  ->  [-1, 0)
-    ocean_mask: BoolArray = ~is_land
-    ocean_min: float = float(elevation[ocean_mask].min())
-    ocean_range: float = sea_level - ocean_min
-    if ocean_range > 0.0:
-        elevation[ocean_mask] = (elevation[ocean_mask] - ocean_min) / ocean_range - 1.0
+    Eroded terrain is bimodal — a low oceanic mode and a high continental
+    (freeboard) mode.  Otsu's method finds the threshold between the two modes
+    that maximizes between-class variance, i.e. the natural sea-level datum in
+    the valley of the hypsometry.  Parameter-free and deterministic, so land
+    fraction *emerges* from how much crust rides high rather than being forced
+    to a quota.
 
-    return is_land
+    Args:
+        elevation: Per-cell raw elevation.
+        bins: Histogram resolution.
+
+    Returns:
+        The elevation value of the Otsu threshold (sea-level datum).
+    """
+    hist, edges = np.histogram(elevation, bins=bins)
+    centers: Float64Array = 0.5 * (edges[:-1] + edges[1:])
+    weight: Float64Array = hist.astype(np.float64)
+    total: float = float(weight.sum())
+    if total <= 0.0:
+        return float(np.median(elevation))
+    weight /= total
+
+    cum_w: Float64Array = np.cumsum(weight)
+    cum_mean: Float64Array = np.cumsum(weight * centers)
+    global_mean: float = float(cum_mean[-1])
+
+    denom: Float64Array = cum_w * (1.0 - cum_w)
+    between: Float64Array = np.where(
+        denom > 0.0,
+        (global_mean * cum_w - cum_mean) ** 2 / np.where(denom > 0.0, denom, 1.0),
+        0.0,
+    )
+    return float(centers[int(np.argmax(between))])
+
+
+def apply_sea_level_datum(
+    *,
+    elevation: Float64Array,
+    datum_bias: float,
+    land_fraction_clamp: tuple[float, float],
+) -> BoolArray:
+    """Emergent sea level from a hypsometric datum, with a removable clamp.
+
+    Places sea level at the Otsu ocean/continent split (so land fraction
+    emerges per seed), shifts it by ``datum_bias`` standard deviations
+    (+ raises sea level -> less land), then clamps the realized land fraction
+    into ``land_fraction_clamp`` so a seed can't go all-ocean or all-land.
+    Widen the clamp to ``(0.0, 1.0)`` to disable the guardrails entirely.
+
+    The input array is mutated in place (piecewise-normalised).
+
+    Args:
+        elevation: Per-cell raw elevation (mutated in place).
+        datum_bias: Sea-level shift in elevation standard deviations.
+        land_fraction_clamp: ``(lo, hi)`` bounds on the realized land fraction.
+
+    Returns:
+        ``is_land``: Boolean mask, True where elevation is at or above sea level.
+    """
+    sea_level: float = _otsu_sea_level(elevation)
+    sea_level += datum_bias * float(np.std(elevation))
+
+    lo, hi = land_fraction_clamp
+    fraction: float = float(np.mean(elevation >= sea_level))
+    if fraction < lo:
+        sea_level = float(np.quantile(a=elevation, q=1.0 - lo))
+    elif fraction > hi:
+        sea_level = float(np.quantile(a=elevation, q=1.0 - hi))
+
+    return _normalize_at_sea_level(elevation=elevation, sea_level=sea_level)
 
 
 def label_landmasses(
