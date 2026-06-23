@@ -330,7 +330,8 @@ class VulcanismConfig:
     volcano_smear: int = 1           # BFS hops the radial edifice bump spreads
     bump_falloff: float = 0.5        # Edifice bump multiplier per smear hop
     caldera_fraction: float = 0.18   # Fraction of volcanoes with a crater lake (VP2)
-    max_per_chain: int = 5           # Discrete volcanoes kept per arc/hotspot chain (landmark scale)
+    max_per_chain: int = 2           # Discrete volcanoes kept per arc/hotspot chain (landmark scale)
+    max_volcanoes: int = 18          # Global cap: keep only the most prominent breached edifices
 
 
 # ---------------------------------------------------------------------------
