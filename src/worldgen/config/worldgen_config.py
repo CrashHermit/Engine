@@ -326,6 +326,12 @@ class BiomeConfig:
 
     blend_sharpness: float = 4.0   # IDW exponent; higher = sharper single-biome dominance
     weight_cutoff: float = 0.02    # Drop biome weights below this, then renormalize
+    # A hard argmax over the soft weights turns cell-scale climate wiggle into
+    # salt-and-pepper biomes (every band-boundary crossing flips). Diffusing the
+    # soft membership over land neighbours first makes biomes coherent regions
+    # with gradual ecotones, the way real biomes blend, without erasing variety.
+    smoothing_passes: int = 4      # Laplacian passes on the soft weights (0 = off)
+    smoothing_strength: float = 0.5  # Blend toward the land-neighbour mean per pass [0,1]
 
 
 # ---------------------------------------------------------------------------

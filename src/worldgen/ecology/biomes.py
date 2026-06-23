@@ -16,7 +16,8 @@ from src.core.model.environment.climate.precipitation import (
 from src.core.model.environment.ecology.biome import BIOME_GRID, BiomeEnum
 from src.core.model.environment.shared.temperature import ORDER as TEMP_ORDER
 from src.worldgen.config.worldgen_config import BiomeConfig
-from src.worldgen.types import BoolArray, Float64Array
+from src.worldgen.geometry.mesh import MeshGeometry
+from src.worldgen.types import BoolArray, Float64Array, Int32Array
 
 
 def derive_centers() -> tuple[Float64Array, Float64Array, list[BiomeEnum]]:
@@ -100,3 +101,63 @@ def biome_weights(
     weights[~is_land] = 0.0
 
     return weights
+
+
+def smooth_biome_weights(
+    *,
+    geometry: MeshGeometry,
+    weights: Float64Array,
+    biome_mask: BoolArray,
+    cfg: BiomeConfig,
+) -> Float64Array:
+    """Diffuse the soft biome weights over land neighbours for coherent regions.
+
+    A hard ``argmax`` over the raw weights speckles: wherever climate sits near a
+    band boundary, cell-scale wiggle flips the dominant biome, so half the
+    "regions" end up a single tile.  Relaxing the soft membership toward the mean
+    of its *biome-bearing* neighbours (ocean and lake rows are excluded so coasts
+    don't bleed toward zero) turns that speckle into coherent regions with
+    gradual ecotones — the real ecological picture — while leaving the
+    climate-driven structure intact.  Rows are renormalized to sum to 1 on land.
+
+    Args:
+        geometry: Torus mesh with CSR adjacency.
+        weights: Soft biome weights, shape ``(n, n_biomes)``.
+        biome_mask: Cells that carry a biome (dry land).
+        cfg: Biome config (``smoothing_passes``, ``smoothing_strength``).
+
+    Returns:
+        The smoothed weights (a new array; the input is not mutated).
+    """
+    if cfg.smoothing_passes <= 0 or cfg.smoothing_strength <= 0.0:
+        return weights
+
+    n: int = geometry.n_cells
+    indices: Int32Array = geometry.neighbor_indices
+    src: Int32Array = np.repeat(
+        np.arange(n, dtype=np.int32), np.diff(geometry.neighbor_offsets)
+    )
+    maskf: Float64Array = biome_mask.astype(np.float64)
+    # Number of biome-bearing neighbours per cell (the masked degree).
+    masked_degree: Float64Array = np.bincount(
+        src, weights=maskf[indices], minlength=n
+    )
+    safe: BoolArray = masked_degree > 0.0
+
+    out: Float64Array = weights.copy()
+    edge_w: Float64Array = maskf[indices]
+    for _ in range(cfg.smoothing_passes):
+        neighbor_mean: Float64Array = np.empty_like(out)
+        for k in range(out.shape[1]):
+            nb_sum: Float64Array = np.bincount(
+                src, weights=out[indices, k] * edge_w, minlength=n
+            )
+            neighbor_mean[:, k] = np.divide(
+                nb_sum, masked_degree, out=out[:, k].copy(), where=safe
+            )
+        out = out + cfg.smoothing_strength * (neighbor_mean - out)
+        out[~biome_mask] = 0.0
+
+    row_sums: Float64Array = out.sum(axis=1, keepdims=True)
+    out = np.divide(out, row_sums, out=np.zeros_like(out), where=row_sums > 0.0)
+    return out

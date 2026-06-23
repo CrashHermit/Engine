@@ -11,7 +11,7 @@ from src.core.model.environment.climate.precipitation import ORDER as PRECIP_ORD
 from src.core.model.environment.ecology.biome import BIOME_GRID
 from src.core.model.environment.shared.temperature import ORDER as TEMP_ORDER
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
-from src.worldgen.ecology.biomes import derive_centers
+from src.worldgen.ecology.biomes import biome_weights, derive_centers
 from src.worldgen.magic.web import _find, _union
 from src.worldgen.pipeline import WorldgenPipeline
 
@@ -172,19 +172,84 @@ def test_biome_rows_sum_to_one_on_land(seed: int) -> None:
 
 @pytest.mark.parametrize("seed", SEEDS)
 def test_argmax_biome_matches_grid(seed: int) -> None:
-    """Dominant biome equals BIOME_GRID[(temp_band, precip_band)] — views agree."""
+    """Raw IDW dominant biome equals BIOME_GRID[(temp_band, precip_band)].
+
+    This is the center-derivation invariant — the continuous IDW representation
+    and the discrete band grid agree per cell.  It is a property of the *raw*
+    weights, before the spatial smoothing that BiomeStage applies for regional
+    coherence (which deliberately lets a cell take a neighbour's biome).
+    """
     _world, ctx = _debug(seed)
     f = ctx.fields
-    _ct, _cp, biome_order = derive_centers()
+    ct, cp, biome_order = derive_centers()
     n_bands = len(TEMP_ORDER)
 
-    land = np.flatnonzero(f.is_land & ~f.is_lake)
+    biome_mask = f.is_land & ~f.is_lake
+    raw = biome_weights(
+        temperature=f.temperature,
+        precipitation=f.precipitation,
+        is_land=biome_mask,
+        center_temp=ct,
+        center_precip=cp,
+        cfg=ctx.config.biome,
+    )
+
+    land = np.flatnonzero(biome_mask)
     rng = np.random.default_rng(seed)
     sample = rng.choice(land, size=min(80, land.size), replace=False)
 
     for cell in sample:
-        col = int(np.argmax(f.biome_weights[cell]))
+        col = int(np.argmax(raw[cell]))
         t_idx = min(int(f.temperature[cell] * n_bands), n_bands - 1)
         p_idx = min(int(f.precipitation[cell] * n_bands), n_bands - 1)
         expected = BIOME_GRID[(TEMP_ORDER[t_idx], PRECIP_ORDER[p_idx])]
         assert biome_order[col] == expected
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_biome_smoothing_reduces_speckle(seed: int) -> None:
+    """Smoothing yields more coherent biome regions than the raw argmax.
+
+    The shipped (smoothed) field must have a smaller share of single-cell biome
+    regions than the raw per-cell classification — biomes are regions, not
+    salt-and-pepper — while keeping most distinct biomes present.
+    """
+    _world, ctx = _debug(seed)
+    f = ctx.fields
+    ct, cp, _order = derive_centers()
+    biome_mask = f.is_land & ~f.is_lake
+    raw = biome_weights(
+        temperature=f.temperature,
+        precipitation=f.precipitation,
+        is_land=biome_mask,
+        center_temp=ct,
+        center_precip=cp,
+        cfg=ctx.config.biome,
+    )
+
+    def singleton_fraction(weights) -> float:
+        dom = np.where(biome_mask, np.argmax(weights, axis=1), -1)
+        seen = np.zeros(ctx.geometry.n_cells, dtype=bool)
+        comps: list[int] = []
+        for start in np.flatnonzero(biome_mask):
+            if seen[start]:
+                continue
+            label = dom[start]
+            stack = [int(start)]
+            seen[start] = True
+            size = 0
+            while stack:
+                c = stack.pop()
+                size += 1
+                for nb in ctx.geometry.neighbors_of(cell_id=c):
+                    nb = int(nb)
+                    if not seen[nb] and biome_mask[nb] and dom[nb] == label:
+                        seen[nb] = True
+                        stack.append(nb)
+            comps.append(size)
+        comps_arr = np.array(comps)
+        return float(np.mean(comps_arr == 1))
+
+    raw_singletons = singleton_fraction(raw)
+    smoothed_singletons = singleton_fraction(f.biome_weights)
+    assert smoothed_singletons < raw_singletons
