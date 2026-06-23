@@ -1,7 +1,6 @@
 """Tests for lake extraction (Phase 3 step 4)."""
 
 import numpy as np
-import pytest
 
 from src.worldgen.config.worldgen_config import LakeConfig
 from src.worldgen.features import Lake
@@ -161,6 +160,32 @@ def test_multiple_lakes():
     for i in range(n):
         if i not in (1, 4):
             assert not is_lake[i]
+
+
+def test_multi_cell_lake_is_one_component():
+    """A connected chain of depression cells is a single lake.
+
+    Guards the BFS: every cell reachable through the lake mask must land in
+    the same component, not just the seed's immediate neighbors.
+    """
+    # 5 cells in a line, each adjacent to the next; all are lake cells.
+    n = 5
+    adj = [[1], [0, 2], [1, 3], [2, 4], [3]]
+    geom = _mock_geometry(n, adj)
+
+    z = np.zeros(n, dtype=np.float64)
+    z_route = np.full(n, 0.5, dtype=np.float64)  # whole chain is one filled basin
+    is_land = np.ones(n, dtype=bool)
+    cfg = LakeConfig(epsilon=1e-6)
+
+    lakes, lake_id, is_lake = extract_lakes(
+        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+    )
+
+    assert len(lakes) == 1
+    assert sorted(lakes[0].cells) == [0, 1, 2, 3, 4]
+    assert bool(np.all(is_lake))
+    assert bool(np.all(lake_id == 0))
 
 
 def test_lake_with_outlet():

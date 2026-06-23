@@ -1,3 +1,14 @@
+"""KNOWN-BROKEN, OUT OF SCOPE for the worldgen redesign.
+
+This module predates the worldgen rebuild and still imports the old
+``src.worldgen.data`` vocabulary and persistence shape.  The redesign stopped
+at producing :class:`src.worldgen.features.WorldData`; wiring it through to the
+database is the *next* round.  That round starts here: update this service and
+the ``TileRepository`` schema to persist the new ``GridFields`` columns
+(temperature, precipitation, discharge, river_id, lake_id, savagery,
+magic_strength/valence/channels, biome_weights, region_id).
+"""
+
 import json
 
 from arcadedb_embedded.core import Database

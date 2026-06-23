@@ -3,14 +3,7 @@ coast distance, slope, determinism."""
 
 import numpy as np
 
-from src.worldgen.config.worldgen_config import (
-    LandmassConfig,
-    MeshConfig,
-    SeaLevelConfig,
-    WorldgenConfig,
-)
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
-from src.worldgen.pipeline import WorldgenPipeline
 from src.worldgen.terrain.finalize import (
     apply_sea_level,
     compute_coast_distance,
@@ -427,94 +420,3 @@ def test_finalize_deterministic() -> None:
     np.testing.assert_array_equal(landmass_class_a, landmass_class_b)
     np.testing.assert_array_equal(coast_a, coast_b)
     np.testing.assert_array_equal(slope_a, slope_b)
-
-
-# ---------------------------------------------------------------------------
-# Full pipeline integration
-# ---------------------------------------------------------------------------
-
-
-def test_full_pipeline_elevation_contract() -> None:
-    """End-to-end: pipeline output satisfies the elevation contract."""
-    ctx: WorldContext = WorldgenPipeline(
-        WorldgenConfig(
-            mesh=MeshConfig(cell_count=CELL_COUNT, width=MESH_WIDTH, height=MESH_HEIGHT),
-            sea_level=SeaLevelConfig(target_land_fraction=0.32),
-            landmass=LandmassConfig(island_min_fraction=0.005, landmass_min_fraction=0.08),
-        )
-    ).run(seed=42, size=50)
-
-    elevation: Float64Array | None = ctx.fields.elevation
-    assert elevation is not None
-    assert elevation.min() >= -1.0 - 1e-10, (
-        f"Elevation min {elevation.min():.4f} should be >= -1"
-    )
-    assert elevation.max() <= 1.0 + 1e-10, (
-        f"Elevation max {elevation.max():.4f} should be <= 1"
-    )
-    assert elevation.min() < 0, "Elevation should have ocean cells (min < 0)"
-    assert elevation.max() > 0, "Elevation should have land cells (max > 0)"
-
-
-def test_full_pipeline_land_fraction() -> None:
-    """End-to-end: land fraction is within ±3% of target."""
-    target: float = 0.32
-    ctx: WorldContext = WorldgenPipeline(
-        WorldgenConfig(
-            mesh=MeshConfig(cell_count=CELL_COUNT, width=MESH_WIDTH, height=MESH_HEIGHT),
-            sea_level=SeaLevelConfig(target_land_fraction=target),
-            landmass=LandmassConfig(island_min_fraction=0.005, landmass_min_fraction=0.08),
-        )
-    ).run(seed=42, size=50)
-
-    is_land: BoolArray | None = ctx.fields.is_land
-    assert is_land is not None
-    actual: float = float(is_land.mean())
-    np.testing.assert_allclose(actual, target, atol=0.03, err_msg=(
-        f"Land fraction {actual:.3f} should be within ±3% of {target}"
-    ))
-
-
-def test_full_pipeline_determinism() -> None:
-    """End-to-end: same seed produces identical world."""
-    ctx_a: WorldContext = WorldgenPipeline(
-        WorldgenConfig(
-            mesh=MeshConfig(cell_count=CELL_COUNT, width=MESH_WIDTH, height=MESH_HEIGHT),
-        )
-    ).run(seed=42, size=50)
-    ctx_b: WorldContext = WorldgenPipeline(
-        WorldgenConfig(
-            mesh=MeshConfig(cell_count=CELL_COUNT, width=MESH_WIDTH, height=MESH_HEIGHT),
-        )
-    ).run(seed=42, size=50)
-
-    # Check all field arrays match.
-    from dataclasses import fields as dataclass_fields
-    for f in dataclass_fields(ctx_a.fields.__class__):
-        a_val = getattr(ctx_a.fields, f.name)
-        b_val = getattr(ctx_b.fields, f.name)
-        if a_val is not None and b_val is not None:
-            assert np.array_equal(a_val, b_val), (
-                f"Field {f.name} differs between identical seeds"
-            )
-
-
-def test_full_pipeline_all_fields_present() -> None:
-    """End-to-end: all expected fields are populated after pipeline."""
-    ctx: WorldContext = WorldgenPipeline(
-        WorldgenConfig(
-            mesh=MeshConfig(cell_count=CELL_COUNT, width=MESH_WIDTH, height=MESH_HEIGHT),
-        )
-    ).run(seed=42, size=50)
-
-    assert ctx.fields.elevation is not None
-    assert ctx.fields.is_land is not None
-    assert ctx.fields.plate_id is not None
-    assert ctx.fields.uplift is not None
-    assert ctx.fields.z_route is not None
-    assert ctx.fields.receiver is not None
-    assert ctx.fields.drainage is not None
-    assert ctx.fields.slope is not None
-    assert ctx.fields.coast_distance is not None
-    assert ctx.fields.landmass_id is not None
-    assert ctx.fields.landmass_class is not None

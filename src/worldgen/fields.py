@@ -83,6 +83,23 @@ class MeshFields:
     lake_id: Int32Array | None = field(
         default=None, metadata={"dtype": np.int32}
     )  # Lake object id; -1 = none
+    savagery: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] danger/wildness from geography
+    magic_strength: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] leyline intensity
+    magic_valence: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [-1,1] corrupt..pure
+    # 2-D fields: allocated to their full (n, k) shape by the writing stage and
+    # baked via the generic value[nearest] fancy index (see bake/grid.py).
+    magic_channels: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # (n, 3) corpus/mens/anima composition
+    biome_weights: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # (n, n_biomes) soft biome distribution
 
     @classmethod
     def allocate(cls, n: int) -> Self:
@@ -169,6 +186,25 @@ class GridFields:
     lake_id: Int32Array | None = field(
         default=None, metadata={"dtype": np.int32}
     )  # Lake object id; -1 = none
+    savagery: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] danger/wildness from geography
+    magic_strength: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] leyline intensity
+    magic_valence: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [-1,1] corrupt..pure
+    # 2-D fields: see MeshFields note — baked via the generic value[nearest].
+    magic_channels: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # (n, 3) corpus/mens/anima composition
+    biome_weights: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # (n, n_biomes) soft biome distribution
+    region_id: Int32Array | None = field(
+        default=None, metadata={"dtype": np.int32}
+    )  # Persistence socket; assembly fills a column of -1 (no mesh source)
 
     @classmethod
     def allocate(cls, n: int) -> Self:

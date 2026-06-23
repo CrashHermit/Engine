@@ -42,6 +42,9 @@ def bake_to_grid(fields: MeshFields, nearest: Int32Array) -> GridFields:
     for f in dataclass_fields(class_or_instance=grid):
         value = getattr(fields, f.name, None)
         if value is not None:
+            # 2-D fields (magic_channels (n, 3), biome_weights (n, n_biomes))
+            # ride this same path: value[nearest] indexes axis 0, giving
+            # (size*size, k) without any special handling.
             setattr(grid, f.name, value[nearest])
         else:
             setattr(grid, f.name, None)

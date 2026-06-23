@@ -1,9 +1,8 @@
 from dataclasses import dataclass, replace
-from typing import Self
 
 from src.worldgen.config.worldgen_config import MeshConfig
 from src.worldgen.config.worldgen_config import WorldgenConfig
-from src.worldgen.features import Lake, River
+from src.worldgen.features import Lake, LeylineNetwork, River
 from src.worldgen.fields import MeshFields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed
@@ -20,6 +19,7 @@ class WorldContext:
     plate_properties: PlateProperties | None = None
     rivers: list[River] | None = None
     lakes: list[Lake] | None = None
+    leylines: LeylineNetwork | None = None
 
     def seed_for(self, name: str) -> int:
         """Deterministic sub-seed for a named stage or purpose."""

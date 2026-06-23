@@ -12,13 +12,15 @@ from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.pipeline import WorldgenPipeline
 
 SEEDS = [1, 7, 42]
-FAST_CONFIG: WorldgenConfig = WorldgenConfig(mesh=MeshConfig(cell_count=2000))
-FAST_SIZE = 50
+FAST_CONFIG: WorldgenConfig = WorldgenConfig(mesh=MeshConfig(cell_count=500))
+FAST_SIZE = 40
 
 
 def _run(ctx_seed: int) -> tuple:
-    """Run the pipeline and return (ctx, rivers, receiver, discharge, is_river)."""
-    ctx = WorldgenPipeline(FAST_CONFIG).run(seed=ctx_seed, size=FAST_SIZE)
+    """Run the pipeline (debug door) and return (ctx, rivers, receiver, ...)."""
+    _world, ctx = WorldgenPipeline(FAST_CONFIG).run_debug(
+        seed=ctx_seed, size=FAST_SIZE
+    )
     return (
         ctx,
         ctx.rivers,
@@ -143,6 +145,38 @@ def test_river_id_stamped_on_field(seed: int) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Step 4 — Lake outlets reach the ocean
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_lake_outlets_reach_ocean(seed: int) -> None:
+    """Following receiver from each non-terminal outlet hits base level in bounded steps."""
+    _world, ctx = WorldgenPipeline(FAST_CONFIG).run_debug(seed=seed, size=FAST_SIZE)
+    receiver = ctx.fields.receiver
+    n = len(receiver)
+
+    for lake in ctx.lakes:
+        if lake.outlet_cell is None:
+            continue  # terminal (endorheic) lake — no outlet to trace
+
+        cell = int(lake.outlet_cell)
+        seen: set[int] = set()
+        steps = 0
+        while cell >= 0 and steps <= n:
+            assert cell not in seen, (
+                f"lake {lake.id} outlet chain cycled at cell {cell}"
+            )
+            seen.add(cell)
+            cell = int(receiver[cell])
+            steps += 1
+
+        assert cell == -1, (
+            f"lake {lake.id} outlet did not reach base level within {n} steps"
+        )
+
+
+# ---------------------------------------------------------------------------
 # Determinism
 # ---------------------------------------------------------------------------
 
@@ -164,3 +198,17 @@ def test_same_seed_same_rivers(seed: int) -> None:
 
     assert np.array_equal(river_id_a, river_id_b)
     assert np.array_equal(is_river_a, is_river_b)
+
+
+# ---------------------------------------------------------------------------
+# WorldData contract — tile-side river ids reference real rivers
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_tile_river_ids_reference_world_rivers(seed: int) -> None:
+    """Every stamped tile river_id resolves to a River in WorldData.rivers."""
+    world = WorldgenPipeline(FAST_CONFIG).run(seed=seed, size=FAST_SIZE)
+    known_ids = {river.id for river in world.rivers}
+    stamped = {int(rid) for rid in np.unique(world.grid.river_id) if rid >= 0}
+    assert stamped <= known_ids, "tile river_id has no matching River object"

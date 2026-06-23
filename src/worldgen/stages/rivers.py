@@ -18,10 +18,11 @@ class RiversStage:
     discharge.  Phase 3 step 3: ``extract_rivers`` — build downstream-first
     River objects from the receiver forest.
 
-    Lake exclusion uses ``is_lake`` when available (step 4+); for the initial
-    wiring when ``is_lake`` is not yet populated, the stage passes an empty
-    boolean mask so that river classification is based on land + discharge
-    only.
+    Lake exclusion uses the ``is_lake`` field when LakesStage has already
+    populated it; in canonical pipeline order (Rivers before Lakes) it has
+    not, so the stage derives the lake-mask stand-in ``is_land & (z_route > z
+    + epsilon)`` — the same mask LakesStage computes.  This keeps river cells
+    out of water-filled depressions and lets rivers terminate at lake cells.
 
     Pipeline order: after DischargeStage, before LakesStage.
     """
@@ -43,14 +44,6 @@ class RiversStage:
             raise RuntimeError(msg)
         is_land: BoolArray = is_land_field
 
-        is_lake_field: BoolArray | None = ctx.fields.is_lake
-        if is_lake_field is None:
-            # is_lake not available yet (step 4).  Pass all-False mask
-            # so river classification is based on land + discharge only.
-            is_lake: BoolArray = np.zeros_like(is_land, dtype=bool)
-        else:
-            is_lake: BoolArray = is_lake_field
-
         receiver_field: Int32Array | None = ctx.fields.receiver
         if receiver_field is None:
             msg: str = "receiver must be set before RiversStage"
@@ -62,6 +55,21 @@ class RiversStage:
             msg: str = "z_route must be set before RiversStage"
             raise RuntimeError(msg)
         z_route: Float64Array = z_route_field
+
+        is_lake_field: BoolArray | None = ctx.fields.is_lake
+        if is_lake_field is None:
+            # LakesStage runs after this stage, so is_lake is not written yet.
+            # Use the lake-mask stand-in `z_route > z + epsilon` — identical to
+            # the mask LakesStage will compute — so the two stages agree.
+            elevation_field: Float64Array | None = ctx.fields.elevation
+            if elevation_field is None:
+                msg: str = "elevation must be set before RiversStage"
+                raise RuntimeError(msg)
+            is_lake: BoolArray = is_land & (
+                z_route > elevation_field + ctx.config.lake.epsilon
+            )
+        else:
+            is_lake: BoolArray = is_lake_field
 
         # --- Step 2: classify river cells ---
         ctx.fields.is_river = classify_rivers(
