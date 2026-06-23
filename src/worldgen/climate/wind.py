@@ -11,18 +11,35 @@ def wind_belts(
     *,
     geometry: MeshGeometry,
     cfg: WindConfig,
+    latitude: Float64Array,
     turbulence_u: FractalField,
     turbulence_v: FractalField,
 ) -> tuple[Float64Array, Float64Array, Float64Array]:
-    """Return (wind_u, wind_v, wind_magnitude): zonal belts + FBm turbulence, normalized.
+    """Return (wind_u, wind_v, wind_magnitude): three-cell belts + FBm turbulence.
 
-    Computes sinusoidal zonal wind belts that wrap seamlessly around the torus,
-    adds independent FBm turbulence per component, then normalizes to store
-    unit direction in (wind_u, wind_v) and speed in wind_magnitude.
+    Earth's banded circulation, as a function of latitude (``L = |latitude|``,
+    0 at the equator, 1 at the pole), split into three cells per hemisphere:
+
+    * **Hadley** (``L`` in 0..1/3): tropical **easterlies** (trade winds),
+      surface flow toward the equator.
+    * **Ferrel** (1/3..2/3): mid-latitude **westerlies**, surface flow toward
+      the pole.
+    * **Polar** (2/3..1): **polar easterlies**, surface flow toward the equator.
+
+    ``band = sin(3*pi*L)`` is positive on the Hadley/Polar cells and negative on
+    the Ferrel cell, so it carries both the easterly/westerly sign (zonal) and
+    the toward-equator/toward-pole sign (meridional) at once, going to zero at
+    the calm belts (equatorial doldrums, subtropical highs ~30 deg, subpolar
+    lows ~60 deg, poles).  A torus has no rotation axis, so belt *directions*
+    are authored from latitude rather than derived from Coriolis.
+
+    All terms are functions of latitude only, so the field wraps seamlessly
+    around both torus seams.
 
     Args:
         geometry: Torus mesh with sites and dimensions.
-        cfg: Wind parameters (belt_count, meridional_strength, turbulence).
+        cfg: Wind parameters (zonal/meridional strength, turbulence).
+        latitude: Signed latitude in ``[-1, 1]`` (0 equator, +/-1 poles).
         turbulence_u: FBm noise field for the u-component wobble.
         turbulence_v: FBm noise field for the v-component wobble.
 
@@ -33,15 +50,17 @@ def wind_belts(
     sites: Float64Array = geometry.sites
     xs: Float64Array = sites[:, 0]
     ys: Float64Array = sites[:, 1]
-    n: int = geometry.n_cells
     width: float = geometry.width
     height: float = geometry.height
 
-    # --- zonal belts ---
-    # Phase wraps correctly: 2*pi*y/height ensures y=0 == y=height.
-    phase: Float64Array = 2.0 * np.pi * ys / height * cfg.belt_count
-    base_u: Float64Array = -np.cos(phase)  # zonal east-west belts
-    base_v: Float64Array = np.sin(phase) * cfg.meridional_strength  # meridional
+    # --- three-cell zonal belts (function of latitude only) ---
+    lat_abs: Float64Array = np.abs(latitude)
+    hemi: Float64Array = np.sign(latitude)  # +1 north, -1 south; 0 at equator
+    band: Float64Array = np.sin(3.0 * np.pi * lat_abs)
+    # Easterly trades / westerlies / polar easterlies (negative u = easterly).
+    base_u: Float64Array = -cfg.zonal_strength * band
+    # Toward-equator (Hadley/Polar) vs toward-pole (Ferrel); hemi maps to +/-y.
+    base_v: Float64Array = cfg.meridional_strength * band * hemi
 
     # --- turbulence ---
     # Sample noise at every site; frequency relative to torus size.

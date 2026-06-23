@@ -161,9 +161,9 @@ class TemperatureConfig:
 
 @dataclass
 class WindConfig:
-    """Prevailing wind belts and terrain deflection."""
+    """Prevailing wind belts and terrain deflection (three-cell circulation)."""
 
-    belt_count: int = 3                # Zonal belts around the ring
+    zonal_strength: float = 1.0        # East-west belt amplitude (trades/westerlies)
     meridional_strength: float = 0.3   # North-south component amplitude
     turbulence: float = 0.4            # FBm wobble amplitude on each component
     deflection: float = 0.5            # How hard wind bends away from uphill (step 4)
@@ -193,8 +193,21 @@ class MoistureConfig:
         50.0  # Land rain-out percentile mapped to 0.5 by the saturating curve
     )
     precip_gamma: float = (
-        1.0  # Optional wetness curve after the saturating map; <1 lifts, =1 off
+        0.6  # Wetness curve after the belt combine; <1 lifts the arid majority
     )
+    # --- latitude rain belts (Hadley structure) ---
+    # A latitudinal baseline multiplies the advected field: wet equatorial ITCZ,
+    # dry subtropical "horse latitude" deserts (~30 deg, the gap between bumps),
+    # wet temperate belt, dry poles.  Advection then modulates it (rain shadows,
+    # wet windward coasts) on top.  The baseline is primary: even with zero
+    # advection a cell keeps ``belt_adv_floor`` of its baseline (the ITCZ rains
+    # regardless), and advection lifts it to the full baseline.
+    belt_equator_weight: float = 1.0    # Equatorial (ITCZ) wet-bump weight
+    belt_equator_sigma: float = 0.24    # Equatorial bump width in |latitude|
+    belt_temperate_weight: float = 0.8  # Temperate wet-bump weight
+    belt_temperate_center: float = 0.55  # Temperate bump center in |latitude|
+    belt_temperate_sigma: float = 0.2   # Temperate bump width in |latitude|
+    belt_adv_floor: float = 0.35        # Baseline fraction kept at zero advection
 
 
 # ---------------------------------------------------------------------------
