@@ -33,6 +33,9 @@ class PlatesConfig:
     )
     continental_uplift: float = 1.0  # Base uplift rate assigned to continental plates
     oceanic_uplift: float = 0.0  # Base uplift rate assigned to oceanic plates
+    density_jitter: float = (
+        0.5  # Per-plate density noise so same-type plates have a definite subducting side
+    )
     belt_width: int = (
         4  # BFS hops to smear boundary collision/rift intensity into mountain belts
     )
@@ -88,6 +91,12 @@ class SeaLevelConfig:
     target_land_fraction: float = (
         0.32  # Desired fraction of land cells after sea-level placement
     )
+    coast_smoothing_passes: int = (
+        2  # Laplacian relaxation passes on elevation before the cut (0 = off)
+    )
+    coast_smoothing_strength: float = (
+        0.5  # Blend toward neighbor mean per smoothing pass, in [0, 1]
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -112,7 +121,7 @@ class InsolationConfig:
     """Authored energy pattern (no latitude on a torus)."""
 
     bands: int = 1          # Number of hot/cold ring pairs around the torus
-    contrast: float = 1.0   # Spread of climate zones; <1 flattens, >1 sharpens
+    contrast: float = 0.8   # Spread of climate zones; <1 flattens, >1 sharpens
     wobble: float = 0.0     # Low-freq noise warp on the ring lines; 0 = laser-straight
 
 # ---------------------------------------------------------------------------
@@ -124,7 +133,7 @@ class InsolationConfig:
 class TemperatureConfig:
     """Lapse rate and maritime moderation on top of insolation."""
 
-    lapse_rate: float = 0.5         # Cooling per unit land elevation
+    lapse_rate: float = 0.3         # Cooling per unit land elevation
     maritime_reach: float = 4.0     # Coast-distance decay length for ocean moderation
     maritime_strength: float = 0.4  # How strongly coasts pull toward sea temperature
 
@@ -153,9 +162,15 @@ class MoistureConfig:
 
     passes: int = 30           # Advection iterations
     evaporation: float = 1.0   # Ocean moisture refill scale (x temperature)
-    base_rain: float = 0.05    # Fraction rained out per inland step (drying rate)
+    base_rain: float = 0.035   # Fraction rained out per inland step (drying rate)
     oro: float = 0.6           # Orographic (uphill) rainout multiplier
     chill: float = 0.3         # Temperature-drop rainout multiplier
+    wet_reference_percentile: float = (
+        99.0  # Land-precip percentile mapped to 1.0 (near-max; avoids top-band pile-up)
+    )
+    precip_gamma: float = (
+        0.5  # Wetness curve on normalized precip; <1 lifts dry/mid bands, =1 linear
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +208,7 @@ class SavageryConfig:
     harshness_weight: float = 0.30    # climate distance from comfort (0.55, 0.5)
     ruggedness_weight: float = 0.15   # slope, percentile-normalized
     noise_weight: float = 0.20        # FBm surprise
+    volcanism_weight: float = 0.15    # live volcanic ground (arcs, ridges, hotspots) is dangerous
     magic_weight: float = 0.0         # corrupt zones breed savagery (wire after step 5)
     comfort_temperature: float = 0.55  # Most-comfortable temperature (harshness origin)
     comfort_precipitation: float = 0.5  # Most-comfortable precipitation (harshness origin)
@@ -215,6 +231,7 @@ class LeylineConfig:
     peak_bonus: float = 1.0      # Score bonus for peak cells
     lake_outlet_bonus: float = 0.8  # Score bonus for lake-outlet cells
     confluence_bonus: float = 0.9   # Score bonus for river confluences (>=2 inflows)
+    volcano_bonus: float = 0.7   # Score bonus scaled by volcanism (volcanoes draw leylines)
     ring_bonus: float = 0.5      # Score bonus near the hot/cold ring lines
     score_noise: float = 0.4     # FBm jitter so similar terrain still varies
     edge_k: int = 4              # Candidate edges: each nexus to its k nearest fellows
@@ -222,14 +239,55 @@ class LeylineConfig:
     purity: float = 2.0          # Valence sharpening toward the poles (sign*|v|^(1/purity))
     channel_purity: float = 2.0  # Channel-weight sharpening exponent
     line_reach: float = 0.08     # Strength falloff length from a leyline (fraction of span)
-    nexus_reach: float = 0.03    # Tighter falloff length of the nexus bump
-    nexus_boost: float = 0.6     # Extra strength right at a nexus
+    line_strength: float = 0.7   # Peak strength along a leyline ridge (nexuses reach higher)
+    nexus_reach: float = 0.03    # Tighter falloff length of the nexus peak
+    nexus_boost: float = 1.0     # Peak strength right at a nexus (the brightest points)
     idw_k: int = 4               # Nearest segments blended for valence/channels
     idw_epsilon: float = 1e-3    # IDW distance floor
     score_frequency: float = 3.0    # Nexus-score FBm frequency (cycles around the torus)
     valence_frequency: float = 1.5  # Valence FBm frequency; low = clustered regions
     floor_frequency: float = 2.0    # Magic-floor FBm frequency
     floor_strength: float = 0.1     # Magic-floor amplitude so dead zones still flicker
+
+
+# ---------------------------------------------------------------------------
+# Vulcanism (Phase 1.5 — between boundary uplift and erosion)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class VulcanismConfig:
+    """Subduction arcs, hotspot island chains, and rift/ridge volcanism.
+
+    Runs after boundary uplift and before erosion, so its edifices are dissected
+    and drained like the rest of the terrain.  Reads the shared ``BoundaryFacts``.
+    """
+
+    # --- subduction arcs (on the overriding plate, offset inland) ---
+    arc_uplift: float = 0.9          # Arc edifice height per unit convergence
+    arc_offset: int = 3              # BFS hops inland from the trench to the arc crest
+    arc_width: int = 2               # Arc band half-width in hops (falloff each side)
+    arc_volcano_spacing: float = 0.07  # Min spacing between arc volcanoes (span fraction)
+    dormant_fraction: float = 0.3    # Fraction of arc volcanoes rolled dormant
+
+    # --- hotspots (drift-aligned decaying island trails) ---
+    hotspot_count: int = 4           # Number of mantle hotspots
+    hotspot_continental_fraction: float = 0.2  # Share allowed on continental plates
+    hotspot_spacing: float = 0.2     # Min spacing between hotspots (span fraction)
+    chain_length: int = 6            # Volcano stamps per hotspot trail
+    chain_step: float = 0.025        # Trail spacing along drift (span fraction)
+    chain_decay: float = 0.72        # Height/activity multiplier per stamp down-trail
+    hotspot_peak_uplift: float = 1.0  # Active-head edifice height
+
+    # --- rifts / mid-ocean ridges ---
+    ridge_uplift: float = 0.4        # Oceanic-divergent ridge raise per unit divergence
+    rift_flank_strength: float = 0.5  # Continental-rift volcanism field weight
+    rift_volcano_spacing: float = 0.10  # Min spacing between rift/ridge volcanoes (span)
+
+    # --- shared ---
+    volcano_smear: int = 1           # BFS hops the radial edifice bump spreads
+    bump_falloff: float = 0.5        # Edifice bump multiplier per smear hop
+    caldera_fraction: float = 0.18   # Fraction of volcanoes with a crater lake (VP2)
 
 
 # ---------------------------------------------------------------------------
@@ -260,6 +318,7 @@ class WorldgenConfig:
     plates: PlatesConfig = field(default_factory=PlatesConfig)  # Plate partitioning and boundary uplift
     sea_level: SeaLevelConfig = field(default_factory=SeaLevelConfig)  # Land/ocean split and normalisation
     erosion: ErosionConfig = field(default_factory=ErosionConfig)  # Stream-power erosion loop
+    vulcanism: VulcanismConfig = field(default_factory=VulcanismConfig)  # Arcs, hotspots, ridges
     landmass: LandmassConfig = field(default_factory=LandmassConfig)  # Connected-component land classification
     insolation: InsolationConfig = field(default_factory=InsolationConfig)  # Authored energy pattern
     temperature: TemperatureConfig = field(default_factory=TemperatureConfig)  # Lapse rate + maritime moderation

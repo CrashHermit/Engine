@@ -1,11 +1,17 @@
 """Lakes stage: extract lakes as connected depressions, write is_lake and ctx.lakes.
 
 Pipeline order: ``... → Rivers → Lakes → Flow``
+
+After extraction, summit calderas of land volcanoes are stamped as small
+terminal crater lakes.  This is the one deliberate cross-stage coupling: a
+caldera is sub-grid at mesh resolution, so rather than hope erosion carves a
+bowl, the stage injects the lake directly from ``ctx.volcanoes``.
 """
 
 
 from src.worldgen.config.worldgen_config import LakeConfig
 from src.worldgen.context import WorldContext
+from src.worldgen.features import Lake, Volcano
 from src.worldgen.water.lakes import extract_lakes
 
 
@@ -51,6 +57,26 @@ class LakesStage:
             is_land=is_land,
             cfg=cfg,
         )
+        # --- Inject crater lakes for land calderas (cross-stage coupling) ---
+        volcanoes: list[Volcano] | None = ctx.volcanoes
+        if volcanoes:
+            next_id: int = len(lakes)
+            for volcano in volcanoes:
+                cell: int = volcano.cell
+                if not volcano.has_caldera or not is_land[cell] or is_lake[cell]:
+                    continue
+                is_lake[cell] = True
+                lake_id[cell] = next_id
+                lakes.append(
+                    Lake(
+                        id=next_id,
+                        cells=[cell],
+                        surface_level=float(elevation[cell]),
+                        outlet_cell=None,  # terminal crater lake
+                    )
+                )
+                next_id += 1
+
         ctx.lakes = lakes
 
         # --- Write to fields ---

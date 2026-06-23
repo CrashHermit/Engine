@@ -2,10 +2,11 @@ from dataclasses import dataclass, replace
 
 from src.worldgen.config.worldgen_config import MeshConfig
 from src.worldgen.config.worldgen_config import WorldgenConfig
-from src.worldgen.features import Lake, LeylineNetwork, River
+from src.worldgen.features import Lake, LeylineNetwork, River, Volcano
 from src.worldgen.fields import MeshFields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed
+from src.worldgen.terrain.boundaries import BoundaryFacts
 from src.worldgen.terrain.plate_personalities import PlateProperties
 
 
@@ -17,6 +18,8 @@ class WorldContext:
     geometry: MeshGeometry
     fields: MeshFields
     plate_properties: PlateProperties | None = None
+    boundary_facts: BoundaryFacts | None = None
+    volcanoes: list[Volcano] | None = None
     rivers: list[River] | None = None
     lakes: list[Lake] | None = None
     leylines: LeylineNetwork | None = None

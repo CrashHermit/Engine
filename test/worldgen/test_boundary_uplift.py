@@ -6,6 +6,7 @@ from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import NoiseSource, subseed
+from src.worldgen.terrain.boundaries import BoundaryFacts, classify_boundaries
 from src.worldgen.terrain.boundary_uplift import apply_boundary_uplift
 from src.worldgen.terrain.plates import build_plates
 from src.worldgen.terrain.plate_personalities import (
@@ -33,9 +34,11 @@ def _small_mesh() -> MeshGeometry:
     )
 
 
-def _setup_uplift(geometry: MeshGeometry) -> tuple[Int32Array, Float64Array, Float64Array, PlatesConfig]:
-    """Run plates + personality to get plate_id, drift, and initial uplift."""
-    plate_id: Int32Array = build_plates(
+def _setup_uplift(
+    geometry: MeshGeometry,
+) -> tuple[BoundaryFacts, Float64Array, PlatesConfig]:
+    """Run plates + personality + classification to get facts and initial uplift."""
+    plate_id = build_plates(
         geometry=geometry,
         n_plates=N_PLATES,
         seed=PLATE_SEED,
@@ -46,13 +49,17 @@ def _setup_uplift(geometry: MeshGeometry) -> tuple[Int32Array, Float64Array, Flo
         seed=PLATE_SEED,
         config=PlatesConfig(),
     )
-    drift: Float64Array = props.drift
+    facts: BoundaryFacts = classify_boundaries(
+        geometry=geometry,
+        plate_id=plate_id,
+        properties=props,
+    )
     uplift: Float64Array = fill_uplift_from_plates(
         plate_id=plate_id,
         base_uplift=props.base_uplift,
     )
     cfg: PlatesConfig = PlatesConfig()
-    return plate_id, drift, uplift, cfg
+    return facts, uplift, cfg
 
 
 def _make_noise_fields(
@@ -82,14 +89,13 @@ def _make_noise_fields(
 def test_collision_belts_increase_uplift() -> None:
     """Boundary uplift adds to existing uplift — some cells must increase."""
     geometry: MeshGeometry = _small_mesh()
-    plate_id, drift, uplift, cfg = _setup_uplift(geometry)
+    facts, uplift, cfg = _setup_uplift(geometry)
     initial_uplift: Float64Array = uplift.copy()
     belt_noise, uplift_noise = _make_noise_fields(geometry, PLATE_SEED)
 
     apply_boundary_uplift(
         geometry=geometry,
-        plate_id=plate_id,
-        drift=drift,
+        facts=facts,
         uplift=uplift,
         config=cfg,
         belt_noise=belt_noise,
@@ -105,14 +111,13 @@ def test_collision_belts_increase_uplift() -> None:
 def test_rift_seams_decrease_uplift() -> None:
     """Boundary uplift subtracts from uplift along divergent boundaries."""
     geometry: MeshGeometry = _small_mesh()
-    plate_id, drift, uplift, cfg = _setup_uplift(geometry)
+    facts, uplift, cfg = _setup_uplift(geometry)
     initial_uplift: Float64Array = uplift.copy()
     belt_noise, uplift_noise = _make_noise_fields(geometry, PLATE_SEED)
 
     apply_boundary_uplift(
         geometry=geometry,
-        plate_id=plate_id,
-        drift=drift,
+        facts=facts,
         uplift=uplift,
         config=cfg,
         belt_noise=belt_noise,
@@ -133,13 +138,12 @@ def test_rift_seams_decrease_uplift() -> None:
 def test_uplift_never_negative() -> None:
     """After boundary uplift, no cell has negative uplift (clamped)."""
     geometry: MeshGeometry = _small_mesh()
-    plate_id, drift, uplift, cfg = _setup_uplift(geometry)
+    facts, uplift, cfg = _setup_uplift(geometry)
     belt_noise, uplift_noise = _make_noise_fields(geometry, PLATE_SEED)
 
     apply_boundary_uplift(
         geometry=geometry,
-        plate_id=plate_id,
-        drift=drift,
+        facts=facts,
         uplift=uplift,
         config=cfg,
         belt_noise=belt_noise,
@@ -160,14 +164,13 @@ def test_uplift_never_negative() -> None:
 def test_belts_wider_than_one_cell() -> None:
     """Collision belts span multiple cells (smear is not a single-cell line)."""
     geometry: MeshGeometry = _small_mesh()
-    plate_id, drift, uplift, cfg = _setup_uplift(geometry)
+    facts, uplift, cfg = _setup_uplift(geometry)
     initial_uplift: Float64Array = uplift.copy()
     belt_noise, uplift_noise = _make_noise_fields(geometry, PLATE_SEED)
 
     apply_boundary_uplift(
         geometry=geometry,
-        plate_id=plate_id,
-        drift=drift,
+        facts=facts,
         uplift=uplift,
         config=cfg,
         belt_noise=belt_noise,
@@ -191,13 +194,12 @@ def test_belts_wider_than_one_cell() -> None:
 def test_boundary_uplift_deterministic() -> None:
     """Same seed produces identical uplift."""
     geometry: MeshGeometry = _small_mesh()
-    plate_id, drift, uplift_a, cfg = _setup_uplift(geometry)
+    facts, uplift_a, cfg = _setup_uplift(geometry)
     belt_noise_a, uplift_noise_a = _make_noise_fields(geometry, PLATE_SEED)
 
     apply_boundary_uplift(
         geometry=geometry,
-        plate_id=plate_id,
-        drift=drift,
+        facts=facts,
         uplift=uplift_a,
         config=cfg,
         belt_noise=belt_noise_a,
@@ -205,13 +207,12 @@ def test_boundary_uplift_deterministic() -> None:
         frequency=4.0 / min(geometry.width, geometry.height),
     )
 
-    plate_id_2, drift_2, uplift_b, cfg_2 = _setup_uplift(geometry)
+    facts_2, uplift_b, cfg_2 = _setup_uplift(geometry)
     belt_noise_b, uplift_noise_b = _make_noise_fields(geometry, PLATE_SEED)
 
     apply_boundary_uplift(
         geometry=geometry,
-        plate_id=plate_id_2,
-        drift=drift_2,
+        facts=facts_2,
         uplift=uplift_b,
         config=cfg_2,
         belt_noise=belt_noise_b,
@@ -230,14 +231,13 @@ def test_boundary_uplift_deterministic() -> None:
 def test_belt_strength_affects_uplift() -> None:
     """Higher belt_strength produces more uplift increase."""
     geometry: MeshGeometry = _small_mesh()
-    plate_id, drift, uplift_a, cfg_low = _setup_uplift(geometry)
+    facts, uplift_a, cfg_low = _setup_uplift(geometry)
     belt_noise, uplift_noise = _make_noise_fields(geometry, PLATE_SEED)
 
     cfg_low.belt_strength = 0.1
     apply_boundary_uplift(
         geometry=geometry,
-        plate_id=plate_id,
-        drift=drift,
+        facts=facts,
         uplift=uplift_a,
         config=cfg_low,
         belt_noise=belt_noise,
@@ -245,12 +245,11 @@ def test_belt_strength_affects_uplift() -> None:
         frequency=4.0 / min(geometry.width, geometry.height),
     )
 
-    plate_id_2, drift_2, uplift_b, cfg_high = _setup_uplift(geometry)
+    facts_2, uplift_b, cfg_high = _setup_uplift(geometry)
     cfg_high.belt_strength = 1.0
     apply_boundary_uplift(
         geometry=geometry,
-        plate_id=plate_id_2,
-        drift=drift_2,
+        facts=facts_2,
         uplift=uplift_b,
         config=cfg_high,
         belt_noise=belt_noise,

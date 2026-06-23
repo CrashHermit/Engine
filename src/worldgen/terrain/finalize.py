@@ -7,6 +7,55 @@ from src.worldgen.geometry.torus import torus_distance
 from src.worldgen.types import BoolArray, Float64Array, Int32Array, Int8Array
 
 
+def smooth_elevation(
+    *,
+    elevation: Float64Array,
+    geometry: MeshGeometry,
+    passes: int,
+    strength: float,
+) -> Float64Array:
+    """Lightly relax elevation toward the neighbor mean to de-speckle coastlines.
+
+    The raw eroded terrain carries high-frequency wiggle that, once cut at sea
+    level, surfaces as one-cell peninsulas, inlets, and islets — the "fuzzy"
+    Voronoi-scale coastline.  A couple of gentle Laplacian passes
+    (``z += strength * (mean_neighbor_z - z)``) damp that wiggle while leaving
+    large-scale relief intact.  Run *before* the sea-level cut so the percentile
+    placement (and therefore land fraction) is computed on the smoothed field.
+
+    Args:
+        elevation: Per-cell raw elevation from erosion.
+        geometry: Torus mesh with CSR adjacency.
+        passes: Number of relaxation passes (``<= 0`` returns the input as-is).
+        strength: Blend toward the neighbor mean per pass, in ``[0, 1]``.
+
+    Returns:
+        The smoothed elevation (a new array; the input is not mutated).
+    """
+    if passes <= 0 or strength <= 0.0:
+        return elevation
+
+    offsets: Int32Array = geometry.neighbor_offsets
+    indices: Int32Array = geometry.neighbor_indices
+    n: int = geometry.n_cells
+    degree: Float64Array = np.diff(offsets).astype(np.float64)
+    src: Int32Array = np.repeat(np.arange(n, dtype=np.int32), np.diff(offsets))
+
+    z: Float64Array = elevation.astype(np.float64, copy=True)
+    for _ in range(passes):
+        neighbor_sum: Float64Array = np.bincount(
+            src, weights=z[indices], minlength=n
+        )
+        neighbor_mean: Float64Array = np.divide(
+            neighbor_sum,
+            degree,
+            out=z.copy(),
+            where=degree > 0.0,
+        )
+        z = z + strength * (neighbor_mean - z)
+    return z
+
+
 def apply_sea_level(
     *,
     elevation: Float64Array,

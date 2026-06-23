@@ -18,6 +18,7 @@ def compute_savagery(
     precipitation: Float64Array,
     slope: Float64Array,
     noise: Float64Array,
+    volcanism: Float64Array,
     cfg: SavageryConfig,
 ) -> Float64Array:
     """Weighted blend of remoteness, harshness, ruggedness, and noise; clipped to [0, 1].
@@ -73,6 +74,7 @@ def compute_savagery(
         + cfg.harshness_weight * harshness
         + cfg.ruggedness_weight * ruggedness
         + cfg.noise_weight * noise01
+        + cfg.volcanism_weight * volcanism  # live volcanic ground is dangerous
     )
 
     return np.clip(savagery, 0.0, 1.0)

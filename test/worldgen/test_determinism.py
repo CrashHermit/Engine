@@ -64,6 +64,7 @@ def test_same_seed_same_world(seed: int, preset: str) -> None:
     assert a.lakes == b.lakes  # plain dataclasses (no arrays)
     assert a.landmasses == b.landmasses
     _assert_leylines_equal(a.leylines, b.leylines)
+    assert a.volcanoes == b.volcanoes  # plain dataclasses (no arrays)
 
 
 @pytest.mark.parametrize("seed", SEEDS)

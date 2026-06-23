@@ -15,6 +15,7 @@ class PlateProperties:
     is_continental: BoolArray  # shape (n_plates,)
     drift: Float64Array  # shape (n_plates, 2), unit vectors
     base_uplift: Float64Array  # shape (n_plates,)
+    density: Float64Array  # shape (n_plates,); denser plate subducts at convergence
 
 
 def assign_plate_personalities(
@@ -49,10 +50,21 @@ def assign_plate_personalities(
         drift[plate, 0] = math.cos(theta)
         drift[plate, 1] = math.sin(theta)
 
+    # Density in a second pass so the continental/drift rolls above stay a pure
+    # function of seed regardless of this addition.  Oceanic plates outrank all
+    # continental ones (oceanic always subducts under continental); the jitter
+    # only breaks ties between same-type plates, so the ordering is: every
+    # oceanic plate is denser than every continental plate.
+    density: Float64Array = np.zeros(shape=n_plates, dtype=np.float64)
+    for plate in range(n_plates):
+        base: float = 0.0 if is_continental[plate] else 1.0
+        density[plate] = base + rng.random() * config.density_jitter
+
     return PlateProperties(
         is_continental=is_continental,
         drift=drift,
         base_uplift=base_uplift,
+        density=density,
     )
 
 

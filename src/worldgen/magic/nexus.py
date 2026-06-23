@@ -89,6 +89,11 @@ def place_nexuses(
     is_confluence: BoolArray = is_river & (inflow >= 2)
     score += cfg.confluence_bonus * is_confluence.astype(np.float64)
 
+    # Volcanism: live volcanic ground (arcs, ridges, hotspots) draws leylines.
+    volcanism: Float64Array | None = fields.volcanism
+    if volcanism is not None:
+        score += cfg.volcano_bonus * volcanism
+
     # Ring alignment: cells near the hot/cold ring lines (insolation extremes).
     ring: Float64Array = np.abs(2.0 * insolation - 1.0)
     score += cfg.ring_bonus * ring
