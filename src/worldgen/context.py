@@ -8,6 +8,7 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed
 from src.worldgen.terrain.boundaries import BoundaryFacts
 from src.worldgen.terrain.plate_personalities import PlateProperties
+from src.worldgen.terrain.vulcanism import VolcanoSeed
 
 
 @dataclass
@@ -19,6 +20,7 @@ class WorldContext:
     fields: MeshFields
     plate_properties: PlateProperties | None = None
     boundary_facts: BoundaryFacts | None = None
+    volcano_candidates: list[VolcanoSeed] | None = None  # pre-erosion seeds; materialized post-finalize
     volcanoes: list[Volcano] | None = None
     rivers: list[River] | None = None
     lakes: list[Lake] | None = None
