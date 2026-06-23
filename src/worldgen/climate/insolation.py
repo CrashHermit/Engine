@@ -43,7 +43,16 @@ def insolation_field(
 
     # --- Core insolation ---------------------------------------------------
     phase: Float64Array = 2.0 * np.pi * sites_y / height * cfg.bands
-    insolation: Float64Array = (np.cos(phase) + 1.0) / 2.0
+    raw: Float64Array = np.cos(phase)  # [-1, 1]
+
+    # Reshape so the temperate middle is the largest zone, not the extremes.
+    # ``sign(raw) * |raw|**bias`` pulls mid-latitudes toward 0 (temperate) for
+    # ``bias > 1`` while leaving the ring peaks at ±1; ``bias == 1`` is the raw
+    # cosine.
+    if cfg.temperate_bias != 1.0:
+        raw = np.sign(raw) * np.abs(raw) ** cfg.temperate_bias
+
+    insolation: Float64Array = 0.5 + 0.5 * raw
     insolation = 0.5 + (insolation - 0.5) * cfg.contrast
 
     return insolation

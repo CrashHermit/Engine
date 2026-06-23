@@ -130,6 +130,11 @@ class InsolationConfig:
     bands: int = 1          # Number of hot/cold ring pairs around the torus
     contrast: float = 0.8   # Spread of climate zones; <1 flattens, >1 sharpens
     wobble: float = 0.0     # Low-freq noise warp on the ring lines; 0 = laser-straight
+    # A raw cosine lingers at its peaks, so the band's value distribution is
+    # U-shaped (arcsine): fat hot/cold extremes, a starved temperate middle.
+    # Raising the cosine to this power (>1) narrows the extreme rings and widens
+    # the temperate zone, the way most of a planet is temperate, not polar.
+    temperate_bias: float = 2.0  # Cosine shaping exponent; 1.0 = raw cosine (U-shaped)
 
 # ---------------------------------------------------------------------------
 # Temperature
@@ -140,7 +145,12 @@ class InsolationConfig:
 class TemperatureConfig:
     """Lapse rate and maritime moderation on top of insolation."""
 
-    lapse_rate: float = 0.3         # Cooling per unit land elevation
+    lapse_rate: float = 0.3         # Cooling per unit elevation above the lowland datum
+    # Lapse is measured above this percentile of land elevation, not sea level:
+    # a continental platform that rides high (freeboard) is the thermal baseline,
+    # and only relief *above* it (real mountains) cools.  Without this, raising
+    # whole continents would freeze their interiors wholesale.
+    lapse_datum_percentile: float = 50.0  # Land-elevation percentile used as the lapse datum
     maritime_reach: float = 4.0     # Coast-distance decay length for ocean moderation
     maritime_strength: float = 0.4  # How strongly coasts pull toward sea temperature
 
