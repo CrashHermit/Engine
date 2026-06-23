@@ -123,11 +123,12 @@ def transport_moisture(
          the downwind neighbors by their weights.
       4. Swap buffers and repeat for ``cfg.passes`` iterations.
 
-    After the loop, precipitation is normalized so that the
-    ``cfg.wet_reference_percentile`` of *land* precipitation maps to 1.0 (land
-    is what biomes read), then clipped to ``[0, 1]``.  Using a land percentile
-    — rather than a global one dominated by a few drenched coastal cells —
-    keeps the bulk of the land off the arid floor.
+    After the loop, precipitation is normalized with a smooth saturating curve
+    ``p = raw / (raw + k)``, where ``k`` is the ``cfg.wet_anchor_percentile`` of
+    *land* rain-out (land is what biomes read).  The anchor maps to 0.5, the dry
+    interior stays dry, and the heavy wet tail compresses smoothly toward 1 — so
+    neither the arid floor nor the wet ceiling piles up the way a
+    percentile-and-clip scale did.
 
     Args:
         geometry: Torus mesh (used for cell count).
@@ -184,21 +185,19 @@ def transport_moisture(
             indices, weights=carry[src] * weights, minlength=n
         )
 
-    # Normalize against a high percentile of *land* precipitation (the divisor
-    # is near the wet maximum, so only a sliver of drenched cells clip — no
-    # pile-up in the top band), then bend with a wetness gamma.  Raw rain-out
-    # is heavily right-skewed (dry interiors, a wet coastal minority); a linear
-    # scale alone would strand the bulk on the arid floor.  ``precip_gamma`` < 1
-    # lifts the dry-to-mid range into the temperate bands without saturating the
-    # wettest cells.
+    # Saturating normalization: ``p = raw / (raw + k)``, ``k`` = a land-rain-out
+    # percentile.  The anchor maps to 0.5; the dry interior stays dry and the
+    # heavy wet tail compresses smoothly toward 1, so neither the arid floor nor
+    # the wet ceiling piles up (a percentile-and-clip scale did one or the
+    # other).  Computed on *land* so a few drenched coastal cells don't set it.
     land_precip: Float64Array = precipitation[is_land]
-    ref: float = (
-        float(np.percentile(a=land_precip, q=cfg.wet_reference_percentile))
+    anchor: float = (
+        float(np.percentile(a=land_precip, q=cfg.wet_anchor_percentile))
         if land_precip.size
         else 0.0
     )
-    if ref > 0.0:
-        precipitation = precipitation / ref
+    if anchor > 0.0:
+        precipitation = precipitation / (precipitation + anchor)
     precipitation = np.clip(precipitation, a_min=0.0, a_max=1.0)
 
     if cfg.precip_gamma != 1.0:

@@ -182,11 +182,18 @@ class MoistureConfig:
     base_rain: float = 0.035   # Fraction rained out per inland step (drying rate)
     oro: float = 0.6           # Orographic (uphill) rainout multiplier
     chill: float = 0.3         # Temperature-drop rainout multiplier
-    wet_reference_percentile: float = (
-        99.0  # Land-precip percentile mapped to 1.0 (near-max; avoids top-band pile-up)
+    # Raw rain-out is heavily right-skewed: a wet coastal/orographic minority and
+    # a long dry interior. A percentile-and-clip scale piled the bulk on either
+    # the arid floor or (if lowered) the saturated ceiling. Instead, normalize
+    # with a smooth saturating curve ``p = raw / (raw + k)`` where ``k`` is this
+    # percentile of land rain-out: the anchor maps to 0.5, the dry interior stays
+    # dry, and the wet tail compresses smoothly toward 1 with no band pile-up.
+    # Higher percentile -> a drier world (the anchor sits at more rain).
+    wet_anchor_percentile: float = (
+        50.0  # Land rain-out percentile mapped to 0.5 by the saturating curve
     )
     precip_gamma: float = (
-        0.5  # Wetness curve on normalized precip; <1 lifts dry/mid bands, =1 linear
+        1.0  # Optional wetness curve after the saturating map; <1 lifts, =1 off
     )
 
 
