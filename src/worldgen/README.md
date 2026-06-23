@@ -26,19 +26,20 @@ results back.
 | 2 | `PlatePersonalityStage` | Per-plate uplift rate, drift direction, and density. |
 | 3 | `BoundaryClassifyStage` | One plate-border walk → per-cell `BoundaryFacts` (the single source of truth for convergence/divergence, plate-pair type, and subduction polarity). |
 | 4 | `BoundaryUpliftStage` | Collision belts (mountains) and rift seams, from the facts. |
-| 5 | `ErosionStage` | Stream-power erosion + hillslope diffusion. |
-| 6 | `FinalizeStage` | Coastal de-speckle, sea level, landmass labels, coast distance, slope. |
-| 7 | `InsolationStage` | Authored hot/cold energy bands around the ring. |
-| 8 | `TemperatureStage` | Lapse rate + maritime moderation. |
-| 9 | `WindStage` | Zonal wind belts deflected by terrain. |
-| 10 | `MoistureStage` | Advect ocean moisture downwind (fan), rain it out. |
-| 11 | `DischargeStage` | Re-route on final terrain; rain-weighted flow. |
-| 12 | `RiversStage` | Classify river cells; extract `River` objects. |
-| 13 | `LakesStage` | Connected depressions → `Lake` objects with outlets. |
-| 14 | `FlowStage` | Per-cell flow direction and stylized speed. |
-| 15 | `SavageryStage` | Legible danger from geography. |
-| 16 | `LeylinesStage` | Nexus placement, MST web, aspects, magic fields. |
-| 17 | `BiomeStage` | Soft biome weights from climate via `BIOME_GRID`. |
+| 5 | `VulcanismStage` | Subduction arcs, hotspot island chains, and mid-ocean ridges into `uplift`; `volcanism` field + `Volcano` objects. |
+| 6 | `ErosionStage` | Stream-power erosion + hillslope diffusion. |
+| 7 | `FinalizeStage` | Coastal de-speckle, sea level, landmass labels, coast distance, slope. |
+| 8 | `InsolationStage` | Authored hot/cold energy bands around the ring. |
+| 9 | `TemperatureStage` | Lapse rate + maritime moderation. |
+| 10 | `WindStage` | Zonal wind belts deflected by terrain. |
+| 11 | `MoistureStage` | Advect ocean moisture downwind (fan), rain it out. |
+| 12 | `DischargeStage` | Re-route on final terrain; rain-weighted flow. |
+| 13 | `RiversStage` | Classify river cells; extract `River` objects. |
+| 14 | `LakesStage` | Connected depressions → `Lake` objects with outlets. |
+| 15 | `FlowStage` | Per-cell flow direction and stylized speed. |
+| 16 | `SavageryStage` | Legible danger from geography. |
+| 17 | `LeylinesStage` | Nexus placement, MST web, aspects, magic fields. |
+| 18 | `BiomeStage` | Soft biome weights from climate via `BIOME_GRID`. |
 
 The grid bake (`bake/`) and river stamp run during assembly, after the stages.
 
@@ -71,15 +72,18 @@ Per-tile product columns. Ranges are noted where meaningful.
 | `is_lake` | Tile under lake water | bool |
 | `lake_id` | `Lake` id; -1 = none | int32 |
 | `savagery` | Danger/wildness | [0, 1] f64 |
+| `volcanism` | Present-day volcanic activity | [0, 1] f64 |
+| `is_volcano` | Tile is a volcano summit | bool |
+| `volcano_id` | `Volcano` id; -1 = none | int32 |
 | `magic_strength` | Leyline intensity | [0, 1] f64 |
 | `magic_valence` | Corrupt..pure | [-1, 1] f64 |
 | `magic_channels` | corpus/mens/anima composition | (n, 3) f64 |
 | `biome_weights` | Soft biome distribution | (n, 49) f64 |
 | `region_id` | Persistence socket (all -1 for now) | int32 |
 
-Feature objects (`River`, `Lake`, `Landmass`, `LeylineNetwork`) ship on
-`WorldData` in mesh-cell coordinates; per-tile lookup is the `river_id` /
-`lake_id` columns above.
+Feature objects (`River`, `Lake`, `Landmass`, `LeylineNetwork`, `Volcano`) ship
+on `WorldData` in mesh-cell coordinates; per-tile lookup is the `river_id` /
+`lake_id` / `volcano_id` columns above.
 
 ## How to run
 

@@ -45,6 +45,7 @@ class Layer(StrEnum):
     WIND = "wind"
     PRECIPITATION = "precipitation"
     DISCHARGE = "discharge"
+    VOLCANISM = "volcanism"
     SAVAGERY = "savagery"
     MAGIC_STRENGTH = "magic_strength"
     MAGIC_VALENCE = "magic_valence"
@@ -63,6 +64,7 @@ LAYER_ORDER: tuple[Layer, ...] = (
     Layer.WIND,
     Layer.PRECIPITATION,
     Layer.DISCHARGE,
+    Layer.VOLCANISM,
     Layer.SAVAGERY,
     Layer.MAGIC_STRENGTH,
     Layer.MAGIC_VALENCE,
@@ -82,6 +84,7 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.WIND: "Wind",
     Layer.PRECIPITATION: "Precipitation",
     Layer.DISCHARGE: "Discharge",
+    Layer.VOLCANISM: "Volcanism",
     Layer.SAVAGERY: "Savagery",
     Layer.MAGIC_STRENGTH: "Magic strength",
     Layer.MAGIC_VALENCE: "Magic valence",
@@ -101,6 +104,7 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.WIND: "Wind: hue = direction (atan2 v,u), brightness = speed. Belts deflect around ranges.",
     Layer.PRECIPITATION: "Rainfall [0,1]. Wet windward coasts bright; dry interiors and rain shadows dark.",
     Layer.DISCHARGE: "Rain-weighted water flow (log). Brighter = more water. River valleys glow brighter in wet regions.",
+    Layer.VOLCANISM: "Present-day volcanic activity [0,1]. Bright subduction arcs, hotspot trails, and mid-ocean ridges; dark elsewhere.",
     Layer.SAVAGERY: "Legible danger [0,1]. Bright deep interiors, deserts, frostbelt, and ranges; calm temperate coasts.",
     Layer.MAGIC_STRENGTH: "Leyline intensity [0,1]. Bright web of lines between nexuses; dim floor elsewhere.",
     Layer.MAGIC_VALENCE: "Magic valence [-1,1]. Diverging palette: corrupt (magenta) vs pure (cyan); neutral grey off the web.",
@@ -254,6 +258,11 @@ def _tile_color(
         log_d: float = math.log(d) / math.log(10000.0)  # normalize so d=10000 -> 1
         t: float = max(0.0, min(1.0, log_d))
         return _lerp_color(low=(30, 60, 120), high=(100, 200, 255), t=t)
+
+    if layer == Layer.VOLCANISM:
+        t: float = max(0.0, min(1.0, float(grid.volcanism[tile_index])))
+        # cold basalt -> molten orange
+        return _lerp_color(low=(20, 18, 24), high=(255, 110, 20), t=t)
 
     if layer == Layer.SAVAGERY:
         t: float = max(0.0, min(1.0, float(grid.savagery[tile_index])))
@@ -436,6 +445,9 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
         mag = np.clip(grid.wind_magnitude.astype(np.float64), 0.0, 1.0)
         hue = (np.arctan2(v, u) / (2.0 * np.pi)) % 1.0
         out = _hsv_to_rgb(hue, np.full(n, 0.8), 0.2 + 0.8 * mag)
+
+    elif layer == Layer.VOLCANISM:
+        out = _lerp_arr((20, 18, 24), (255, 110, 20), grid.volcanism.astype(np.float64))
 
     elif layer == Layer.SAVAGERY:
         out = _lerp_arr((40, 90, 60), (200, 40, 40), grid.savagery.astype(np.float64))

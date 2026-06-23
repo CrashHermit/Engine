@@ -86,6 +86,15 @@ class MeshFields:
     savagery: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] danger/wildness from geography
+    volcanism: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] present-day volcanic activity
+    is_volcano: BoolArray | None = field(
+        default=None, metadata={"dtype": bool}
+    )  # Cell is a discrete volcano summit
+    volcano_id: Int32Array | None = field(
+        default=None, metadata={"dtype": np.int32}
+    )  # Volcano object id; -1 = none
     magic_strength: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] leyline intensity
@@ -189,6 +198,15 @@ class GridFields:
     savagery: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] danger/wildness from geography
+    volcanism: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] present-day volcanic activity
+    is_volcano: BoolArray | None = field(
+        default=None, metadata={"dtype": bool}
+    )  # Cell is a discrete volcano summit
+    volcano_id: Int32Array | None = field(
+        default=None, metadata={"dtype": np.int32}
+    )  # Volcano object id; -1 = none
     magic_strength: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] leyline intensity

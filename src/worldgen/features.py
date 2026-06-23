@@ -7,10 +7,44 @@ pipeline hands to the persistence layer.
 """
 
 from dataclasses import dataclass
+from enum import IntEnum
 
 from src.worldgen.config.worldgen_config import WorldgenConfig
 from src.worldgen.fields import GridFields
 from src.worldgen.types import Float64Array
+
+
+class VolcanoKind(IntEnum):
+    """Volcano morphology, derived from its generating mechanism."""
+
+    STRATO = 0   # subduction arc — steep composite cone
+    SHIELD = 1   # hotspot — broad basaltic shield
+    FISSURE = 2  # rift / mid-ocean ridge — fissure eruption
+
+
+class VolcanoStatus(IntEnum):
+    """Present-day activity of a volcano."""
+
+    ACTIVE = 0
+    DORMANT = 1
+    EXTINCT = 2
+
+
+@dataclass
+class Volcano:
+    """A discrete volcano in mesh-cell coordinates.
+
+    Built by the vulcanism stage; ships on ``WorldData.volcanoes`` and is the
+    object the per-tile ``volcano_id`` column points back to.
+    """
+
+    id: int  #: Unique volcano identifier (0-based; matches ``volcano_id``).
+    cell: int  #: Mesh cell id of the summit.
+    kind: VolcanoKind  #: Morphology (from mechanism).
+    status: VolcanoStatus  #: Active / dormant / extinct.
+    chain_id: int  #: Arc or hotspot trail grouping; ``-1`` = solitary.
+    activity: float  #: [0,1] present-day activity at the summit.
+    has_caldera: bool  #: Summit caldera forces a crater lake (set in VP2).
 
 
 @dataclass
@@ -92,3 +126,4 @@ class WorldData:
     lakes: list[Lake]  #: Lake objects in mesh-cell coordinates.
     leylines: LeylineNetwork  #: The magic web.
     landmasses: list[Landmass]  #: Connected land components (ocean excluded).
+    volcanoes: list[Volcano]  #: Discrete volcanoes in mesh-cell coordinates.

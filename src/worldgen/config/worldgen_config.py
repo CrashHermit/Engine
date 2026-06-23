@@ -249,6 +249,46 @@ class LeylineConfig:
 
 
 # ---------------------------------------------------------------------------
+# Vulcanism (Phase 1.5 — between boundary uplift and erosion)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class VulcanismConfig:
+    """Subduction arcs, hotspot island chains, and rift/ridge volcanism.
+
+    Runs after boundary uplift and before erosion, so its edifices are dissected
+    and drained like the rest of the terrain.  Reads the shared ``BoundaryFacts``.
+    """
+
+    # --- subduction arcs (on the overriding plate, offset inland) ---
+    arc_uplift: float = 0.9          # Arc edifice height per unit convergence
+    arc_offset: int = 3              # BFS hops inland from the trench to the arc crest
+    arc_width: int = 2               # Arc band half-width in hops (falloff each side)
+    arc_volcano_spacing: float = 0.05  # Min spacing between arc volcanoes (span fraction)
+    dormant_fraction: float = 0.3    # Fraction of arc volcanoes rolled dormant
+
+    # --- hotspots (drift-aligned decaying island trails) ---
+    hotspot_count: int = 4           # Number of mantle hotspots
+    hotspot_continental_fraction: float = 0.2  # Share allowed on continental plates
+    hotspot_spacing: float = 0.2     # Min spacing between hotspots (span fraction)
+    chain_length: int = 6            # Volcano stamps per hotspot trail
+    chain_step: float = 0.025        # Trail spacing along drift (span fraction)
+    chain_decay: float = 0.72        # Height/activity multiplier per stamp down-trail
+    hotspot_peak_uplift: float = 1.0  # Active-head edifice height
+
+    # --- rifts / mid-ocean ridges ---
+    ridge_uplift: float = 0.4        # Oceanic-divergent ridge raise per unit divergence
+    rift_flank_strength: float = 0.5  # Continental-rift volcanism field weight
+    rift_volcano_spacing: float = 0.08  # Min spacing between rift/ridge volcanoes (span)
+
+    # --- shared ---
+    volcano_smear: int = 1           # BFS hops the radial edifice bump spreads
+    bump_falloff: float = 0.5        # Edifice bump multiplier per smear hop
+    caldera_fraction: float = 0.25   # Fraction of volcanoes with a crater lake (VP2)
+
+
+# ---------------------------------------------------------------------------
 # Biomes (Phase 4)
 # ---------------------------------------------------------------------------
 
@@ -276,6 +316,7 @@ class WorldgenConfig:
     plates: PlatesConfig = field(default_factory=PlatesConfig)  # Plate partitioning and boundary uplift
     sea_level: SeaLevelConfig = field(default_factory=SeaLevelConfig)  # Land/ocean split and normalisation
     erosion: ErosionConfig = field(default_factory=ErosionConfig)  # Stream-power erosion loop
+    vulcanism: VulcanismConfig = field(default_factory=VulcanismConfig)  # Arcs, hotspots, ridges
     landmass: LandmassConfig = field(default_factory=LandmassConfig)  # Connected-component land classification
     insolation: InsolationConfig = field(default_factory=InsolationConfig)  # Authored energy pattern
     temperature: TemperatureConfig = field(default_factory=TemperatureConfig)  # Lapse rate + maritime moderation

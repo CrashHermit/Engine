@@ -23,6 +23,7 @@ from src.worldgen.stages.plate_personality import PlatePersonalityStage
 from src.worldgen.stages.rivers import RiversStage
 from src.worldgen.stages.savagery import SavageryStage
 from src.worldgen.stages.temperature import TemperatureStage
+from src.worldgen.stages.vulcanism import VulcanismStage
 from src.worldgen.stages.wind import WindStage
 from src.worldgen.types import Int32Array
 
@@ -35,6 +36,7 @@ def _build_stages() -> list[Stage]:
         PlatePersonalityStage(),
         BoundaryClassifyStage(),
         BoundaryUpliftStage(),
+        VulcanismStage(),
         ErosionStage(),
         FinalizeStage(),
         # Phase 2 — climate
@@ -162,6 +164,7 @@ class WorldgenPipeline:
             lakes=ctx.lakes or [],
             leylines=leylines,
             landmasses=_build_landmasses(ctx, grid),
+            volcanoes=ctx.volcanoes or [],
         )
 
 

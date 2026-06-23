@@ -1,0 +1,425 @@
+"""Vulcanism: subduction arcs, hotspot island chains, and rift/ridge volcanism.
+
+Runs after boundary uplift and before erosion, reading the shared
+``BoundaryFacts``.  It contributes edifice height to ``uplift`` (so erosion
+dissects and drains the volcanic terrain like everything else), builds a
+present-day-activity ``volcanism`` field, and marks discrete ``Volcano`` summits.
+
+Three mechanisms, all keyed off plate type and subduction polarity:
+
+* **Subduction arcs** — convergent boundaries that involve an oceanic plate
+  (never continent-continent).  Arc potential is seeded on the *overriding*
+  plate's trench cells and BFS-marched inland to ``arc_offset`` hops, so the arc
+  sits behind the trench: a continental arc (CONV_OC) inland, an offshore island
+  arc (CONV_OO).
+* **Hotspots** — fixed plate-interior points whose host plate's drift stamps a
+  decaying trail of volcanoes (active head, subsiding tail), i.e. an island
+  chain laid out spatially instead of over time.
+* **Rifts / ridges** — ocean-ocean divergence raises a mid-ocean ridge (which
+  boundary uplift left uncarved); continental rifts get flank volcanism.
+"""
+
+import random
+from collections import deque
+from dataclasses import dataclass
+
+import numpy as np
+from scipy.spatial import cKDTree
+
+from src.worldgen.config.worldgen_config import VulcanismConfig
+from src.worldgen.geometry.mesh import MeshGeometry
+from src.worldgen.terrain.boundaries import BoundaryFacts, BoundaryKind
+from src.worldgen.terrain.plate_personalities import PlateProperties
+from src.worldgen.types import BoolArray, Float64Array, Int8Array, Int32Array
+
+
+@dataclass
+class VolcanoSeed:
+    """A discrete volcano before it gets a global id (filled by the stage)."""
+
+    cell: int
+    kind: int  # VolcanoKind value
+    status: int  # VolcanoStatus value
+    chain_id: int
+    activity: float
+
+
+@dataclass
+class VulcanismResult:
+    """Per-cell contributions plus the discrete volcanoes to materialize."""
+
+    uplift_add: Float64Array  # added to ctx.fields.uplift (>= 0)
+    volcanism: Float64Array  # [0,1] present-day activity field
+    volcanoes: list[VolcanoSeed]
+
+
+# --- volcano morphology / status (mirror features.VolcanoKind/Status values) ---
+_STRATO, _SHIELD, _FISSURE = 0, 1, 2
+_ACTIVE, _DORMANT, _EXTINCT = 0, 1, 2
+
+
+def _status_from_activity(activity: float) -> int:
+    """Bucket a [0,1] activity level into active / dormant / extinct."""
+    if activity > 0.66:
+        return _ACTIVE
+    if activity > 0.33:
+        return _DORMANT
+    return _EXTINCT
+
+
+def _torus_distance(
+    a: Float64Array, b: Float64Array, width: float, height: float
+) -> float:
+    """Minimum-image distance between two sites on the torus."""
+    dx: float = abs(float(a[0]) - float(b[0]))
+    dy: float = abs(float(a[1]) - float(b[1]))
+    dx = min(dx, width - dx)
+    dy = min(dy, height - dy)
+    return float(np.hypot(dx, dy))
+
+
+def _stamp_bump(
+    *,
+    geometry: MeshGeometry,
+    uplift_add: Float64Array,
+    activity: Float64Array,
+    cell: int,
+    height: float,
+    smear: int,
+    falloff: float,
+) -> None:
+    """Add a small radial edifice bump around ``cell`` (BFS to ``smear`` hops)."""
+    uplift_add[cell] += height
+    activity[cell] = max(activity[cell], min(1.0, height))
+    if smear <= 0:
+        return
+    frontier: list[int] = [cell]
+    level_height: float = height
+    hop: int = 0
+    seen: set[int] = {cell}
+    while frontier and hop < smear:
+        level_height *= falloff
+        hop += 1
+        nxt: list[int] = []
+        for c in frontier:
+            for nb in geometry.neighbors_of(cell_id=c):
+                nb_i: int = int(nb)
+                if nb_i in seen:
+                    continue
+                seen.add(nb_i)
+                uplift_add[nb_i] += level_height
+                activity[nb_i] = max(activity[nb_i], min(1.0, level_height))
+                nxt.append(nb_i)
+        frontier = nxt
+
+
+def _subduction_arcs(
+    *,
+    geometry: MeshGeometry,
+    facts: BoundaryFacts,
+    plate_id: Int32Array,
+    cfg: VulcanismConfig,
+) -> Float64Array:
+    """Return per-cell arc activity (also the arc uplift driver, pre-scale).
+
+    Seed the trench (overriding-side convergent cells, OO/OC only — never CC),
+    then BFS inland *within the overriding plate* and shape a band peaking at
+    ``arc_offset`` hops from the trench.
+    """
+    n: int = geometry.n_cells
+    conv: Float64Array = facts.convergence
+    kind: Int8Array = facts.conv_kind
+
+    subducting: BoolArray = (
+        facts.is_overriding
+        & (conv > 0.0)
+        & ((kind == int(BoundaryKind.CONV_OO)) | (kind == int(BoundaryKind.CONV_OC)))
+    )
+
+    hop: Int32Array = np.full(n, -1, dtype=np.int32)
+    src_conv: Float64Array = np.zeros(n, dtype=np.float64)
+    max_hop: int = cfg.arc_offset + cfg.arc_width + 1
+
+    queue: deque[int] = deque()
+    for cell in np.flatnonzero(subducting):
+        c: int = int(cell)
+        hop[c] = 0
+        src_conv[c] = float(conv[c])
+        queue.append(c)
+
+    while queue:
+        c = queue.popleft()
+        if hop[c] >= max_hop:
+            continue
+        plate_c: int = int(plate_id[c])
+        for nb in geometry.neighbors_of(cell_id=c):
+            nb_i: int = int(nb)
+            if hop[nb_i] != -1:
+                continue
+            if int(plate_id[nb_i]) != plate_c:
+                continue  # stay on the overriding plate
+            hop[nb_i] = hop[c] + 1
+            src_conv[nb_i] = src_conv[c]
+            queue.append(nb_i)
+
+    activity: Float64Array = np.zeros(n, dtype=np.float64)
+    reached: BoolArray = hop >= 0
+    band: Float64Array = np.maximum(
+        0.0, 1.0 - np.abs(hop - cfg.arc_offset) / float(cfg.arc_width + 1)
+    )
+    activity[reached] = src_conv[reached] * band[reached]
+    # Continent-continent collision cells are amagmatic: an arc marching inland
+    # off a neighbouring subduction zone must not light up the collision seam
+    # (no volcanoes in the Himalayas).
+    activity[kind == int(BoundaryKind.CONV_CC)] = 0.0
+    return activity
+
+
+def _hotspot_trails(
+    *,
+    geometry: MeshGeometry,
+    facts: BoundaryFacts,
+    plate_id: Int32Array,
+    properties: PlateProperties,
+    tree: cKDTree,
+    cfg: VulcanismConfig,
+    rng: random.Random,
+    uplift_add: Float64Array,
+    activity: Float64Array,
+) -> list[VolcanoSeed]:
+    """Place hotspots and stamp drift-aligned decaying volcano trails."""
+    n: int = geometry.n_cells
+    sites: Float64Array = geometry.sites
+    width: float = geometry.width
+    height: float = geometry.height
+    span: float = max(width, height)
+    is_continental: BoolArray = properties.is_continental
+
+    # Candidates: plate interiors (away from boundaries), oceanic-biased.
+    boundary: BoolArray = (facts.convergence > 0.0) | (facts.divergence > 0.0)
+    interior: Int32Array = np.flatnonzero(~boundary)
+    if interior.size == 0:
+        return []
+
+    score: dict[int, float] = {}
+    for cell in interior:
+        c: int = int(cell)
+        oceanic: bool = not bool(is_continental[int(plate_id[c])])
+        weight: float = 1.0 if oceanic else cfg.hotspot_continental_fraction
+        score[c] = rng.random() * weight
+
+    ordered: list[int] = sorted(score, key=lambda c: score[c], reverse=True)
+    min_d: float = cfg.hotspot_spacing * span
+    hotspots: list[int] = []
+    for c in ordered:
+        if len(hotspots) >= cfg.hotspot_count:
+            break
+        if all(
+            _torus_distance(sites[c], sites[h], width, height) >= min_d
+            for h in hotspots
+        ):
+            hotspots.append(c)
+
+    volcanoes: list[VolcanoSeed] = []
+    used: set[int] = set()
+    for chain_id, hc in enumerate(hotspots):
+        drift: Float64Array = properties.drift[int(plate_id[hc])]
+        origin: Float64Array = sites[hc]
+        for k in range(cfg.chain_length):
+            offset: float = k * cfg.chain_step * span
+            pos = np.array(
+                [
+                    (origin[0] + offset * drift[0]) % width,
+                    (origin[1] + offset * drift[1]) % height,
+                ]
+            )
+            _dist, idx = tree.query(x=pos)
+            cell = int(idx)
+            if cell in used:
+                continue
+            used.add(cell)
+            decay: float = cfg.chain_decay**k
+            height_k: float = cfg.hotspot_peak_uplift * decay
+            _stamp_bump(
+                geometry=geometry,
+                uplift_add=uplift_add,
+                activity=activity,
+                cell=cell,
+                height=height_k,
+                smear=cfg.volcano_smear,
+                falloff=cfg.bump_falloff,
+            )
+            volcanoes.append(
+                VolcanoSeed(
+                    cell=cell,
+                    kind=_SHIELD,
+                    status=_status_from_activity(decay),
+                    chain_id=chain_id,
+                    activity=decay,
+                )
+            )
+    return volcanoes
+
+
+def _greedy_spaced(
+    *,
+    geometry: MeshGeometry,
+    score: Float64Array,
+    candidate: BoolArray,
+    spacing_frac: float,
+    exclude: set[int],
+) -> list[int]:
+    """Accept highest-score candidate cells with a minimum torus spacing."""
+    sites: Float64Array = geometry.sites
+    width: float = geometry.width
+    height: float = geometry.height
+    min_d: float = spacing_frac * max(width, height)
+
+    order: Int32Array = np.argsort(-score, kind="stable")
+    accepted: list[int] = []
+    for cell in order:
+        c: int = int(cell)
+        if not candidate[c] or score[c] <= 0.0 or c in exclude:
+            continue
+        if all(
+            _torus_distance(sites[c], sites[a], width, height) >= min_d
+            for a in accepted
+        ):
+            accepted.append(c)
+    return accepted
+
+
+def compute_vulcanism(
+    *,
+    geometry: MeshGeometry,
+    facts: BoundaryFacts,
+    plate_id: Int32Array,
+    properties: PlateProperties,
+    cfg: VulcanismConfig,
+    seed: int,
+) -> VulcanismResult:
+    """Compute uplift contribution, the volcanism field, and discrete volcanoes."""
+    n: int = geometry.n_cells
+    rng: random.Random = random.Random(seed)
+    tree: cKDTree = cKDTree(
+        data=geometry.sites, boxsize=[geometry.width, geometry.height]
+    )
+
+    uplift_add: Float64Array = np.zeros(n, dtype=np.float64)
+    activity: Float64Array = np.zeros(n, dtype=np.float64)
+
+    # --- 1. subduction arcs ---
+    arc_activity: Float64Array = _subduction_arcs(
+        geometry=geometry, facts=facts, plate_id=plate_id, cfg=cfg
+    )
+    uplift_add += cfg.arc_uplift * arc_activity
+    activity = np.maximum(activity, arc_activity)
+
+    # --- 2. mid-ocean ridges (OO divergence, raised — boundary uplift skipped it) ---
+    ridge: Float64Array = np.where(
+        facts.div_kind == int(BoundaryKind.DIV_OO), facts.divergence, 0.0
+    )
+    uplift_add += cfg.ridge_uplift * ridge
+    activity = np.maximum(activity, ridge)
+
+    # --- 3. continental rift flank volcanism (no extra uplift; valley already cut) ---
+    rift_mask: BoolArray = (facts.div_kind == int(BoundaryKind.DIV_OC)) | (
+        facts.div_kind == int(BoundaryKind.DIV_CC)
+    )
+    rift_activity: Float64Array = np.where(
+        rift_mask, cfg.rift_flank_strength * facts.divergence, 0.0
+    )
+    activity = np.maximum(activity, rift_activity)
+
+    # --- 4. hotspots (stamp trails into uplift_add and activity directly) ---
+    volcanoes: list[VolcanoSeed] = _hotspot_trails(
+        geometry=geometry,
+        facts=facts,
+        plate_id=plate_id,
+        properties=properties,
+        tree=tree,
+        cfg=cfg,
+        rng=rng,
+        uplift_add=uplift_add,
+        activity=activity,
+    )
+    used: set[int] = {v.cell for v in volcanoes}
+
+    # --- 5. arc volcanoes (stratovolcanoes), grouped by connected arc band ---
+    arc_band: BoolArray = arc_activity > 0.0
+    arc_labels: Int32Array = _components(geometry=geometry, mask=arc_band)
+    chain_base: int = cfg.hotspot_count
+    arc_cells: list[int] = _greedy_spaced(
+        geometry=geometry,
+        score=arc_activity,
+        candidate=arc_band,
+        spacing_frac=cfg.arc_volcano_spacing,
+        exclude=used,
+    )
+    for c in arc_cells:
+        norm: float = float(min(1.0, arc_activity[c]))
+        status: int = (
+            _DORMANT if rng.random() < cfg.dormant_fraction else _ACTIVE
+        )
+        volcanoes.append(
+            VolcanoSeed(
+                cell=c,
+                kind=_STRATO,
+                status=status,
+                chain_id=chain_base + int(arc_labels[c]),
+                activity=max(norm, 0.34) if status != _EXTINCT else norm,
+            )
+        )
+        used.add(c)
+
+    # --- 6. ridge / rift fissure volcanoes (solitary) ---
+    fissure_score: Float64Array = np.maximum(ridge, rift_activity)
+    fissure_cells: list[int] = _greedy_spaced(
+        geometry=geometry,
+        score=fissure_score,
+        candidate=fissure_score > 0.0,
+        spacing_frac=cfg.rift_volcano_spacing,
+        exclude=used,
+    )
+    for c in fissure_cells:
+        volcanoes.append(
+            VolcanoSeed(
+                cell=c,
+                kind=_FISSURE,
+                status=_ACTIVE,
+                chain_id=-1,
+                activity=float(min(1.0, max(0.5, fissure_score[c]))),
+            )
+        )
+        used.add(c)
+
+    # --- normalize the activity field to [0,1] ---
+    peak: float = float(activity.max())
+    volcanism: Float64Array = activity / peak if peak > 0.0 else activity
+    np.clip(volcanism, 0.0, 1.0, out=volcanism)
+
+    return VulcanismResult(
+        uplift_add=uplift_add, volcanism=volcanism, volcanoes=volcanoes
+    )
+
+
+def _components(*, geometry: MeshGeometry, mask: BoolArray) -> Int32Array:
+    """Label connected components of ``mask`` (BFS); -1 outside the mask."""
+    n: int = len(mask)
+    labels: Int32Array = np.full(n, -1, dtype=np.int32)
+    component: int = -1
+    for cell_id in range(n):
+        if not mask[cell_id] or labels[cell_id] >= 0:
+            continue
+        component += 1
+        queue: deque[int] = deque([cell_id])
+        labels[cell_id] = component
+        while queue:
+            current: int = queue.popleft()
+            for nb in geometry.neighbors_of(cell_id=current):
+                nb_i: int = int(nb)
+                if labels[nb_i] >= 0 or not mask[nb_i]:
+                    continue
+                labels[nb_i] = component
+                queue.append(nb_i)
+    return labels
