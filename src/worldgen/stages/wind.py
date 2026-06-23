@@ -57,10 +57,16 @@ class WindStage:
         wind_u, wind_v, wind_magnitude = deflect_wind(
             wind_u=wind_u,
             wind_v=wind_v,
+            wind_magnitude=wind_magnitude,
             grad_x=grad_x,
             grad_y=grad_y,
             cfg=cfg,
         )
+
+        # --- normalize speed to [0, 1] (belt speed × deflection) ---
+        mag_max: float = float(wind_magnitude.max())
+        if mag_max > 0.0:
+            wind_magnitude = wind_magnitude / mag_max
 
         # --- write results ---
         ctx.fields.wind_u = wind_u

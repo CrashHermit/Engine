@@ -120,24 +120,32 @@ def deflect_wind(
     *,
     wind_u: Float64Array,
     wind_v: Float64Array,
+    wind_magnitude: Float64Array,
     grad_x: Float64Array,
     grad_y: Float64Array,
     cfg: WindConfig,
 ) -> tuple[Float64Array, Float64Array, Float64Array]:
-    """Subtract the uphill-into-slope component from wind; return renormalized (u, v, magnitude).
+    """Bend wind around uphill terrain and slow it where it is blocked.
 
     Wind blows harder into uphill terrain; deflection pushes it sideways along
-    ranges and accelerates it through gaps.
+    ranges and accelerates it through gaps.  The deflected unit vector's length
+    is a natural *deflection factor* in ``[0, 1]`` — ``1`` where the wind passes
+    unobstructed (flat ground or wind parallel to the slope) and shrinking as
+    terrain turns it — so the incoming belt speed is scaled by that factor.  The
+    previous version discarded the belt speed and reported the factor itself as
+    the magnitude, which pinned every flat cell to exactly ``1.0``.
 
     Args:
         wind_u: East-west wind direction (unit vector, may be zero-magnitude).
         wind_v: North-south wind direction (unit vector, may be zero-magnitude).
+        wind_magnitude: Incoming belt wind speed per cell.
         grad_x: X-component of elevation gradient (points uphill).
         grad_y: Y-component of elevation gradient (points uphill).
         cfg: Wind deflection strength.
 
     Returns:
-        Tuple of (wind_u, wind_v, wind_magnitude), renormalized after deflection.
+        Tuple of ``(wind_u, wind_v, wind_magnitude)``: unit direction after
+        deflection, and belt speed scaled by the deflection factor.
     """
     # --- gradient magnitude and unit direction ---
     grad_mag: Float64Array = np.hypot(grad_x, grad_y)
@@ -151,10 +159,11 @@ def deflect_wind(
     deflected_u: Float64Array = wind_u - cfg.deflection * into_slope * grad_u
     deflected_v: Float64Array = wind_v - cfg.deflection * into_slope * grad_v
 
-    # --- renormalize ---
-    mag: Float64Array = np.hypot(deflected_u, deflected_v)
-    wind_u = np.where(mag > 0.0, deflected_u / mag, 0.0)
-    wind_v = np.where(mag > 0.0, deflected_v / mag, 0.0)
-    wind_magnitude: Float64Array = mag
+    # --- deflection factor (<= 1) scales the belt speed; renormalize direction ---
+    deflection_factor: Float64Array = np.hypot(deflected_u, deflected_v)
+    safe: Float64Array = deflection_factor > 0.0
+    wind_u = np.where(safe, deflected_u / deflection_factor, 0.0)
+    wind_v = np.where(safe, deflected_v / deflection_factor, 0.0)
+    wind_magnitude = wind_magnitude * deflection_factor
 
     return wind_u, wind_v, wind_magnitude

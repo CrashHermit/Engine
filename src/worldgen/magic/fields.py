@@ -29,6 +29,30 @@ def _min_image(delta: Float64Array, width: float, height: float) -> Float64Array
     return out
 
 
+def _compose_strength(
+    line_term: Float64Array, nexus_term: Float64Array, floor: Float64Array
+) -> Float64Array:
+    """Combine the line ridge, the nexus peak, and the noise floor into [0, 1].
+
+    The earlier model *summed* ``line + nexus_bump + floor`` and clipped, so
+    every cell near the web pinned to 1.0 (a quarter of the land), erasing all
+    falloff detail there.  Instead, screen-combine the two web terms — which
+    keeps the result in ``[0, 1]`` when both inputs are (``a + b - a·b``) and
+    lets a nexus sitting on a line reach the full peak without overshoot — then
+    lay that over the noise floor as a baseline rather than an additive term.
+
+    Args:
+        line_term: Leyline ridge contribution per cell, in ``[0, 1]``.
+        nexus_term: Nexus peak contribution per cell, in ``[0, 1]``.
+        floor: Background magic floor per cell (small), in ``[0, 1]``.
+
+    Returns:
+        Per-cell magic strength in ``[0, 1]``.
+    """
+    web: Float64Array = line_term + nexus_term - line_term * nexus_term
+    return np.clip(floor + (1.0 - floor) * web, 0.0, 1.0)
+
+
 def rasterize_magic(
     *,
     geometry: MeshGeometry,
@@ -84,13 +108,13 @@ def rasterize_magic(
     for idx in range(k):
         d: Float64Array = _min_image(sites - nexus_sites[idx], width, height)
         nexus_min = np.minimum(nexus_min, np.hypot(d[:, 0], d[:, 1]))
-    nexus_bump: Float64Array = cfg.nexus_boost * np.exp(-nexus_min / nexus_reach)
+    nexus_term: Float64Array = cfg.nexus_boost * np.exp(-nexus_min / nexus_reach)
 
     edges: list[tuple[int, int]] = network.edges
     n_seg: int = len(edges)
     if n_seg == 0:
-        # A single isolated nexus: strength is the bump + floor only.
-        strength = np.clip(nexus_bump + floor, 0.0, 1.0)
+        # A single isolated nexus: only the nexus peak over the floor.
+        strength = _compose_strength(np.zeros(n, dtype=np.float64), nexus_term, floor)
         return strength, np.zeros(n, dtype=np.float64), uniform_channels
 
     # --- per-segment distance and projection t (cells vectorized per segment) ---
@@ -112,9 +136,8 @@ def rasterize_magic(
         seg_t[seg] = t
 
     min_dist: Float64Array = seg_dist.min(axis=0)  # (n,)
-    strength = np.clip(
-        np.exp(-min_dist / line_reach) + nexus_bump + floor, 0.0, 1.0
-    )
+    line_term: Float64Array = cfg.line_strength * np.exp(-min_dist / line_reach)
+    strength = _compose_strength(line_term, nexus_term, floor)
 
     # --- IDW over the k nearest segments ---
     dist_by_cell: Float64Array = seg_dist.T  # (n, n_seg)

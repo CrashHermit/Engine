@@ -234,8 +234,9 @@ class LeylineConfig:
     purity: float = 2.0          # Valence sharpening toward the poles (sign*|v|^(1/purity))
     channel_purity: float = 2.0  # Channel-weight sharpening exponent
     line_reach: float = 0.08     # Strength falloff length from a leyline (fraction of span)
-    nexus_reach: float = 0.03    # Tighter falloff length of the nexus bump
-    nexus_boost: float = 0.6     # Extra strength right at a nexus
+    line_strength: float = 0.7   # Peak strength along a leyline ridge (nexuses reach higher)
+    nexus_reach: float = 0.03    # Tighter falloff length of the nexus peak
+    nexus_boost: float = 1.0     # Peak strength right at a nexus (the brightest points)
     idw_k: int = 4               # Nearest segments blended for valence/channels
     idw_epsilon: float = 1e-3    # IDW distance floor
     score_frequency: float = 3.0    # Nexus-score FBm frequency (cycles around the torus)
