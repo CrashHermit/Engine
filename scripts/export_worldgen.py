@@ -9,42 +9,26 @@ if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
 # ruff: noqa: E402
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from scripts.worldgen_render import (
     GRID_COLOR,
     LAYER_ORDER,
-    RGB,
     Layer,
     Phase0World,
     generate_world,
-    rasterize_grid,
+    rasterize_rgb,
 )
 
 
-def _draw_grid_lines(pixels: list[list[RGB]], scale: int) -> Image.Image:
-    from PIL import ImageDraw
-
-    size = len(pixels)
-    img = _draw_scaled(pixels, scale)
-    canvas = ImageDraw.Draw(img)
+def _overlay_grid_lines(image: Image.Image, size: int, scale: int) -> Image.Image:
+    """Draw thin grid lines between tiles (only legible at scale >= ~4)."""
+    canvas = ImageDraw.Draw(image)
     for i in range(size + 1):
         pos = i * scale
         canvas.line([(pos, 0), (pos, size * scale)], fill=GRID_COLOR, width=1)
         canvas.line([(0, pos), (size * scale, pos)], fill=GRID_COLOR, width=1)
-
-    return img
-
-
-def _draw_scaled(pixels: list[list[RGB]], scale: int) -> Image.Image:
-    size = len(pixels)
-    base = Image.new("RGB", (size, size))
-    for y in range(size):
-        for x in range(size):
-            base.putpixel((x, y), pixels[y][x])
-    if scale == 1:
-        return base
-    return base.resize((size * scale, size * scale), Image.Resampling.NEAREST)
+    return image
 
 
 def export_layer(
@@ -54,14 +38,14 @@ def export_layer(
     scale: int,
     grid: bool,
 ) -> None:
-    pixels = rasterize_grid(world, layer)
-    if grid or scale > 1:
-        image = _draw_grid_lines(pixels, scale) if grid else _draw_scaled(pixels, scale)
-    else:
-        image = Image.new("RGB", (world.size, world.size))
-        for y in range(world.size):
-            for x in range(world.size):
-                image.putpixel((x, y), pixels[y][x])
+    # Vectorized colorize → one numpy array → one PIL image (fast even at 2k+).
+    image = Image.fromarray(rasterize_rgb(world, layer), mode="RGB")
+    if scale > 1:
+        image = image.resize(
+            (world.size * scale, world.size * scale), Image.Resampling.NEAREST
+        )
+    if grid:
+        image = _overlay_grid_lines(image, world.size, scale)
 
     output.parent.mkdir(parents=True, exist_ok=True)
     image.save(output)
@@ -73,7 +57,17 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Export worldgen maps to PNG.")
     parser.add_argument("--seed", type=int, default=0, help="World seed (default: 0)")
     parser.add_argument(
-        "--size", type=int, default=200, help="Grid size (default: 200)"
+        "--size", type=int, default=200, help="Gameplay grid size (default: 200)"
+    )
+    parser.add_argument(
+        "--resolution",
+        type=int,
+        default=None,
+        help=(
+            "Render resolution in tiles, decoupled from --size. Bakes the mesh "
+            "directly at this resolution so PNGs resolve full mesh detail "
+            "(e.g. --resolution 1024). Defaults to --size."
+        ),
     )
     parser.add_argument(
         "--layer",
@@ -112,8 +106,15 @@ def main() -> None:
     if args.scale < 1:
         raise SystemExit("--scale must be >= 1")
 
-    print(f"Generating world (seed={args.seed}, size={args.size})...")
-    world = generate_world(args.size, args.seed)
+    if args.resolution is not None and args.resolution < 1:
+        raise SystemExit("--resolution must be >= 1")
+
+    detail = args.resolution if args.resolution is not None else args.size
+    print(
+        f"Generating world (seed={args.seed}, size={args.size}, "
+        f"render={detail}x{detail})..."
+    )
+    world = generate_world(args.size, args.seed, resolution=args.resolution)
 
     if args.all_layers:
         out_dir = args.output if args.output.suffix == "" else args.output.parent

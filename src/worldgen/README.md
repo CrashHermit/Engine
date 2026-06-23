@@ -86,6 +86,12 @@ Feature objects (`River`, `Lake`, `Landmass`, `LeylineNetwork`) ship on
 # Interactive viewer (layers: elevation, plates, climate, water, magic, biomes)
 uv run python scripts/view_worldgen.py
 
+# Export a layer to PNG. --resolution decouples render detail from the gameplay
+# grid: it bakes the mesh directly at that resolution, so the PNG resolves the
+# full Voronoi mesh instead of the coarse gameplay grid (for diagnosis/tuning).
+uv run python scripts/export_worldgen.py --seed 7 --size 100 --resolution 1024 --layer elevation
+uv run python scripts/export_worldgen.py --seed 7 --resolution 1024 --all-layers -o output/
+
 # One-paragraph census per preset/seed — the regression eyeball
 uv run python scripts/census.py
 

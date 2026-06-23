@@ -2,22 +2,19 @@ from __future__ import annotations
 
 import colorsys
 import math
-from typing import TypeAlias
 from dataclasses import dataclass
 from enum import StrEnum
 
 import numpy as np
 
-from src.worldgen.bake import nearest_cell_per_tile
+from src.worldgen.bake import bake_to_grid, nearest_cell_per_tile, stamp_rivers
 from src.worldgen.context import WorldContext
-from src.worldgen.features import WorldData
 from src.worldgen.fields import GridFields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.pipeline import WorldgenPipeline
 from src.worldgen.types import Float64Array, Int32Array
 
-
-RGB: TypeAlias = tuple[int, int, int]
+type RGB = tuple[int, int, int]
 
 WATER_COLOR: RGB = (20, 60, 140)
 LAND_COLOR: RGB = (30, 80, 40)
@@ -112,16 +109,38 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
 }
 
 
-def generate_world(size: int, seed: int) -> Phase0World:
-    """Run the full pipeline (debug door) and keep mesh intermediates for display."""
-    world: WorldData
+def generate_world(
+    size: int, seed: int, resolution: int | None = None
+) -> Phase0World:
+    """Run the full pipeline and bake mesh fields for display.
+
+    ``resolution`` decouples render detail from the gameplay ``size``: the
+    mesh is baked onto a ``resolution × resolution`` grid instead of
+    ``size × size``, so diagnostic PNGs can resolve the full Voronoi mesh
+    (up to ``cell_count`` cells) instead of the coarse gameplay grid.  When
+    ``None`` (the interactive default), detail equals the gameplay ``size``.
+    """
     ctx: WorldContext
-    world, ctx = WorldgenPipeline().run_debug(seed=seed, size=size)
+    _world, ctx = WorldgenPipeline().run_debug(seed=seed, size=size)
+
+    render_size: int = resolution if resolution is not None else ctx.config.size
     nearest: Int32Array = nearest_cell_per_tile(
         geometry=ctx.geometry,
-        size=ctx.config.size,
+        size=render_size,
     )
-    grid: GridFields = world.grid
+    # Bake the mesh fields at the render resolution, then stamp rivers crisply
+    # at that resolution (the product grid bakes at gameplay size; this is a
+    # diagnostic re-bake that keeps sub-tile detail).
+    grid: GridFields = bake_to_grid(fields=ctx.fields, nearest=nearest)
+    if ctx.rivers:
+        stamp_rivers(
+            grid=grid,
+            rivers=ctx.rivers,
+            geometry=ctx.geometry,
+            fields=ctx.fields,
+            size=render_size,
+            cfg=ctx.config.river,
+        )
 
     # insolation stays off the product grid (mesh-side intermediate); bake it
     # per-tile here purely so the viewer can show the authored energy field.
@@ -134,7 +153,7 @@ def generate_world(size: int, seed: int) -> Phase0World:
 
     return Phase0World(
         seed=seed,
-        size=size,
+        size=render_size,
         grid=grid,
         geometry=ctx.geometry,
         nearest=nearest,
@@ -323,3 +342,130 @@ def rasterize_grid(world: Phase0World, layer: Layer) -> list[list[RGB]]:
         for x, y in coords:
             grid[y][x] = color
     return grid
+
+
+# ---------------------------------------------------------------------------
+# Vectorized dense renderer (for high-resolution PNG export)
+# ---------------------------------------------------------------------------
+#
+# rasterize_grid colors one tile at a time in Python — fine for the small
+# interactive canvas, far too slow for a 2048x2048 diagnostic export. The
+# functions below colour every tile at once with numpy, producing the same
+# colours as _tile_color but in milliseconds. The viewer keeps the scalar path.
+
+
+def _lerp_arr(low: RGB, high: RGB, t: Float64Array) -> Float64Array:
+    """Per-element lerp between two RGB colors; returns an (n, 3) float array."""
+    t = np.clip(t, 0.0, 1.0)[:, None]
+    low_arr = np.array(low, dtype=np.float64)[None, :]
+    high_arr = np.array(high, dtype=np.float64)[None, :]
+    return low_arr + (high_arr - low_arr) * t
+
+
+def _hsv_to_rgb(
+    h: Float64Array, s: Float64Array, v: Float64Array
+) -> Float64Array:
+    """Vectorized HSV→RGB; inputs in [0, 1], returns (n, 3) in [0, 255]."""
+    h6 = (h % 1.0) * 6.0
+    i = np.floor(h6).astype(np.int64) % 6
+    f = h6 - np.floor(h6)
+    p = v * (1.0 - s)
+    q = v * (1.0 - f * s)
+    t = v * (1.0 - (1.0 - f) * s)
+    r = np.choose(i, [v, q, p, p, t, v])
+    g = np.choose(i, [t, v, v, q, p, p])
+    b = np.choose(i, [p, p, t, v, v, q])
+    return np.stack([r, g, b], axis=1) * 255.0
+
+
+_PHI: float = 0.6180339887
+
+
+def colorize(world: Phase0World, layer: Layer) -> Float64Array:
+    """Color every tile for ``layer`` at once; returns (n, 3) uint8, flat tile order."""
+    grid: GridFields = world.grid
+    n: int = world.size * world.size
+    is_land: np.ndarray = grid.is_land.astype(bool)
+    out: Float64Array = np.zeros((n, 3), dtype=np.float64)
+
+    if layer == Layer.LAND:
+        out[:] = np.array(LAND_COLOR)
+        out[~is_land] = np.array(WATER_COLOR)
+
+    elif layer == Layer.ELEVATION:
+        z = grid.elevation.astype(np.float64)
+        z_min, z_max = float(z.min()), float(z.max())
+        span = z_max - z_min if z_max > z_min else 1.0
+        out = _lerp_arr(LAND_COLOR, (220, 210, 180), (z - z_min) / span)
+        out[~is_land] = np.array(WATER_COLOR)
+
+    elif layer in (Layer.PLATES, Layer.MESH):
+        ids = (grid.plate_id if layer == Layer.PLATES else world.nearest).astype(
+            np.float64
+        )
+        hue = (ids * _PHI) % 1.0
+        out = _hsv_to_rgb(hue, np.full(n, 0.7), np.full(n, 0.9))
+
+    elif layer == Layer.UPLIFT:
+        out = _lerp_arr((30, 40, 80), (220, 200, 160), grid.uplift.astype(np.float64))
+
+    elif layer in (Layer.DRAINAGE, Layer.DISCHARGE):
+        values = (
+            grid.drainage if layer == Layer.DRAINAGE else grid.discharge
+        ).astype(np.float64)
+        scale = 1000.0 if layer == Layer.DRAINAGE else 10000.0
+        low = (30, 60, 100) if layer == Layer.DRAINAGE else (30, 60, 120)
+        high = (255, 240, 200) if layer == Layer.DRAINAGE else (100, 200, 255)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            t = np.where(values > 0.0, np.log(values) / np.log(scale), 0.0)
+        out = _lerp_arr(low, high, t)
+        out[(values <= 0.0) | (~is_land)] = np.array((10, 20, 30))
+
+    elif layer == Layer.INSOLATION:
+        out = _lerp_arr((20, 30, 90), (255, 240, 180), world.insolation)
+
+    elif layer == Layer.TEMPERATURE:
+        out = _lerp_arr((40, 80, 200), (220, 60, 50), grid.temperature.astype(np.float64))
+
+    elif layer == Layer.PRECIPITATION:
+        out = _lerp_arr((200, 180, 120), (20, 90, 130), grid.precipitation.astype(np.float64))
+
+    elif layer == Layer.WIND:
+        u = grid.wind_u.astype(np.float64)
+        v = grid.wind_v.astype(np.float64)
+        mag = np.clip(grid.wind_magnitude.astype(np.float64), 0.0, 1.0)
+        hue = (np.arctan2(v, u) / (2.0 * np.pi)) % 1.0
+        out = _hsv_to_rgb(hue, np.full(n, 0.8), 0.2 + 0.8 * mag)
+
+    elif layer == Layer.SAVAGERY:
+        out = _lerp_arr((40, 90, 60), (200, 40, 40), grid.savagery.astype(np.float64))
+
+    elif layer == Layer.MAGIC_STRENGTH:
+        out = _lerp_arr((15, 15, 30), (180, 120, 255), grid.magic_strength.astype(np.float64))
+
+    elif layer == Layer.MAGIC_VALENCE:
+        valence = np.clip(grid.magic_valence.astype(np.float64), -1.0, 1.0)
+        corrupt = _lerp_arr((120, 120, 120), (210, 40, 160), -valence)
+        pure = _lerp_arr((120, 120, 120), (40, 200, 210), valence)
+        out = np.where((valence < 0.0)[:, None], corrupt, pure)
+
+    elif layer == Layer.MAGIC_CHANNELS:
+        channels = grid.magic_channels.astype(np.float64)
+        peak = np.maximum(channels.max(axis=1, keepdims=True), 1e-6)
+        out = 255.0 * channels / peak
+
+    elif layer == Layer.BIOMES:
+        col = np.argmax(grid.biome_weights, axis=1).astype(np.float64)
+        hue = (col * _PHI) % 1.0
+        out = _hsv_to_rgb(hue, np.full(n, 0.55), np.full(n, 0.9))
+        out[~is_land] = np.array(WATER_COLOR)
+
+    return np.clip(out, 0.0, 255.0).astype(np.uint8)
+
+
+def rasterize_rgb(world: Phase0World, layer: Layer) -> np.ndarray:
+    """Dense ``(size, size, 3)`` uint8 image array (row-major: ``[y, x]``)."""
+    size: int = world.size
+    flat: Float64Array = colorize(world, layer)
+    # Flat tile index is x-major (x * size + y); transpose to image rows (y, x).
+    return flat.reshape(size, size, 3).transpose(1, 0, 2)
