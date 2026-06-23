@@ -1,6 +1,7 @@
 # Worldgen Redesign Plan
 
-Status: **planning — awaiting confirmation before implementation.**
+Status: **implemented (Phases 0–5).** See "Implementation notes & divergences"
+at the bottom for where the build differs from this map.
 
 Scope: `src/worldgen` only — a pure map generator (seed + config in, `WorldData` out).
 `service/world.py`, persistence, the TUI create-world modal, and the starter dungeon are
@@ -230,5 +231,40 @@ concern for the persistence round.
 | 3 | Discharge, river/lake objects, direction/speed, rasterization; water layers + invariants |
 | 4 | Savagery, leylines/magic, biomes; layers |
 | 5 | Final `WorldData` assembly, presets, full test suite, docs pass |
+
+---
+
+## 11. Implementation notes & divergences
+
+The plan was a map, not a contract with ourselves. What shipped, and where it
+diverged:
+
+- **`WorldData` (§2)** ships as a plain dataclass in `worldgen/features.py`:
+  `seed, size, config, grid, rivers, lakes, leylines, landmasses`. The mesh is
+  ephemeral — `WorldgenPipeline.run` returns `WorldData`; the viewer uses
+  `run_debug -> (WorldData, WorldContext)` for mesh intermediates. `region_id`
+  ships as a column of `-1`s on `GridFields` (the persistence socket).
+- **All 16 stages live in `pipeline.py::_build_stages`** in canonical order
+  (Phases 1–4), per CONVENTIONS §13. See `src/worldgen/README.md` for the table.
+- **Features stay in mesh-cell coordinates**; tile-side lookup is the baked
+  `river_id` / `lake_id` columns. No tile-path river representation was invented.
+- **Old vocabulary is gone**: `MeshCell`, `GridPositionData`, `BiomeCenter`,
+  `LakeBasin`, `biome_centers.py`, `AnchorConfig` — grep comes back empty in
+  `src/`.
+- **Tests** are consolidated into five subject files (`test_determinism`,
+  `test_geometry`, `test_terrain`, `test_water`, `test_climate_ecology`) plus
+  the pure-function unit suites; `scripts/census.py` is the regression eyeball.
+- **Magic/biome tuning is taste, not contract.** Default insolation (one ring
+  pair) skews land cold, so census biome mixes lean frigid/arid — a knob to
+  tune (insolation bands/contrast, lapse rate), not a correctness bug. The
+  argmax-equals-`BIOME_GRID` agreement holds regardless.
+
+### Known broken / next round
+
+`service/world.py` and `TileRepository` still speak the **old** worldgen shape
+and are out of scope for this round (documented as known-broken in
+`service/world.py`'s module docstring). The next round — persistence — starts
+there: schema the new `GridFields` columns and the feature objects, then wire
+`region_id` to the eventual geography-clustering tier.
 
 Each phase ends runnable and visible in the viewer.

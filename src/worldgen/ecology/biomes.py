@@ -3,7 +3,7 @@
 Phase 4 step 6.  ``BIOME_GRID`` in ``core/model`` is the single source of
 truth: worldgen *derives* each biome's ideal climate point from the band
 breakpoints (bands are sevenths; band ``i`` midpoint ``(i + 0.5) / 7``) rather
-than maintaining a separate ``biome_centers.py``.  Soft membership is then
+than maintaining a separate hand-edited centers table.  Soft membership is then
 inverse-distance weighting over those centers, done as one ``(n, n_biomes)``
 matrix.
 """

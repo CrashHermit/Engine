@@ -8,8 +8,9 @@ from enum import StrEnum
 
 import numpy as np
 
-from src.worldgen.bake import bake_to_grid, nearest_cell_per_tile
+from src.worldgen.bake import nearest_cell_per_tile
 from src.worldgen.context import WorldContext
+from src.worldgen.features import WorldData
 from src.worldgen.fields import GridFields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.pipeline import WorldgenPipeline
@@ -112,13 +113,15 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
 
 
 def generate_world(size: int, seed: int) -> Phase0World:
-    """Run the Phase 0 pipeline and bake mesh fields onto the gameplay grid."""
-    ctx: WorldContext = WorldgenPipeline().run(seed=seed, size=size)
+    """Run the full pipeline (debug door) and keep mesh intermediates for display."""
+    world: WorldData
+    ctx: WorldContext
+    world, ctx = WorldgenPipeline().run_debug(seed=seed, size=size)
     nearest: Int32Array = nearest_cell_per_tile(
         geometry=ctx.geometry,
         size=ctx.config.size,
     )
-    grid: GridFields = bake_to_grid(fields=ctx.fields, nearest=nearest)
+    grid: GridFields = world.grid
 
     # insolation stays off the product grid (mesh-side intermediate); bake it
     # per-tile here purely so the viewer can show the authored energy field.
