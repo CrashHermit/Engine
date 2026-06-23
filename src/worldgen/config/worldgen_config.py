@@ -33,6 +33,13 @@ class PlatesConfig:
     )
     continental_uplift: float = 1.0  # Base uplift rate assigned to continental plates
     oceanic_uplift: float = 0.0  # Base uplift rate assigned to oceanic plates
+    # Continental freeboard: continental crust rides high, sloping up from its
+    # margins into a buoyant interior platform.  Without it a continental plate
+    # is a flat slab balanced at sea level, so only the boundary belts surface
+    # and land reads as a stringy skeleton; with it whole continents stand up as
+    # blobs and rising sea level floods the low margins first (realistic).
+    continental_freeboard: float = 1.1  # Peak interior uplift added to continental cells
+    freeboard_reach: float = 0.06  # Inland ramp length to the platform (fraction of span)
     density_jitter: float = (
         0.5  # Per-plate density noise so same-type plates have a definite subducting side
     )
