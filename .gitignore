@@ -17,3 +17,6 @@ data/
 .env
 # Node
 client/node_modules/
+
+# Generated worldgen renders
+output/
