@@ -208,6 +208,7 @@ class SavageryConfig:
     harshness_weight: float = 0.30    # climate distance from comfort (0.55, 0.5)
     ruggedness_weight: float = 0.15   # slope, percentile-normalized
     noise_weight: float = 0.20        # FBm surprise
+    volcanism_weight: float = 0.15    # live volcanic ground (arcs, ridges, hotspots) is dangerous
     magic_weight: float = 0.0         # corrupt zones breed savagery (wire after step 5)
     comfort_temperature: float = 0.55  # Most-comfortable temperature (harshness origin)
     comfort_precipitation: float = 0.5  # Most-comfortable precipitation (harshness origin)
@@ -230,6 +231,7 @@ class LeylineConfig:
     peak_bonus: float = 1.0      # Score bonus for peak cells
     lake_outlet_bonus: float = 0.8  # Score bonus for lake-outlet cells
     confluence_bonus: float = 0.9   # Score bonus for river confluences (>=2 inflows)
+    volcano_bonus: float = 0.7   # Score bonus scaled by volcanism (volcanoes draw leylines)
     ring_bonus: float = 0.5      # Score bonus near the hot/cold ring lines
     score_noise: float = 0.4     # FBm jitter so similar terrain still varies
     edge_k: int = 4              # Candidate edges: each nexus to its k nearest fellows
@@ -265,7 +267,7 @@ class VulcanismConfig:
     arc_uplift: float = 0.9          # Arc edifice height per unit convergence
     arc_offset: int = 3              # BFS hops inland from the trench to the arc crest
     arc_width: int = 2               # Arc band half-width in hops (falloff each side)
-    arc_volcano_spacing: float = 0.05  # Min spacing between arc volcanoes (span fraction)
+    arc_volcano_spacing: float = 0.07  # Min spacing between arc volcanoes (span fraction)
     dormant_fraction: float = 0.3    # Fraction of arc volcanoes rolled dormant
 
     # --- hotspots (drift-aligned decaying island trails) ---
@@ -280,12 +282,12 @@ class VulcanismConfig:
     # --- rifts / mid-ocean ridges ---
     ridge_uplift: float = 0.4        # Oceanic-divergent ridge raise per unit divergence
     rift_flank_strength: float = 0.5  # Continental-rift volcanism field weight
-    rift_volcano_spacing: float = 0.08  # Min spacing between rift/ridge volcanoes (span)
+    rift_volcano_spacing: float = 0.10  # Min spacing between rift/ridge volcanoes (span)
 
     # --- shared ---
     volcano_smear: int = 1           # BFS hops the radial edifice bump spreads
     bump_falloff: float = 0.5        # Edifice bump multiplier per smear hop
-    caldera_fraction: float = 0.25   # Fraction of volcanoes with a crater lake (VP2)
+    caldera_fraction: float = 0.18   # Fraction of volcanoes with a crater lake (VP2)
 
 
 # ---------------------------------------------------------------------------

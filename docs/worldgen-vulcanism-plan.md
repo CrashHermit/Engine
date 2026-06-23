@@ -1,6 +1,7 @@
 # Worldgen Vulcanism Plan
 
-Status: **design (interview complete, pre-implementation).**
+Status: **implemented (VP0–VP4).** See the phasing table (§8) for what shipped.
+One seam left open by design (§9): the post-erosion crisp-cone pass.
 
 Scope: `src/worldgen` only. Adds volcanism to the existing terrain genesis —
 volcanoes, volcanic arcs, hotspot island chains, and mid-ocean ridges — as a new
@@ -288,9 +289,9 @@ Invariants (pytest, seed-parameterized):
 |---|---|
 | VP0 | ✅ **Done.** `terrain/boundaries.py` shared classifier (`BoundaryFacts` + `BoundaryKind`); `BoundaryClassifyStage` writes `ctx.boundary_facts`; `boundary_uplift.py` refactored to consume it; plate `density` (subduction polarity) added in a second RNG pass so existing worlds stay bit-identical except the intended DIV_OO no-carve. Tests: `test_boundaries.py` (+5), suite green (170). |
 | VP1 | ✅ **Done.** `VulcanismStage` (after BoundaryUplift, before Erosion): subduction arcs (overriding-side BFS, CC suppressed), hotspot drift-trails, oceanic ridges into `uplift`; `volcanism`/`is_volcano`/`volcano_id` fields; `Volcano` object (kind/status/chain_id/activity) + `WorldData.volcanoes`; auto-bake; viewer `volcanism` layer. Tests: `test_vulcanism.py` (+18), suite green (188). Caldera flag + crater lakes deferred to VP2; status/kind already derived here. |
-| VP2 | Caldera crater lakes (`LakesStage` injection); finalize kind/status/chain/activity off the assembled field. |
-| VP3 | Coupling — savagery `volcanism_weight`, nexus `volcano_bonus`; preset tuning. |
-| VP4 | Full invariant suite, viewer/README/docs pass. |
+| VP2 | ✅ **Done.** Caldera flag rolled per volcano (`caldera_fraction`); `LakesStage` injects a single-cell terminal crater lake at each land caldera (the one cross-stage coupling) — or shares a natural lake if the summit is already flooded. Kind/status/chain/activity already finalized in VP1. Test: land calderas hold water. |
+| VP3 | ✅ **Done.** Coupling: `SavageryConfig.volcanism_weight` (live volcanic ground is dangerous) wired into `compute_savagery`; `LeylineConfig.volcano_bonus` makes volcanoes prime nexus sites in `place_nexuses`. Presets tuned (archipelago/wildlands volcanic, pangaea quiet). Census reports volcano/caldera counts. Default densities dialed to landmark scale. |
+| VP4 | ✅ **Done.** Invariant suite (`test_vulcanism.py`, 21 cases) + determinism extended to `volcanoes`; viewer `volcanism` layer; README stage table + field glossary; this doc. Full suite green (191). |
 
 Each phase ends runnable and visible in the viewer.
 

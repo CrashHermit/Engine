@@ -47,6 +47,12 @@ class SavageryStage:
             raise RuntimeError(msg)
         slope: Float64Array = slope_field
 
+        volcanism_field: Float64Array | None = ctx.fields.volcanism
+        if volcanism_field is None:
+            msg = "volcanism must be set before SavageryStage"
+            raise RuntimeError(msg)
+        volcanism: Float64Array = volcanism_field
+
         # --- surprise noise ---
         noise_field: FractalField = FractalField(
             sampler=ctx.noise_for("savagery"),
@@ -64,5 +70,6 @@ class SavageryStage:
             precipitation=precipitation,
             slope=slope,
             noise=noise,
+            volcanism=volcanism,
             cfg=cfg,
         )

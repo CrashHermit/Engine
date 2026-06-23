@@ -87,6 +87,28 @@ def test_hotspot_trails_decay(seed: int) -> None:
 
 
 @pytest.mark.parametrize("seed", SEEDS)
+def test_land_calderas_hold_water(seed: int) -> None:
+    """Every caldera volcano on land has water at its summit.
+
+    Usually that is a freshly injected single-cell terminal crater lake; if the
+    summit already sits inside a natural lake, the caldera simply shares it.
+    """
+    world, ctx = _debug(seed)
+    is_land = ctx.fields.is_land
+    is_lake = ctx.fields.is_lake
+    lake_by_id = {lk.id: lk for lk in world.lakes}
+    injected = 0
+    for v in world.volcanoes:
+        if v.has_caldera and is_land[v.cell]:
+            assert is_lake[v.cell], f"land caldera {v.cell} holds no water"
+            lake = lake_by_id[int(ctx.fields.lake_id[v.cell])]
+            if lake.cells == [v.cell]:  # our injected crater lake
+                assert lake.outlet_cell is None  # crater lakes are terminal
+                injected += 1
+    assert injected > 0, "expected at least one injected crater lake"
+
+
+@pytest.mark.parametrize("seed", SEEDS)
 def test_bake_parity(seed: int) -> None:
     """Grid volcanism is the nearest-cell gather of the mesh field."""
     world, ctx = _debug(seed)

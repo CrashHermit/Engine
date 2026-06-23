@@ -70,7 +70,7 @@ class VulcanismStage:
                     status=VolcanoStatus(seed.status),
                     chain_id=seed.chain_id,
                     activity=seed.activity,
-                    has_caldera=False,  # set in VP2
+                    has_caldera=seed.has_caldera,
                 )
             )
             is_volcano[seed.cell] = True

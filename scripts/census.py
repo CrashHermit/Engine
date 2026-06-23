@@ -48,6 +48,7 @@ def census(world: WorldData) -> str:
 
     longest_river: int = max((len(r.cells) for r in world.rivers), default=0)
     terminal_lakes: int = sum(1 for lk in world.lakes if lk.outlet_cell is None)
+    calderas: int = sum(1 for v in world.volcanoes if v.has_caldera)
 
     # Dominant-biome histogram over dry-land tiles.
     _ct, _cp, biome_order = derive_centers()
@@ -65,6 +66,7 @@ def census(world: WorldData) -> str:
         f"{len(world.landmasses)} landmasses ({landmass_summary}); "
         f"{len(world.rivers)} rivers (longest {longest_river} cells), "
         f"{len(world.lakes)} lakes ({terminal_lakes} terminal); "
+        f"{len(world.volcanoes)} volcanoes ({calderas} calderas); "
         f"{len(world.leylines.nexus_cells)} nexuses, "
         f"{len(world.leylines.edges)} leylines. "
         f"Top biomes: {top5}."

@@ -42,6 +42,7 @@ class VolcanoSeed:
     status: int  # VolcanoStatus value
     chain_id: int
     activity: float
+    has_caldera: bool = False
 
 
 @dataclass
@@ -392,6 +393,10 @@ def compute_vulcanism(
             )
         )
         used.add(c)
+
+    # --- caldera flag (a crater lake gets injected later for land calderas) ---
+    for vseed in volcanoes:
+        vseed.has_caldera = rng.random() < cfg.caldera_fraction
 
     # --- normalize the activity field to [0,1] ---
     peak: float = float(activity.max())
