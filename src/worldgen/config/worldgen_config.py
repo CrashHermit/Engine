@@ -33,6 +33,13 @@ class PlatesConfig:
     )
     continental_uplift: float = 1.0  # Base uplift rate assigned to continental plates
     oceanic_uplift: float = 0.0  # Base uplift rate assigned to oceanic plates
+    # Continental freeboard: continental crust rides high, sloping up from its
+    # margins into a buoyant interior platform.  Without it a continental plate
+    # is a flat slab balanced at sea level, so only the boundary belts surface
+    # and land reads as a stringy skeleton; with it whole continents stand up as
+    # blobs and rising sea level floods the low margins first (realistic).
+    continental_freeboard: float = 1.1  # Peak interior uplift added to continental cells
+    freeboard_reach: float = 0.06  # Inland ramp length to the platform (fraction of span)
     density_jitter: float = (
         0.5  # Per-plate density noise so same-type plates have a definite subducting side
     )
@@ -123,6 +130,11 @@ class InsolationConfig:
     bands: int = 1          # Number of hot/cold ring pairs around the torus
     contrast: float = 0.8   # Spread of climate zones; <1 flattens, >1 sharpens
     wobble: float = 0.0     # Low-freq noise warp on the ring lines; 0 = laser-straight
+    # A raw cosine lingers at its peaks, so the band's value distribution is
+    # U-shaped (arcsine): fat hot/cold extremes, a starved temperate middle.
+    # Raising the cosine to this power (>1) narrows the extreme rings and widens
+    # the temperate zone, the way most of a planet is temperate, not polar.
+    temperate_bias: float = 2.0  # Cosine shaping exponent; 1.0 = raw cosine (U-shaped)
 
 # ---------------------------------------------------------------------------
 # Temperature
@@ -133,7 +145,12 @@ class InsolationConfig:
 class TemperatureConfig:
     """Lapse rate and maritime moderation on top of insolation."""
 
-    lapse_rate: float = 0.3         # Cooling per unit land elevation
+    lapse_rate: float = 0.3         # Cooling per unit elevation above the lowland datum
+    # Lapse is measured above this percentile of land elevation, not sea level:
+    # a continental platform that rides high (freeboard) is the thermal baseline,
+    # and only relief *above* it (real mountains) cools.  Without this, raising
+    # whole continents would freeze their interiors wholesale.
+    lapse_datum_percentile: float = 50.0  # Land-elevation percentile used as the lapse datum
     maritime_reach: float = 4.0     # Coast-distance decay length for ocean moderation
     maritime_strength: float = 0.4  # How strongly coasts pull toward sea temperature
 
@@ -165,11 +182,18 @@ class MoistureConfig:
     base_rain: float = 0.035   # Fraction rained out per inland step (drying rate)
     oro: float = 0.6           # Orographic (uphill) rainout multiplier
     chill: float = 0.3         # Temperature-drop rainout multiplier
-    wet_reference_percentile: float = (
-        99.0  # Land-precip percentile mapped to 1.0 (near-max; avoids top-band pile-up)
+    # Raw rain-out is heavily right-skewed: a wet coastal/orographic minority and
+    # a long dry interior. A percentile-and-clip scale piled the bulk on either
+    # the arid floor or (if lowered) the saturated ceiling. Instead, normalize
+    # with a smooth saturating curve ``p = raw / (raw + k)`` where ``k`` is this
+    # percentile of land rain-out: the anchor maps to 0.5, the dry interior stays
+    # dry, and the wet tail compresses smoothly toward 1 with no band pile-up.
+    # Higher percentile -> a drier world (the anchor sits at more rain).
+    wet_anchor_percentile: float = (
+        50.0  # Land rain-out percentile mapped to 0.5 by the saturating curve
     )
     precip_gamma: float = (
-        0.5  # Wetness curve on normalized precip; <1 lifts dry/mid bands, =1 linear
+        1.0  # Optional wetness curve after the saturating map; <1 lifts, =1 off
     )
 
 
@@ -288,6 +312,7 @@ class VulcanismConfig:
     volcano_smear: int = 1           # BFS hops the radial edifice bump spreads
     bump_falloff: float = 0.5        # Edifice bump multiplier per smear hop
     caldera_fraction: float = 0.18   # Fraction of volcanoes with a crater lake (VP2)
+    max_per_chain: int = 5           # Discrete volcanoes kept per arc/hotspot chain (landmark scale)
 
 
 # ---------------------------------------------------------------------------
@@ -301,6 +326,12 @@ class BiomeConfig:
 
     blend_sharpness: float = 4.0   # IDW exponent; higher = sharper single-biome dominance
     weight_cutoff: float = 0.02    # Drop biome weights below this, then renormalize
+    # A hard argmax over the soft weights turns cell-scale climate wiggle into
+    # salt-and-pepper biomes (every band-boundary crossing flips). Diffusing the
+    # soft membership over land neighbours first makes biomes coherent regions
+    # with gradual ecotones, the way real biomes blend, without erasing variety.
+    smoothing_passes: int = 4      # Laplacian passes on the soft weights (0 = off)
+    smoothing_strength: float = 0.5  # Blend toward the land-neighbour mean per pass [0,1]
 
 
 # ---------------------------------------------------------------------------

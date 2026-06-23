@@ -16,7 +16,9 @@ def compute_temperature(
 
     Three effects applied in order:
     1. Base: temperature = insolation
-    2. Lapse rate: cool high elevation
+    2. Lapse rate: cool elevation *above the lowland datum* (so a high-riding
+       continental platform keeps its latitude's climate and only real mountains
+       chill — measuring lapse from sea level would freeze raised interiors)
     3. Maritime moderation: coasts buffer toward sea temperature
 
     Args:
@@ -32,7 +34,15 @@ def compute_temperature(
     temperature: Float64Array = insolation.copy()
 
     # --- lapse rate (mountains are cold) ---
-    temperature -= cfg.lapse_rate * np.maximum(0.0, elevation)
+    # Datum = a low percentile of land elevation (the lowland platform).  Only
+    # relief above it cools, so a buoyant continent isn't uniformly frozen.
+    land_elevation: Float64Array = np.maximum(0.0, elevation)
+    datum: float = (
+        float(np.percentile(land_elevation[is_land], cfg.lapse_datum_percentile))
+        if np.any(is_land)
+        else 0.0
+    )
+    temperature -= cfg.lapse_rate * np.maximum(0.0, land_elevation - datum)
 
     # --- maritime moderation (coasts are mild) ---
     maritime_weight: Float64Array = np.where(

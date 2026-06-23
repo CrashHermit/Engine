@@ -23,7 +23,7 @@ from src.worldgen.stages.plate_personality import PlatePersonalityStage
 from src.worldgen.stages.rivers import RiversStage
 from src.worldgen.stages.savagery import SavageryStage
 from src.worldgen.stages.temperature import TemperatureStage
-from src.worldgen.stages.vulcanism import VulcanismStage
+from src.worldgen.stages.vulcanism import VolcanoesStage, VulcanismStage
 from src.worldgen.stages.wind import WindStage
 from src.worldgen.types import Int32Array
 
@@ -39,6 +39,7 @@ def _build_stages() -> list[Stage]:
         VulcanismStage(),
         ErosionStage(),
         FinalizeStage(),
+        VolcanoesStage(),  # discrete volcanoes once we know which edifices breached
         # Phase 2 — climate
         InsolationStage(),
         TemperatureStage(),

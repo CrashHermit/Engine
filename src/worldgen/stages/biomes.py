@@ -5,7 +5,11 @@ Pipeline order: ``... → Leylines → Biomes``
 
 from src.worldgen.config.worldgen_config import BiomeConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.ecology.biomes import biome_weights, derive_centers
+from src.worldgen.ecology.biomes import (
+    biome_weights,
+    derive_centers,
+    smooth_biome_weights,
+)
 from src.worldgen.types import BoolArray, Float64Array
 
 
@@ -49,11 +53,18 @@ class BiomeStage:
 
         center_temp, center_precip, _biome_order = derive_centers()
 
-        ctx.fields.biome_weights = biome_weights(
+        weights: Float64Array = biome_weights(
             temperature=temperature,
             precipitation=precipitation,
             is_land=biome_mask,
             center_temp=center_temp,
             center_precip=center_precip,
+            cfg=cfg,
+        )
+        # Coherent regions instead of per-cell speckle (gradual ecotones).
+        ctx.fields.biome_weights = smooth_biome_weights(
+            geometry=ctx.geometry,
+            weights=weights,
+            biome_mask=biome_mask,
             cfg=cfg,
         )

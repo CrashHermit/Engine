@@ -368,7 +368,9 @@ def compute_vulcanism(
                 kind=_STRATO,
                 status=status,
                 chain_id=chain_base + int(arc_labels[c]),
-                activity=max(norm, 0.34) if status != _EXTINCT else norm,
+                # Arc cones read as present-day active ground even where the raw
+                # convergence band is faint, so floor their activity.
+                activity=max(norm, 0.34),
             )
         )
         used.add(c)
@@ -406,6 +408,98 @@ def compute_vulcanism(
     return VulcanismResult(
         uplift_add=uplift_add, volcanism=volcanism, volcanoes=volcanoes
     )
+
+
+def _surfacing_mask(*, geometry: MeshGeometry, is_land: BoolArray) -> BoolArray:
+    """Cells that breached: on land, or coastal (a land neighbour).
+
+    A discrete landmark volcano has to be somewhere you could stand or sail to.
+    Land summits qualify directly; a just-submarine summit one cell off a coast
+    qualifies too, so an island edifice whose summit cell happens to fall on the
+    ocean side of the Voronoi split is not lost to mesh resolution.
+    """
+    surfacing: BoolArray = is_land.copy()
+    cell: int
+    for cell in np.flatnonzero(~is_land):
+        c: int = int(cell)
+        for nb in geometry.neighbors_of(cell_id=c):
+            if is_land[int(nb)]:
+                surfacing[c] = True
+                break
+    return surfacing
+
+
+def select_landmark_volcanoes(
+    *,
+    geometry: MeshGeometry,
+    candidates: list[VolcanoSeed],
+    is_land: BoolArray,
+    cfg: VulcanismConfig,
+) -> list[VolcanoSeed]:
+    """Thin the pre-erosion candidate set down to discrete landmark volcanoes.
+
+    Candidates are generated *before* erosion and sea level, so they trace every
+    submarine arc, ridge, and seamount — a near-continuous string of points
+    along every plate boundary.  A ``Volcano`` feature, though, should be a
+    landmark: an edifice that breached (land or coastal), plus a single anchor
+    seamount for any otherwise-submarine chain so island arcs and hotspot trails
+    are still represented by *something*.  Selection only filters and never
+    rewrites a candidate, so kind / chain / activity / caldera and the down-trail
+    decay ordering are all preserved; the original order is kept so a chain's
+    ascending id stays its trail order.
+
+    The volcanism *field* deliberately keeps the full submarine picture (mid-ocean
+    ridges are the most volcanically active places on Earth) — only this discrete
+    landmark set is thinned.
+
+    Args:
+        geometry: Torus mesh (for the coastal test).
+        candidates: Pre-erosion volcano seeds from :func:`compute_vulcanism`.
+        is_land: Finalised land mask (so surfacing is known).
+        cfg: Vulcanism config (``max_per_chain``).
+
+    Returns:
+        The kept seeds, in their original candidate order.
+    """
+    if not candidates:
+        return []
+
+    surfacing: BoolArray = _surfacing_mask(geometry=geometry, is_land=is_land)
+
+    chains: dict[int, list[int]] = {}
+    solitary: list[int] = []
+    idx: int
+    for idx, seed in enumerate(candidates):
+        if seed.chain_id < 0:
+            solitary.append(idx)
+        else:
+            chains.setdefault(seed.chain_id, []).append(idx)
+
+    keep: BoolArray = np.zeros(len(candidates), dtype=bool)
+
+    # Chains (arcs, hotspot trails): keep the breached members, capped to the
+    # strongest few; if the whole chain stayed under water, keep one anchor so
+    # the island arc / seamount trail is still on the map.
+    for members in chains.values():
+        breached: list[int] = [i for i in members if surfacing[candidates[i].cell]]
+        if breached:
+            if len(breached) > cfg.max_per_chain:
+                breached = sorted(
+                    breached, key=lambda i: candidates[i].activity, reverse=True
+                )[: cfg.max_per_chain]
+            for i in breached:
+                keep[i] = True
+        else:
+            anchor: int = max(members, key=lambda i: candidates[i].activity)
+            keep[anchor] = True
+
+    # Solitary fissures: only the ones that actually breached (an un-breached
+    # submarine ridge cell is just ridge, not a landmark).
+    for i in solitary:
+        if surfacing[candidates[i].cell]:
+            keep[i] = True
+
+    return [seed for i, seed in enumerate(candidates) if keep[i]]
 
 
 def _components(*, geometry: MeshGeometry, mask: BoolArray) -> Int32Array:

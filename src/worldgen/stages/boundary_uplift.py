@@ -3,8 +3,12 @@ from src.worldgen.context import WorldContext
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import FIELD_BOUNDARY_UPLIFT, FIELD_UPLIFT_FLOOR
 from src.worldgen.terrain.boundaries import BoundaryFacts
-from src.worldgen.terrain.boundary_uplift import apply_boundary_uplift
-from src.worldgen.types import Float64Array
+from src.worldgen.terrain.boundary_uplift import (
+    apply_boundary_uplift,
+    apply_continental_freeboard,
+)
+from src.worldgen.terrain.plate_personalities import PlateProperties
+from src.worldgen.types import BoolArray, Float64Array, Int32Array
 
 
 class BoundaryUpliftStage:
@@ -43,4 +47,24 @@ class BoundaryUpliftStage:
             belt_noise=belt_noise,
             uplift_noise=uplift_noise,
             frequency=frequency,
+        )
+
+        # Continental crust rides high: turn flat slabs into platforms so whole
+        # continents surface as blobs instead of just the boundary belts.
+        plate_id_field: Int32Array | None = ctx.fields.plate_id
+        if plate_id_field is None:
+            msg = "plate_id must be set before BoundaryUpliftStage"
+            raise RuntimeError(msg)
+        properties: PlateProperties | None = ctx.plate_properties
+        if properties is None:
+            msg = "plate_properties must be set before BoundaryUpliftStage"
+            raise RuntimeError(msg)
+        is_continental_cell: BoolArray = properties.is_continental[plate_id_field]
+        apply_continental_freeboard(
+            geometry=ctx.geometry,
+            plate_id=plate_id_field,
+            is_continental_cell=is_continental_cell,
+            uplift=uplift,
+            strength=cfg.continental_freeboard,
+            reach_frac=cfg.freeboard_reach,
         )

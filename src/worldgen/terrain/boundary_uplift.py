@@ -15,7 +15,7 @@ from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.field import FractalField
 from src.worldgen.terrain.boundaries import BoundaryFacts, BoundaryKind
-from src.worldgen.types import Float64Array
+from src.worldgen.types import BoolArray, Float64Array, Int32Array
 
 
 def _smear_intensity(
@@ -71,6 +71,70 @@ def _sample_site_noise(
         dtype=np.float64,
         count=geometry.n_cells,
     )
+
+
+def _boundary_hop_distance(
+    *, geometry: MeshGeometry, plate_id: Int32Array
+) -> Int32Array:
+    """Per-cell hop distance to the nearest cell that borders another plate.
+
+    Multi-source BFS seeded from every cell with a neighbour on a different
+    plate (the plate margins).  Interior cells get their hop count outward.
+    """
+    n: int = geometry.n_cells
+    dist: Int32Array = np.full(n, -1, dtype=np.int32)
+    queue: deque[int] = deque()
+
+    cell_id: int
+    for cell_id in range(n):
+        pid: int = int(plate_id[cell_id])
+        for neighbor_id in geometry.neighbors_of(cell_id=cell_id):
+            if int(plate_id[int(neighbor_id)]) != pid:
+                dist[cell_id] = 0
+                queue.append(cell_id)
+                break
+
+    while queue:
+        current: int = queue.popleft()
+        for neighbor_id in geometry.neighbors_of(cell_id=current):
+            nb: int = int(neighbor_id)
+            if dist[nb] == -1:
+                dist[nb] = dist[current] + 1
+                queue.append(nb)
+
+    np.maximum(dist, 0, out=dist)
+    return dist
+
+
+def apply_continental_freeboard(
+    *,
+    geometry: MeshGeometry,
+    plate_id: Int32Array,
+    is_continental_cell: BoolArray,
+    uplift: Float64Array,
+    strength: float,
+    reach_frac: float,
+) -> None:
+    """Raise continental cells into a buoyant platform, in place.
+
+    The edifice ramps from ``0`` at the plate margin to ``strength`` in the deep
+    interior over a physical length of ``reach_frac`` of the world span, so the
+    lowest continental ground is the coast: rising sea level drowns margins
+    first and the continent surfaces as a coherent blob instead of a flat slab
+    that floods into ribbons.  Distance is measured in hops but converted to
+    physical units, so the ramp is the same shape at any mesh resolution.
+    """
+    if strength <= 0.0 or reach_frac <= 0.0:
+        return
+
+    hops: Int32Array = _boundary_hop_distance(geometry=geometry, plate_id=plate_id)
+    spacing: float = float(
+        np.sqrt(geometry.width * geometry.height / geometry.n_cells)
+    )
+    reach: float = reach_frac * max(geometry.width, geometry.height)
+    ramp: Float64Array = 1.0 - np.exp(-(hops.astype(np.float64) * spacing) / reach)
+    uplift += strength * is_continental_cell.astype(np.float64) * ramp
+    np.maximum(uplift, 0.0, out=uplift)
 
 
 def apply_boundary_uplift(

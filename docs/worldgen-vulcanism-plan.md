@@ -184,8 +184,9 @@ New order (changes in **bold**):
 
 ```
 Plates → PlatePersonality(+density) → BoundaryUplift(refactored)
-       → Vulcanism                                    ← NEW, before erosion
+       → Vulcanism                                    ← NEW, before erosion (uplift + field + candidates)
        → Erosion → Finalize
+       → Volcanoes                                     ← NEW, after finalize (discrete landmarks)
        → Insolation → Temperature → Wind → Moisture
        → Discharge → Rivers → Lakes(+caldera inject)   ← reads ctx.volcanoes
        → Flow
@@ -193,6 +194,18 @@ Plates → PlatePersonality(+density) → BoundaryUplift(refactored)
        → Leylines(+volcano nexus bonus)                ← new score term
        → Biomes
 ```
+
+**Two-stage vulcanism (post-VP4 fix).** `VulcanismStage` runs before erosion and
+owns the *physics*: edifice height into `uplift` and the present-day `volcanism`
+field (which keeps the full submarine picture — mid-ocean ridges are the most
+active places on Earth). It stashes the discrete-volcano *candidates* on the
+context but does **not** materialize them. A new `VolcanoesStage` runs after
+`Finalize`, when `is_land` exists, and selects the discrete `Volcano` landmarks:
+the candidates that breached (land or coastal), plus a single anchor seamount per
+otherwise-submarine chain, capped at `max_per_chain`. Materializing volcanoes
+before the coastline existed was the bug — it stamped a feature on every
+submarine boundary cell (100–180 per world); the split drops that to a
+landmark-scale ~40–60 concentrated on real edifices.
 
 - `WorldContext` gains `volcanoes: list[Volcano] | None` (set by
   `VulcanismStage`, finalized in place; consumed by Lakes/assembly).
