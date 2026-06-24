@@ -1,8 +1,8 @@
 """Nexus placement: score + greedy spacing.
 
 Phase 4 step 2.  Nexuses should sit at *significant* places (peaks, lake
-mouths, river forks, ring lines) without bunching up.  The standard pattern is
-score-every-candidate then greedily accept the best with a minimum spacing.
+mouths, river forks, volcanic ground) without bunching up.  The standard pattern
+is score-every-candidate then greedily accept the best with a minimum spacing.
 """
 
 import numpy as np
@@ -45,14 +45,15 @@ def place_nexuses(
 ) -> list[int]:
     """Score every land cell, then greedily accept the best with torus-spacing.
 
-    Score = peak bonus + lake-outlet bonus + confluence bonus + ring-alignment
-    bonus + score noise.  Candidates are taken in descending score (ties broken
-    by cell id) and accepted only if their ``torus_distance`` to every accepted
-    nexus is at least ``cfg.min_spacing`` of the world span.
+    Score = peak bonus + lake-outlet bonus + confluence bonus + volcanism bonus
+    + score noise — terrain/hydrology/volcanism only, decoupled from climate.
+    Candidates are taken in descending score (ties broken by cell id) and
+    accepted only if their ``torus_distance`` to every accepted nexus is at
+    least ``cfg.min_spacing`` of the world span.
 
     Args:
         geometry: Torus mesh with sites and dimensions.
-        fields: Mesh fields (elevation, is_land, is_river, receiver, insolation).
+        fields: Mesh fields (elevation, is_land, is_river, receiver, volcanism).
         lakes: Extracted lakes (their outlet cells score a bonus).
         cfg: Leyline configuration (bonuses, spacing, count).
         score_noise: Per-cell FBm sample in roughly [-1, 1] for score jitter.
@@ -66,7 +67,6 @@ def place_nexuses(
     is_land: BoolArray = _require(fields.is_land, "is_land")
     is_river: BoolArray = _require(fields.is_river, "is_river")
     receiver: Int32Array = _require(fields.receiver, "receiver")
-    insolation: Float64Array = _require(fields.insolation, "insolation")
 
     # --- score components (array math) ---
     score: Float64Array = np.zeros(n, dtype=np.float64)
@@ -94,9 +94,8 @@ def place_nexuses(
     if volcanism is not None:
         score += cfg.volcano_bonus * volcanism
 
-    # Ring alignment: cells near the hot/cold ring lines (insolation extremes).
-    ring: Float64Array = np.abs(2.0 * insolation - 1.0)
-    score += cfg.ring_bonus * ring
+    # Magic is decoupled from climate: nexuses key off terrain, hydrology, and
+    # volcanism only ("magic pools at dramatic places"), not the latitude bands.
 
     # Noise jitter mapped to [0, 1].
     score += cfg.score_noise * (score_noise + 1.0) * 0.5

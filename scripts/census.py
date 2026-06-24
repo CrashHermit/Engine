@@ -27,9 +27,13 @@ from src.worldgen.ecology.biomes import derive_centers
 from src.worldgen.features import WorldData
 from src.worldgen.pipeline import WorldgenPipeline
 
-# Census mesh is smaller than the 12k default so the sweep stays quick; the
-# qualitative story (land %, river/lake/nexus counts, biome mix) holds.
-CENSUS_CELLS: int = 3000
+# Census mesh is smaller than the 12k default so the sweep stays quick.  Keep
+# it high enough that drainage actually forms, though: below ~6k cells the
+# hydrology is too coarse and rivers read as stubs (a resolution artifact, not
+# the real network — at the 12k production mesh the same seeds carry
+# continent-spanning rivers).  Exact river *lengths* remain resolution-sensitive
+# here; the continent-spanning guarantee is a full-resolution plausibility test.
+CENSUS_CELLS: int = 6000
 CENSUS_SIZE: int = 96
 CENSUS_SEEDS: tuple[int, ...] = (1, 7, 42)
 

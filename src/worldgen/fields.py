@@ -41,12 +41,15 @@ class MeshFields:
     landmass_class: Int8Array | None = field(
         default=None, metadata={"dtype": np.int8}
     )  # 0 = ocean, 1 = island, 2 = landmass, 3 = major
+    latitude: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [-1,1] signed latitude; 0 = equator, +/-1 = poles (weather-layer driver)
     insolation: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
-    )  # [0,1] authored energy field; 1 = sunband (mesh-side intermediate)
+    )  # [0,1] authored energy field; 1 = equator (mesh-side intermediate)
     temperature: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
-    )  # [0,1] warmth; 1 = sunband
+    )  # [0,1] warmth; 1 = equator
     precipitation: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] rainfall
@@ -156,9 +159,12 @@ class GridFields:
     landmass_class: Int8Array | None = field(
         default=None, metadata={"dtype": np.int8}
     )  # 0 = ocean, 1 = island, 2 = landmass, 3 = major
+    latitude: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [-1,1] signed latitude; 0 = equator, +/-1 = poles (weather-layer driver)
     temperature: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
-    )  # [0,1] warmth; 1 = sunband
+    )  # [0,1] warmth; 1 = equator
     precipitation: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] rainfall

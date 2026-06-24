@@ -30,10 +30,10 @@ results back.
 | 6 | `ErosionStage` | Stream-power erosion + hillslope diffusion. |
 | 7 | `FinalizeStage` | Coastal de-speckle, sea level, landmass labels, coast distance, slope. |
 | 8 | `VolcanoesStage` | Discrete `Volcano` landmarks from the candidates, now that `is_land` is known: keep the edifices that breached (plus one anchor per submarine chain), drop the rest. |
-| 9 | `InsolationStage` | Authored hot/cold energy bands around the ring. |
+| 9 | `InsolationStage` | Signed `latitude` driver (equator at center, poles at the wrap seam) + insolation from it. |
 | 10 | `TemperatureStage` | Lapse rate + maritime moderation. |
-| 11 | `WindStage` | Zonal wind belts deflected by terrain. |
-| 12 | `MoistureStage` | Advect ocean moisture downwind (fan), rain it out. |
+| 11 | `WindStage` | Three-cell zonal belts (trades/westerlies/polar easterlies) deflected by terrain. |
+| 12 | `MoistureStage` | Latitude rain belts (ITCZ/subtropical/temperate/polar) × downwind moisture advection. |
 | 13 | `DischargeStage` | Re-route on final terrain; rain-weighted flow. |
 | 14 | `RiversStage` | Classify river cells; extract `River` objects. |
 | 15 | `LakesStage` | Connected depressions → `Lake` objects with outlets. |
@@ -61,7 +61,8 @@ Per-tile product columns. Ranges are noted where meaningful.
 | `coast_distance` | Hops from coast | f64 |
 | `landmass_id` | Connected land component; 0 = ocean | int32 |
 | `landmass_class` | 0 ocean, 1 island, 2 landmass, 3 major | int8 |
-| `temperature` | Warmth; 1 = sunband | [0, 1] f64 |
+| `latitude` | Signed latitude; 0 = equator, ±1 = poles | [-1, 1] f64 |
+| `temperature` | Warmth; 1 = equator | [0, 1] f64 |
 | `precipitation` | Rainfall | [0, 1] f64 |
 | `wind_u`, `wind_v` | Unit wind direction | f64 |
 | `wind_magnitude` | Wind speed | [0, 1] f64 |

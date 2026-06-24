@@ -1,7 +1,7 @@
 from src.worldgen.config.worldgen_config import LandmassConfig, SeaLevelConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.terrain.finalize import (
-    apply_sea_level,
+    apply_sea_level_datum,
     compute_coast_distance,
     compute_slope,
     label_landmasses,
@@ -44,10 +44,11 @@ class FinalizeStage:
         )
         ctx.fields.elevation = elevation
 
-        # --- 1. Sea level and piecewise normalisation ---
-        is_land: BoolArray = apply_sea_level(
+        # --- 1. Emergent sea level (hypsometric datum) + normalisation ---
+        is_land: BoolArray = apply_sea_level_datum(
             elevation=elevation,
-            target_land_fraction=sea_cfg.target_land_fraction,
+            datum_bias=sea_cfg.datum_bias,
+            land_fraction_clamp=sea_cfg.land_fraction_clamp,
         )
         ctx.fields.is_land = is_land
 

@@ -45,6 +45,12 @@ class MoistureStage:
             raise RuntimeError(msg)
         wind_v: Float64Array = wind_v_field
 
+        latitude_field: Float64Array | None = ctx.fields.latitude
+        if latitude_field is None:
+            msg = "latitude must be set before MoistureStage"
+            raise RuntimeError(msg)
+        latitude: Float64Array = latitude_field
+
         # --- step 5a: precompute downwind fan (once) ---
         downwind: tuple[Int32Array, Int32Array, Float64Array] = build_downwind(
             geometry=ctx.geometry,
@@ -59,5 +65,6 @@ class MoistureStage:
             temperature=temperature,
             elevation=elevation,
             is_land=is_land,
+            latitude=latitude,
             cfg=cfg,
         )

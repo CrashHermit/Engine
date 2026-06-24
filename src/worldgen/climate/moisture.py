@@ -103,6 +103,32 @@ def _downwind_means(
     return out
 
 
+def precip_belt(*, latitude: Float64Array, cfg: MoistureConfig) -> Float64Array:
+    """Latitudinal precipitation baseline in [0, 1] from Hadley structure.
+
+    Two Gaussian wet bumps in ``|latitude|`` — the equatorial ITCZ at 0 and the
+    temperate belt near ``belt_temperate_center`` — with the dry subtropical
+    "horse latitudes" emerging as the gap between them and the dry poles as the
+    falloff past the temperate bump.  Normalized so the equatorial peak is ~1.
+
+    Args:
+        latitude: Signed latitude in ``[-1, 1]`` (0 equator, +/-1 poles).
+        cfg: Moisture config (belt weights, centers, widths).
+
+    Returns:
+        Per-cell baseline precipitation in ``[0, 1]``.
+    """
+    lat_abs: Float64Array = np.abs(latitude)
+    equator: Float64Array = cfg.belt_equator_weight * np.exp(
+        -((lat_abs / cfg.belt_equator_sigma) ** 2)
+    )
+    temperate: Float64Array = cfg.belt_temperate_weight * np.exp(
+        -(((lat_abs - cfg.belt_temperate_center) / cfg.belt_temperate_sigma) ** 2)
+    )
+    belt: Float64Array = (equator + temperate) / max(cfg.belt_equator_weight, 1e-9)
+    return np.clip(belt, 0.0, 1.0)
+
+
 def transport_moisture(
     *,
     geometry: MeshGeometry,
@@ -110,6 +136,7 @@ def transport_moisture(
     temperature: Float64Array,
     elevation: Float64Array,
     is_land: BoolArray,
+    latitude: Float64Array,
     cfg: MoistureConfig,
 ) -> Float64Array:
     """Advect ocean-sourced moisture downwind, raining it out.
@@ -198,7 +225,20 @@ def transport_moisture(
     )
     if anchor > 0.0:
         precipitation = precipitation / (precipitation + anchor)
-    precipitation = np.clip(precipitation, a_min=0.0, a_max=1.0)
+    advected: Float64Array = np.clip(precipitation, a_min=0.0, a_max=1.0)
+
+    # --- latitude rain belts (primary) modulated by advection (local detail) ---
+    # ``precip = belt * (adv_floor + (1 - adv_floor) * advected)``: the belt sets
+    # the wet/dry banding (wet ITCZ, dry subtropics, wet temperate, dry poles),
+    # and advection lifts a cell from ``adv_floor`` of its baseline (deep, dry
+    # interior — but the ITCZ still rains) up to the full baseline (wet windward
+    # coast).  Multiplicative, so a dry belt OR a rain shadow both dry a cell:
+    # subtropical coasts stay desert, temperate lee stays dry.
+    belt: Float64Array = precip_belt(latitude=latitude, cfg=cfg)
+    modulation: Float64Array = cfg.belt_adv_floor + (
+        1.0 - cfg.belt_adv_floor
+    ) * advected
+    precipitation = np.clip(belt * modulation, a_min=0.0, a_max=1.0)
 
     if cfg.precip_gamma != 1.0:
         precipitation = precipitation**cfg.precip_gamma

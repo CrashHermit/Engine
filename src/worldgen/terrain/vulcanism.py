@@ -436,27 +436,33 @@ def select_landmark_volcanoes(
     is_land: BoolArray,
     cfg: VulcanismConfig,
 ) -> list[VolcanoSeed]:
-    """Thin the pre-erosion candidate set down to discrete landmark volcanoes.
+    """Thin the pre-erosion candidate set down to iconic landmark volcanoes.
 
     Candidates are generated *before* erosion and sea level, so they trace every
     submarine arc, ridge, and seamount — a near-continuous string of points
-    along every plate boundary.  A ``Volcano`` feature, though, should be a
-    landmark: an edifice that breached (land or coastal), plus a single anchor
-    seamount for any otherwise-submarine chain so island arcs and hotspot trails
-    are still represented by *something*.  Selection only filters and never
-    rewrites a candidate, so kind / chain / activity / caldera and the down-trail
-    decay ordering are all preserved; the original order is kept so a chain's
-    ascending id stays its trail order.
+    along every plate boundary.  A ``Volcano`` feature, though, should be an
+    *iconic landmark*: an edifice that actually breached (land or coastal) and
+    is prominent enough to name.  Selection runs in three steps:
 
-    The volcanism *field* deliberately keeps the full submarine picture (mid-ocean
-    ridges are the most volcanically active places on Earth) — only this discrete
-    landmark set is thinned.
+    1. **Per chain**, keep only breached members, capped to the strongest
+       ``max_per_chain`` (the chain head — highest down-trail activity).  A
+       chain that stayed entirely submarine contributes nothing: an underwater
+       seamount is not a landmark (the volcanism *field* still carries it).
+    2. **Solitary** fissures: keep only the ones that breached.
+    3. **Global cap**: keep only the ``max_volcanoes`` most prominent of those
+       (land summits over coastal, then by activity), so a single busy arc can't
+       flood the map.  The result is a handful of Vesuvius/Fuji landmarks, not
+       a scatter of dozens.
+
+    Selection only filters and never rewrites a candidate (kind / chain /
+    activity / caldera preserved), and the original candidate order is kept so a
+    chain's ascending id stays its trail order.
 
     Args:
         geometry: Torus mesh (for the coastal test).
         candidates: Pre-erosion volcano seeds from :func:`compute_vulcanism`.
         is_land: Finalised land mask (so surfacing is known).
-        cfg: Vulcanism config (``max_per_chain``).
+        cfg: Vulcanism config (``max_per_chain``, ``max_volcanoes``).
 
     Returns:
         The kept seeds, in their original candidate order.
@@ -475,31 +481,35 @@ def select_landmark_volcanoes(
         else:
             chains.setdefault(seed.chain_id, []).append(idx)
 
-    keep: BoolArray = np.zeros(len(candidates), dtype=bool)
+    kept_idx: list[int] = []
 
     # Chains (arcs, hotspot trails): keep the breached members, capped to the
-    # strongest few; if the whole chain stayed under water, keep one anchor so
-    # the island arc / seamount trail is still on the map.
+    # strongest few.  Submarine-only chains are dropped (no anchor — not a
+    # landmark); the volcanism field keeps the submarine picture.
     for members in chains.values():
         breached: list[int] = [i for i in members if surfacing[candidates[i].cell]]
-        if breached:
-            if len(breached) > cfg.max_per_chain:
-                breached = sorted(
-                    breached, key=lambda i: candidates[i].activity, reverse=True
-                )[: cfg.max_per_chain]
-            for i in breached:
-                keep[i] = True
-        else:
-            anchor: int = max(members, key=lambda i: candidates[i].activity)
-            keep[anchor] = True
+        if not breached:
+            continue
+        if len(breached) > cfg.max_per_chain:
+            breached = sorted(
+                breached, key=lambda i: candidates[i].activity, reverse=True
+            )[: cfg.max_per_chain]
+        kept_idx.extend(breached)
 
-    # Solitary fissures: only the ones that actually breached (an un-breached
-    # submarine ridge cell is just ridge, not a landmark).
-    for i in solitary:
-        if surfacing[candidates[i].cell]:
-            keep[i] = True
+    # Solitary fissures: only the ones that actually breached.
+    kept_idx.extend(i for i in solitary if surfacing[candidates[i].cell])
 
-    return [seed for i, seed in enumerate(candidates) if keep[i]]
+    # Global prominence cap: prefer land summits over coastal, then activity.
+    def _prominence(i: int) -> tuple[int, float]:
+        return (int(is_land[candidates[i].cell]), candidates[i].activity)
+
+    if len(kept_idx) > cfg.max_volcanoes:
+        kept_idx = sorted(kept_idx, key=_prominence, reverse=True)[
+            : cfg.max_volcanoes
+        ]
+
+    keep_set: set[int] = set(kept_idx)
+    return [seed for i, seed in enumerate(candidates) if i in keep_set]
 
 
 def _components(*, geometry: MeshGeometry, mask: BoolArray) -> Int32Array:

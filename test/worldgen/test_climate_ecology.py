@@ -62,11 +62,18 @@ def test_wind_direction_unit_length(seed: int) -> None:
 
 @pytest.mark.parametrize("seed", SEEDS)
 def test_coasts_wetter_than_interiors(seed: int) -> None:
-    """Ocean moisture advected inland leaves coasts wetter than deep interiors."""
+    """Advected moisture leaves coasts wetter than interiors *at a given latitude*.
+
+    With latitude rain belts, a global coast-vs-interior mean is confounded by
+    latitude (an equatorial continent interior — the Amazon/Congo — is wetter
+    than its subtropical coasts).  The advection signal is the *within-band*
+    comparison: holding |latitude| roughly constant, coasts beat interiors.
+    """
     _world, ctx = _debug(seed)
     precip = ctx.fields.precipitation
     coast = ctx.fields.coast_distance
     land = ctx.fields.is_land
+    lat_abs = np.abs(ctx.fields.latitude)
 
     land_coast = coast[land]
     if float(land_coast.max()) < 2.0:
@@ -75,8 +82,24 @@ def test_coasts_wetter_than_interiors(seed: int) -> None:
     threshold = float(np.percentile(land_coast, 50))
     near = (coast < threshold) & land
     far = (coast >= threshold) & land
-    assert int(near.sum()) > 0 and int(far.sum()) > 0
-    assert float(precip[near].mean()) > float(precip[far].mean())
+
+    # Compare within |latitude| bands where ocean-moisture advection is the
+    # dominant precip mechanism — the equatorial and temperate bands.  The polar
+    # band is excluded by physics: cold polar air carries little moisture, so
+    # advection does not make polar coasts wetter than polar interiors.
+    bands = [(0.0, 0.33), (0.33, 0.66)]
+    judged = 0
+    for lo, hi in bands:
+        in_band = (lat_abs >= lo) & (lat_abs < hi)
+        n = near & in_band
+        f = far & in_band
+        if int(n.sum()) < 30 or int(f.sum()) < 30:
+            continue
+        judged += 1
+        assert float(precip[n].mean()) > float(precip[f].mean()), (
+            f"band {lo}-{hi}: coasts not wetter than interiors"
+        )
+    assert judged > 0, "no latitude band had enough samples to judge"
 
 
 @pytest.mark.parametrize("seed", SEEDS)

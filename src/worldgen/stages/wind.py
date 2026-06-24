@@ -28,6 +28,12 @@ class WindStage:
             raise RuntimeError(msg)
         elevation: Float64Array = elevation_field
 
+        latitude_field: Float64Array | None = ctx.fields.latitude
+        if latitude_field is None:
+            msg = "latitude must be set before WindStage"
+            raise RuntimeError(msg)
+        latitude: Float64Array = latitude_field
+
         # --- turbulence noise fields (two independent sub-seeded sources) ---
         turbulence_u: FractalField = FractalField(
             sampler=ctx.noise_for("wind_u"),
@@ -44,6 +50,7 @@ class WindStage:
         wind_u, wind_v, wind_magnitude = wind_belts(
             geometry=geometry,
             cfg=cfg,
+            latitude=latitude,
             turbulence_u=turbulence_u,
             turbulence_v=turbulence_v,
         )
