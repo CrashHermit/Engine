@@ -1,21 +1,33 @@
 """Named geographic regions — the gameplay "socket".
 
-Phase 4 (final): a cheap derived pass that segments the mesh into named,
-gameplay-addressable :class:`~src.worldgen.features.Region` entities and writes a
-per-cell ``region_id``.  Quests, cities, and borders reference regions by id, so
+Phase 5 (final): a cheap derived pass that segments the mesh into named,
+gameplay-addressable :class:`~src.worldgen.features.Region` entities and writes
+the per-cell id columns.  Quests, cities, and borders reference regions by id, so
 this contract is stable even as the underlying fields churn — re-running simply
 re-segments.
 
-The socket ships the two geography-stable kinds (land bodies, ocean bodies),
-which together form a wall-to-wall partition: every cell belongs to exactly one
-region.  Ecology- and weather-derived kinds (forests, plains, marine biomes)
-layer on later without changing the contract.
+Regions are layered, not one partition:
+
+* **Geographic bodies** (``region_id``) — land bodies and ocean bodies; a
+  wall-to-wall partition (every cell belongs to exactly one).
+* **Biome-regions** (``biome_region_id``) — connected runs of one landscape
+  category (forest, plains, ...), *overlapping* the land bodies, on dry land
+  only.
+
+All regions share one global id space and ship in a single ``regions`` list, so
+gameplay has one lookup; per-tile membership is per-layer (separate id columns).
 """
 
 import numpy as np
 
+from src.core.model.environment.ecology.biome import BiomeEnum
 from src.worldgen.features import Region, RegionKind
 from src.worldgen.geometry.mesh import MeshGeometry
+from src.worldgen.regions.landscape import (
+    LANDSCAPE_KIND,
+    LANDSCAPE_NOUN,
+    LANDSCAPE_ORDER,
+)
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 from src.worldgen.water.lakes import components
 
@@ -33,15 +45,22 @@ _CODAS: tuple[str, ...] = (
 )
 
 
+def _name_suffix(kind: RegionKind) -> str:
+    """The trailing landscape noun for a region name ('' / ' Sea' / ' Forest')."""
+    if kind == RegionKind.LANDMASS:
+        return ""
+    if kind == RegionKind.OCEAN:
+        return " Sea"
+    return f" {LANDSCAPE_NOUN[kind]}"
+
+
 def _region_name(*, kind: RegionKind, seed: int, region_id: int) -> str:
-    """A stable, seed-derived placeholder name; oceans get a sea-suffix."""
+    """A stable, seed-derived placeholder name with a kind-flavored suffix."""
     rng: np.random.Generator = np.random.default_rng(seed * 1_000_003 + region_id)
     stem: str = _ONSETS[int(rng.integers(len(_ONSETS)))] + _CODAS[
         int(rng.integers(len(_CODAS)))
     ]
-    if kind == RegionKind.OCEAN:
-        return f"{stem} Sea"
-    return stem
+    return stem + _name_suffix(kind)
 
 
 def _torus_centroid(
@@ -70,78 +89,114 @@ def _torus_centroid(
     )
 
 
+def _cell_landscape(
+    *,
+    dominant_biome: Int32Array,
+    biome_mask: BoolArray,
+    biome_order: list[BiomeEnum],
+) -> Int32Array:
+    """Per-cell landscape :class:`RegionKind` value (as int); ``-1`` off the mask."""
+    col_to_kind: Int32Array = np.array(
+        [int(LANDSCAPE_KIND[biome]) for biome in biome_order], dtype=np.int32
+    )
+    kinds: Int32Array = np.full(dominant_biome.shape[0], -1, dtype=np.int32)
+    kinds[biome_mask] = col_to_kind[dominant_biome[biome_mask]]
+    return kinds
+
+
 def assign_regions(
     *,
     geometry: MeshGeometry,
     is_land: BoolArray,
     landmass_id: Int32Array,
+    biome_mask: BoolArray,
+    dominant_biome: Int32Array,
+    biome_order: list[BiomeEnum],
     seed: int,
-) -> tuple[Int32Array, list[Region]]:
-    """Partition the mesh into named regions; return ``(region_id, regions)``.
+) -> tuple[Int32Array, Int32Array, list[Region]]:
+    """Segment the mesh into named regions across two layers.
 
-    Land cells inherit their connected ``landmass_id`` component (one
-    :class:`RegionKind.LANDMASS` region each); ocean cells are segmented into
-    connected components (one :class:`RegionKind.OCEAN` region each).  Together
-    these cover every cell, so ``region_id`` has no ``-1`` holes.  Region ids are
-    global and 0-based, matching the per-cell ``region_id`` and the baked
-    ``grid.region_id``.
+    Layer 1 — geographic bodies (``region_id``, wall-to-wall): land cells inherit
+    their connected ``landmass_id`` component; ocean cells segment into connected
+    bodies.  Layer 2 — biome-regions (``biome_region_id``, dry land only): each
+    landscape category's cells segment into connected runs, overlapping layer 1.
+    All regions share one global 0-based id space and one ``regions`` list.
 
     Args:
         geometry: Torus mesh with CSR adjacency.
         is_land: Per-cell land mask (ocean = ~is_land).
         landmass_id: 1-based connected land component per cell (0 = ocean).
+        biome_mask: Cells that carry a biome (dry land = is_land & ~is_lake).
+        dominant_biome: Per-cell argmax biome column (meaningful where biome_mask).
+        biome_order: Column index → ``BiomeEnum`` (from ``derive_centers``).
         seed: World seed, for deterministic region names.
 
     Returns:
-        ``region_id``: Per-cell global region id (0-based; no holes).
-        ``regions``: The :class:`Region` entities, indexed by id.
+        ``region_id``: Per-cell geographic-body id (0-based; no holes).
+        ``biome_region_id``: Per-cell biome-region id (0-based; -1 off dry land).
+        ``regions``: All :class:`Region` entities, indexed by their global id.
     """
     n: int = geometry.n_cells
     region_id: Int32Array = np.full(n, -1, dtype=np.int32)
+    biome_region_id: Int32Array = np.full(n, -1, dtype=np.int32)
     regions: list[Region] = []
     next_id: int = 0
 
-    # --- land bodies: reuse the landmass components ---
+    def emit(*, members: BoolArray, kind: RegionKind, biome: BiomeEnum | None) -> int:
+        """Append one region for ``members`` and return its assigned id."""
+        nonlocal next_id
+        rid: int = next_id
+        regions.append(
+            Region(
+                id=rid,
+                kind=kind,
+                name=_region_name(kind=kind, seed=seed, region_id=rid),
+                cell_count=int(np.count_nonzero(members)),
+                centroid=_torus_centroid(geometry=geometry, members=members),
+                dominant_biome=biome,
+            )
+        )
+        next_id += 1
+        return rid
+
+    # --- layer 1a: land bodies (reuse the landmass components) ---
     max_landmass: int = int(landmass_id.max()) if landmass_id.size else 0
     for component in range(1, max_landmass + 1):
         members: BoolArray = landmass_id == component
-        count: int = int(np.count_nonzero(members))
-        if count == 0:
+        if not members.any():
             continue
-        region_id[members] = next_id
-        regions.append(
-            Region(
-                id=next_id,
-                kind=RegionKind.LANDMASS,
-                name=_region_name(
-                    kind=RegionKind.LANDMASS, seed=seed, region_id=next_id
-                ),
-                cell_count=count,
-                centroid=_torus_centroid(geometry=geometry, members=members),
-            )
+        region_id[members] = emit(
+            members=members, kind=RegionKind.LANDMASS, biome=None
         )
-        next_id += 1
 
-    # --- ocean bodies: connected components of the non-land cells ---
+    # --- layer 1b: ocean bodies (connected components of the non-land cells) ---
     ocean_labels: Int32Array = components(geometry=geometry, mask=~is_land)
-    max_ocean: int = int(ocean_labels.max()) if ocean_labels.size else -1
-    for component in range(max_ocean + 1):
+    for component in range(int(ocean_labels.max()) + 1):
         members = ocean_labels == component
-        count = int(np.count_nonzero(members))
-        if count == 0:
+        if not members.any():
             continue
-        region_id[members] = next_id
-        regions.append(
-            Region(
-                id=next_id,
-                kind=RegionKind.OCEAN,
-                name=_region_name(
-                    kind=RegionKind.OCEAN, seed=seed, region_id=next_id
-                ),
-                cell_count=count,
-                centroid=_torus_centroid(geometry=geometry, members=members),
-            )
-        )
-        next_id += 1
+        region_id[members] = emit(members=members, kind=RegionKind.OCEAN, biome=None)
 
-    return region_id, regions
+    # --- layer 2: biome-regions (connected runs of one landscape category) ---
+    cell_kind: Int32Array = _cell_landscape(
+        dominant_biome=dominant_biome,
+        biome_mask=biome_mask,
+        biome_order=biome_order,
+    )
+    n_biomes: int = len(biome_order)
+    for kind in LANDSCAPE_ORDER:
+        category_mask: BoolArray = biome_mask & (cell_kind == int(kind))
+        labels: Int32Array = components(geometry=geometry, mask=category_mask)
+        for component in range(int(labels.max()) + 1):
+            members = labels == component
+            if not members.any():
+                continue
+            counts: Int32Array = np.bincount(
+                dominant_biome[members], minlength=n_biomes
+            )
+            dominant: BiomeEnum = biome_order[int(counts.argmax())]
+            biome_region_id[members] = emit(
+                members=members, kind=kind, biome=dominant
+            )
+
+    return region_id, biome_region_id, regions

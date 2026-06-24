@@ -56,6 +56,7 @@ class Layer(StrEnum):
     MAGIC_CHANNELS = "magic_channels"
     BIOMES = "biomes"
     REGIONS = "regions"
+    BIOME_REGIONS = "biome_regions"
 
 
 # Layers grouped by the pipeline phase that produces them — the single source of
@@ -103,7 +104,7 @@ LAYER_GROUPS: tuple[tuple[str, tuple[Layer, ...]], ...] = (
     ),
     (
         "Regions",
-        (Layer.REGIONS,),
+        (Layer.REGIONS, Layer.BIOME_REGIONS),
     ),
 )
 
@@ -134,6 +135,7 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.MAGIC_CHANNELS: "Magic channels",
     Layer.BIOMES: "Biomes",
     Layer.REGIONS: "Regions",
+    Layer.BIOME_REGIONS: "Biome regions",
 }
 
 LAYER_DESCRIPTIONS: dict[Layer, str] = {
@@ -159,6 +161,7 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.MAGIC_CHANNELS: "Channel composition (corpus/mens/anima) mapped straight to RGB.",
     Layer.BIOMES: "Dominant biome per tile (argmax of the soft weights); one hue per biome.",
     Layer.REGIONS: "Named geographic regions (the gameplay socket); one hue per region id (landmasses + ocean bodies).",
+    Layer.BIOME_REGIONS: "Biome-regions: connected runs of one landscape category (forest/plains/...); one hue per region id, ocean/lake dark.",
 }
 
 
@@ -381,6 +384,14 @@ def _tile_color(
             return (20, 20, 25)
         hue: float = (region * 0.6180339887) % 1.0
         red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.65, v=0.9)
+        return int(red * 255), int(green * 255), int(blue * 255)
+
+    if layer == Layer.BIOME_REGIONS:
+        biome_region: int = int(grid.biome_region_id[tile_index])
+        if biome_region < 0:
+            return (20, 30, 45)
+        hue: float = (biome_region * 0.6180339887) % 1.0
+        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.6, v=0.92)
         return int(red * 255), int(green * 255), int(blue * 255)
 
     return (0, 0, 0)
@@ -647,6 +658,12 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
         hue = (ids * _PHI) % 1.0
         out = _hsv_to_rgb(hue, np.full(n, 0.65), np.full(n, 0.9))
         out[ids < 0.0] = np.array((20, 20, 25))  # unassigned (should not occur)
+
+    elif layer == Layer.BIOME_REGIONS:
+        ids = grid.biome_region_id.astype(np.float64)
+        hue = (ids * _PHI) % 1.0
+        out = _hsv_to_rgb(hue, np.full(n, 0.6), np.full(n, 0.92))
+        out[ids < 0.0] = np.array((20, 30, 45))  # ocean / lake (no biome-region)
 
     return np.clip(out, 0.0, 255.0).astype(np.uint8)
 

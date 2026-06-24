@@ -121,6 +121,9 @@ class MeshFields:
     region_id: Int32Array | None = field(
         default=None, metadata={"dtype": np.int32}
     )  # Named geographic region id; baked to grid.region_id (-1 = unassigned)
+    biome_region_id: Int32Array | None = field(
+        default=None, metadata={"dtype": np.int32}
+    )  # Biome-region id (forest/plains/...); overlaps region_id; -1 = none (ocean/lake)
 
     @classmethod
     def allocate(cls, n: int) -> Self:
@@ -244,6 +247,9 @@ class GridFields:
     region_id: Int32Array | None = field(
         default=None, metadata={"dtype": np.int32}
     )  # Named geographic region id (baked from the mesh region_id); -1 = unassigned
+    biome_region_id: Int32Array | None = field(
+        default=None, metadata={"dtype": np.int32}
+    )  # Biome-region id (forest/plains/...); overlaps region_id; -1 = none (ocean/lake)
 
     @classmethod
     def allocate(cls, n: int) -> Self:

@@ -9,6 +9,7 @@ pipeline hands to the persistence layer.
 from dataclasses import dataclass
 from enum import IntEnum
 
+from src.core.model.environment.ecology.biome import BiomeEnum
 from src.worldgen.config.worldgen_config import WorldgenConfig
 from src.worldgen.fields import GridFields
 from src.worldgen.types import Float64Array
@@ -119,6 +120,14 @@ class RegionKind(IntEnum):
 
     LANDMASS = 0  #: A connected body of dry land (continent / island).
     OCEAN = 1  #: A connected body of open sea (ocean / sea / gulf).
+    # Biome-regions: connected runs of one landscape category, overlapping the
+    # land bodies above (per-tile lookup is the separate ``biome_region_id``).
+    FOREST = 2  #: Forests, taigas, woodlands, rainforests, jungles.
+    GRASSLAND = 3  #: Prairies, steppes, savannas — open "plains".
+    DESERT = 4  #: Hot/cold deserts, badlands, wastelands.
+    TUNDRA = 5  #: Frigid barrens, ice, polar desert.
+    WETLAND = 6  #: Bogs, mires, marshes, swamps, mangroves.
+    SHRUBLAND = 7  #: Scrub, chaparral, sagebrush, thorn.
 
 
 @dataclass
@@ -131,11 +140,12 @@ class Region:
     new kinds and richer naming can be added without touching the contract.
     """
 
-    id: int  #: Global region id (0-based); matches the per-cell/per-tile ``region_id``.
+    id: int  #: Global region id (0-based); matches the per-cell/per-tile id columns.
     kind: RegionKind  #: What this region is (see :class:`RegionKind`).
     name: str  #: Display name (deterministic from seed + id; a placeholder namer for now).
     cell_count: int  #: Number of mesh cells in the region.
     centroid: tuple[float, float]  #: Torus-aware center in world units (wraps correctly).
+    dominant_biome: BiomeEnum | None = None  #: Most common biome (biome-regions only; else None).
 
 
 @dataclass
