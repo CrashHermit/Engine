@@ -97,21 +97,39 @@ mean — so a land mask keeps ocean zeros from bleeding into coasts).
 **File:** `src/worldgen/climate/moisture.py`, end of `transport_moisture(...)`
 (it already has `geometry` and `is_land` in scope). Apply as the **final step**,
 after the belt × modulation multiply and the `precip_gamma`, so the field that
-ships to biomes is the climatic-normal:
+ships to biomes is the climatic-normal.
+
+**Preserve ocean precipitation.** `precipitation` is a baked grid field that
+ships in `WorldData`; ocean values are part of the data contract (even though
+the only in-worldgen readers — biomes and savagery harshness — are land-only).
+So do **not** use a single `mask=is_land` smooth: `diffuse(mask=is_land)` zeroes
+ocean cells and would destroy that data. Smooth **land and ocean as two separate
+masked domains**, so each smooths only among its own cells (no wet-ocean bleed
+into coastal land, no dry-land bleed into coastal ocean) and ocean precip is
+both preserved and tidied:
 
 ```python
-precipitation = diffuse(
-    geometry=geometry,
-    field=precipitation,
+land_p = diffuse(
+    geometry=geometry, field=precipitation,
     strength=cfg.precip_smoothing_strength,
-    passes=cfg.precip_smoothing_passes,
-    mask=is_land,   # ocean rows are not what biomes read; keep coasts clean
-)
+    passes=cfg.precip_smoothing_passes, mask=is_land,
+)   # ocean cells are 0 here
+sea_p = diffuse(
+    geometry=geometry, field=precipitation,
+    strength=cfg.precip_smoothing_strength,
+    passes=cfg.precip_smoothing_passes, mask=~is_land,
+)   # land cells are 0 here
+precipitation = np.where(is_land, land_p, sea_p)
 ```
 
-Note the mask zeroes ocean cells; that is fine because biomes only read land
-precipitation, but confirm no other consumer needs ocean precipitation values
-(if one does, smooth a land-masked copy for biomes instead of overwriting).
+(If ocean-precip coherence turns out not to matter, the cheaper variant is to
+smooth land only and restore ocean originals:
+`precipitation = np.where(is_land, land_p, precipitation)`. Either way, ocean
+values must survive.)
+
+**Future ocean biomes are not rain-determined.** Marine biomes will key off
+**SST/temperature, depth, and currents** (reef / open ocean / kelp / polar pack
+ice), not precipitation — so this land-precip smoothing has no bearing on them.
 
 **Config:** add to `MoistureConfig` in
 `src/worldgen/config/worldgen_config.py`:
