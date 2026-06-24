@@ -49,13 +49,13 @@ def pangaea() -> WorldgenConfig:
 
 
 def wildlands() -> WorldgenConfig:
-    """Earthlike physique, but savage, leyline-dense, and corruption-leaning."""
+    """Earthlike physique, but savage and leyline-dense."""
     return WorldgenConfig(
         plates=PlatesConfig(n_plates=10, continental_fraction=0.33),
         savagery=SavageryConfig(
             noise_weight=0.35, remoteness_weight=0.40, volcanism_weight=0.25
         ),
-        leyline=LeylineConfig(count=30, purity=3.0),
+        leyline=LeylineConfig(count=30),
         vulcanism=VulcanismConfig(hotspot_count=6, arc_uplift=1.0),
     )
 

@@ -291,9 +291,10 @@ class SavageryConfig:
     """Legible danger as a weighted blend of named geography components.
 
     Savagery is *physical/geographic* danger only and is deliberately orthogonal
-    to magic: corruption lives in ``magic_valence``, not here.  A place can be
-    corrupt-but-calm or pure-but-savage; a future encounter/threat layer is what
-    composes the two axes (``total_threat = f(savagery, valence, ...)``).
+    to magic: how magical a place is lives in ``magic_strength``/``magic_channels``,
+    not here.  A place can be quiet-but-savage or steeped-in-magic-but-calm; a
+    future encounter/threat layer is what composes the axes
+    (``total_threat = f(savagery, magic_strength, ...)``).
     """
 
     remoteness_weight: float = 0.35   # coast_distance, max-normalized
@@ -332,16 +333,14 @@ class LeylineConfig:
     score_noise: float = 0.4     # FBm jitter so similar terrain still varies
     edge_k: int = 4              # Candidate edges: each nexus to its k nearest fellows
     extra_loops: int = 3         # Shortest rejected edges added back as loops
-    purity: float = 2.0          # Valence sharpening toward the poles (sign*|v|^(1/purity))
     channel_purity: float = 2.0  # Channel-weight sharpening exponent
     line_reach: float = 0.08     # Strength falloff length from a leyline (fraction of span)
     line_strength: float = 0.7   # Peak strength along a leyline ridge (nexuses reach higher)
     nexus_reach: float = 0.03    # Tighter falloff length of the nexus peak
     nexus_boost: float = 1.0     # Peak strength right at a nexus (the brightest points)
-    idw_k: int = 4               # Nearest segments blended for valence/channels
+    idw_k: int = 4               # Nearest segments blended for channels
     idw_epsilon: float = 1e-3    # IDW distance floor
     score_frequency: float = 3.0    # Nexus-score FBm frequency (cycles around the torus)
-    valence_frequency: float = 1.5  # Valence FBm frequency; low = clustered regions
     floor_frequency: float = 2.0    # Magic-floor FBm frequency
     floor_strength: float = 0.1     # Magic-floor amplitude so dead zones still flicker
 

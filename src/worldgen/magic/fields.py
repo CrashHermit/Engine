@@ -5,9 +5,9 @@ Phase 4 step 5.  Every cell measures its distance to the nearest leyline
 
 * ``magic_strength`` = exponential falloff from the web + a tighter nexus bump
   + a low FBm floor so dead zones still flicker.
-* ``magic_valence`` / ``magic_channels`` = inverse-distance-weighted blend over
-  the nearest segments, each segment's aspect interpolated along its length by
-  the projection ``t``, faded toward neutral where the magic is weak.
+* ``magic_channels`` = inverse-distance-weighted blend over the nearest
+  segments, each segment's channels interpolated along its length by the
+  projection ``t``, faded toward neutral (uniform thirds) where the magic is weak.
 
 The hot path vectorizes **cells per segment** (≈n × segments, never n²).
 """
@@ -59,8 +59,8 @@ def rasterize_magic(
     network: LeylineNetwork,
     cfg: LeylineConfig,
     floor_noise: FractalField,
-) -> tuple[Float64Array, Float64Array, Float64Array]:
-    """Per-cell ``(magic_strength, magic_valence, magic_channels)`` from the web.
+) -> tuple[Float64Array, Float64Array]:
+    """Per-cell ``(magic_strength, magic_channels)`` from the web.
 
     Args:
         geometry: Torus mesh with sites and dimensions.
@@ -70,7 +70,6 @@ def rasterize_magic(
 
     Returns:
         magic_strength: Per-cell intensity in [0, 1].
-        magic_valence: Per-cell valence in [-1, 1].
         magic_channels: Per-cell channel composition, shape ``(n, 3)``.
     """
     n: int = geometry.n_cells
@@ -96,7 +95,7 @@ def rasterize_magic(
     k: int = len(network.nexus_cells)
     if k == 0:
         strength: Float64Array = np.clip(floor, 0.0, 1.0)
-        return strength, np.zeros(n, dtype=np.float64), uniform_channels
+        return strength, uniform_channels
 
     nexus_sites: Float64Array = sites[network.nexus_cells]  # (k, 2)
     line_reach: float = cfg.line_reach * span
@@ -115,7 +114,7 @@ def rasterize_magic(
     if n_seg == 0:
         # A single isolated nexus: only the nexus peak over the floor.
         strength = _compose_strength(np.zeros(n, dtype=np.float64), nexus_term, floor)
-        return strength, np.zeros(n, dtype=np.float64), uniform_channels
+        return strength, uniform_channels
 
     # --- per-segment distance and projection t (cells vectorized per segment) ---
     seg_dist: Float64Array = np.empty((n_seg, n), dtype=np.float64)
@@ -155,14 +154,6 @@ def rasterize_magic(
     ia_arr: Float64Array = np.array([e[0] for e in edges], dtype=np.int64)
     ib_arr: Float64Array = np.array([e[1] for e in edges], dtype=np.int64)
 
-    # Valence: lerp endpoint valences by t, then IDW blend.
-    val_a: Float64Array = network.nexus_valence[ia_arr]  # (n_seg,)
-    val_b: Float64Array = network.nexus_valence[ib_arr]
-    seg_valence: Float64Array = (
-        (1.0 - t_by_cell) * val_a[None, :] + t_by_cell * val_b[None, :]
-    )  # (n, n_seg)
-    valence_raw: Float64Array = (w * seg_valence).sum(axis=1) / safe_sum
-
     # Channels: lerp endpoint channels by t, then IDW blend.
     chan_a: Float64Array = network.nexus_channels[ia_arr]  # (n_seg, 3)
     chan_b: Float64Array = network.nexus_channels[ib_arr]
@@ -175,7 +166,6 @@ def rasterize_magic(
     ) / safe_sum[:, None]
 
     # --- fade toward neutral where magic is weak ---
-    magic_valence: Float64Array = valence_raw * strength
     magic_channels: Float64Array = third + (channels_raw - third) * strength[:, None]
     chan_sum: Float64Array = magic_channels.sum(axis=1, keepdims=True)
     magic_channels = np.divide(
@@ -185,4 +175,4 @@ def rasterize_magic(
         where=chan_sum > 0.0,
     )
 
-    return strength, magic_valence, magic_channels
+    return strength, magic_channels

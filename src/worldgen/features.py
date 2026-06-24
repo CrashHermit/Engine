@@ -89,7 +89,6 @@ class LeylineNetwork:
     """
 
     nexus_cells: list[int]  #: Mesh cell ids of the placed nexuses.
-    nexus_valence: Float64Array  #: Per-nexus valence in [-1, 1] (corrupt..pure).
     nexus_channels: Float64Array  #: Per-nexus channel weights, shape (k, 3).
     edges: list[tuple[int, int]]  #: Leyline edges as index pairs into ``nexus_cells``.
 

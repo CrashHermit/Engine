@@ -107,9 +107,6 @@ class MeshFields:
     magic_strength: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] leyline intensity
-    magic_valence: Float64Array | None = field(
-        default=None, metadata={"dtype": np.float64}
-    )  # [-1,1] corrupt..pure
     # 2-D fields: allocated to their full (n, k) shape by the writing stage and
     # baked via the generic value[nearest] fancy index (see bake/grid.py).
     magic_channels: Float64Array | None = field(
@@ -234,9 +231,6 @@ class GridFields:
     magic_strength: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] leyline intensity
-    magic_valence: Float64Array | None = field(
-        default=None, metadata={"dtype": np.float64}
-    )  # [-1,1] corrupt..pure
     # 2-D fields: see MeshFields note — baked via the generic value[nearest].
     magic_channels: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}

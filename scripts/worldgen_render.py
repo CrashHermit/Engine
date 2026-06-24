@@ -52,7 +52,6 @@ class Layer(StrEnum):
     VOLCANISM = "volcanism"
     SAVAGERY = "savagery"
     MAGIC_STRENGTH = "magic_strength"
-    MAGIC_VALENCE = "magic_valence"
     MAGIC_CHANNELS = "magic_channels"
     BIOMES = "biomes"
     REGIONS = "regions"
@@ -97,7 +96,6 @@ LAYER_GROUPS: tuple[tuple[str, tuple[Layer, ...]], ...] = (
         (
             Layer.SAVAGERY,
             Layer.MAGIC_STRENGTH,
-            Layer.MAGIC_VALENCE,
             Layer.MAGIC_CHANNELS,
             Layer.BIOMES,
         ),
@@ -131,7 +129,6 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.VOLCANISM: "Volcanism",
     Layer.SAVAGERY: "Savagery",
     Layer.MAGIC_STRENGTH: "Magic strength",
-    Layer.MAGIC_VALENCE: "Magic valence",
     Layer.MAGIC_CHANNELS: "Magic channels",
     Layer.BIOMES: "Biomes",
     Layer.REGIONS: "Regions",
@@ -157,7 +154,6 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.VOLCANISM: "Present-day volcanic activity [0,1]. Bright subduction arcs, hotspot trails, and mid-ocean ridges; dark elsewhere.",
     Layer.SAVAGERY: "Legible danger [0,1]. Bright deep interiors, deserts, frostbelt, and ranges; calm temperate coasts.",
     Layer.MAGIC_STRENGTH: "Leyline intensity [0,1]. Bright web of lines between nexuses; dim floor elsewhere.",
-    Layer.MAGIC_VALENCE: "Magic valence [-1,1]. Diverging palette: corrupt (magenta) vs pure (cyan); neutral grey off the web.",
     Layer.MAGIC_CHANNELS: "Channel composition (corpus/mens/anima) mapped straight to RGB.",
     Layer.BIOMES: "Dominant biome per tile (argmax of the soft weights); one hue per biome.",
     Layer.REGIONS: "Named geographic regions (the gameplay socket); one hue per region id (landmasses + ocean bodies).",
@@ -353,13 +349,6 @@ def _tile_color(
     if layer == Layer.MAGIC_STRENGTH:
         t: float = max(0.0, min(1.0, float(grid.magic_strength[tile_index])))
         return _lerp_color(low=(15, 15, 30), high=(180, 120, 255), t=t)
-
-    if layer == Layer.MAGIC_VALENCE:
-        v: float = max(-1.0, min(1.0, float(grid.magic_valence[tile_index])))
-        # corrupt (-1) = magenta, neutral (0) = grey, pure (+1) = cyan
-        if v < 0.0:
-            return _lerp_color(low=(120, 120, 120), high=(210, 40, 160), t=-v)
-        return _lerp_color(low=(120, 120, 120), high=(40, 200, 210), t=v)
 
     if layer == Layer.MAGIC_CHANNELS:
         channels = grid.magic_channels[tile_index]
@@ -636,12 +625,6 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
 
     elif layer == Layer.MAGIC_STRENGTH:
         out = _lerp_arr((15, 15, 30), (180, 120, 255), grid.magic_strength.astype(np.float64))
-
-    elif layer == Layer.MAGIC_VALENCE:
-        valence = np.clip(grid.magic_valence.astype(np.float64), -1.0, 1.0)
-        corrupt = _lerp_arr((120, 120, 120), (210, 40, 160), -valence)
-        pure = _lerp_arr((120, 120, 120), (40, 200, 210), valence)
-        out = np.where((valence < 0.0)[:, None], corrupt, pure)
 
     elif layer == Layer.MAGIC_CHANNELS:
         channels = grid.magic_channels.astype(np.float64)

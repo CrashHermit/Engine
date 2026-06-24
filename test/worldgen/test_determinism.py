@@ -46,7 +46,6 @@ def _assert_rivers_equal(a: list[River], b: list[River]) -> None:
 def _assert_leylines_equal(a: LeylineNetwork, b: LeylineNetwork) -> None:
     assert a.nexus_cells == b.nexus_cells
     assert a.edges == b.edges
-    assert np.array_equal(a.nexus_valence, b.nexus_valence)
     assert np.array_equal(a.nexus_channels, b.nexus_channels)
 
 

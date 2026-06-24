@@ -22,7 +22,8 @@ FIELD_WIND_U: int = 5
 FIELD_WIND_V: int = 6
 FIELD_SAVAGERY: int = 7
 FIELD_NEXUS_SCORE: int = 8
-FIELD_VALENCE: int = 9
+# 9 retired (was FIELD_VALENCE); kept as a gap so FIELD_MAGIC_FLOOR's offset is
+# unchanged and magic-floor noise stays bit-identical.
 FIELD_MAGIC_FLOOR: int = 10
 
 

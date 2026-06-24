@@ -173,13 +173,11 @@ def test_union_find_basic() -> None:
 
 @pytest.mark.parametrize("seed", SEEDS)
 def test_magic_fields_ranges(seed: int) -> None:
-    """Strength in [0,1], valence in [-1,1], channels are per-cell distributions."""
+    """Strength in [0,1]; channels are per-cell distributions."""
     _world, ctx = _debug(seed)
     f = ctx.fields
     assert float(f.magic_strength.min()) >= 0.0
     assert float(f.magic_strength.max()) <= 1.0
-    assert float(f.magic_valence.min()) >= -1.0
-    assert float(f.magic_valence.max()) <= 1.0
 
     assert f.magic_channels.shape == (ctx.geometry.n_cells, 3)
     assert np.all(f.magic_channels >= 0.0)

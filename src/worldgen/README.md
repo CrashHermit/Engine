@@ -78,7 +78,6 @@ Per-tile product columns. Ranges are noted where meaningful.
 | `is_volcano` | Tile is a volcano summit | bool |
 | `volcano_id` | `Volcano` id; -1 = none | int32 |
 | `magic_strength` | Leyline intensity | [0, 1] f64 |
-| `magic_valence` | Corrupt..pure | [-1, 1] f64 |
 | `magic_channels` | corpus/mens/anima composition | (n, 3) f64 |
 | `biome_weights` | Soft biome distribution | (n, 49) f64 |
 | `region_id` | Named geographic `Region` id (landmass / ocean body) | int32 |
