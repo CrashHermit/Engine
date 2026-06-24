@@ -130,14 +130,21 @@ class LandmassConfig:
 
 @dataclass
 class InsolationConfig:
-    """Authored energy pattern (no latitude on a torus)."""
+    """Latitude-derived energy pattern on the torus.
 
-    bands: int = 1          # Number of hot/cold ring pairs around the torus
+    The equator sits at the map center and the poles at the y-wrap seam, so the
+    northern and southern hemispheres are mirror images that both lead to the
+    same wrapped polar cap.  Insolation is a function of ``|latitude|`` (1 at the
+    equator, 0 at the poles) and wraps seamlessly in y.
+    """
+
+    bands: int = 1          # Equator-to-pole latitude cycles over the torus height
+                            # (1 = a single equator at center, poles at the seam)
     contrast: float = 0.8   # Spread of climate zones; <1 flattens, >1 sharpens
-    wobble: float = 0.0     # Low-freq noise warp on the ring lines; 0 = laser-straight
+    wobble: float = 0.0     # Low-freq noise warp on the latitude lines; 0 = laser-straight
     # A raw cosine lingers at its peaks, so the band's value distribution is
     # U-shaped (arcsine): fat hot/cold extremes, a starved temperate middle.
-    # Raising the cosine to this power (>1) narrows the extreme rings and widens
+    # Raising the cosine to this power (>1) narrows the extreme bands and widens
     # the temperate zone, the way most of a planet is temperate, not polar.
     temperate_bias: float = 2.0  # Cosine shaping exponent; 1.0 = raw cosine (U-shaped)
 
