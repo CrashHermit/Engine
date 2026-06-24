@@ -15,16 +15,6 @@ class IntentAlignmentRouterSignature(Signature):
     current location.
     """
 
-    character_name: str = InputField(
-        default="", description="The player character's name"
-    )
-    location_name: str = InputField(
-        default="", description="The name of the current location"
-    )
-    entity_names: str = InputField(
-        default="",
-        description="Names of entities present in the current location, one per line",
-    )
     message_history: str = InputField(
         default="", description="The conversation history so far"
     )

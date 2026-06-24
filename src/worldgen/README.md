@@ -97,7 +97,7 @@ uv run python scripts/view_worldgen.py
 # grid: it bakes the mesh directly at that resolution, so the PNG resolves the
 # full Voronoi mesh instead of the coarse gameplay grid (for diagnosis/tuning).
 uv run python scripts/export_worldgen.py --seed 7 --size 100 --resolution 1024 --layer elevation
-uv run python scripts/export_worldgen.py --seed 7 --resolution 1024 --all-layers -o output/
+uv run python scripts/export_worldgen.py --seed 8 --resolution 1024 --all-layers -o output/
 
 # One-paragraph census per preset/seed — the regression eyeball
 uv run python scripts/census.py
