@@ -118,6 +118,9 @@ class MeshFields:
     biome_weights: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # (n, n_biomes) soft biome distribution
+    region_id: Int32Array | None = field(
+        default=None, metadata={"dtype": np.int32}
+    )  # Named geographic region id; baked to grid.region_id (-1 = unassigned)
 
     @classmethod
     def allocate(cls, n: int) -> Self:
@@ -240,7 +243,7 @@ class GridFields:
     )  # (n, n_biomes) soft biome distribution
     region_id: Int32Array | None = field(
         default=None, metadata={"dtype": np.int32}
-    )  # Persistence socket; assembly fills a column of -1 (no mesh source)
+    )  # Named geographic region id (baked from the mesh region_id); -1 = unassigned
 
     @classmethod
     def allocate(cls, n: int) -> Self:

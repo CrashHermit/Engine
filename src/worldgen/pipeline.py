@@ -3,7 +3,7 @@ import numpy as np
 from src.worldgen.bake.grid import bake_and_stamp, nearest_cell_per_tile
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.features import Landmass, LeylineNetwork, WorldData
+from src.worldgen.features import Landmass, LeylineNetwork, Region, WorldData
 from src.worldgen.fields import GridFields, MeshFields
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.stages.base import Stage
@@ -21,6 +21,7 @@ from src.worldgen.stages.moisture import MoistureStage
 from src.worldgen.stages.ocean_current import OceanCurrentStage
 from src.worldgen.stages.plate import PlatesStage
 from src.worldgen.stages.plate_personality import PlatePersonalityStage
+from src.worldgen.stages.regions import RegionsStage
 from src.worldgen.stages.rivers import RiversStage
 from src.worldgen.stages.savagery import SavageryStage
 from src.worldgen.stages.temperature import TemperatureStage
@@ -58,6 +59,8 @@ def _build_stages() -> list[Stage]:
         SavageryStage(),
         LeylinesStage(),
         BiomeStage(),
+        # Phase 5 — derived regions (named gameplay socket; consumes finished fields)
+        RegionsStage(),
     ]
 
 
@@ -152,12 +155,14 @@ class WorldgenPipeline:
             cfg=ctx.config.river,
         )
 
-        # region_id is the persistence socket: present, schema-able, all -1.
-        grid.region_id = np.full(size * size, -1, dtype=np.int32)
-
         leylines: LeylineNetwork | None = ctx.leylines
         if leylines is None:
             msg: str = "leylines must be set before assembling WorldData"
+            raise RuntimeError(msg)
+
+        regions: list[Region] | None = ctx.regions
+        if regions is None:
+            msg = "regions must be set before assembling WorldData"
             raise RuntimeError(msg)
 
         return WorldData(
@@ -170,6 +175,7 @@ class WorldgenPipeline:
             leylines=leylines,
             landmasses=_build_landmasses(ctx, grid),
             volcanoes=ctx.volcanoes or [],
+            regions=regions,
         )
 
 
