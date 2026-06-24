@@ -12,7 +12,7 @@ import pytest
 
 from src.worldgen.config.presets import PRESETS
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
-from src.worldgen.features import LeylineNetwork, River, WorldData
+from src.worldgen.features import Nexus, River, Vein, WorldData
 from src.worldgen.fields import GridFields
 from src.worldgen.pipeline import WorldgenPipeline
 
@@ -43,11 +43,26 @@ def _assert_rivers_equal(a: list[River], b: list[River]) -> None:
         assert np.array_equal(ra.discharge, rb.discharge)
 
 
-def _assert_leylines_equal(a: LeylineNetwork, b: LeylineNetwork) -> None:
-    assert a.nexus_cells == b.nexus_cells
-    assert a.edges == b.edges
-    assert np.array_equal(a.nexus_valence, b.nexus_valence)
-    assert np.array_equal(a.nexus_channels, b.nexus_channels)
+def _assert_veins_equal(a: list[Vein], b: list[Vein]) -> None:
+    assert len(a) == len(b), "vein count differs"
+    for va, vb in zip(a, b):
+        assert va.id == vb.id
+        assert va.cells == vb.cells
+        assert va.source_nexus == vb.source_nexus
+        assert va.mouth_nexus == vb.mouth_nexus
+        assert va.tributary_of == vb.tributary_of
+        assert np.array_equal(va.strength, vb.strength)
+        assert np.array_equal(va.channels, vb.channels)
+
+
+def _assert_nexuses_equal(a: list[Nexus], b: list[Nexus]) -> None:
+    assert len(a) == len(b), "nexus count differs"
+    for na, nb in zip(a, b):
+        assert na.id == nb.id
+        assert na.cell == nb.cell
+        assert na.polarity == nb.polarity
+        assert na.charge == nb.charge
+        assert np.array_equal(na.channels, nb.channels)
 
 
 @pytest.mark.parametrize("seed", SEEDS)
@@ -63,7 +78,8 @@ def test_same_seed_same_world(seed: int, preset: str) -> None:
     _assert_rivers_equal(a.rivers, b.rivers)
     assert a.lakes == b.lakes  # plain dataclasses (no arrays)
     assert a.landmasses == b.landmasses
-    _assert_leylines_equal(a.leylines, b.leylines)
+    _assert_veins_equal(a.veins, b.veins)
+    _assert_nexuses_equal(a.nexuses, b.nexuses)
     assert a.volcanoes == b.volcanoes  # plain dataclasses (no arrays)
 
 

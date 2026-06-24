@@ -291,9 +291,14 @@ Plates → PlatePersonality → BoundaryClassify → BoundaryUplift
        → Vulcanism → Erosion → Finalize → Volcanoes           (Phase 1)
        → Insolation → Wind → OceanCurrent → Temperature → Moisture   (Phase 2)
        → Discharge → Rivers → Lakes → Flow                    (Phase 3)
-       → Savagery → Leylines → Biomes                         (Phase 4)
+       → Savagery → Magic → Biomes                            (Phase 4)
        → Regions                                              (Phase 5)
 ```
+
+(Phase 4 note: `Magic` is the mana-hydrology stage — it mirrors the water
+subsystem, flowing a source emission down a ley potential into dendritic veins.
+It reads `boundary_facts` and the finalized `slope`, both ready by this point.)
+
 
 (Phase 5 note: `Regions` is a derived labeling pass — it segments the finished
 fields into named, gameplay-addressable `Region` entities and writes the per-tile

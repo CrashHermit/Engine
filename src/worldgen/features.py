@@ -1,9 +1,9 @@
 """Feature objects and the final ``WorldData`` output contract.
 
-The feature dataclasses (``River``, ``Lake``, ``Landmass``, ``LeylineNetwork``)
+The feature dataclasses (``River``, ``Lake``, ``Landmass``, ``Vein``, ``Nexus``)
 are carried on the context during generation (``ctx.rivers``, ``ctx.lakes``,
-``ctx.leylines``) and ship inside ``WorldData`` — the single product type the
-pipeline hands to the persistence layer.
+``ctx.veins``, ``ctx.nexuses``) and ship inside ``WorldData`` — the single
+product type the pipeline hands to the persistence layer.
 """
 
 from dataclasses import dataclass
@@ -80,18 +80,47 @@ class Lake:
     outlet_cell: int | None  #: Spill cell; ``None`` = terminal (endorheic) lake.
 
 
-@dataclass
-class LeylineNetwork:
-    """The magic web: scored nexus cells, their aspects, and the edges between.
+class NexusPolarity(IntEnum):
+    """A nexus pole's role in the mana flow (the sign of its ley-mantle extremum)."""
 
-    Built in Phase 4 (nexus placement → MST + loops → aspect assignment).
-    ``edges`` index into ``nexus_cells``, not raw mesh cell ids.
+    SOURCE = 1   # Ley-mantle maximum: magic wells up here (a headwater).
+    SINK = -1    # Ley-mantle minimum: magic drains here (a mouth).
+
+
+@dataclass
+class Nexus:
+    """A magic pole: an enumerated extremum of the ley-mantle potential.
+
+    Built in Phase 4 by ``magic/nexuses.py``; ships on ``WorldData.nexuses`` and
+    is the object the per-tile ``nexus_id`` column points back to.  Sources are
+    maxima (magic wells up), sinks are minima (magic drains) — the headwaters and
+    mouths of the mana drainage.
     """
 
-    nexus_cells: list[int]  #: Mesh cell ids of the placed nexuses.
-    nexus_valence: Float64Array  #: Per-nexus valence in [-1, 1] (corrupt..pure).
-    nexus_channels: Float64Array  #: Per-nexus channel weights, shape (k, 3).
-    edges: list[tuple[int, int]]  #: Leyline edges as index pairs into ``nexus_cells``.
+    id: int  #: Unique nexus identifier (0-based; matches ``nexus_id``).
+    cell: int  #: Mesh cell id of the pole.
+    polarity: NexusPolarity  #: Source (+) or sink (−).
+    charge: float  #: [0,1] prominence of the extremum.
+    channels: Float64Array  #: Channel identity at the pole, shape (3,) corpus/mens/anima.
+
+
+@dataclass
+class Vein:
+    """A leyline as a labeled path through the mana flow tree.
+
+    The magic mirror of :class:`River`: veins are the high-accumulation paths
+    through the receiver forest over the ley potential.  Sources start new veins;
+    at junctions the larger-strength inflow keeps the vein identity and smaller
+    ones record ``tributary_of``.
+    """
+
+    id: int  #: Unique vein identifier (0-based; matches ``vein_id``).
+    cells: list[int]  #: Source → mouth, mesh cell ids (contiguous).
+    strength: Float64Array  #: Per-cell magic strength along the vein (same length as ``cells``).
+    channels: Float64Array  #: Per-cell channel composition along the vein, shape (len(cells), 3).
+    source_nexus: int  #: Nexus id at the headwater; ``-1`` if the source is not a pole.
+    mouth_nexus: int | None  #: Sink nexus id the vein drains into; ``None`` if it ends elsewhere.
+    tributary_of: int | None  #: Vein id this vein joins; ``None`` for trunk veins.
 
 
 @dataclass
@@ -165,7 +194,8 @@ class WorldData:
     grid: GridFields  #: Per-tile fields (the product surface).
     rivers: list[River]  #: River objects in mesh-cell coordinates.
     lakes: list[Lake]  #: Lake objects in mesh-cell coordinates.
-    leylines: LeylineNetwork  #: The magic web.
+    veins: list[Vein]  #: Leyline veins (mana drainage paths) in mesh-cell coords.
+    nexuses: list[Nexus]  #: Nexus poles (ley-mantle extrema) in mesh-cell coords.
     landmasses: list[Landmass]  #: Connected land components (ocean excluded).
     volcanoes: list[Volcano]  #: Discrete volcanoes in mesh-cell coordinates.
     regions: list[Region]  #: Named geographic regions; per-tile lookup is ``grid.region_id``.

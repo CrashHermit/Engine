@@ -2,13 +2,14 @@ from dataclasses import dataclass, replace
 
 from src.worldgen.config.worldgen_config import MeshConfig
 from src.worldgen.config.worldgen_config import WorldgenConfig
-from src.worldgen.features import Lake, LeylineNetwork, Region, River, Volcano
+from src.worldgen.features import Lake, Nexus, Region, River, Vein, Volcano
 from src.worldgen.fields import MeshFields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed
 from src.worldgen.terrain.boundaries import BoundaryFacts
 from src.worldgen.terrain.plate_personalities import PlateProperties
 from src.worldgen.terrain.vulcanism import VolcanoSeed
+from src.worldgen.types import Float64Array
 
 
 @dataclass
@@ -24,7 +25,9 @@ class WorldContext:
     volcanoes: list[Volcano] | None = None
     rivers: list[River] | None = None
     lakes: list[Lake] | None = None
-    leylines: LeylineNetwork | None = None
+    veins: list[Vein] | None = None
+    nexuses: list[Nexus] | None = None
+    magic_potential: Float64Array | None = None  # combined ley potential (mesh intermediate, for the viewer/tests)
     regions: list[Region] | None = None
 
     def seed_for(self, name: str) -> int:

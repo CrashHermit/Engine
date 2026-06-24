@@ -89,8 +89,8 @@ def census(world: WorldData) -> str:
         f"{len(world.rivers)} rivers (longest {longest_river} cells), "
         f"{len(world.lakes)} lakes ({terminal_lakes} terminal); "
         f"{len(world.volcanoes)} volcanoes ({calderas} calderas); "
-        f"{len(world.leylines.nexus_cells)} nexuses, "
-        f"{len(world.leylines.edges)} leylines; "
+        f"{len(world.nexuses)} nexuses, "
+        f"{len(world.veins)} veins; "
         f"currents +{warm_anom:.2f}/{cold_anom:.2f} SST. "
         f"Top biomes: {top5}."
     )
