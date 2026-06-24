@@ -1,5 +1,5 @@
 from src.worldgen.config.worldgen_config import (
-    LeylineConfig,
+    MagicConfig,
     PlatesConfig,
     SavageryConfig,
     SeaLevelConfig,
@@ -55,7 +55,8 @@ def wildlands() -> WorldgenConfig:
         savagery=SavageryConfig(
             noise_weight=0.35, remoteness_weight=0.40, volcanism_weight=0.25
         ),
-        leyline=LeylineConfig(count=30),
+        # Denser, branchier veins: stronger rock coupling and a lower vein cutoff.
+        magic=MagicConfig(bones_weight=0.8, vein_percentile=85.0),
         vulcanism=VulcanismConfig(hotspot_count=6, arc_uplift=1.0),
     )
 

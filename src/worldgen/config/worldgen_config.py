@@ -315,34 +315,35 @@ class SavageryConfig:
 
 
 # ---------------------------------------------------------------------------
-# Leylines (Phase 4)
+# Magic (Phase 4) — mana hydrology
 # ---------------------------------------------------------------------------
 
 
 @dataclass
-class LeylineConfig:
-    """Nexus placement, the leyline web, and magic-field rasterization."""
+class MagicConfig:
+    """Mana hydrology: ley-mantle potential, rock coupling, emission, veins.
 
-    count: int = 18              # Target number of nexuses to place
-    min_spacing: float = 0.18    # Greedy spacing as a fraction of world span
-    peak_percentile: float = 90.0  # Elevation percentile that counts as a peak
-    peak_bonus: float = 1.0      # Score bonus for peak cells
-    lake_outlet_bonus: float = 0.8  # Score bonus for lake-outlet cells
-    confluence_bonus: float = 0.9   # Score bonus for river confluences (>=2 inflows)
-    volcano_bonus: float = 0.7   # Score bonus scaled by volcanism (volcanoes draw leylines)
-    score_noise: float = 0.4     # FBm jitter so similar terrain still varies
-    edge_k: int = 4              # Candidate edges: each nexus to its k nearest fellows
-    extra_loops: int = 3         # Shortest rejected edges added back as loops
-    channel_purity: float = 2.0  # Channel-weight sharpening exponent
-    line_reach: float = 0.08     # Strength falloff length from a leyline (fraction of span)
-    line_strength: float = 0.7   # Peak strength along a leyline ridge (nexuses reach higher)
-    nexus_reach: float = 0.03    # Tighter falloff length of the nexus peak
-    nexus_boost: float = 1.0     # Peak strength right at a nexus (the brightest points)
-    idw_k: int = 4               # Nearest segments blended for channels
-    idw_epsilon: float = 1e-3    # IDW distance floor
-    score_frequency: float = 3.0    # Nexus-score FBm frequency (cycles around the torus)
-    floor_frequency: float = 2.0    # Magic-floor FBm frequency
-    floor_strength: float = 0.1     # Magic-floor amplitude so dead zones still flicker
+    Magic is generated like water: an emission flows down a ``combined_potential``
+    (a low-frequency ley-mantle field perturbed by the rock 'bones') and
+    accumulates into dendritic veins, exactly as discharge accumulates into
+    rivers.  See ``docs/worldgen-magic-redesign-plan.md``.
+    """
+
+    ley_mantle_frequency: float = 1.2   # Low → broad source/sink regions (the climate baseline)
+    ley_mantle_octaves: int = 3         # FBm octaves for the ley-mantle field
+    bones_weight: float = 0.6           # How hard faults/ridges carve troughs into the potential
+    bones_boundary_weight: float = 1.0  # Fault stress (convergence + divergence) share of bones
+    bones_ridge_weight: float = 0.5     # Ridge-line (high-slope) share of bones
+    bones_ridge_percentile: float = 80.0  # Slope percentile that counts as a ridge
+    bones_smoothing: int = 1            # Laplacian passes on the bones field (0 = off)
+    ambient_floor: float = 0.05         # Uniform emission so dead zones still flicker
+    base_fraction: float = 0.10         # Lowest-potential percentile used as routing base (sinks)
+    channel_frequency: float = 1.5      # Per-channel noise freq (clustered corpus/mens/anima-lands)
+    nexus_prominence: float = 0.15      # Min normalized prominence to enumerate an extremum as a pole
+    nexus_min_spacing: float = 0.08     # Greedy pole spacing as a fraction of world span
+    vein_percentile: float = 90.0       # Strength percentile that counts as a vein
+    flow_strength_exp: float = 0.2      # Mana-current speed ∝ strength^this
+    flow_slope_exp: float = 0.3         # Mana-current speed ∝ potential-slope^this
 
 
 # ---------------------------------------------------------------------------
@@ -434,5 +435,5 @@ class WorldgenConfig:
     river: RiverConfig = field(default_factory=RiverConfig)
     lake: LakeConfig = field(default_factory=LakeConfig)
     savagery: SavageryConfig = field(default_factory=SavageryConfig)  # Legible danger blend
-    leyline: LeylineConfig = field(default_factory=LeylineConfig)  # Nexuses + magic web
+    magic: MagicConfig = field(default_factory=MagicConfig)  # Mana hydrology (ley-mantle → veins)
     biome: BiomeConfig = field(default_factory=BiomeConfig)  # Soft biome weights from climate

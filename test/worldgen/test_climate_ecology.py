@@ -13,7 +13,7 @@ from src.core.model.environment.shared.temperature import ORDER as TEMP_ORDER
 from src.worldgen.climate.moisture import coastal_sst_source, continentality
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.ecology.biomes import biome_weights, derive_centers
-from src.worldgen.magic.web import _find, _union
+from src.worldgen.features import NexusPolarity
 from src.worldgen.pipeline import WorldgenPipeline
 
 # Climate causality (coasts wetter than interiors) needs landmasses big enough
@@ -142,42 +142,43 @@ def test_savagery_in_unit_range(seed: int) -> None:
 
 
 @pytest.mark.parametrize("seed", SEEDS)
-def test_leyline_web_connected(seed: int) -> None:
-    """The MST connects every nexus; edges index into nexus_cells."""
+def test_nexus_polarity_matches_extrema(seed: int) -> None:
+    """Every source nexus is a strict local max of the potential; sinks, a min."""
     _world, ctx = _debug(seed)
-    network = ctx.leylines
-    k = len(network.nexus_cells)
-    if k <= 1:
-        assert network.edges == []
-        return
-
-    parent = list(range(k))
-    rank = [0] * k
-    for i, j in network.edges:
-        assert 0 <= i < k and 0 <= j < k
-        _union(parent, rank, i, j)
-    roots = {_find(parent, i) for i in range(k)}
-    assert len(roots) == 1, "leyline web is not connected"
+    potential = ctx.magic_potential
+    geometry = ctx.geometry
+    for nexus in ctx.nexuses:
+        cell_val = float(potential[nexus.cell])
+        neighbor_vals = potential[geometry.neighbors_of(cell_id=nexus.cell)]
+        if nexus.polarity == NexusPolarity.SOURCE:
+            assert cell_val > float(neighbor_vals.max())
+        else:
+            assert cell_val < float(neighbor_vals.min())
+        assert 0.0 <= nexus.charge <= 1.0
 
 
-def test_union_find_basic() -> None:
-    """Union-find merges sets and answers connectivity."""
-    parent = list(range(5))
-    rank = [0] * 5
-    assert _union(parent, rank, 0, 1) is True
-    assert _union(parent, rank, 0, 1) is False
-    _union(parent, rank, 2, 3)
-    assert _find(parent, 1) == _find(parent, 0)
-    assert _find(parent, 2) != _find(parent, 0)
+@pytest.mark.parametrize("seed", SEEDS)
+def test_veins_are_high_strength(seed: int) -> None:
+    """Vein cells are exactly the cells above the strength percentile cutoff."""
+    _world, ctx = _debug(seed)
+    f = ctx.fields
+    threshold = float(
+        np.percentile(f.magic_strength, ctx.config.magic.vein_percentile)
+    )
+    assert np.array_equal(f.is_vein, f.magic_strength >= threshold)
+    # Every classified vein cell is owned by exactly one vein object.
+    assert np.all(f.vein_id[f.is_vein] >= 0)
 
 
 @pytest.mark.parametrize("seed", SEEDS)
 def test_magic_fields_ranges(seed: int) -> None:
-    """Strength in [0,1]; channels are per-cell distributions."""
+    """Strength + flow speed in [0,1]; channels are per-cell distributions."""
     _world, ctx = _debug(seed)
     f = ctx.fields
     assert float(f.magic_strength.min()) >= 0.0
     assert float(f.magic_strength.max()) <= 1.0
+    assert float(f.magic_flow_speed.min()) >= 0.0
+    assert float(f.magic_flow_speed.max()) <= 1.0
 
     assert f.magic_channels.shape == (ctx.geometry.n_cells, 3)
     assert np.all(f.magic_channels >= 0.0)

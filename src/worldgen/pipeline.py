@@ -3,7 +3,7 @@ import numpy as np
 from src.worldgen.bake.grid import bake_and_stamp, nearest_cell_per_tile
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.features import Landmass, LeylineNetwork, Region, WorldData
+from src.worldgen.features import Landmass, Nexus, Region, Vein, WorldData
 from src.worldgen.fields import GridFields, MeshFields
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.stages.base import Stage
@@ -16,7 +16,7 @@ from src.worldgen.stages.finalize import FinalizeStage
 from src.worldgen.stages.flow import FlowStage
 from src.worldgen.stages.insolation import InsolationStage
 from src.worldgen.stages.lakes import LakesStage
-from src.worldgen.stages.leylines import LeylinesStage
+from src.worldgen.stages.magic import MagicStage
 from src.worldgen.stages.moisture import MoistureStage
 from src.worldgen.stages.ocean_current import OceanCurrentStage
 from src.worldgen.stages.plate import PlatesStage
@@ -57,7 +57,7 @@ def _build_stages() -> list[Stage]:
         FlowStage(),
         # Phase 4 — magic & ecology
         SavageryStage(),
-        LeylinesStage(),
+        MagicStage(),
         BiomeStage(),
         # Phase 5 — derived regions (named gameplay socket; consumes finished fields)
         RegionsStage(),
@@ -155,9 +155,10 @@ class WorldgenPipeline:
             cfg=ctx.config.river,
         )
 
-        leylines: LeylineNetwork | None = ctx.leylines
-        if leylines is None:
-            msg: str = "leylines must be set before assembling WorldData"
+        veins: list[Vein] | None = ctx.veins
+        nexuses: list[Nexus] | None = ctx.nexuses
+        if veins is None or nexuses is None:
+            msg: str = "veins/nexuses must be set before assembling WorldData"
             raise RuntimeError(msg)
 
         regions: list[Region] | None = ctx.regions
@@ -172,7 +173,8 @@ class WorldgenPipeline:
             grid=grid,
             rivers=ctx.rivers or [],
             lakes=ctx.lakes or [],
-            leylines=leylines,
+            veins=veins,
+            nexuses=nexuses,
             landmasses=_build_landmasses(ctx, grid),
             volcanoes=ctx.volcanoes or [],
             regions=regions,

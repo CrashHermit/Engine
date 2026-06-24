@@ -39,7 +39,7 @@ results back.
 | 15 | `LakesStage` | Connected depressions → `Lake` objects with outlets. |
 | 16 | `FlowStage` | Per-cell flow direction and stylized speed. |
 | 17 | `SavageryStage` | Legible danger from geography. |
-| 18 | `LeylinesStage` | Nexus placement, MST web, aspects, magic fields. |
+| 18 | `MagicStage` | Mana hydrology: ley potential → flow accumulation → veins, nexus poles, channels, mana currents. |
 | 19 | `BiomeStage` | Soft biome weights from climate via `BIOME_GRID`. |
 
 The grid bake (`bake/`) and river stamp run during assembly, after the stages.
@@ -77,16 +77,22 @@ Per-tile product columns. Ranges are noted where meaningful.
 | `volcanism` | Present-day volcanic activity | [0, 1] f64 |
 | `is_volcano` | Tile is a volcano summit | bool |
 | `volcano_id` | `Volcano` id; -1 = none | int32 |
-| `magic_strength` | Leyline intensity | [0, 1] f64 |
+| `magic_strength` | Vein intensity (accumulated mana flow) | [0, 1] f64 |
 | `magic_channels` | corpus/mens/anima composition | (n, 3) f64 |
+| `magic_flow_u`, `magic_flow_v` | Unit mana-current direction | f64 |
+| `magic_flow_speed` | Stylized mana-current speed | [0, 1] f64 |
+| `is_vein` | Tile carries a leyline vein | bool |
+| `vein_id` | `Vein` id; -1 = none | int32 |
+| `is_nexus` | Tile is a nexus pole | bool |
+| `nexus_id` | `Nexus` id; -1 = none | int32 |
 | `biome_weights` | Soft biome distribution | (n, 49) f64 |
 | `region_id` | Named geographic `Region` id (landmass / ocean body) | int32 |
 | `biome_region_id` | Biome-region `Region` id (forest/plains/…); -1 = ocean/lake | int32 |
 
-Feature objects (`River`, `Lake`, `Landmass`, `LeylineNetwork`, `Volcano`,
+Feature objects (`River`, `Lake`, `Landmass`, `Vein`, `Nexus`, `Volcano`,
 `Region`) ship on `WorldData` in mesh-cell coordinates; per-tile lookup is the
-`river_id` / `lake_id` / `volcano_id` / `region_id` / `biome_region_id` columns
-above. Regions are layered: `region_id` is the wall-to-wall geographic-body
+`river_id` / `lake_id` / `vein_id` / `nexus_id` / `volcano_id` / `region_id` /
+`biome_region_id` columns above. Regions are layered: `region_id` is the wall-to-wall geographic-body
 partition, `biome_region_id` overlaps it on dry land; both index the one
 `regions` list.
 

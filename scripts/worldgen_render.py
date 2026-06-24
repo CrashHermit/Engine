@@ -53,6 +53,9 @@ class Layer(StrEnum):
     SAVAGERY = "savagery"
     MAGIC_STRENGTH = "magic_strength"
     MAGIC_CHANNELS = "magic_channels"
+    VEINS = "veins"
+    NEXUSES = "nexuses"
+    MAGIC_FLOW = "magic_flow"
     BIOMES = "biomes"
     REGIONS = "regions"
     BIOME_REGIONS = "biome_regions"
@@ -97,6 +100,9 @@ LAYER_GROUPS: tuple[tuple[str, tuple[Layer, ...]], ...] = (
             Layer.SAVAGERY,
             Layer.MAGIC_STRENGTH,
             Layer.MAGIC_CHANNELS,
+            Layer.VEINS,
+            Layer.NEXUSES,
+            Layer.MAGIC_FLOW,
             Layer.BIOMES,
         ),
     ),
@@ -130,6 +136,9 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.SAVAGERY: "Savagery",
     Layer.MAGIC_STRENGTH: "Magic strength",
     Layer.MAGIC_CHANNELS: "Magic channels",
+    Layer.VEINS: "Veins",
+    Layer.NEXUSES: "Nexuses",
+    Layer.MAGIC_FLOW: "Mana currents",
     Layer.BIOMES: "Biomes",
     Layer.REGIONS: "Regions",
     Layer.BIOME_REGIONS: "Biome regions",
@@ -153,8 +162,11 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.DISCHARGE: "Rain-weighted water flow (log). Brighter = more water. River valleys glow brighter in wet regions.",
     Layer.VOLCANISM: "Present-day volcanic activity [0,1]. Bright subduction arcs, hotspot trails, and mid-ocean ridges; dark elsewhere.",
     Layer.SAVAGERY: "Legible danger [0,1]. Bright deep interiors, deserts, frostbelt, and ranges; calm temperate coasts.",
-    Layer.MAGIC_STRENGTH: "Leyline intensity [0,1]. Bright web of lines between nexuses; dim floor elsewhere.",
+    Layer.MAGIC_STRENGTH: "Accumulated mana strength [0,1] (log). Bright dendritic veins along the ley potential; dim floor elsewhere.",
     Layer.MAGIC_CHANNELS: "Channel composition (corpus/mens/anima) mapped straight to RGB.",
+    Layer.VEINS: "Leyline veins: cells above the strength cutoff, colored by channel flavor; non-vein cells dark.",
+    Layer.NEXUSES: "Nexus poles over dim strength: bright cells are the ley-potential extrema (sources + sinks).",
+    Layer.MAGIC_FLOW: "Mana currents: hue = direction (atan2 v,u), brightness = speed. The flow that future magical weather rides.",
     Layer.BIOMES: "Dominant biome per tile (argmax of the soft weights); one hue per biome.",
     Layer.REGIONS: "Named geographic regions (the gameplay socket); one hue per region id (landmasses + ocean bodies).",
     Layer.BIOME_REGIONS: "Biome-regions: connected runs of one landscape category (forest/plains/...); one hue per region id, ocean/lake dark.",
@@ -359,6 +371,33 @@ def _tile_color(
             int(255 * float(channels[1]) / peak),
             int(255 * float(channels[2]) / peak),
         )
+
+    if layer == Layer.VEINS:
+        if not bool(grid.is_vein[tile_index]):
+            return (12, 12, 20)
+        channels = grid.magic_channels[tile_index]
+        s: float = max(0.0, min(1.0, float(grid.magic_strength[tile_index])))
+        peak = max(float(channels.max()), 1e-6)
+        scale: float = (0.4 + 0.6 * s) * 255.0 / peak
+        return (
+            int(scale * float(channels[0])),
+            int(scale * float(channels[1])),
+            int(scale * float(channels[2])),
+        )
+
+    if layer == Layer.NEXUSES:
+        if bool(grid.is_nexus[tile_index]):
+            return (255, 230, 120)
+        t: float = max(0.0, min(1.0, float(grid.magic_strength[tile_index])))
+        return _lerp_color(low=(12, 12, 20), high=(70, 55, 100), t=t)
+
+    if layer == Layer.MAGIC_FLOW:
+        fu: float = float(grid.magic_flow_u[tile_index])
+        fv: float = float(grid.magic_flow_v[tile_index])
+        spd: float = max(0.0, min(1.0, float(grid.magic_flow_speed[tile_index])))
+        hue: float = (math.atan2(fv, fu) / (2.0 * math.pi)) % 1.0
+        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.8, v=0.2 + 0.8 * spd)
+        return int(red * 255), int(green * 255), int(blue * 255)
 
     if layer == Layer.BIOMES:
         if not grid.is_land[tile_index]:
@@ -630,6 +669,25 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
         channels = grid.magic_channels.astype(np.float64)
         peak = np.maximum(channels.max(axis=1, keepdims=True), 1e-6)
         out = 255.0 * channels / peak
+
+    elif layer == Layer.VEINS:
+        channels = grid.magic_channels.astype(np.float64)
+        peak = np.maximum(channels.max(axis=1, keepdims=True), 1e-6)
+        strength = np.clip(grid.magic_strength.astype(np.float64), 0.0, 1.0)
+        scale = (0.4 + 0.6 * strength)[:, None] * 255.0 / peak
+        out = scale * channels
+        out[~grid.is_vein] = np.array((12, 12, 20))
+
+    elif layer == Layer.NEXUSES:
+        out = _lerp_arr((12, 12, 20), (70, 55, 100), grid.magic_strength.astype(np.float64))
+        out[grid.is_nexus] = np.array((255, 230, 120))
+
+    elif layer == Layer.MAGIC_FLOW:
+        u = grid.magic_flow_u.astype(np.float64)
+        v = grid.magic_flow_v.astype(np.float64)
+        spd = np.clip(grid.magic_flow_speed.astype(np.float64), 0.0, 1.0)
+        hue = (np.arctan2(v, u) / (2.0 * np.pi)) % 1.0
+        out = _hsv_to_rgb(hue, np.full(n, 0.8), 0.2 + 0.8 * spd)
 
     elif layer == Layer.BIOMES:
         col = np.argmax(grid.biome_weights, axis=1)

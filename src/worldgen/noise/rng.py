@@ -25,6 +25,10 @@ FIELD_NEXUS_SCORE: int = 8
 # 9 retired (was FIELD_VALENCE); kept as a gap so FIELD_MAGIC_FLOOR's offset is
 # unchanged and magic-floor noise stays bit-identical.
 FIELD_MAGIC_FLOOR: int = 10
+FIELD_LEY_MANTLE: int = 11
+FIELD_CHANNEL_CORPUS: int = 12
+FIELD_CHANNEL_MENS: int = 13
+FIELD_CHANNEL_ANIMA: int = 14
 
 
 def subseed(seed: int, name: str) -> int:

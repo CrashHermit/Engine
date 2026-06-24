@@ -1,7 +1,8 @@
 # Worldgen Magic Redesign — Mana Hydrology
 
-Status: **designed, not yet implemented.** Step 0 (drop the pure/corrupt valence
-axis) is already done in code; the rest of this document is the build plan.
+Status: **implemented.** Steps 0–7 are done; see "Implementation notes" at the
+bottom for where the build differs from this map. The body below is the design
+it was built to.
 
 Scope: `src/worldgen` magic only. Replaces the leyline/nexus **drawing** model
 (score nexuses → MST + loop edges → distance-falloff rasterize) with a
@@ -356,6 +357,37 @@ new fields, and add: `LEY_POTENTIAL` (debug, diverging palette), `VEINS`
 | 7 | Swap `WorldData`/pipeline/features; delete old drawing modules; presets, full tests, README/glossary pass. |
 
 Each step ends runnable and visible in the viewer.
+
+---
+
+## 7b. Implementation notes & divergences
+
+What shipped, and where it differs from the map above:
+
+- **One `MagicStage`, not two.** The doc allowed either; the build uses a single
+  `stages/magic.py` that calls the pure functions in sequence
+  (`potential → route → accumulate → channels → nexuses → veins → flow`). There is
+  no separate `MagicPotentialStage`.
+- **Pure functions** live in `magic/{potential,accumulate,channels,veins,nexuses,
+  flow}.py`; `magic/savagery.py` is untouched. The old drawing modules
+  (`magic/{nexus,web,aspects,fields}.py`, `stages/leylines.py`) are deleted.
+- **`combined_potential` is stashed on `ctx.magic_potential`** (a mesh
+  intermediate) so the nexus-polarity test (and a future viewer debug layer) can
+  read it. The `LEY_POTENTIAL` debug viewer layer itself was not added (it needs
+  mesh-intermediate baking); the shipped magic layers are `VEINS`, `NEXUSES`, and
+  `MAGIC_FLOW` (plus the existing strength/channels), all from grid fields.
+- **Routing base** = the lowest `base_fraction` percentile of `combined_potential`
+  (via `argpartition`), mirroring `DischargeStage` exactly, rather than
+  pre-identifying sink nexuses.
+- **Nexus extraction** finds strict local extrema, max-normalizes prominence to a
+  `[0,1]` charge, thresholds by `nexus_prominence`, and greedy-spaces by charge.
+  Counts scale with mesh resolution (≈tens at debug scale); tune via
+  `nexus_prominence` / `nexus_min_spacing`.
+- **Tests:** the "every vein terminates at a sink" invariant was replaced by two
+  more robust ones — `test_nexus_polarity_matches_extrema` (sources are strict
+  maxima of `magic_potential`, sinks strict minima) and `test_veins_are_high_strength`
+  (vein cells are exactly those above the percentile cutoff). 269 worldgen tests
+  pass; ruff clean.
 
 ---
 
