@@ -244,14 +244,19 @@ class LakeConfig:
 
 @dataclass
 class SavageryConfig:
-    """Legible danger as a weighted blend of named geography components."""
+    """Legible danger as a weighted blend of named geography components.
+
+    Savagery is *physical/geographic* danger only and is deliberately orthogonal
+    to magic: corruption lives in ``magic_valence``, not here.  A place can be
+    corrupt-but-calm or pure-but-savage; a future encounter/threat layer is what
+    composes the two axes (``total_threat = f(savagery, valence, ...)``).
+    """
 
     remoteness_weight: float = 0.35   # coast_distance, max-normalized
     harshness_weight: float = 0.30    # climate distance from comfort (0.55, 0.5)
     ruggedness_weight: float = 0.15   # slope, percentile-normalized
     noise_weight: float = 0.20        # FBm surprise
     volcanism_weight: float = 0.15    # live volcanic ground (arcs, ridges, hotspots) is dangerous
-    magic_weight: float = 0.0         # corrupt zones breed savagery (wire after step 5)
     comfort_temperature: float = 0.55  # Most-comfortable temperature (harshness origin)
     comfort_precipitation: float = 0.5  # Most-comfortable precipitation (harshness origin)
     ruggedness_percentile: float = 95.0  # Percentile that normalizes slope to 1.0
@@ -274,7 +279,6 @@ class LeylineConfig:
     lake_outlet_bonus: float = 0.8  # Score bonus for lake-outlet cells
     confluence_bonus: float = 0.9   # Score bonus for river confluences (>=2 inflows)
     volcano_bonus: float = 0.7   # Score bonus scaled by volcanism (volcanoes draw leylines)
-    ring_bonus: float = 0.5      # Score bonus near the hot/cold ring lines
     score_noise: float = 0.4     # FBm jitter so similar terrain still varies
     edge_k: int = 4              # Candidate edges: each nexus to its k nearest fellows
     extra_loops: int = 3         # Shortest rejected edges added back as loops
