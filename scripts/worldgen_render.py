@@ -40,6 +40,7 @@ class Layer(StrEnum):
     PLATES = "plates"
     UPLIFT = "uplift"
     DRAINAGE = "drainage"
+    LATITUDE = "latitude"
     INSOLATION = "insolation"
     TEMPERATURE = "temperature"
     SST = "sst"
@@ -54,26 +55,53 @@ class Layer(StrEnum):
     MAGIC_CHANNELS = "magic_channels"
     BIOMES = "biomes"
 
-LAYER_ORDER: tuple[Layer, ...] = (
-    Layer.ELEVATION,
-    Layer.LAND,
-    Layer.MESH,
-    Layer.PLATES,
-    Layer.UPLIFT,
-    Layer.DRAINAGE,
-    Layer.INSOLATION,
-    Layer.TEMPERATURE,
-    Layer.SST,
-    Layer.SST_ANOMALY,
-    Layer.WIND,
-    Layer.PRECIPITATION,
-    Layer.DISCHARGE,
-    Layer.VOLCANISM,
-    Layer.SAVAGERY,
-    Layer.MAGIC_STRENGTH,
-    Layer.MAGIC_VALENCE,
-    Layer.MAGIC_CHANNELS,
-    Layer.BIOMES,
+
+# Layers grouped by the pipeline phase that produces them — the single source of
+# truth for both ordering and the viewer's section headers.  ``LAYER_ORDER`` is
+# the flattened sequence (used for export, cycling, and indexing).
+LAYER_GROUPS: tuple[tuple[str, tuple[Layer, ...]], ...] = (
+    (
+        "Terrain",
+        (
+            Layer.ELEVATION,
+            Layer.LAND,
+            Layer.PLATES,
+            Layer.UPLIFT,
+            Layer.DRAINAGE,
+            Layer.VOLCANISM,
+            Layer.MESH,
+        ),
+    ),
+    (
+        "Climate",
+        (
+            Layer.LATITUDE,
+            Layer.INSOLATION,
+            Layer.TEMPERATURE,
+            Layer.SST,
+            Layer.SST_ANOMALY,
+            Layer.WIND,
+            Layer.PRECIPITATION,
+        ),
+    ),
+    (
+        "Water",
+        (Layer.DISCHARGE,),
+    ),
+    (
+        "Magic & Ecology",
+        (
+            Layer.SAVAGERY,
+            Layer.MAGIC_STRENGTH,
+            Layer.MAGIC_VALENCE,
+            Layer.MAGIC_CHANNELS,
+            Layer.BIOMES,
+        ),
+    ),
+)
+
+LAYER_ORDER: tuple[Layer, ...] = tuple(
+    layer for _group, layers in LAYER_GROUPS for layer in layers
 )
 
 LAYER_LABELS: dict[Layer, str] = {
@@ -83,6 +111,7 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.PLATES: "Plates",
     Layer.UPLIFT: "Uplift",
     Layer.DRAINAGE: "Drainage",
+    Layer.LATITUDE: "Latitude",
     Layer.INSOLATION: "Insolation",
     Layer.TEMPERATURE: "Temperature",
     Layer.SST: "Sea temperature",
@@ -105,6 +134,7 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.PLATES: "Tectonic plates; each color is a plate id (ragged Voronoi partition).",
     Layer.UPLIFT: "Base tectonic uplift before boundary belts. Bright = continental plates, dark = oceanic.",
     Layer.DRAINAGE: "Upstream drainage area per cell (log). Brighter = more flow. River valleys visible as bright veins.",
+    Layer.LATITUDE: "Signed latitude [-1,1]. Equator (pale) at map center; hemispheres diverge red (north) / blue (south) toward the shared polar seam.",
     Layer.INSOLATION: "Authored energy field. Bright = hot sunband, dark = cold frostbelt; wraps seamlessly.",
     Layer.TEMPERATURE: "Warmth [0,1]. Cold frostbelt and mountain peaks blue; hot sunband red; mild coasts.",
     Layer.SST: "Sea-surface temperature [0,1]. Wind-advected ocean currents: warm water carried poleward, cold equatorward; land shows its baseline.",
@@ -239,6 +269,13 @@ def _tile_color(
     if layer == Layer.INSOLATION:
         t: float = max(0.0, min(1.0, float(world.insolation[tile_index])))
         return _lerp_color(low=(20, 30, 90), high=(255, 240, 180), t=t)
+
+    if layer == Layer.LATITUDE:
+        lat: float = float(grid.latitude[tile_index])  # [-1, 1]
+        # Equator pale; north warms red, south cools blue (hemisphere structure).
+        if lat >= 0.0:
+            return _lerp_color(low=(235, 235, 235), high=(200, 60, 60), t=lat)
+        return _lerp_color(low=(235, 235, 235), high=(60, 90, 200), t=-lat)
 
     if layer == Layer.TEMPERATURE:
         t: float = max(0.0, min(1.0, float(grid.temperature[tile_index])))
@@ -455,6 +492,12 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
 
     elif layer == Layer.INSOLATION:
         out = _lerp_arr((20, 30, 90), (255, 240, 180), world.insolation)
+
+    elif layer == Layer.LATITUDE:
+        lat = grid.latitude.astype(np.float64)
+        north = _lerp_arr((235, 235, 235), (200, 60, 60), np.clip(lat, 0.0, 1.0))
+        south = _lerp_arr((235, 235, 235), (60, 90, 200), np.clip(-lat, 0.0, 1.0))
+        out = np.where((lat >= 0.0)[:, None], north, south)
 
     elif layer == Layer.TEMPERATURE:
         out = _lerp_arr((40, 80, 200), (220, 60, 50), grid.temperature.astype(np.float64))
