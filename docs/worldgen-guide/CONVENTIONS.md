@@ -287,11 +287,16 @@ Each new stage is appended in order to `_build_stages()` in
 canonical order grows like this across phases:
 
 ```
-Plates → PlatePersonality → BoundaryUplift → Erosion → Finalize
-       → Insolation → Temperature → Wind → Moisture          (Phase 2)
+Plates → PlatePersonality → BoundaryClassify → BoundaryUplift
+       → Vulcanism → Erosion → Finalize → Volcanoes           (Phase 1)
+       → Insolation → Wind → OceanCurrent → Temperature → Moisture   (Phase 2)
        → Discharge → Rivers → Lakes → Flow                    (Phase 3)
        → Savagery → Leylines → Biomes                         (Phase 4)
 ```
+
+(Phase 2 note: Wind precedes OceanCurrent and Temperature because the ocean
+current is wind-advected and coasts moderate toward the wind-borne sea
+temperature.)
 
 (`Mesh` is built by the pipeline itself before stages run; it is not a `Stage`.)
 
@@ -302,11 +307,15 @@ Plates → PlatePersonality → BoundaryUplift → Erosion → Finalize
 When a step says "add an `X` layer", edit `scripts/worldgen_render.py`:
 
 1. add `X = "x"` to the `Layer` `StrEnum`,
-2. add `Layer.X` to `LAYER_ORDER`,
-3. add a label to `LAYER_LABELS`,
-4. add a color branch in `rasterize_display` reading `grid.<field>`.
+2. add `Layer.X` to the appropriate phase group in `LAYER_GROUPS` (the single
+   source of truth; `LAYER_ORDER` is derived by flattening it),
+3. add a label to `LAYER_LABELS` and a blurb to `LAYER_DESCRIPTIONS`,
+4. add a color branch in **both** `_tile_color` (scalar, interactive canvas) and
+   `colorize` (vectorized, PNG export) reading `grid.<field>`.
 
-Layers read from `GridFields` arrays (baked), never from mesh objects.
+Layers read from `GridFields` arrays (baked), never from mesh objects. The
+viewer (`scripts/view_worldgen.py`) renders the groups as scrollable, labelled
+sections automatically — no per-layer keybinding to add.
 
 ---
 
