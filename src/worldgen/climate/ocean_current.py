@@ -24,6 +24,10 @@ See ``docs/worldgen-ocean-currents-plan.md``.
 
 import numpy as np
 
+from src.worldgen.climate.transport import (
+    aligned_edges,
+    normalize_per_receiver,
+)
 from src.worldgen.config.worldgen_config import OceanCurrentConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta
@@ -102,60 +106,26 @@ def _build_upwind_gather(
 ) -> tuple[Int32Array, Int32Array, Float64Array]:
     """Per-cell upwind gather over edges where both endpoints participate.
 
-    A cell takes the temperature of the water/air flowing *into* it, so for each
-    receiving cell we collect its upwind neighbors — those whose flow points
-    toward it (``dot(unit_offset(u->i), wind[u]) > 0``) — weighted by that
-    alignment and normalized to sum to one per receiver.
+    A cell takes the temperature of the water/air flowing *into* it, so each
+    wind-aligned edge (shared :func:`aligned_edges`) is normalized to sum to one
+    per *receiver* — the weighted mean of the cells flowing into it.
 
     Returns ``(src, dst, weight)`` flat edge arrays: edge ``k`` carries
     ``weight[k] * value[src[k]]`` into ``dst[k]``.  Cells that never appear in
     ``dst`` have no upwind source (they are flow origins / sinks).
     """
-    sites: Float64Array = geometry.sites
-    width: float = geometry.width
-    height: float = geometry.height
     n: int = geometry.n_cells
-
-    src: list[int] = []
-    dst: list[int] = []
-    raw: list[float] = []
-
-    for u in range(n):
-        if not participates[u]:
-            continue
-        wu: float = float(wind_u[u])
-        wv: float = float(wind_v[u])
-        if wu == 0.0 and wv == 0.0:
-            continue
-        for neighbor_id in geometry.neighbors_of(cell_id=u):
-            j: int = int(neighbor_id)
-            if not participates[j]:
-                continue
-            d: Float64Array = torus_delta(
-                a=sites[u], b=sites[j], width=width, height=height
-            )
-            dist: float = float(np.hypot(d[0], d[1]))
-            if dist == 0.0:
-                continue
-            align: float = (float(d[0]) * wu + float(d[1]) * wv) / dist
-            if align > 0.0:
-                src.append(u)
-                dst.append(j)
-                raw.append(align)
-
-    src_arr: Int32Array = np.array(src, dtype=np.int32)
-    dst_arr: Int32Array = np.array(dst, dtype=np.int32)
-    raw_arr: Float64Array = np.array(raw, dtype=np.float64)
-
-    if dst_arr.size == 0:
-        return src_arr, dst_arr, raw_arr
-
-    # Normalize weights per receiving cell so each gather is a weighted mean.
-    totals: Float64Array = np.asarray(
-        np.bincount(dst_arr, weights=raw_arr, minlength=n), dtype=np.float64
+    src: Int32Array
+    dst: Int32Array
+    align: Float64Array
+    src, dst, align = aligned_edges(
+        geometry=geometry,
+        wind_u=wind_u,
+        wind_v=wind_v,
+        participates=participates,
     )
-    weight: Float64Array = raw_arr / totals[dst_arr]
-    return src_arr, dst_arr, weight
+    weight: Float64Array = normalize_per_receiver(dst=dst, align=align, n=n)
+    return src, dst, weight
 
 
 def compute_sst(
