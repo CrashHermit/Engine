@@ -90,7 +90,7 @@ def build_structural_bones(
     bones = diffuse(
         geometry=geometry,
         field=bones,
-        strength=0.5,
+        strength=cfg.bones_smoothing_strength,
         passes=cfg.bones_smoothing,
     )
 

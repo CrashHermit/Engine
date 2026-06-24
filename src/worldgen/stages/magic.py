@@ -15,7 +15,11 @@ import numpy as np
 from src.worldgen.config.worldgen_config import MagicConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.features import Nexus, Vein
-from src.worldgen.magic.accumulate import accumulate_strength
+from src.worldgen.magic.accumulate import (
+    accumulate_strength,
+    compute_source_emission,
+    normalize_strength,
+)
 from src.worldgen.magic.channels import mix_channels, seed_source_channels
 from src.worldgen.magic.flow import compute_magic_flow
 from src.worldgen.magic.nexuses import extract_nexuses
@@ -91,21 +95,15 @@ class MagicStage:
         )
 
         # --- 3. emission → accumulation → log-normalized strength ---
-        source_emission: Float64Array = (
-            np.clip(ley_mantle - float(ley_mantle.mean()), 0.0, None)
-            + cfg.ambient_floor
+        source_emission: Float64Array = compute_source_emission(
+            ley_mantle=ley_mantle, cfg=cfg
         )
         accum: Float64Array = accumulate_strength(
             receiver=receiver,
             potential_routed=potential_routed,
             source_emission=source_emission,
         )
-        accum_max: float = float(accum.max())
-        magic_strength: Float64Array = (
-            np.clip(np.log1p(accum) / np.log1p(accum_max), 0.0, 1.0)
-            if accum_max > 0.0
-            else np.zeros(n, dtype=np.float64)
-        )
+        magic_strength: Float64Array = normalize_strength(accum=accum)
 
         # --- 4. channels: seed source flavor, mix downstream ---
         source_channels: Float64Array = seed_source_channels(

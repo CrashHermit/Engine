@@ -336,6 +336,7 @@ class MagicConfig:
     bones_ridge_weight: float = 0.5     # Ridge-line (high-slope) share of bones
     bones_ridge_percentile: float = 80.0  # Slope percentile that counts as a ridge
     bones_smoothing: int = 1            # Laplacian passes on the bones field (0 = off)
+    bones_smoothing_strength: float = 0.5  # Blend toward neighbour mean per bones pass
     ambient_floor: float = 0.05         # Uniform emission so dead zones still flicker
     base_fraction: float = 0.10         # Lowest-potential percentile used as routing base (sinks)
     channel_frequency: float = 1.5      # Per-channel noise freq (clustered corpus/mens/anima-lands)
