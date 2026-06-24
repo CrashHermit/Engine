@@ -175,13 +175,12 @@ fudges. Presets bias them later if desired (default: shared across presets).
 
 ## 6. Out of scope / future work
 
-- **Convergence-derived rain belts.** The deepest first-principles rain model
-  would derive the latitudinal rain structure from **wind convergence**
-  (`∇·wind < 0` → uplift → rain) instead of authored Gaussian ITCZ/temperate
-  bumps. That would make rain a *consequence* of the wind field and would let SST
-  bend rain **if** the SST→wind cycle were ever done. It is a rewrite of the
-  existing precip baseline, orthogonal to currents, and threatens the sanity
-  plan's hardest-won tuning — **logged here, not built now.**
+- **Convergence-derived rain belts.** ~~The deepest first-principles rain model
+  would derive the latitudinal rain structure from wind convergence...~~
+  **Implemented** — see `docs/worldgen-convergence-rain-plan.md`. Rain is now a
+  consequence of the wind field (signed convergence: rising air wets, subsidence
+  dries), the authored Gaussian belt is retired by default, and it sets up
+  seasonal ITCZ migration for the future weather layer.
 - **SST → wind feedback (monsoons / ITCZ migration).** The only physical way to
   bend the rain belt by SST. Requires a wind↔SST cycle (iterate to convergence),
   breaks the staged acyclic pipeline, and is weather, not climate. Deferred.

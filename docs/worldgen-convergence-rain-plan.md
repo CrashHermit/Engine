@@ -1,6 +1,7 @@
 # Worldgen Convergence Rain Plan
 
-Status: **design — not yet implemented.** A guide for replacing the authored
+Status: **implemented.** See "Implementation notes & divergences" at the bottom
+for what shipped and where it differed. A guide for replacing the authored
 Gaussian rain belts with rain derived from **wind convergence**, so the
 latitudinal wet/dry banding becomes a *consequence* of the prevailing wind field
 rather than a second, independently-tuned authoring of the same latitude
@@ -196,3 +197,40 @@ reason this plan is sequenced ahead of weather.
 The SST→wind coupling (deferred in the ocean-currents plan as a cycle/weather
 concern) also composes here: if the weather layer ever lets warm SST nudge the
 wind, the convergence — and therefore the rain — follows automatically.
+
+---
+
+## 8. Implementation notes & divergences
+
+What shipped, and where it diverged from the map above:
+
+- **The field became signed** (`convergence ∈ [-1, 1]`, a *vertical-motion*
+  field: + rising/converging, − sinking/diverging) rather than the planned
+  convergence-only `[0, 1]`. This was the key divergence and it was necessary:
+  strategy A's rising-only term could only *add* rain at the ITCZ, never
+  *suppress* it in the subtropics, so with the belt off the subtropics stayed
+  wet (even inverted on pangaea). Signing it lets one field carry the whole
+  banding — wet ITCZ/subpolar **and** dry subtropics — and made `belt_trim = 1`
+  (belt fully retired) viable, the plan's target end state.
+- **Convergence smoothing was added** (not in the original plan): the raw
+  neighbour-difference divergence is turbulence-noisy, and a climatic normal must
+  be smooth (decision-4 territory). Three `diffuse` passes (reusing the unified
+  field-ops primitive) drop the turbulence-scale noise and keep the
+  belt/terrain-scale signal. Without it the coarse-mesh `coasts > interiors`
+  invariant flickered; with it, that invariant holds at coarse and production
+  resolution.
+- **`belt_trim` ships at 1.0** (authored belt off by default); convergence
+  carries the banding. The `belt_*` and `belt_trim` knobs remain as the
+  documented fallback (decision 4). The belt-off biome mix is actually *healthier*
+  — forest/woodland/wetland-leaning rather than the belt-on `ice_sheet`/
+  `cold_desert` extremes.
+- **No new stage / no pipeline reorder**: convergence is computed inside
+  `WindStage` (it needs only the finished wind field), so the climate order is
+  unchanged. New config lives in `WindConfig` (`convergence_percentile`,
+  `convergence_smoothing_*`) and `MoistureConfig` (`convergence_weight`,
+  `belt_trim`).
+- **Validation:** `test_convergence.py` (divergence of uniform wind = 0; signed
+  bounded field; ITCZ convergence > subtropics; equator wetter than subtropics
+  with the belt off; determinism). Full worldgen suite green (243 tests);
+  plausibility biome bands and the within-band `coasts > interiors` invariant
+  hold.
