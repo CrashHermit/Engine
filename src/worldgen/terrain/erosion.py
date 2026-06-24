@@ -75,36 +75,3 @@ def stream_power_pass(
         z[cell_id] = (z_i + cfg.dt * u_i + f * z_r) / (1.0 + f)
 
 
-def diffuse(
-    *,
-    z: Float64Array,
-    geometry: MeshGeometry,
-    cfg: ErosionConfig,
-) -> None:
-    """Hillslope diffusion pass — smooths ridges by relaxing each
-    cell toward its neighbours' mean elevation.
-
-    Deltas are computed for every cell first, then applied in bulk,
-    so the pass is order-independent and deterministic.  Without
-    this, stream-power erosion would sharpen ridges into unreal
-    knife edges.
-
-    Args:
-        z: Per-cell ground elevation (mutated in place).
-        geometry: Torus mesh with CSR adjacency.
-        cfg: Erosion parameters (``diffusion``).
-    """
-    n: int = geometry.n_cells
-    deltas: Float64Array = np.empty(shape=n, dtype=np.float64)
-
-    for cell_id in range(n):
-        # Compute all deltas first — applying within the loop would
-        # make the result depend on cell order (determinism bug).
-        neighbours: Int32Array = geometry.neighbors_of(cell_id=cell_id)
-
-        mean: float = float(z[neighbours].mean())
-        delta: float = cfg.diffusion * (mean - float(z[cell_id]))
-        deltas[cell_id] = delta
-
-    # Apply all deltas in one shot (order-independent).
-    z += deltas

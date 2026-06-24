@@ -3,8 +3,9 @@
 import numpy as np
 
 from src.worldgen.config.worldgen_config import ErosionConfig
+from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
-from src.worldgen.terrain.erosion import diffuse, stream_power_pass
+from src.worldgen.terrain.erosion import stream_power_pass
 from src.worldgen.terrain.routing import (
     accumulate_drainage,
     compute_receivers,
@@ -196,7 +197,7 @@ def test_diffusion_no_nans() -> None:
     z: Float64Array = _make_terrain(rng, geometry)
     cfg: ErosionConfig = ErosionConfig(diffusion=0.1)
 
-    diffuse(z=z, geometry=geometry, cfg=cfg)
+    z = diffuse(geometry=geometry, field=z, strength=cfg.diffusion, passes=1)
 
     assert not np.any(np.isnan(z)), "diffusion produced NaN"
     assert not np.any(np.isinf(z)), "diffusion produced Inf"
@@ -210,7 +211,7 @@ def test_diffusion_blurs() -> None:
     cfg: ErosionConfig = ErosionConfig(diffusion=0.1)
 
     var_before: float = float(np.var(z))
-    diffuse(z=z, geometry=geometry, cfg=cfg)
+    z = diffuse(geometry=geometry, field=z, strength=cfg.diffusion, passes=1)
     var_after: float = float(np.var(z))
 
     assert var_after < var_before, (
@@ -231,8 +232,8 @@ def test_diffusion_order_independent() -> None:
 
     cfg: ErosionConfig = ErosionConfig(diffusion=0.1)
 
-    diffuse(z=z_a, geometry=geometry, cfg=cfg)
-    diffuse(z=z_b, geometry=geometry, cfg=cfg)
+    z_a = diffuse(geometry=geometry, field=z_a, strength=cfg.diffusion, passes=1)
+    z_b = diffuse(geometry=geometry, field=z_b, strength=cfg.diffusion, passes=1)
 
     np.testing.assert_array_equal(z_a, z_b)
 
@@ -246,8 +247,8 @@ def test_diffusion_deterministic() -> None:
 
     cfg: ErosionConfig = ErosionConfig(diffusion=0.1)
 
-    diffuse(z=z_a, geometry=geometry, cfg=cfg)
-    diffuse(z=z_b, geometry=geometry, cfg=cfg)
+    z_a = diffuse(geometry=geometry, field=z_a, strength=cfg.diffusion, passes=1)
+    z_b = diffuse(geometry=geometry, field=z_b, strength=cfg.diffusion, passes=1)
 
     assert np.array_equal(z_a, z_b)
 
@@ -286,7 +287,7 @@ def test_full_erosion_loop_stable() -> None:
             drainage=drainage, uplift=uplift,
             geometry=geometry, cfg=cfg,
         )
-        diffuse(z=z, geometry=geometry, cfg=cfg)
+        z = diffuse(geometry=geometry, field=z, strength=cfg.diffusion, passes=1)
 
     assert not np.any(np.isnan(z)), "Full erosion loop produced NaN"
     assert not np.any(np.isinf(z)), "Full erosion loop produced Inf"
@@ -314,7 +315,7 @@ def test_full_erosion_loop_creves_valleys() -> None:
             z=z, z_route=z_route, receiver=receiver,
             drainage=drainage, uplift=uplift, geometry=geometry, cfg=cfg,
         )
-        diffuse(z=z, geometry=geometry, cfg=cfg)
+        z = diffuse(geometry=geometry, field=z, strength=cfg.diffusion, passes=1)
 
     # The range should be meaningful (mountains and valleys).
     assert z.max() > z.min() + 0.1, "Erosion should produce meaningful relief"
