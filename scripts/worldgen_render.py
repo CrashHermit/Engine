@@ -364,12 +364,15 @@ def _tile_color(
 
     if layer == Layer.MAGIC_CHANNELS:
         channels = grid.magic_channels[tile_index]
-        # corpus/mens/anima -> RGB; scale so the dominant channel is vivid
-        peak: float = max(float(channels.max()), 1e-6)
+        # corpus/mens/anima -> RGB, amplifying the deviation from a balanced
+        # third so a faded (1/3,1/3,1/3) reads as mid-grey (not white) and the
+        # dominant channel pops.  gain controls how hard flavor is stretched.
+        third: float = 1.0 / 3.0
+        gain: float = 3.0
         return (
-            int(255 * float(channels[0]) / peak),
-            int(255 * float(channels[1]) / peak),
-            int(255 * float(channels[2]) / peak),
+            int(255 * max(0.0, min(1.0, 0.5 + (float(channels[0]) - third) * gain))),
+            int(255 * max(0.0, min(1.0, 0.5 + (float(channels[1]) - third) * gain))),
+            int(255 * max(0.0, min(1.0, 0.5 + (float(channels[2]) - third) * gain))),
         )
 
     if layer == Layer.VEINS:
@@ -395,8 +398,12 @@ def _tile_color(
         fu: float = float(grid.magic_flow_u[tile_index])
         fv: float = float(grid.magic_flow_v[tile_index])
         spd: float = max(0.0, min(1.0, float(grid.magic_flow_speed[tile_index])))
+        stren: float = max(0.0, min(1.0, float(grid.magic_strength[tile_index])))
         hue: float = (math.atan2(fv, fu) / (2.0 * math.pi)) % 1.0
-        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.8, v=0.2 + 0.8 * spd)
+        # Gate brightness by strength so weak-magic direction confetti goes dark
+        # and currents read along the bright veins.
+        val: float = (0.15 + 0.85 * spd) * stren
+        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.85, v=val)
         return int(red * 255), int(green * 255), int(blue * 255)
 
     if layer == Layer.BIOMES:
@@ -666,9 +673,10 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
         out = _lerp_arr((15, 15, 30), (180, 120, 255), grid.magic_strength.astype(np.float64))
 
     elif layer == Layer.MAGIC_CHANNELS:
+        # Amplify deviation from a balanced third (see _tile_color): faded magic
+        # reads mid-grey, the dominant channel pops.
         channels = grid.magic_channels.astype(np.float64)
-        peak = np.maximum(channels.max(axis=1, keepdims=True), 1e-6)
-        out = 255.0 * channels / peak
+        out = np.clip(0.5 + (channels - 1.0 / 3.0) * 3.0, 0.0, 1.0) * 255.0
 
     elif layer == Layer.VEINS:
         channels = grid.magic_channels.astype(np.float64)
@@ -686,8 +694,10 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
         u = grid.magic_flow_u.astype(np.float64)
         v = grid.magic_flow_v.astype(np.float64)
         spd = np.clip(grid.magic_flow_speed.astype(np.float64), 0.0, 1.0)
+        stren = np.clip(grid.magic_strength.astype(np.float64), 0.0, 1.0)
         hue = (np.arctan2(v, u) / (2.0 * np.pi)) % 1.0
-        out = _hsv_to_rgb(hue, np.full(n, 0.8), 0.2 + 0.8 * spd)
+        # Gate brightness by strength: weak-magic direction confetti → dark.
+        out = _hsv_to_rgb(hue, np.full(n, 0.85), (0.15 + 0.85 * spd) * stren)
 
     elif layer == Layer.BIOMES:
         col = np.argmax(grid.biome_weights, axis=1)
