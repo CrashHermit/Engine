@@ -1,7 +1,10 @@
 # Worldgen Precipitation Redesign — Design Plan
 
-*Status: design (not yet implemented). Implement on `claude/serene-fermi-2b2kts`.
-House style: `docs/worldgen-guide/CONVENTIONS.md`.*
+*Status: **implemented** on `claude/serene-fermi-2b2kts`. Tuned defaults:
+`continentality_reach=10` (map-width units, density-independent),
+`sst_source_min=0.30`, `belt_floor=0.12`, `precip_gamma=0.8`. Land-cover at the
+128 target spans Forest/Grassland/Desert/Shrubland/Tundra; `corr(coast, precip)`
+≈ −0.4 (was +0.00).*
 
 ## Problem
 

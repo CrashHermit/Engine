@@ -82,7 +82,7 @@ def test_itcz_emerges_from_convergence(preset: str, seed: int) -> None:
 
 @pytest.mark.parametrize(("preset", "seed"), CASES)
 def test_equator_wetter_than_subtropics(preset: str, seed: int) -> None:
-    """With the authored belt off by default, convergence still bands the rain."""
+    """The latitude belt makes equatorial land wetter than the subtropics."""
     world, _ctx = _world(preset, seed)
     g = world.grid
     land = g.is_land & ~g.is_lake
