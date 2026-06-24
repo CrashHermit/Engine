@@ -1,8 +1,9 @@
 # Worldgen Sanity Plan
 
-Status: **design — ready to implement.** A guide for rebuilding the parts of the
-worldgen pipeline that currently produce implausible output, so the world reads
-as a believable planet.
+Status: **implemented (Phases A–F).** See "Implementation notes & divergences"
+at the bottom for what shipped and where it differed from this map. A guide for
+rebuilding the parts of the worldgen pipeline that produced implausible output,
+so the world reads as a believable planet.
 
 Scope: `src/worldgen` only. The pipeline is fully implemented (Phases 0–5); this
 is a *correction* round, not a greenfield build. We keep the mesh/grid duality,
@@ -314,3 +315,45 @@ layer can derive seasonal/diurnal variation.
   consumer needs them.
 - **`service/world.py` / persistence** — already known-broken against the new
   worldgen shape; its own round.
+
+---
+
+## 11. Implementation notes & divergences
+
+What shipped (Phases A–F, each its own commit), and where it diverged from the
+map above:
+
+- **Climate (A)** landed as planned: a signed `latitude` field (equator at map
+  center, poles at the wrap seam) on both `MeshFields` and `GridFields`;
+  insolation from `|latitude|`; three-cell zonal wind (`-sin(3π|lat|)` zonal,
+  toward-equator/pole meridional); latitude rain belts (Gaussian ITCZ +
+  temperate bumps) × advection. Tuning to escape the over-arid regime
+  (`precip_gamma=0.6`, wider belts) was needed; HYPER_ARID land dropped ~55% →
+  ~24% and forests/jungles/savannas now dominate.
+- **Sea level (B)** uses an **Otsu** threshold over the elevation histogram (the
+  ocean/continent valley) as the datum — a clean, parameter-free choice not
+  named in the plan. Land fraction is emergent (earthlike 35–51%, pangaea
+  51–69%) inside a removable `land_fraction_clamp`.
+- **Volcanoes (C):** the iconic cull is a **global prominence cap**
+  (`max_volcanoes=18`) plus a lower `max_per_chain` and **dropping submarine-only
+  anchors** — count fell from 27–57 to ~18. Calderas/crater-lakes preserved.
+- **Rivers (D) — the big divergence.** The plan assumed rivers were clipped
+  stubs and prescribed headwater re-tracing. Investigation showed rivers were
+  **already continent-spanning at the production mesh** (earthlike 50/35/51,
+  pangaea 55/71 cells); the "stubs" were a **census artifact** of running at
+  3000 cells, too coarse for drainage to form. Lowering the discharge threshold
+  only spawned hundreds of tiny stub-rivers. So **no river-algorithm change was
+  made**; instead `CENSUS_CELLS` was raised (3000 → 6000) so the eyeball stops
+  lying, and the continent-spanning guarantee became a full-resolution
+  plausibility test.
+- **Magic (E):** `ring_bonus` and its insolation read are gone; nexuses key only
+  off terrain/hydrology/volcanism. **Savagery** turned out to never read
+  magic/valence at all — already orthogonal — so the dead `magic_weight` knob
+  was removed and the orthogonality documented. Biome `blend_sharpness`/
+  `smoothing` were left as-is (the climate rebuild restored variety on its own).
+- **Validation (F):** `test_plausibility.py` asserts the bands (land-in-clamp,
+  volcanoes 3–25, caldera minority, ≥6 distinct land biomes & none >45%, cold
+  land <55%, rivers present and ≥10 cells on a major landmass) across a few
+  representative worlds at an 8k mesh. The `test_coasts_wetter_than_interiors`
+  invariant was refined to compare *within* latitude bands (an equatorial
+  interior is legitimately wetter than its subtropical coasts).
