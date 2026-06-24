@@ -292,7 +292,12 @@ Plates → PlatePersonality → BoundaryClassify → BoundaryUplift
        → Insolation → Wind → OceanCurrent → Temperature → Moisture   (Phase 2)
        → Discharge → Rivers → Lakes → Flow                    (Phase 3)
        → Savagery → Leylines → Biomes                         (Phase 4)
+       → Regions                                              (Phase 5)
 ```
+
+(Phase 5 note: `Regions` is a derived labeling pass — it segments the finished
+fields into named, gameplay-addressable `Region` entities and writes the per-tile
+`region_id`. It runs last so future region kinds can consume any upstream field.)
 
 (Phase 2 note: Wind precedes OceanCurrent and Temperature because the ocean
 current is wind-advected and coasts moderate toward the wind-borne sea

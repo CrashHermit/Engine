@@ -2,7 +2,7 @@ from dataclasses import dataclass, replace
 
 from src.worldgen.config.worldgen_config import MeshConfig
 from src.worldgen.config.worldgen_config import WorldgenConfig
-from src.worldgen.features import Lake, LeylineNetwork, River, Volcano
+from src.worldgen.features import Lake, LeylineNetwork, Region, River, Volcano
 from src.worldgen.fields import MeshFields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed
@@ -25,6 +25,7 @@ class WorldContext:
     rivers: list[River] | None = None
     lakes: list[Lake] | None = None
     leylines: LeylineNetwork | None = None
+    regions: list[Region] | None = None
 
     def seed_for(self, name: str) -> int:
         """Deterministic sub-seed for a named stage or purpose."""
@@ -46,7 +47,15 @@ class WorldContext:
         cfg: WorldgenConfig = config or WorldgenConfig()
         mesh_width: float = cfg.mesh.width or float(size)
         mesh_height: float = cfg.mesh.height or float(size)
+        # cell_count == 0 means "derive from size": one cell per tile (parity),
+        # capped so large worlds stay within a sane gen-time budget.
+        resolved_cells: int = cfg.mesh.cell_count or min(
+            size * size, cfg.mesh.cell_count_cap
+        )
         resolved_mesh: MeshConfig = replace(
-            cfg.mesh, width=mesh_width, height=mesh_height
+            cfg.mesh,
+            cell_count=resolved_cells,
+            width=mesh_width,
+            height=mesh_height,
         )
         return replace(cfg, seed=seed, size=size, mesh=resolved_mesh)

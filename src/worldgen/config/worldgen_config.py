@@ -9,7 +9,14 @@ from dataclasses import dataclass, field
 class MeshConfig:
     """Parameters for the Voronoi mesh that underpins all simulation layers."""
 
-    cell_count: int = 12000  # Target number of Voronoi cells (sites)
+    # Target number of Voronoi cells (sites).  0 = derive from world size for
+    # ~1 cell per tile (parity), so the gameplay bake neither up- nor down-samples
+    # the mesh — tweak ``size`` and the mesh density follows.  Derived as
+    # ``min(size * size, cell_count_cap)``; set a positive value to pin it
+    # explicitly (tests do this for speed).  Note: changing this reseeds the
+    # geometry, so it is part of a world's identity — pin it per saved world.
+    cell_count: int = 0
+    cell_count_cap: int = 40000  # Ceiling on the size-derived count (gen time ~linear)
     lloyd_iterations: int = 2  # Lloyd relaxation passes for more uniform cell sizes
     width: float = 0.0  # Torus width in world units; 0 uses float(world size)
     height: float = 0.0  # Torus height in world units; 0 uses float(world size)
@@ -204,8 +211,11 @@ class WindConfig:
     deflection: float = 0.5            # How hard wind bends away from uphill (step 4)
     convergence_percentile: float = 90.0  # Wind-convergence percentile mapped to 1.0
     # Convergence is a climatic normal, so smooth the raw (turbulence-noisy)
-    # divergence into the belt/terrain-scale signal that bands the rain.
-    convergence_smoothing_passes: int = 3     # Laplacian passes on the convergence field
+    # divergence into the belt/terrain-scale signal that bands the rain.  This is
+    # stage one of the two-stage precipitation de-marbling (the precip output
+    # smooth is stage two): killing the convergence-door noise early, before it
+    # bakes into sharp wet/dry contrast, lets the final precip smooth stay gentle.
+    convergence_smoothing_passes: int = 6     # Laplacian passes on the convergence field
     convergence_smoothing_strength: float = 0.5  # Blend toward neighbour mean per pass
 
 # ---------------------------------------------------------------------------
@@ -215,48 +225,38 @@ class WindConfig:
 
 @dataclass
 class MoistureConfig:
-    """Ocean-sourced moisture advected downwind and rained out."""
+    """Geography-driven precipitation (a climate normal).
 
-    passes: int = 30           # Advection iterations
-    evaporation: float = 1.0   # Ocean moisture refill scale (x temperature)
-    base_rain: float = 0.035   # Fraction rained out per inland step (drying rate)
-    oro: float = 0.6           # Orographic (uphill) rainout multiplier
-    chill: float = 0.3         # Temperature-drop rainout multiplier
-    # Raw rain-out is heavily right-skewed: a wet coastal/orographic minority and
-    # a long dry interior. A percentile-and-clip scale piled the bulk on either
-    # the arid floor or (if lowered) the saturated ceiling. Instead, normalize
-    # with a smooth saturating curve ``p = raw / (raw + k)`` where ``k`` is this
-    # percentile of land rain-out: the anchor maps to 0.5, the dry interior stays
-    # dry, and the wet tail compresses smoothly toward 1 with no band pile-up.
-    # Higher percentile -> a drier world (the anchor sits at more rain).
-    wet_anchor_percentile: float = (
-        50.0  # Land rain-out percentile mapped to 0.5 by the saturating curve
-    )
-    precip_gamma: float = (
-        0.6  # Wetness curve after the belt combine; <1 lifts the arid majority
-    )
-    # --- latitude rain belts (Hadley structure) ---
-    # A latitudinal baseline multiplies the advected field: wet equatorial ITCZ,
-    # dry subtropical "horse latitude" deserts (~30 deg, the gap between bumps),
-    # wet temperate belt, dry poles.  Advection then modulates it (rain shadows,
-    # wet windward coasts) on top.  The baseline is primary: even with zero
-    # advection a cell keeps ``belt_adv_floor`` of its baseline (the ITCZ rains
-    # regardless), and advection lifts it to the full baseline.
+    precip = belt(latitude) x continentality(coast, sst) x orographic(wind, relief)
+    x (1 + perturb*convergence), composed multiplicatively, absolute-calibrated
+    with no floor.  See docs/worldgen-precipitation-redesign-plan.md.  This replaces
+    the old iterative moisture advection, which flooded the continent uniformly and
+    needed a precipitation floor to avoid all-desert interiors.
+    """
+
+    # --- latitude belt (Hadley structure): wet ITCZ + temperate, dry subtropics/poles ---
     belt_equator_weight: float = 1.0    # Equatorial (ITCZ) wet-bump weight
     belt_equator_sigma: float = 0.24    # Equatorial bump width in |latitude|
     belt_temperate_weight: float = 0.8  # Temperate wet-bump weight
     belt_temperate_center: float = 0.55  # Temperate bump center in |latitude|
     belt_temperate_sigma: float = 0.2   # Temperate bump width in |latitude|
-    belt_adv_floor: float = 0.35        # Baseline fraction kept at zero advection
-    # --- convergence-derived rain (see docs/worldgen-convergence-rain-plan.md) ---
-    # Wind convergence (rising air) rains moisture out alongside the orographic
-    # and chill terms, so the latitudinal banding emerges from where the wind
-    # actually converges rather than from the authored Gaussian belt.  ``belt_trim``
-    # blends the authored belt toward 1.0 (no banding of its own): 0 = full
-    # authored belt, 1 = belt removed and convergence carries the banding.
-    convergence_weight: float = 0.6     # Rainout per unit signed vertical motion
-    belt_trim: float = 1.0              # Blend authored belt toward 1.0 (0=full, 1=off);
-                                        # default off — convergence carries the banding
+    belt_floor: float = 0.12            # Faint precip even in the driest belts (never 0)
+    # --- continentality + ocean source (wet coasts, dry interiors; cold-current deserts) ---
+    continentality_reach: float = 10.0  # Inland reach to 1/e supply, in map-width units (density-independent)
+    sst_source_min: float = 0.30        # Driest coastal source (cold current) as a fraction of warm
+    sst_source_gamma: float = 1.0       # Shapes the warm->wet / cold->dry coastal response
+    # --- orographic: windward wet, leeward rain shadow (extended via upwind barrier) ---
+    orographic_lookahead: int = 6       # Cells scanned upwind along the wind for a barrier
+    shadow_strength: float = 3.0        # How hard an upwind barrier dries the lee (per elev unit)
+    windward_gain: float = 0.6          # Wet bonus per unit upslope into the wind
+    orographic_min: float = 0.2         # Floor on the orographic multiplier (never fully zero)
+    orographic_max: float = 1.6         # Cap on the windward wet bonus
+    # --- convergence perturbation (secondary; the belt carries the bands) ---
+    convergence_perturb: float = 0.25   # +/- fraction the smoothed convergence field nudges precip
+    # --- final shaping (absolute; no floor, no relative anchor) ---
+    precip_gamma: float = 0.8           # >1 sharpens arid, <1 lifts arid
+    smoothing_passes: int = 1           # Light Laplacian to clean mesh-walk artifacts (0 = off)
+    smoothing_strength: float = 0.5     # Blend toward neighbour mean per pass
 
 
 # ---------------------------------------------------------------------------
@@ -305,6 +305,12 @@ class SavageryConfig:
     comfort_precipitation: float = 0.5  # Most-comfortable precipitation (harshness origin)
     ruggedness_percentile: float = 95.0  # Percentile that normalizes slope to 1.0
     noise_frequency: float = 3.0      # Surprise-noise spatial frequency (relative to span)
+    # Savagery is consumed as discrete bands, so single-tile flips read as
+    # confetti; a light Laplacian smooth removes them while keeping the intentional
+    # noise-term texture.  Start light (2) and raise toward ~4 only if band-confetti
+    # persists.  (It also self-heals partly: harshness reads the now-smoothed precip.)
+    smoothing_passes: int = 2         # Laplacian passes on savagery (0 = off)
+    smoothing_strength: float = 0.5   # Blend toward neighbour mean per pass
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +403,10 @@ class BiomeConfig:
     # salt-and-pepper biomes (every band-boundary crossing flips). Diffusing the
     # soft membership over land neighbours first makes biomes coherent regions
     # with gradual ecotones, the way real biomes blend, without erasing variety.
-    smoothing_passes: int = 4      # Laplacian passes on the soft weights (0 = off)
+    # With precipitation now smoothed to a climatic normal upstream, this pass no
+    # longer has to fight marbling — its only remaining job is to soften the hard
+    # argmax band-edge line into a gradual ecotone, so it runs light.
+    smoothing_passes: int = 2      # Laplacian passes on the soft weights (0 = off)
     smoothing_strength: float = 0.5  # Blend toward the land-neighbour mean per pass [0,1]
 
 

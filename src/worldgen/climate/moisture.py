@@ -1,75 +1,27 @@
+"""Geography-driven precipitation — a climate normal.
+
+precip = belt(latitude) x continentality(coast_distance, sst) x orographic(wind,
+relief) x (1 + perturb * convergence), composed multiplicatively and
+absolute-calibrated (no floor, no relative anchor).  See
+``docs/worldgen-precipitation-redesign-plan.md``.
+
+This replaces the old iterative moisture advection, which fanned ocean moisture
+downwind and rained it out: that model flooded the continent to a near-uniform
+saturation (``corr(coast_distance, precip) = 0``) and needed a precipitation
+floor to avoid all-desert interiors.  Here dryness emerges from geography — deep
+interiors (continentality), subtropics/poles (belt), rain shadows (orographic),
+and cold-current coasts (sst) — so no floor is required.
+"""
+
+from collections import deque
+
 import numpy as np
 
-from src.worldgen.climate.transport import aligned_edges, normalize_per_source
+from src.worldgen.climate.transport import aligned_edges
 from src.worldgen.config.worldgen_config import MoistureConfig
+from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
-
-
-def build_downwind(
-    *,
-    geometry: MeshGeometry,
-    wind_u: Float64Array,
-    wind_v: Float64Array,
-) -> tuple[Int32Array, Int32Array, Float64Array]:
-    """Per-cell downwind neighbor *distribution*, as a CSR fan.
-
-    Moisture does not travel in a single-file line: it spreads to every
-    neighbor the wind pushes toward, weighted by how well that neighbor aligns
-    with the wind.  For each cell we keep all neighbors with a positive
-    alignment ``dot(unit_offset, wind)`` and normalize their weights to sum to
-    one; cells with no downwind-aligned neighbor (or zero wind) are sinks (an
-    empty row), where moisture rains out in place.
-
-    Returning a CSR triple (rather than one neighbor per cell) is what turns
-    the old 1-D moisture filaments — which left most interior cells bone dry —
-    into a spreading front that actually wets the land.
-
-    Args:
-        geometry: Torus mesh with CSR adjacency.
-        wind_u: Unit wind direction x-component (shape ``(n_cells,)``).
-        wind_v: Unit wind direction y-component (shape ``(n_cells,)``).
-
-    Returns:
-        ``(indptr, indices, weights)``: CSR arrays over downwind neighbors.
-        Row ``i`` spans ``indptr[i]:indptr[i + 1]``; ``indices`` holds the
-        neighbor cell ids and ``weights`` their normalized share (summing to
-        one per non-sink row).
-    """
-    n: int = geometry.n_cells
-    src: Int32Array
-    indices: Int32Array
-    align: Float64Array
-    src, indices, align = aligned_edges(
-        geometry=geometry, wind_u=wind_u, wind_v=wind_v
-    )
-    indptr: Int32Array
-    weights: Float64Array
-    indptr, weights = normalize_per_source(src=src, align=align, n=n)
-    return indptr, indices, weights
-
-
-def _downwind_means(
-    *,
-    src: Int32Array,
-    indices: Int32Array,
-    weights: Float64Array,
-    is_sink: BoolArray,
-    values: Float64Array,
-) -> Float64Array:
-    """Weighted mean of ``values`` over each cell's downwind neighbors.
-
-    Computed as a scatter-add: each CSR entry contributes
-    ``weight * value[target]`` back to its source cell.  Sink cells (no
-    downwind edges) keep their own value, so the orographic and chill terms see
-    no gradient there and contribute nothing.
-    """
-    n: int = values.shape[0]
-    out: Float64Array = np.bincount(
-        src, weights=weights * values[indices], minlength=n
-    )
-    out[is_sink] = values[is_sink]
-    return out
 
 
 def precip_belt(*, latitude: Float64Array, cfg: MoistureConfig) -> Float64Array:
@@ -98,135 +50,233 @@ def precip_belt(*, latitude: Float64Array, cfg: MoistureConfig) -> Float64Array:
     return np.clip(belt, 0.0, 1.0)
 
 
-def transport_moisture(
+def coastal_sst_source(
     *,
     geometry: MeshGeometry,
-    downwind: tuple[Int32Array, Int32Array, Float64Array],
-    temperature: Float64Array,
+    sst: Float64Array,
+    is_land: BoolArray,
+    cfg: MoistureConfig,
+) -> Float64Array:
+    """Ocean-temperature moisture-source strength per cell, in ``[sst_source_min, 1]``.
+
+    Each coastal land cell seeds the field with the mean sea-surface temperature
+    of its adjacent ocean cells; a multi-source BFS then carries that nearest-coast
+    value inland (the same shape as ``compute_coast_distance``).  Warm coastal
+    water (high sst) charges a wet source; cold currents / upwelling (low sst)
+    starve the coast — the cold-current coastal deserts (Atacama, Namib).
+
+    Args:
+        geometry: Torus mesh with CSR adjacency.
+        sst: Per-cell sea-surface temperature in ``[0, 1]``.
+        is_land: ``True`` for land cells.
+        cfg: Moisture config (``sst_source_min``, ``sst_source_gamma``).
+
+    Returns:
+        Per-cell source strength in ``[sst_source_min, 1]``.
+    """
+    n: int = geometry.n_cells
+    is_ocean: BoolArray = ~is_land
+    source: Float64Array = np.zeros(shape=n, dtype=np.float64)
+    seeded: BoolArray = np.zeros(shape=n, dtype=bool)
+    queue: deque[int] = deque()
+
+    cell_id: int
+    for cell_id in range(n):
+        if not is_land[cell_id]:
+            continue
+        ocean_sst: list[float] = []
+        for neighbor_id in geometry.neighbors_of(cell_id=cell_id):
+            neighbor_id = int(neighbor_id)
+            if is_ocean[neighbor_id]:
+                ocean_sst.append(float(sst[neighbor_id]))
+        if ocean_sst:
+            source[cell_id] = float(np.mean(ocean_sst))
+            seeded[cell_id] = True
+            queue.append(cell_id)
+
+    while queue:
+        current: int = queue.popleft()
+        for neighbor_id in geometry.neighbors_of(cell_id=current):
+            neighbor_id = int(neighbor_id)
+            if seeded[neighbor_id] or not is_land[neighbor_id]:
+                continue
+            seeded[neighbor_id] = True
+            source[neighbor_id] = source[current]
+            queue.append(neighbor_id)
+
+    # Ocean cells (and any land with no reachable coast) keep their own sst.
+    source[is_ocean] = sst[is_ocean]
+
+    clamped: Float64Array = np.clip(source, 0.0, 1.0) ** cfg.sst_source_gamma
+    return cfg.sst_source_min + (1.0 - cfg.sst_source_min) * clamped
+
+
+def continentality(
+    *,
+    geometry: MeshGeometry,
+    coast_distance: Float64Array,
+    sst_source: Float64Array,
+    cfg: MoistureConfig,
+) -> Float64Array:
+    """Moisture supply: coastal source strength decaying inland from the coast.
+
+    ``sst_source * exp(-coast_distance / reach)`` — wet near the coast (scaled by
+    how warm that coast's water is), drying exponentially into the interior.  The
+    wind asymmetry (which coast is wetter) is the orographic term's job, so this
+    term is deliberately isotropic.
+
+    ``coast_distance`` is in mesh *hops*, whose physical length shrinks as the mesh
+    densifies, so the reach is converted from physical map units to hops via the
+    cell spacing (``hops_per_unit = sqrt(n_cells) / width``).  This keeps the
+    continentality gradient the same regardless of ``cell_count`` (a world at the
+    coarse test mesh and at the dense gameplay mesh dry their interiors alike).
+
+    Args:
+        geometry: Torus mesh (for the hop↔distance conversion).
+        coast_distance: Per-cell hops from the coast (0 at coast and ocean).
+        sst_source: Per-cell coastal source strength (see ``coastal_sst_source``).
+        cfg: Moisture config (``continentality_reach``, in map-width units).
+
+    Returns:
+        Per-cell moisture supply in ``[0, 1]``.
+    """
+    hops_per_unit: float = float(np.sqrt(geometry.n_cells)) / geometry.width
+    reach_hops: float = max(cfg.continentality_reach * hops_per_unit, 1e-6)
+    return sst_source * np.exp(-coast_distance / reach_hops)
+
+
+def _best_upwind(
+    *,
+    geometry: MeshGeometry,
+    wind_u: Float64Array,
+    wind_v: Float64Array,
+) -> Int32Array:
+    """Per-cell neighbour the air arrived from (best-aligned with the upwind dir).
+
+    Reuses ``aligned_edges`` with the *negated* wind to weight each edge by how
+    well it points upwind; the highest-aligned neighbour per cell is the step the
+    orographic walk follows.  Calm cells (no upwind edge) point at themselves, so
+    the walk stalls and contributes no orographic effect.
+    """
+    n: int = geometry.n_cells
+    src: Int32Array
+    dst: Int32Array
+    align: Float64Array
+    src, dst, align = aligned_edges(geometry=geometry, wind_u=-wind_u, wind_v=-wind_v)
+
+    best: Int32Array = np.arange(n, dtype=np.int32)
+    if src.size:
+        # Sort edges by (src, align); writing dst in that order lets the highest
+        # alignment per source win (it is written last).
+        order: Int32Array = np.lexsort((align, src))
+        best[src[order]] = dst[order]
+    return best
+
+
+def orographic(
+    *,
+    geometry: MeshGeometry,
+    elevation: Float64Array,
+    wind_u: Float64Array,
+    wind_v: Float64Array,
+    cfg: MoistureConfig,
+) -> Float64Array:
+    """Windward-wet / leeward-dry multiplier with *extended* rain shadows.
+
+    For each cell, walk ``orographic_lookahead`` steps upwind and record the
+    tallest barrier crossed: a high upwind barrier means the air already dropped
+    its moisture climbing it, so the cell sits in an extended rain shadow.
+    Independently, air rising into the cell from a lower upwind neighbour
+    (windward upslope) earns a wet bonus.  Bounded to ``[orographic_min,
+    orographic_max]``.
+
+    Args:
+        geometry: Torus mesh with CSR adjacency.
+        elevation: Per-cell elevation in ``[-1, 1]``.
+        wind_u: Unit wind direction x-component.
+        wind_v: Unit wind direction y-component.
+        cfg: Moisture config (lookahead, shadow/windward strengths, bounds).
+
+    Returns:
+        Per-cell orographic multiplier in ``[orographic_min, orographic_max]``.
+    """
+    n: int = geometry.n_cells
+    best_up: Int32Array = _best_upwind(
+        geometry=geometry, wind_u=wind_u, wind_v=wind_v
+    )
+
+    # Windward bonus: cell higher than the air's immediate upwind origin = rising.
+    upslope: Float64Array = np.maximum(0.0, elevation - elevation[best_up])
+    windward: Float64Array = 1.0 + cfg.windward_gain * upslope
+
+    # Extended shadow: tallest barrier crossed walking upwind.
+    current: Int32Array = np.arange(n, dtype=np.int32)
+    max_barrier: Float64Array = elevation.copy()
+    _step: int
+    for _step in range(cfg.orographic_lookahead):
+        current = best_up[current]
+        max_barrier = np.maximum(max_barrier, elevation[current])
+    shadow_drop: Float64Array = np.maximum(0.0, max_barrier - elevation)
+    shadow: Float64Array = np.exp(-cfg.shadow_strength * shadow_drop)
+
+    return np.clip(windward * shadow, cfg.orographic_min, cfg.orographic_max)
+
+
+def compute_precipitation(
+    *,
+    geometry: MeshGeometry,
+    latitude: Float64Array,
+    coast_distance: Float64Array,
     sst: Float64Array,
     elevation: Float64Array,
     is_land: BoolArray,
-    latitude: Float64Array,
+    wind_u: Float64Array,
+    wind_v: Float64Array,
     convergence: Float64Array,
     cfg: MoistureConfig,
 ) -> Float64Array:
-    """Advect ocean-sourced moisture downwind, raining it out.
+    """Compose the geography-driven precipitation climate normal in ``[0, 1]``.
 
-    Double-buffered advection loop:
-      1. Refill ocean moisture as ``evaporation × sst`` (Clausius-Clapeyron:
-         warm water charges the air with more vapor, so warm currents feed wet
-         downwind coasts and cold currents starve them).
-      2. For each cell, compute ``rainout`` from base drying, orographic
-         forcing (rising into higher downwind terrain), and temperature chill
-         (cooling toward the downwind cells).
-      3. Accumulate rain into ``precipitation[i]``; the remainder fans out to
-         the downwind neighbors by their weights.
-      4. Swap buffers and repeat for ``cfg.passes`` iterations.
-
-    After the loop, precipitation is normalized with a smooth saturating curve
-    ``p = raw / (raw + k)``, where ``k`` is the ``cfg.wet_anchor_percentile`` of
-    *land* rain-out (land is what biomes read).  The anchor maps to 0.5, the dry
-    interior stays dry, and the heavy wet tail compresses smoothly toward 1 — so
-    neither the arid floor nor the wet ceiling piles up the way a
-    percentile-and-clip scale did.
-
-    Args:
-        geometry: Torus mesh (used for cell count).
-        downwind: CSR ``(indptr, indices, weights)`` from :func:`build_downwind`.
-        temperature: Per-cell temperature in ``[0, 1]`` (drives the chill term).
-        sst: Per-cell sea-surface temperature in ``[0, 1]`` (drives ocean
-            evaporation; warm currents evaporate more).
-        elevation: Per-cell elevation in ``[-1, 1]``; 0 = sea level.
-        is_land: ``True`` for land cells, ``False`` for ocean.
-        cfg: Moisture transport parameters.
+    Multiplicative composition (any single dry factor gates the cell): the latitude
+    belt sets the planetary bands, continentality x ocean source set wet coasts /
+    dry interiors / cold-current deserts, orographic adds windward rain and
+    leeward shadows, and the smoothed convergence field perturbs it.  Absolute —
+    clipped to ``[0, 1]`` with an optional gamma, no floor and no relative anchor,
+    so worlds keep their individual wet/dry character.
 
     Returns:
         ``precipitation`` array in ``[0, 1]``.
     """
-    n: int = geometry.n_cells
-    indptr, indices, weights = downwind
-
-    # Flatten the CSR for vectorized passes: ``src`` is the source cell of each
-    # downwind edge; ``is_sink`` marks cells with no downwind edge.
-    row_len: Int32Array = np.diff(indptr)
-    src: Int32Array = np.repeat(np.arange(n, dtype=np.int32), row_len)
-    is_sink: BoolArray = row_len == 0
-
-    # Per-cell rainout is fixed across passes (wind/terrain/temperature don't
-    # change), so derive its orographic and chill terms once from the
-    # downwind-weighted means.
-    dw_elev: Float64Array = _downwind_means(
-        src=src, indices=indices, weights=weights, is_sink=is_sink, values=elevation
-    )
-    dw_temp: Float64Array = _downwind_means(
-        src=src, indices=indices, weights=weights, is_sink=is_sink, values=temperature
-    )
-    uphill: Float64Array = np.maximum(0.0, dw_elev - elevation)
-    chill: Float64Array = np.maximum(0.0, temperature - dw_temp)
-    # Convergence (rising air) rains moisture out alongside orographic and chill
-    # uplift — the term that makes the latitudinal banding emerge from the wind
-    # field instead of an authored belt.
-    rainout: Float64Array = np.clip(
-        cfg.base_rain
-        + cfg.oro * uphill
-        + cfg.chill * chill
-        + cfg.convergence_weight * convergence,
-        0.0,
-        1.0,
-    )
-    # Sinks rain out everything they hold.
-    rainout[is_sink] = 1.0
-
-    moisture: Float64Array = np.zeros(shape=n, dtype=np.float64)
-    precipitation: Float64Array = np.zeros(shape=n, dtype=np.float64)
-    ocean_mask: BoolArray = ~is_land
-
-    for _ in range(cfg.passes):
-        # Refill ocean moisture at the start of every pass (evaporation ∝ SST).
-        moisture[ocean_mask] = cfg.evaporation * sst[ocean_mask]
-
-        rain: Float64Array = moisture * rainout
-        precipitation += rain
-
-        # Fan the remainder to downwind neighbors: each edge carries
-        # carry[src] * weight to its target cell.
-        carry: Float64Array = moisture - rain
-        moisture = np.bincount(
-            indices, weights=carry[src] * weights, minlength=n
-        )
-
-    # Saturating normalization: ``p = raw / (raw + k)``, ``k`` = a land-rain-out
-    # percentile.  The anchor maps to 0.5; the dry interior stays dry and the
-    # heavy wet tail compresses smoothly toward 1, so neither the arid floor nor
-    # the wet ceiling piles up (a percentile-and-clip scale did one or the
-    # other).  Computed on *land* so a few drenched coastal cells don't set it.
-    land_precip: Float64Array = precipitation[is_land]
-    anchor: float = (
-        float(np.percentile(a=land_precip, q=cfg.wet_anchor_percentile))
-        if land_precip.size
-        else 0.0
-    )
-    if anchor > 0.0:
-        precipitation = precipitation / (precipitation + anchor)
-    advected: Float64Array = np.clip(precipitation, a_min=0.0, a_max=1.0)
-
-    # --- latitude rain belts (primary) modulated by advection (local detail) ---
-    # ``precip = belt * (adv_floor + (1 - adv_floor) * advected)``: the belt sets
-    # the wet/dry banding (wet ITCZ, dry subtropics, wet temperate, dry poles),
-    # and advection lifts a cell from ``adv_floor`` of its baseline (deep, dry
-    # interior — but the ITCZ still rains) up to the full baseline (wet windward
-    # coast).  Multiplicative, so a dry belt OR a rain shadow both dry a cell:
-    # subtropical coasts stay desert, temperate lee stays dry.
-    # ``belt_trim`` blends the authored belt toward 1.0 (no banding of its own),
-    # ceding the latitudinal banding to the convergence rainout above.
     belt: Float64Array = precip_belt(latitude=latitude, cfg=cfg)
-    belt = belt + cfg.belt_trim * (1.0 - belt)
-    modulation: Float64Array = cfg.belt_adv_floor + (
-        1.0 - cfg.belt_adv_floor
-    ) * advected
-    precipitation = np.clip(belt * modulation, a_min=0.0, a_max=1.0)
+    belt = cfg.belt_floor + (1.0 - cfg.belt_floor) * belt
 
+    source: Float64Array = coastal_sst_source(
+        geometry=geometry, sst=sst, is_land=is_land, cfg=cfg
+    )
+    supply: Float64Array = continentality(
+        geometry=geometry, coast_distance=coast_distance, sst_source=source, cfg=cfg
+    )
+    oro: Float64Array = orographic(
+        geometry=geometry,
+        elevation=elevation,
+        wind_u=wind_u,
+        wind_v=wind_v,
+        cfg=cfg,
+    )
+    perturb: Float64Array = 1.0 + cfg.convergence_perturb * convergence
+
+    precip: Float64Array = belt * supply * oro * perturb
     if cfg.precip_gamma != 1.0:
-        precipitation = precipitation**cfg.precip_gamma
+        precip = np.clip(precip, a_min=0.0, a_max=None) ** cfg.precip_gamma
+    precip = np.clip(precip, a_min=0.0, a_max=1.0)
 
-    return precipitation
+    # A light pass cleans directed-walk artifacts on the irregular mesh; the field
+    # is otherwise smooth by construction (this is a climate normal, not weather).
+    if cfg.smoothing_passes > 0 and cfg.smoothing_strength > 0.0:
+        precip = diffuse(
+            geometry=geometry,
+            field=precip,
+            strength=cfg.smoothing_strength,
+            passes=cfg.smoothing_passes,
+        )
+    return precip

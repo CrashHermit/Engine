@@ -9,6 +9,7 @@ pipeline hands to the persistence layer.
 from dataclasses import dataclass
 from enum import IntEnum
 
+from src.core.model.environment.ecology.biome import BiomeEnum
 from src.worldgen.config.worldgen_config import WorldgenConfig
 from src.worldgen.fields import GridFields
 from src.worldgen.types import Float64Array
@@ -107,6 +108,46 @@ class Landmass:
     landmass_class: int  #: 1 = island, 2 = landmass, 3 = major.
 
 
+class RegionKind(IntEnum):
+    """What a ``Region`` is — the taxonomy gameplay hooks (quests, lore) key on.
+
+    A small, *extensible* enum: the socket ships the geography-stable kinds whose
+    inputs are settled (land bodies, ocean bodies).  Ecology- and weather-derived
+    kinds (forests, plains, marine biomes, ...) slot in later as their fields
+    mature, without changing the contract.  Region kinds are allowed to overlap;
+    the per-tile ``region_id`` carries the *primary* (geographic-body) partition.
+    """
+
+    LANDMASS = 0  #: A connected body of dry land (continent / island).
+    OCEAN = 1  #: A connected body of open sea (ocean / sea / gulf).
+    # Biome-regions: connected runs of one landscape category, overlapping the
+    # land bodies above (per-tile lookup is the separate ``biome_region_id``).
+    FOREST = 2  #: Forests, taigas, woodlands, rainforests, jungles.
+    GRASSLAND = 3  #: Prairies, steppes, savannas — open "plains".
+    DESERT = 4  #: Hot/cold deserts, badlands, wastelands.
+    TUNDRA = 5  #: Frigid barrens, ice, polar desert.
+    WETLAND = 6  #: Bogs, mires, marshes, swamps, mangroves.
+    SHRUBLAND = 7  #: Scrub, chaparral, sagebrush, thorn.
+
+
+@dataclass
+class Region:
+    """A named, gameplay-addressable area derived from geography.
+
+    The "socket" entity: a stable handle (``id`` ↔ per-tile ``region_id``) that
+    quests, cities, and borders reference, independent of how the underlying
+    fields churn.  Region extraction is a cheap derived pass over the mesh, so
+    new kinds and richer naming can be added without touching the contract.
+    """
+
+    id: int  #: Global region id (0-based); matches the per-cell/per-tile id columns.
+    kind: RegionKind  #: What this region is (see :class:`RegionKind`).
+    name: str  #: Display name (deterministic from seed + id; a placeholder namer for now).
+    cell_count: int  #: Number of mesh cells in the region.
+    centroid: tuple[float, float]  #: Torus-aware center in world units (wraps correctly).
+    dominant_biome: BiomeEnum | None = None  #: Most common biome (biome-regions only; else None).
+
+
 @dataclass
 class WorldData:
     """The final worldgen product handed to persistence.
@@ -127,3 +168,4 @@ class WorldData:
     leylines: LeylineNetwork  #: The magic web.
     landmasses: list[Landmass]  #: Connected land components (ocean excluded).
     volcanoes: list[Volcano]  #: Discrete volcanoes in mesh-cell coordinates.
+    regions: list[Region]  #: Named geographic regions; per-tile lookup is ``grid.region_id``.

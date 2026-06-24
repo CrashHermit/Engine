@@ -81,11 +81,15 @@ Per-tile product columns. Ranges are noted where meaningful.
 | `magic_valence` | Corrupt..pure | [-1, 1] f64 |
 | `magic_channels` | corpus/mens/anima composition | (n, 3) f64 |
 | `biome_weights` | Soft biome distribution | (n, 49) f64 |
-| `region_id` | Persistence socket (all -1 for now) | int32 |
+| `region_id` | Named geographic `Region` id (landmass / ocean body) | int32 |
+| `biome_region_id` | Biome-region `Region` id (forest/plains/…); -1 = ocean/lake | int32 |
 
-Feature objects (`River`, `Lake`, `Landmass`, `LeylineNetwork`, `Volcano`) ship
-on `WorldData` in mesh-cell coordinates; per-tile lookup is the `river_id` /
-`lake_id` / `volcano_id` columns above.
+Feature objects (`River`, `Lake`, `Landmass`, `LeylineNetwork`, `Volcano`,
+`Region`) ship on `WorldData` in mesh-cell coordinates; per-tile lookup is the
+`river_id` / `lake_id` / `volcano_id` / `region_id` / `biome_region_id` columns
+above. Regions are layered: `region_id` is the wall-to-wall geographic-body
+partition, `biome_region_id` overlaps it on dry land; both index the one
+`regions` list.
 
 ## How to run
 

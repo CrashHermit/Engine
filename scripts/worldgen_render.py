@@ -55,6 +55,8 @@ class Layer(StrEnum):
     MAGIC_VALENCE = "magic_valence"
     MAGIC_CHANNELS = "magic_channels"
     BIOMES = "biomes"
+    REGIONS = "regions"
+    BIOME_REGIONS = "biome_regions"
 
 
 # Layers grouped by the pipeline phase that produces them — the single source of
@@ -100,6 +102,10 @@ LAYER_GROUPS: tuple[tuple[str, tuple[Layer, ...]], ...] = (
             Layer.BIOMES,
         ),
     ),
+    (
+        "Regions",
+        (Layer.REGIONS, Layer.BIOME_REGIONS),
+    ),
 )
 
 LAYER_ORDER: tuple[Layer, ...] = tuple(
@@ -128,6 +134,8 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.MAGIC_VALENCE: "Magic valence",
     Layer.MAGIC_CHANNELS: "Magic channels",
     Layer.BIOMES: "Biomes",
+    Layer.REGIONS: "Regions",
+    Layer.BIOME_REGIONS: "Biome regions",
 }
 
 LAYER_DESCRIPTIONS: dict[Layer, str] = {
@@ -152,6 +160,8 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.MAGIC_VALENCE: "Magic valence [-1,1]. Diverging palette: corrupt (magenta) vs pure (cyan); neutral grey off the web.",
     Layer.MAGIC_CHANNELS: "Channel composition (corpus/mens/anima) mapped straight to RGB.",
     Layer.BIOMES: "Dominant biome per tile (argmax of the soft weights); one hue per biome.",
+    Layer.REGIONS: "Named geographic regions (the gameplay socket); one hue per region id (landmasses + ocean bodies).",
+    Layer.BIOME_REGIONS: "Biome-regions: connected runs of one landscape category (forest/plains/...); one hue per region id, ocean/lake dark.",
 }
 
 
@@ -241,7 +251,7 @@ def _tile_color(
 
     if layer == Layer.ELEVATION:
         t: float = (float(grid.elevation[tile_index]) - z_min) / z_span
-        return _lerp_color(low=LAND_COLOR, high=(220, 210, 180), t=t)
+        return _hypsometric_color(t)
 
     if layer == Layer.PLATES:
         plate_id: int = int(grid.plate_id[tile_index])
@@ -365,8 +375,23 @@ def _tile_color(
         if not grid.is_land[tile_index]:
             return WATER_COLOR
         biome_col: int = int(np.argmax(grid.biome_weights[tile_index]))
-        hue: float = (biome_col * 0.6180339887) % 1.0
-        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.55, v=0.9)
+        red, green, blue = _biome_palette()[biome_col]
+        return int(red), int(green), int(blue)
+
+    if layer == Layer.REGIONS:
+        region: int = int(grid.region_id[tile_index])
+        if region < 0:
+            return (20, 20, 25)
+        hue: float = (region * 0.6180339887) % 1.0
+        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.65, v=0.9)
+        return int(red * 255), int(green * 255), int(blue * 255)
+
+    if layer == Layer.BIOME_REGIONS:
+        biome_region: int = int(grid.biome_region_id[tile_index])
+        if biome_region < 0:
+            return (20, 30, 45)
+        hue: float = (biome_region * 0.6180339887) % 1.0
+        red, green, blue = colorsys.hsv_to_rgb(h=hue, s=0.6, v=0.92)
         return int(red * 255), int(green * 255), int(blue * 255)
 
     return (0, 0, 0)
@@ -391,9 +416,12 @@ def rasterize_display(
     display_size = max(1, min(display_size, world_size * 8))
     grid: GridFields = world.grid
     pixels: dict[RGB, list[tuple[int, int]]] = {}
-    z_min: float = float(grid.elevation.min())
-    z_max: float = float(grid.elevation.max())
-    z_span: float = z_max - z_min if z_max > z_min else 1.0
+    # Land-normalized elevation (0..land-max) so the hypsometric tint resolves real
+    # relief instead of squashing all land into the top of the ramp.
+    land_z = grid.elevation[grid.is_land.astype(bool)]
+    z_min: float = 0.0
+    z_max: float = float(land_z.max()) if land_z.size else 1.0
+    z_span: float = z_max if z_max > 0.0 else 1.0
 
     display_y: int
     display_x: int
@@ -461,6 +489,66 @@ def _hsv_to_rgb(
 _PHI: float = 0.6180339887
 
 
+# Hypsometric land tint (green lowland → yellow → brown upland → white peak),
+# normalized over 0..land-max so real relief reads instead of squashing land into
+# the top of a single ramp (the relief is in the data; only the old colormap hid it).
+_HYPS_STOPS: Float64Array = np.array([0.0, 0.35, 0.6, 0.85, 1.0])
+_HYPS_COLORS: Float64Array = np.array(
+    [
+        [60, 130, 60],     # low green
+        [180, 190, 90],    # yellow-green
+        [150, 110, 70],    # brown upland
+        [120, 100, 95],    # dark rocky
+        [245, 245, 245],   # snow peak
+    ],
+    dtype=np.float64,
+)
+
+
+def _hypsometric(t: Float64Array) -> Float64Array:
+    """Map land elevation fraction ``t`` in [0, 1] to an (n, 3) hypsometric tint."""
+    t = np.clip(t, 0.0, 1.0)
+    return np.stack(
+        [np.interp(t, _HYPS_STOPS, _HYPS_COLORS[:, c]) for c in range(3)], axis=1
+    )
+
+
+def _hypsometric_color(t: float) -> RGB:
+    """Scalar hypsometric tint for the interactive per-tile path."""
+    tc: float = max(0.0, min(1.0, t))
+    return (
+        int(np.interp(tc, _HYPS_STOPS, _HYPS_COLORS[:, 0])),
+        int(np.interp(tc, _HYPS_STOPS, _HYPS_COLORS[:, 1])),
+        int(np.interp(tc, _HYPS_STOPS, _HYPS_COLORS[:, 2])),
+    )
+
+
+# 2-D climate colormap for biomes: each biome is colored by its (temperature,
+# precipitation) center so climatically-adjacent biomes are perceptually adjacent
+# and the map reads as a smooth climate field — an honest view of coherence,
+# versus golden-ratio hues that paint real ecotones as collisions.  Bilinear blend
+# over four climate-corner colors; viewer-only (these hues don't ship).
+_BIOME_C00: Float64Array = np.array([210, 215, 205], dtype=np.float64)  # cold + dry
+_BIOME_C10: Float64Array = np.array([225, 200, 120], dtype=np.float64)  # hot + dry
+_BIOME_C01: Float64Array = np.array([70, 110, 120], dtype=np.float64)   # cold + wet
+_BIOME_C11: Float64Array = np.array([25, 115, 45], dtype=np.float64)    # hot + wet
+
+
+def _biome_palette() -> Float64Array:
+    """Per-biome-column RGB palette from climate centers; shape ``(n_biomes, 3)``."""
+    from src.worldgen.ecology.biomes import derive_centers
+
+    center_temp, center_precip, _order = derive_centers()
+    t: Float64Array = center_temp[:, None]
+    p: Float64Array = center_precip[:, None]
+    return (
+        (1.0 - t) * (1.0 - p) * _BIOME_C00
+        + t * (1.0 - p) * _BIOME_C10
+        + (1.0 - t) * p * _BIOME_C01
+        + t * p * _BIOME_C11
+    )
+
+
 def colorize(world: Phase0World, layer: Layer) -> Float64Array:
     """Color every tile for ``layer`` at once; returns (n, 3) uint8, flat tile order."""
     grid: GridFields = world.grid
@@ -474,9 +562,10 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
 
     elif layer == Layer.ELEVATION:
         z = grid.elevation.astype(np.float64)
-        z_min, z_max = float(z.min()), float(z.max())
-        span = z_max - z_min if z_max > z_min else 1.0
-        out = _lerp_arr(LAND_COLOR, (220, 210, 180), (z - z_min) / span)
+        land_z = z[is_land]
+        z_max = float(land_z.max()) if land_z.size else 1.0
+        span = z_max if z_max > 0.0 else 1.0
+        out = _hypsometric(z / span)
         out[~is_land] = np.array(WATER_COLOR)
 
     elif layer in (Layer.PLATES, Layer.MESH):
@@ -560,10 +649,21 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
         out = 255.0 * channels / peak
 
     elif layer == Layer.BIOMES:
-        col = np.argmax(grid.biome_weights, axis=1).astype(np.float64)
-        hue = (col * _PHI) % 1.0
-        out = _hsv_to_rgb(hue, np.full(n, 0.55), np.full(n, 0.9))
+        col = np.argmax(grid.biome_weights, axis=1)
+        out = _biome_palette()[col]
         out[~is_land] = np.array(WATER_COLOR)
+
+    elif layer == Layer.REGIONS:
+        ids = grid.region_id.astype(np.float64)
+        hue = (ids * _PHI) % 1.0
+        out = _hsv_to_rgb(hue, np.full(n, 0.65), np.full(n, 0.9))
+        out[ids < 0.0] = np.array((20, 20, 25))  # unassigned (should not occur)
+
+    elif layer == Layer.BIOME_REGIONS:
+        ids = grid.biome_region_id.astype(np.float64)
+        hue = (ids * _PHI) % 1.0
+        out = _hsv_to_rgb(hue, np.full(n, 0.6), np.full(n, 0.92))
+        out[ids < 0.0] = np.array((20, 30, 45))  # ocean / lake (no biome-region)
 
     return np.clip(out, 0.0, 255.0).astype(np.uint8)
 
