@@ -7,7 +7,9 @@ from src.worldgen.types import BoolArray, Float64Array, Int32Array
 class MoistureStage:
     """Advect ocean-sourced moisture downwind, raining it out.
 
-    Pipeline order: ``Insolation → Temperature → Wind → Moisture``
+    Pipeline order: ``Insolation → Wind → OceanCurrent → Temperature → Moisture``.
+    Evaporation scales with sea-surface temperature (``sst``), so warm currents
+    feed wet downwind coasts and cold currents starve them.
     """
 
     def run(self, ctx: WorldContext) -> None:

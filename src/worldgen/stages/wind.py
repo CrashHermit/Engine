@@ -12,7 +12,9 @@ from src.worldgen.types import Float64Array
 class WindStage:
     """Compute wind belts and terrain deflection.
 
-    Pipeline order: ``Insolation → Temperature → Wind → Moisture``
+    Pipeline order: ``Insolation → Wind → OceanCurrent → Temperature → Moisture``.
+    Wind precedes the ocean-current and temperature stages because the current
+    is wind-advected and coasts moderate toward the wind-borne sea temperature.
     """
 
     def run(self, ctx: WorldContext) -> None:
