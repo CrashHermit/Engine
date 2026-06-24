@@ -334,7 +334,10 @@ map above:
   toward-equator/pole meridional); latitude rain belts (Gaussian ITCZ +
   temperate bumps) × advection. Tuning to escape the over-arid regime
   (`precip_gamma=0.6`, wider belts) was needed; HYPER_ARID land dropped ~55% →
-  ~24% and forests/jungles/savannas now dominate.
+  ~24% and forests/jungles/savannas now dominate. **Later superseded:** the
+  authored Gaussian rain belts were retired in favour of **convergence-derived
+  rain** (rain emerges from wind convergence, not a parallel latitude authoring)
+  — see `docs/worldgen-convergence-rain-plan.md`.
 - **Sea level (B)** uses an **Otsu** threshold over the elevation histogram (the
   ocean/continent valley) as the datum — a clean, parameter-free choice not
   named in the plan. Land fraction is emergent (earthlike 35–51%, pangaea

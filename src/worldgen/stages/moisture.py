@@ -59,6 +59,12 @@ class MoistureStage:
             raise RuntimeError(msg)
         latitude: Float64Array = latitude_field
 
+        convergence_field: Float64Array | None = ctx.fields.convergence
+        if convergence_field is None:
+            msg = "convergence must be set before MoistureStage"
+            raise RuntimeError(msg)
+        convergence: Float64Array = convergence_field
+
         # --- step 5a: precompute downwind fan (once) ---
         downwind: tuple[Int32Array, Int32Array, Float64Array] = build_downwind(
             geometry=ctx.geometry,
@@ -75,5 +81,6 @@ class MoistureStage:
             elevation=elevation,
             is_land=is_land,
             latitude=latitude,
+            convergence=convergence,
             cfg=cfg,
         )

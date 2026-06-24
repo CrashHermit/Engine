@@ -46,6 +46,7 @@ class Layer(StrEnum):
     SST = "sst"
     SST_ANOMALY = "sst_anomaly"
     WIND = "wind"
+    CONVERGENCE = "convergence"
     PRECIPITATION = "precipitation"
     DISCHARGE = "discharge"
     VOLCANISM = "volcanism"
@@ -81,6 +82,7 @@ LAYER_GROUPS: tuple[tuple[str, tuple[Layer, ...]], ...] = (
             Layer.SST,
             Layer.SST_ANOMALY,
             Layer.WIND,
+            Layer.CONVERGENCE,
             Layer.PRECIPITATION,
         ),
     ),
@@ -117,6 +119,7 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.SST: "Sea temperature",
     Layer.SST_ANOMALY: "Current anomaly",
     Layer.WIND: "Wind",
+    Layer.CONVERGENCE: "Convergence",
     Layer.PRECIPITATION: "Precipitation",
     Layer.DISCHARGE: "Discharge",
     Layer.VOLCANISM: "Volcanism",
@@ -140,6 +143,7 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.SST: "Sea-surface temperature [0,1]. Wind-advected ocean currents: warm water carried poleward, cold equatorward; land shows its baseline.",
     Layer.SST_ANOMALY: "Current warming/cooling: SST minus latitude baseline. Red = warm current, blue = cold current/upwelling; land neutral.",
     Layer.WIND: "Wind: hue = direction (atan2 v,u), brightness = speed. Belts deflect around ranges.",
+    Layer.CONVERGENCE: "Signed vertical motion [-1,1]. Blue = rising/converging air (ITCZ, subpolar lows, windward ranges) that rains; tan = sinking/diverging (subtropical deserts).",
     Layer.PRECIPITATION: "Rainfall [0,1]. Wet windward coasts bright; dry interiors and rain shadows dark.",
     Layer.DISCHARGE: "Rain-weighted water flow (log). Brighter = more water. River valleys glow brighter in wet regions.",
     Layer.VOLCANISM: "Present-day volcanic activity [0,1]. Bright subduction arcs, hotspot trails, and mid-ocean ridges; dark elsewhere.",
@@ -296,6 +300,13 @@ def _tile_color(
         if t >= 0.0:
             return _lerp_color(low=(120, 120, 120), high=(220, 60, 50), t=t)
         return _lerp_color(low=(120, 120, 120), high=(40, 80, 200), t=-t)
+
+    if layer == Layer.CONVERGENCE:
+        v: float = max(-1.0, min(1.0, float(grid.convergence[tile_index])))
+        # rising/converging = blue (wet); sinking/diverging = tan (dry); neutral grey
+        if v >= 0.0:
+            return _lerp_color(low=(150, 140, 120), high=(40, 90, 200), t=v)
+        return _lerp_color(low=(150, 140, 120), high=(185, 160, 110), t=-v)
 
     if layer == Layer.PRECIPITATION:
         t: float = max(0.0, min(1.0, float(grid.precipitation[tile_index])))
@@ -511,6 +522,12 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
         warm = _lerp_arr((120, 120, 120), (220, 60, 50), t)
         cold = _lerp_arr((120, 120, 120), (40, 80, 200), -t)
         out = np.where((t >= 0.0)[:, None], warm, cold)
+
+    elif layer == Layer.CONVERGENCE:
+        v = np.clip(grid.convergence.astype(np.float64), -1.0, 1.0)
+        rising = _lerp_arr((150, 140, 120), (40, 90, 200), np.clip(v, 0.0, 1.0))
+        sinking = _lerp_arr((150, 140, 120), (185, 160, 110), np.clip(-v, 0.0, 1.0))
+        out = np.where((v >= 0.0)[:, None], rising, sinking)
 
     elif layer == Layer.PRECIPITATION:
         out = _lerp_arr((200, 180, 120), (20, 90, 130), grid.precipitation.astype(np.float64))

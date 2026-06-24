@@ -135,6 +135,92 @@ def elevation_gradient(
     return grad_x, grad_y
 
 
+def wind_divergence(
+    *,
+    geometry: MeshGeometry,
+    vel_u: Float64Array,
+    vel_v: Float64Array,
+) -> Float64Array:
+    """Per-cell scalar divergence of the wind velocity field, ``∇·w``.
+
+    The divergence-flavoured analogue of :func:`elevation_gradient`: instead of
+    accumulating a vector that points uphill, we accumulate the scalar
+
+        div_i = Σ_j  (w_j − w_i) · d_ij  /  |d_ij|²
+
+    over torus-aware neighbour offsets ``d_ij``.  ``> 0`` means the wind speeds
+    up in the outward direction (**divergence**); ``< 0`` means it slows or
+    reverses toward the cell (**convergence**, where air piles up and rises).
+
+    Args:
+        geometry: Torus mesh with CSR adjacency.
+        vel_u: Wind velocity x-component per cell (direction × speed).
+        vel_v: Wind velocity y-component per cell.
+
+    Returns:
+        Per-cell divergence, shape ``(n_cells,)``.
+    """
+    sites: Float64Array = geometry.sites
+    width: float = geometry.width
+    height: float = geometry.height
+    n: int = geometry.n_cells
+
+    divergence: Float64Array = np.zeros(shape=n, dtype=np.float64)
+
+    for cell_id in range(n):
+        wu_i: float = float(vel_u[cell_id])
+        wv_i: float = float(vel_v[cell_id])
+        site_i: Float64Array = sites[cell_id]
+        acc: float = 0.0
+
+        for neighbor_id in geometry.neighbors_of(cell_id=cell_id):
+            neighbor_id_int: int = int(neighbor_id)
+            d: Float64Array = torus_delta(
+                a=site_i, b=sites[neighbor_id_int], width=width, height=height
+            )
+            dist_sq: float = float(d[0] ** 2 + d[1] ** 2)
+            if dist_sq < 1e-12:
+                continue
+            du: float = float(vel_u[neighbor_id_int]) - wu_i
+            dv: float = float(vel_v[neighbor_id_int]) - wv_i
+            acc += (du * float(d[0]) + dv * float(d[1])) / dist_sq
+
+        divergence[cell_id] = acc
+
+    return divergence
+
+
+def convergence_field(
+    *,
+    divergence: Float64Array,
+    percentile: float,
+) -> Float64Array:
+    """Signed vertical-motion field in ``[-1, 1]`` from wind divergence.
+
+    Rising air is ``-divergence``: positive where the wind converges (air piles
+    up and rises → rain) and negative where it diverges (descending, subsiding
+    air → drying, the subtropical deserts).  Scaled symmetrically so a high
+    percentile of ``|rising|`` maps to magnitude 1.0 — a stable per-seed
+    normalization, the same idiom used for slope/rain-out.
+
+    The signed form lets a single field carry the *whole* latitudinal banding:
+    the wet ITCZ/subpolar belts and the dry subtropics, where pure convergence
+    (the rising half alone) could only add wet and never suppress it.
+
+    Args:
+        divergence: Per-cell ``∇·w`` from :func:`wind_divergence`.
+        percentile: ``|rising|`` percentile mapped to magnitude 1.0.
+
+    Returns:
+        Per-cell signed vertical motion in ``[-1, 1]`` (+ rising, − sinking).
+    """
+    rising: Float64Array = -divergence
+    anchor: float = float(np.percentile(np.abs(rising), percentile))
+    if anchor > 0.0:
+        rising = np.clip(rising / anchor, -1.0, 1.0)
+    return rising
+
+
 def deflect_wind(
     *,
     wind_u: Float64Array,

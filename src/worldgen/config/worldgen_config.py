@@ -202,6 +202,11 @@ class WindConfig:
     meridional_strength: float = 0.3   # North-south component amplitude
     turbulence: float = 0.4            # FBm wobble amplitude on each component
     deflection: float = 0.5            # How hard wind bends away from uphill (step 4)
+    convergence_percentile: float = 90.0  # Wind-convergence percentile mapped to 1.0
+    # Convergence is a climatic normal, so smooth the raw (turbulence-noisy)
+    # divergence into the belt/terrain-scale signal that bands the rain.
+    convergence_smoothing_passes: int = 3     # Laplacian passes on the convergence field
+    convergence_smoothing_strength: float = 0.5  # Blend toward neighbour mean per pass
 
 # ---------------------------------------------------------------------------
 # Moisture
@@ -243,6 +248,15 @@ class MoistureConfig:
     belt_temperate_center: float = 0.55  # Temperate bump center in |latitude|
     belt_temperate_sigma: float = 0.2   # Temperate bump width in |latitude|
     belt_adv_floor: float = 0.35        # Baseline fraction kept at zero advection
+    # --- convergence-derived rain (see docs/worldgen-convergence-rain-plan.md) ---
+    # Wind convergence (rising air) rains moisture out alongside the orographic
+    # and chill terms, so the latitudinal banding emerges from where the wind
+    # actually converges rather than from the authored Gaussian belt.  ``belt_trim``
+    # blends the authored belt toward 1.0 (no banding of its own): 0 = full
+    # authored belt, 1 = belt removed and convergence carries the banding.
+    convergence_weight: float = 0.6     # Rainout per unit signed vertical motion
+    belt_trim: float = 1.0              # Blend authored belt toward 1.0 (0=full, 1=off);
+                                        # default off — convergence carries the banding
 
 
 # ---------------------------------------------------------------------------
