@@ -9,7 +9,14 @@ from dataclasses import dataclass, field
 class MeshConfig:
     """Parameters for the Voronoi mesh that underpins all simulation layers."""
 
-    cell_count: int = 12000  # Target number of Voronoi cells (sites)
+    # Target number of Voronoi cells (sites).  0 = derive from world size for
+    # ~1 cell per tile (parity), so the gameplay bake neither up- nor down-samples
+    # the mesh — tweak ``size`` and the mesh density follows.  Derived as
+    # ``min(size * size, cell_count_cap)``; set a positive value to pin it
+    # explicitly (tests do this for speed).  Note: changing this reseeds the
+    # geometry, so it is part of a world's identity — pin it per saved world.
+    cell_count: int = 0
+    cell_count_cap: int = 40000  # Ceiling on the size-derived count (gen time ~linear)
     lloyd_iterations: int = 2  # Lloyd relaxation passes for more uniform cell sizes
     width: float = 0.0  # Torus width in world units; 0 uses float(world size)
     height: float = 0.0  # Torus height in world units; 0 uses float(world size)
