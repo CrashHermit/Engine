@@ -65,6 +65,9 @@ class MeshFields:
     wind_magnitude: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] wind speed
+    convergence: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [-1,1] signed vertical motion (+rising/converging, -sinking/diverging); drives rain belts
     discharge: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # Rain-weighted water flow volume
@@ -183,6 +186,9 @@ class GridFields:
     wind_magnitude: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] wind speed
+    convergence: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [-1,1] signed vertical motion (+rising/converging, -sinking/diverging); drives rain belts
     discharge: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # Rain-weighted water flow volume

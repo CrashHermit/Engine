@@ -107,6 +107,7 @@ def transport_moisture(
     elevation: Float64Array,
     is_land: BoolArray,
     latitude: Float64Array,
+    convergence: Float64Array,
     cfg: MoistureConfig,
 ) -> Float64Array:
     """Advect ocean-sourced moisture downwind, raining it out.
@@ -162,8 +163,16 @@ def transport_moisture(
     )
     uphill: Float64Array = np.maximum(0.0, dw_elev - elevation)
     chill: Float64Array = np.maximum(0.0, temperature - dw_temp)
+    # Convergence (rising air) rains moisture out alongside orographic and chill
+    # uplift — the term that makes the latitudinal banding emerge from the wind
+    # field instead of an authored belt.
     rainout: Float64Array = np.clip(
-        cfg.base_rain + cfg.oro * uphill + cfg.chill * chill, 0.0, 1.0
+        cfg.base_rain
+        + cfg.oro * uphill
+        + cfg.chill * chill
+        + cfg.convergence_weight * convergence,
+        0.0,
+        1.0,
     )
     # Sinks rain out everything they hold.
     rainout[is_sink] = 1.0
@@ -208,7 +217,10 @@ def transport_moisture(
     # interior — but the ITCZ still rains) up to the full baseline (wet windward
     # coast).  Multiplicative, so a dry belt OR a rain shadow both dry a cell:
     # subtropical coasts stay desert, temperate lee stays dry.
+    # ``belt_trim`` blends the authored belt toward 1.0 (no banding of its own),
+    # ceding the latitudinal banding to the convergence rainout above.
     belt: Float64Array = precip_belt(latitude=latitude, cfg=cfg)
+    belt = belt + cfg.belt_trim * (1.0 - belt)
     modulation: Float64Array = cfg.belt_adv_floor + (
         1.0 - cfg.belt_adv_floor
     ) * advected

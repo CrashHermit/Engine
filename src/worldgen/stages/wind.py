@@ -1,8 +1,11 @@
+from src.worldgen.climate.wind import convergence_field
 from src.worldgen.climate.wind import deflect_wind
 from src.worldgen.climate.wind import elevation_gradient
 from src.worldgen.climate.wind import wind_belts
+from src.worldgen.climate.wind import wind_divergence
 from src.worldgen.config.worldgen_config import WindConfig
 from src.worldgen.context import WorldContext
+from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import FIELD_WIND_U
 from src.worldgen.noise.rng import FIELD_WIND_V
@@ -77,7 +80,28 @@ class WindStage:
         if mag_max > 0.0:
             wind_magnitude = wind_magnitude / mag_max
 
+        # --- convergence of the wind velocity field (rising air → rain) ---
+        # Divergence is computed on the full velocity (unit direction × speed) so
+        # the calm, converging doldrums read as strong convergence.
+        divergence: Float64Array = wind_divergence(
+            geometry=geometry,
+            vel_u=wind_u * wind_magnitude,
+            vel_v=wind_v * wind_magnitude,
+        )
+        convergence: Float64Array = convergence_field(
+            divergence=divergence, percentile=cfg.convergence_percentile
+        )
+        # Smooth to a climatic normal: drop turbulence-scale noise, keep the
+        # belt/terrain-scale convergence that bands the rain.
+        convergence = diffuse(
+            geometry=geometry,
+            field=convergence,
+            strength=cfg.convergence_smoothing_strength,
+            passes=cfg.convergence_smoothing_passes,
+        )
+
         # --- write results ---
         ctx.fields.wind_u = wind_u
         ctx.fields.wind_v = wind_v
         ctx.fields.wind_magnitude = wind_magnitude
+        ctx.fields.convergence = convergence
