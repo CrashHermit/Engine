@@ -1,7 +1,7 @@
 # Worldgen Biome Coherence — Design Plan
 
-*Status: design (not yet implemented). Author-facing guide; implement on
-`claude/serene-fermi-2b2kts`.*
+*Status: **implemented** on `claude/serene-fermi-2b2kts`. Starting knob values
+below are live; retune against renders per the tuning order.*
 
 ## Problem
 

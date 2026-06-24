@@ -5,6 +5,7 @@ Pipeline order: ``... → Flow → Savagery → Leylines → Biomes``
 
 from src.worldgen.config.worldgen_config import SavageryConfig
 from src.worldgen.context import WorldContext
+from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.magic.savagery import compute_savagery
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import FIELD_SAVAGERY
@@ -64,7 +65,7 @@ class SavageryStage:
             xs=geometry.sites[:, 0], ys=geometry.sites[:, 1], frequency=frequency
         )
 
-        ctx.fields.savagery = compute_savagery(
+        savagery: Float64Array = compute_savagery(
             coast_distance=coast_distance,
             temperature=temperature,
             precipitation=precipitation,
@@ -72,4 +73,15 @@ class SavageryStage:
             noise=noise,
             volcanism=volcanism,
             cfg=cfg,
+        )
+
+        # Savagery is consumed as discrete bands, so single-tile flips read as
+        # confetti.  A light Laplacian smooth removes them while keeping the
+        # intentional noise-term texture (it is defined on every cell, so smooth
+        # unmasked).
+        ctx.fields.savagery = diffuse(
+            geometry=geometry,
+            field=savagery,
+            strength=cfg.smoothing_strength,
+            passes=cfg.smoothing_passes,
         )

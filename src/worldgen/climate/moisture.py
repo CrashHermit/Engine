@@ -2,6 +2,7 @@ import numpy as np
 
 from src.worldgen.climate.transport import aligned_edges, normalize_per_source
 from src.worldgen.config.worldgen_config import MoistureConfig
+from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 
@@ -228,5 +229,28 @@ def transport_moisture(
 
     if cfg.precip_gamma != 1.0:
         precipitation = precipitation**cfg.precip_gamma
+
+    # Climatic-normal smoothing (stage two; convergence smoothing is stage one).
+    # Precipitation otherwise carries the wind-turbulence marbling that shreds
+    # biomes into confetti.  Smooth land and ocean as *separate* masked domains so
+    # neither bleeds across the coast — and so ocean precipitation (a shipped grid
+    # field) is preserved and tidied rather than zeroed.  Biomes read the land
+    # field; future ocean biomes key off SST/depth/currents, not this.
+    if cfg.precip_smoothing_passes > 0 and cfg.precip_smoothing_strength > 0.0:
+        land_smoothed: Float64Array = diffuse(
+            geometry=geometry,
+            field=precipitation,
+            strength=cfg.precip_smoothing_strength,
+            passes=cfg.precip_smoothing_passes,
+            mask=is_land,
+        )
+        sea_smoothed: Float64Array = diffuse(
+            geometry=geometry,
+            field=precipitation,
+            strength=cfg.precip_smoothing_strength,
+            passes=cfg.precip_smoothing_passes,
+            mask=~is_land,
+        )
+        precipitation = np.where(is_land, land_smoothed, sea_smoothed)
 
     return precipitation

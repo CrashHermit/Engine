@@ -204,8 +204,11 @@ class WindConfig:
     deflection: float = 0.5            # How hard wind bends away from uphill (step 4)
     convergence_percentile: float = 90.0  # Wind-convergence percentile mapped to 1.0
     # Convergence is a climatic normal, so smooth the raw (turbulence-noisy)
-    # divergence into the belt/terrain-scale signal that bands the rain.
-    convergence_smoothing_passes: int = 3     # Laplacian passes on the convergence field
+    # divergence into the belt/terrain-scale signal that bands the rain.  This is
+    # stage one of the two-stage precipitation de-marbling (the precip output
+    # smooth is stage two): killing the convergence-door noise early, before it
+    # bakes into sharp wet/dry contrast, lets the final precip smooth stay gentle.
+    convergence_smoothing_passes: int = 6     # Laplacian passes on the convergence field
     convergence_smoothing_strength: float = 0.5  # Blend toward neighbour mean per pass
 
 # ---------------------------------------------------------------------------
@@ -257,6 +260,14 @@ class MoistureConfig:
     convergence_weight: float = 0.6     # Rainout per unit signed vertical motion
     belt_trim: float = 1.0              # Blend authored belt toward 1.0 (0=full, 1=off);
                                         # default off — convergence carries the banding
+    # --- climatic-normal output smoothing (see docs/worldgen-biome-coherence-plan.md) ---
+    # Precipitation is the one climate field that otherwise never gets a spatial
+    # smooth, so it keeps the wind-turbulence marbling that shreds biomes into
+    # confetti.  A final Laplacian pass (land and ocean smoothed as separate
+    # masked domains so coasts don't bleed) removes that high-frequency noise while
+    # leaving the belt/rain-shadow structure standing.  Stage two of two.
+    precip_smoothing_passes: int = 3       # Laplacian passes on the precipitation field
+    precip_smoothing_strength: float = 0.5  # Blend toward neighbour mean per pass
 
 
 # ---------------------------------------------------------------------------
@@ -305,6 +316,12 @@ class SavageryConfig:
     comfort_precipitation: float = 0.5  # Most-comfortable precipitation (harshness origin)
     ruggedness_percentile: float = 95.0  # Percentile that normalizes slope to 1.0
     noise_frequency: float = 3.0      # Surprise-noise spatial frequency (relative to span)
+    # Savagery is consumed as discrete bands, so single-tile flips read as
+    # confetti; a light Laplacian smooth removes them while keeping the intentional
+    # noise-term texture.  Start light (2) and raise toward ~4 only if band-confetti
+    # persists.  (It also self-heals partly: harshness reads the now-smoothed precip.)
+    smoothing_passes: int = 2         # Laplacian passes on savagery (0 = off)
+    smoothing_strength: float = 0.5   # Blend toward neighbour mean per pass
 
 
 # ---------------------------------------------------------------------------
@@ -397,7 +414,10 @@ class BiomeConfig:
     # salt-and-pepper biomes (every band-boundary crossing flips). Diffusing the
     # soft membership over land neighbours first makes biomes coherent regions
     # with gradual ecotones, the way real biomes blend, without erasing variety.
-    smoothing_passes: int = 4      # Laplacian passes on the soft weights (0 = off)
+    # With precipitation now smoothed to a climatic normal upstream, this pass no
+    # longer has to fight marbling — its only remaining job is to soften the hard
+    # argmax band-edge line into a gradual ecotone, so it runs light.
+    smoothing_passes: int = 2      # Laplacian passes on the soft weights (0 = off)
     smoothing_strength: float = 0.5  # Blend toward the land-neighbour mean per pass [0,1]
 
 

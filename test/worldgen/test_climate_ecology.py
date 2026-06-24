@@ -276,3 +276,34 @@ def test_biome_smoothing_reduces_speckle(seed: int) -> None:
     raw_singletons = singleton_fraction(raw)
     smoothed_singletons = singleton_fraction(f.biome_weights)
     assert smoothed_singletons < raw_singletons
+
+
+@pytest.mark.parametrize("seed", SEEDS)
+def test_biome_smoothing_preserves_variety(seed: int) -> None:
+    """The coherence smoothing must not collapse the world to a few biomes.
+
+    The dual guard to ``test_biome_smoothing_reduces_speckle``: removing confetti
+    is only correct if variety survives.  The shipped (smoothed) field must keep a
+    healthy share of distinct biomes present on land — both above an absolute floor
+    and close to the raw per-cell classification it was derived from.
+    """
+    _world, ctx = _debug(seed)
+    f = ctx.fields
+    ct, cp, _order = derive_centers()
+    biome_mask = f.is_land & ~f.is_lake
+    raw = biome_weights(
+        temperature=f.temperature,
+        precipitation=f.precipitation,
+        is_land=biome_mask,
+        center_temp=ct,
+        center_precip=cp,
+        cfg=ctx.config.biome,
+    )
+
+    raw_distinct = len(np.unique(np.argmax(raw[biome_mask], axis=1)))
+    smoothed_distinct = len(np.unique(np.argmax(f.biome_weights[biome_mask], axis=1)))
+
+    # Absolute floor: a varied world, not three biomes.
+    assert smoothed_distinct >= 12
+    # Relative: smoothing trims at most a couple of marginal biomes, not most.
+    assert smoothed_distinct >= raw_distinct - 4
