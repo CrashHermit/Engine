@@ -4,7 +4,8 @@ from src.worldgen.config.worldgen_config import ErosionConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import FIELD_EROSION_INIT
-from src.worldgen.terrain.erosion import diffuse, stream_power_pass
+from src.worldgen.geometry.field_ops import diffuse
+from src.worldgen.terrain.erosion import stream_power_pass
 from src.worldgen.terrain.routing import (
     accumulate_drainage,
     compute_receivers,
@@ -17,7 +18,6 @@ class ErosionStage:
     """Tectonically-driven terrain: uplift-scaled initial height carved
     by stream-power erosion and hillslope diffusion.
 
-    Replaces ``PlaceholderElevationStage``.
     Pipeline order: ``Mesh → Plates → BoundaryUplift → Erosion → …``
     """
 
@@ -94,10 +94,13 @@ class ErosionStage:
                 geometry=ctx.geometry,
                 cfg=cfg,
             )
-            diffuse(
-                z=z,
+            # Hillslope diffusion: one neighbour-mean relaxation pass, so
+            # stream-power erosion doesn't sharpen ridges into knife edges.
+            z = diffuse(
                 geometry=ctx.geometry,
-                cfg=cfg,
+                field=z,
+                strength=cfg.diffusion,
+                passes=1,
             )
 
         # --- store on ctx.fields before the last-iteration locals are dropped ---

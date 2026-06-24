@@ -307,8 +307,13 @@ layer can derive seasonal/diurnal variation.
 
 ## 10. Out of scope (noted, not done)
 
-- **Ocean-current warming** (Gulf-Stream-style) — second-order; circulation sim was
-  ruled out. Possible future climate refinement.
+- **Ocean-current warming** (Gulf-Stream-style) — ~~second-order; circulation sim was
+  ruled out. Possible future climate refinement.~~ **Implemented** as a
+  wind-advected sea-surface-temperature field (no circulation sim) that leans
+  into the torus geometry — see `docs/worldgen-ocean-currents-plan.md`. One
+  consequence to note: a circumpolar warm band gives a continent uniformly mild
+  coasts at every longitude, so biomes band longitudinally more strongly than on
+  Earth.
 - **Seasonality / weather** — the future layer these baselines feed. Biome 3rd axis
   and tier-2 minor streams arrive with it.
 - **Materialized minor-stream objects** — implicit in the `discharge` field until a

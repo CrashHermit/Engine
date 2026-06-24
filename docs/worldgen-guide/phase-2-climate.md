@@ -15,6 +15,13 @@ New fields: `temperature`, `precipitation`, `wind_u`, `wind_v`,
 `wind_magnitude`, plus mesh-side intermediate `moisture`. New configs:
 `InsolationConfig`, `WindConfig`, `MoistureConfig`.
 
+> **Later extension (not part of this original build):** the climate phase was
+> since extended with a wind-advected sea-surface-temperature stage, and the
+> order is now `Insolation → Wind → OceanCurrent → Temperature → Moisture`
+> (Wind moved ahead of Temperature; `sst` feeds the maritime term and ocean
+> evaporation). This guide still teaches the original four-step build; see
+> `docs/worldgen-ocean-currents-plan.md` for the current shape.
+
 ---
 
 ## Before you start (house style — read `CONVENTIONS.md`)

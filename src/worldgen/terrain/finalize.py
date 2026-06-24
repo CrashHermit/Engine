@@ -2,6 +2,7 @@ from collections import deque
 
 import numpy as np
 
+from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_distance
 from src.worldgen.types import BoolArray, Float64Array, Int32Array, Int8Array
@@ -32,28 +33,9 @@ def smooth_elevation(
     Returns:
         The smoothed elevation (a new array; the input is not mutated).
     """
-    if passes <= 0 or strength <= 0.0:
-        return elevation
-
-    offsets: Int32Array = geometry.neighbor_offsets
-    indices: Int32Array = geometry.neighbor_indices
-    n: int = geometry.n_cells
-    degree: Float64Array = np.diff(offsets).astype(np.float64)
-    src: Int32Array = np.repeat(np.arange(n, dtype=np.int32), np.diff(offsets))
-
-    z: Float64Array = elevation.astype(np.float64, copy=True)
-    for _ in range(passes):
-        neighbor_sum: Float64Array = np.bincount(
-            src, weights=z[indices], minlength=n
-        )
-        neighbor_mean: Float64Array = np.divide(
-            neighbor_sum,
-            degree,
-            out=z.copy(),
-            where=degree > 0.0,
-        )
-        z = z + strength * (neighbor_mean - z)
-    return z
+    return diffuse(
+        geometry=geometry, field=elevation, strength=strength, passes=passes
+    )
 
 
 def _normalize_at_sea_level(

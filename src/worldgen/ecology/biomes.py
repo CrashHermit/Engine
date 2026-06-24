@@ -16,8 +16,9 @@ from src.core.model.environment.climate.precipitation import (
 from src.core.model.environment.ecology.biome import BIOME_GRID, BiomeEnum
 from src.core.model.environment.shared.temperature import ORDER as TEMP_ORDER
 from src.worldgen.config.worldgen_config import BiomeConfig
+from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.geometry.mesh import MeshGeometry
-from src.worldgen.types import BoolArray, Float64Array, Int32Array
+from src.worldgen.types import BoolArray, Float64Array
 
 
 def derive_centers() -> tuple[Float64Array, Float64Array, list[BiomeEnum]]:
@@ -132,32 +133,17 @@ def smooth_biome_weights(
     if cfg.smoothing_passes <= 0 or cfg.smoothing_strength <= 0.0:
         return weights
 
-    n: int = geometry.n_cells
-    indices: Int32Array = geometry.neighbor_indices
-    src: Int32Array = np.repeat(
-        np.arange(n, dtype=np.int32), np.diff(geometry.neighbor_offsets)
+    # Land-only Laplacian relaxation: only biome-bearing neighbours contribute,
+    # and ocean/lake rows are held at zero so coasts don't bleed toward zero.
+    out: Float64Array = diffuse(
+        geometry=geometry,
+        field=weights,
+        strength=cfg.smoothing_strength,
+        passes=cfg.smoothing_passes,
+        mask=biome_mask,
     )
-    maskf: Float64Array = biome_mask.astype(np.float64)
-    # Number of biome-bearing neighbours per cell (the masked degree).
-    masked_degree: Float64Array = np.bincount(
-        src, weights=maskf[indices], minlength=n
-    )
-    safe: BoolArray = masked_degree > 0.0
 
-    out: Float64Array = weights.copy()
-    edge_w: Float64Array = maskf[indices]
-    for _ in range(cfg.smoothing_passes):
-        neighbor_mean: Float64Array = np.empty_like(out)
-        for k in range(out.shape[1]):
-            nb_sum: Float64Array = np.bincount(
-                src, weights=out[indices, k] * edge_w, minlength=n
-            )
-            neighbor_mean[:, k] = np.divide(
-                nb_sum, masked_degree, out=out[:, k].copy(), where=safe
-            )
-        out = out + cfg.smoothing_strength * (neighbor_mean - out)
-        out[~biome_mask] = 0.0
-
+    # Renormalize each land row back to a distribution summing to 1.
     row_sums: Float64Array = out.sum(axis=1, keepdims=True)
     out = np.divide(out, row_sums, out=np.zeros_like(out), where=row_sums > 0.0)
     return out

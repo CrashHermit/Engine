@@ -7,7 +7,9 @@ from src.worldgen.types import BoolArray, Float64Array, Int32Array
 class MoistureStage:
     """Advect ocean-sourced moisture downwind, raining it out.
 
-    Pipeline order: ``Insolation → Temperature → Wind → Moisture``
+    Pipeline order: ``Insolation → Wind → OceanCurrent → Temperature → Moisture``.
+    Evaporation scales with sea-surface temperature (``sst``), so warm currents
+    feed wet downwind coasts and cold currents starve them.
     """
 
     def run(self, ctx: WorldContext) -> None:
@@ -20,6 +22,12 @@ class MoistureStage:
             msg: str = "temperature must be set before MoistureStage"
             raise RuntimeError(msg)
         temperature: Float64Array = temperature_field
+
+        sst_field: Float64Array | None = ctx.fields.sst
+        if sst_field is None:
+            msg = "sst must be set before MoistureStage"
+            raise RuntimeError(msg)
+        sst: Float64Array = sst_field
 
         elevation_field: Float64Array | None = ctx.fields.elevation
         if elevation_field is None:
@@ -63,6 +71,7 @@ class MoistureStage:
             geometry=ctx.geometry,
             downwind=downwind,
             temperature=temperature,
+            sst=sst,
             elevation=elevation,
             is_land=is_land,
             latitude=latitude,

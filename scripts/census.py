@@ -54,6 +54,24 @@ def census(world: WorldData) -> str:
     terminal_lakes: int = sum(1 for lk in world.lakes if lk.outlet_cell is None)
     calderas: int = sum(1 for v in world.volcanoes if v.has_caldera)
 
+    # Ocean-current eyeball: how far ocean SST departs from its *latitude-band*
+    # mean (the radiative baseline currents perturb).  Warm currents sit above
+    # their band, cold currents below; near-zero spread means currents do
+    # nothing.  Uses only grid latitude + sst (insolation is mesh-side only).
+    ocean = ~is_land
+    warm_anom: float = 0.0
+    cold_anom: float = 0.0
+    if ocean.any():
+        lat_band = np.floor(np.abs(grid.latitude[ocean]) * 16).astype(int)
+        sst_ocean = grid.sst[ocean]
+        band_mean = np.zeros_like(sst_ocean)
+        for b in np.unique(lat_band):
+            sel = lat_band == b
+            band_mean[sel] = sst_ocean[sel].mean()
+        anom = sst_ocean - band_mean
+        warm_anom = float(anom.max())
+        cold_anom = float(anom.min())
+
     # Dominant-biome histogram over dry-land tiles.
     _ct, _cp, biome_order = derive_centers()
     land_tiles = is_land & ~grid.is_lake
@@ -72,7 +90,8 @@ def census(world: WorldData) -> str:
         f"{len(world.lakes)} lakes ({terminal_lakes} terminal); "
         f"{len(world.volcanoes)} volcanoes ({calderas} calderas); "
         f"{len(world.leylines.nexus_cells)} nexuses, "
-        f"{len(world.leylines.edges)} leylines. "
+        f"{len(world.leylines.edges)} leylines; "
+        f"currents +{warm_anom:.2f}/{cold_anom:.2f} SST. "
         f"Top biomes: {top5}."
     )
 

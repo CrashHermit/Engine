@@ -18,6 +18,7 @@ from src.worldgen.stages.insolation import InsolationStage
 from src.worldgen.stages.lakes import LakesStage
 from src.worldgen.stages.leylines import LeylinesStage
 from src.worldgen.stages.moisture import MoistureStage
+from src.worldgen.stages.ocean_current import OceanCurrentStage
 from src.worldgen.stages.plate import PlatesStage
 from src.worldgen.stages.plate_personality import PlatePersonalityStage
 from src.worldgen.stages.rivers import RiversStage
@@ -41,9 +42,12 @@ def _build_stages() -> list[Stage]:
         FinalizeStage(),
         VolcanoesStage(),  # discrete volcanoes once we know which edifices breached
         # Phase 2 — climate
+        # Wind precedes OceanCurrent + Temperature: SST is wind-advected, and
+        # coasts moderate toward the wind-borne sea-surface temperature.
         InsolationStage(),
-        TemperatureStage(),
         WindStage(),
+        OceanCurrentStage(),
+        TemperatureStage(),
         MoistureStage(),
         # Phase 3 — water
         DischargeStage(),

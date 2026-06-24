@@ -8,7 +8,8 @@ from src.worldgen.noise.rng import FIELD_INSOLATION_WOBBLE
 class InsolationStage:
     """Compute the signed ``latitude`` driver and the insolation field.
 
-    Pipeline order: ``Finalize → Insolation → Temperature → Wind → Moisture``
+    Pipeline order:
+    ``Finalize → Insolation → Wind → OceanCurrent → Temperature → Moisture``
     """
 
     def run(self, ctx: WorldContext) -> None:

@@ -14,13 +14,14 @@ if str(_ROOT) not in sys.path:
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.color import Color
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.widgets import Button, Footer, Header, Static
 from textual_canvas import Canvas
 
 from scripts.export_worldgen import export_layer
 from scripts.worldgen_render import (
     LAYER_DESCRIPTIONS,
+    LAYER_GROUPS,
     LAYER_LABELS,
     LAYER_ORDER,
     Layer,
@@ -70,7 +71,7 @@ class WorldgenViewerApp(App[None]):
     }
 
     #sidebar {
-        width: 28;
+        width: 30;
         height: 1fr;
         padding: 1;
         background: $panel;
@@ -91,8 +92,20 @@ class WorldgenViewerApp(App[None]):
         margin-bottom: 1;
     }
 
+    /* The layer list scrolls — the catalogue is longer than most terminals. */
     #layer-bar {
-        height: auto;
+        height: 1fr;
+        scrollbar-size-vertical: 1;
+    }
+
+    .group-header {
+        text-style: bold;
+        color: $accent;
+        margin-top: 1;
+    }
+
+    #layer-bar Button {
+        width: 100%;
     }
 
     #map-area {
@@ -117,13 +130,10 @@ class WorldgenViewerApp(App[None]):
         Binding("equal", "zoom_in", "Zoom in", show=False),
         Binding("plus", "zoom_in", "Zoom in"),
         Binding("minus", "zoom_out", "Zoom out"),
-        Binding("1", "layer('elevation')", "Elevation"),
-        Binding("2", "layer('land')", "Land"),
-        Binding("3", "layer('mesh')", "Mesh"),
-        Binding("4", "layer('plates')", "Plates"),
-        Binding("5", "layer('uplift')", "Uplift"),
-        Binding("6", "layer('drainage')", "Drainage"),
-
+        Binding("right_square_bracket", "next_layer", "Next layer", key_display="]"),
+        Binding("left_square_bracket", "prev_layer", "Prev layer", key_display="["),
+        Binding("j", "next_layer", "Next layer", show=False),
+        Binding("k", "prev_layer", "Prev layer", show=False),
     ]
 
     def __init__(
@@ -151,13 +161,15 @@ class WorldgenViewerApp(App[None]):
                 yield Static("Layer", id="info-title")
                 yield Static("", id="info-desc")
                 yield Static("", id="info-meta")
-                with Vertical(id="layer-bar"):
-                    for index, layer in enumerate(LAYER_ORDER, start=1):
-                        yield Button(
-                            f"{index}  {LAYER_LABELS[layer]}",
-                            id=f"btn-{layer.value}",
-                            variant="default",
-                        )
+                with VerticalScroll(id="layer-bar"):
+                    for group_name, layers in LAYER_GROUPS:
+                        yield Static(group_name, classes="group-header")
+                        for layer in layers:
+                            yield Button(
+                                LAYER_LABELS[layer],
+                                id=f"btn-{layer.value}",
+                                variant="default",
+                            )
             with Vertical(id="map-area"):
                 self._canvas = Canvas(
                     MAX_VIEW_SIZE,
@@ -191,16 +203,27 @@ class WorldgenViewerApp(App[None]):
         self.sub_title = (
             f"seed {self._seed}  |  grid {grid_label}  |  view {view_label}  |  {zoom_label}"
         )
-        self.query_one("#info-title", Static).update(LAYER_LABELS[self._layer])
+        position = LAYER_ORDER.index(self._layer) + 1
+        self.query_one("#info-title", Static).update(
+            f"{LAYER_LABELS[self._layer]}  ({position}/{len(LAYER_ORDER)})"
+        )
         self.query_one("#info-desc", Static).update(LAYER_DESCRIPTIONS[self._layer])
         self.query_one("#info-meta", Static).update(
-            "Layers: 1-4 or sidebar.\n"
+            "[ [ ] / [ ] ] cycle layers (or click)\n"
             "[+]/[-] zoom view  [p] full-res PNG\n"
             "[r] re-roll  [q] quit"
         )
         for layer in LAYER_ORDER:
             button = self.query_one(f"#btn-{layer.value}", Button)
             button.set_class(self._layer == layer, "-active")
+
+    def _scroll_active_into_view(self) -> None:
+        """Keep the selected layer's button visible when cycling by keyboard."""
+        try:
+            button = self.query_one(f"#btn-{self._layer.value}", Button)
+        except Exception:
+            return
+        button.scroll_visible(animate=False)
 
     def _canvas_widget(self) -> Canvas:
         """Return the map canvas, whether stored on self or queried from the DOM."""
@@ -232,6 +255,20 @@ class WorldgenViewerApp(App[None]):
     def action_layer(self, layer_name: str) -> None:
         self._layer = Layer(layer_name)
         self._redraw()
+        self._scroll_active_into_view()
+
+    def _step_layer(self, delta: int) -> None:
+        """Move the active layer ``delta`` steps through LAYER_ORDER (wrapping)."""
+        index = (LAYER_ORDER.index(self._layer) + delta) % len(LAYER_ORDER)
+        self._layer = LAYER_ORDER[index]
+        self._redraw()
+        self._scroll_active_into_view()
+
+    def action_next_layer(self) -> None:
+        self._step_layer(1)
+
+    def action_prev_layer(self) -> None:
+        self._step_layer(-1)
 
     def action_zoom_in(self) -> None:
         """Increase sampling resolution (each pixel covers fewer world tiles)."""
