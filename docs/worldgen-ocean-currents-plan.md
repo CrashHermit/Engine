@@ -1,8 +1,9 @@
 # Worldgen Ocean Currents Plan
 
-Status: **design — not yet implemented.** A guide for adding Gulf-Stream-style
-ocean-current warming to the climate stack. Scope: `src/worldgen` climate phase
-plus its fields/config/validation surface.
+Status: **implemented.** A guide for adding Gulf-Stream-style ocean-current
+warming to the climate stack. Scope: `src/worldgen` climate phase plus its
+fields/config/validation surface. See "Implementation notes" at the bottom for
+what shipped and where it differed from this map.
 
 This was parked as out-of-scope item #10 in `worldgen-sanity-plan.md`
 ("second-order; circulation sim was ruled out"). We are now building it — but
@@ -238,3 +239,45 @@ Each phase ends runnable and inspectable in the viewer.
 
 **Preserve-the-drivers checkpoint (every phase):** `latitude`, `coast_distance`,
 `precipitation`, and now `sst` remain on the output for the weather layer.
+
+---
+
+## 9. Implementation notes & divergences
+
+What shipped, and where it diverged from the map above:
+
+- **SST advection** landed as planned in `climate/ocean_current.py`: an
+  **upwind-gather** formulation (each cell takes the weighted mean of its upwind
+  neighbours' SST, normalized per receiver) rather than a downwind scatter — the
+  two are equivalent for an intensive scalar, and the gather makes the
+  relaxation blend (`relax·baseline + (1−relax)·gathered`) read directly. The
+  **no-normal-flow boundary condition** is `_coast_projected_wind`: the coast
+  normal is the mean unit offset toward land neighbours, and the onshore wind
+  component is projected out before the ocean-only gather is built.
+- **Maritime onshore SST** (`maritime_sst_onshore`) uses a *second*, all-cell
+  gather on the **raw** wind (maritime air crosses coasts; water does not),
+  propagating ocean SST inland for `≈3·maritime_reach` passes; the inland decay
+  itself is still the temperature stage's `exp(−coast_distance/reach)` weight, so
+  no new decay knob was added. `OceanCurrentConfig` ended up as just
+  `{passes, relaxation}` (the design's `maritime_reach` field was dropped —
+  reuse `TemperatureConfig.maritime_reach`).
+- **Temperature** (`compute_temperature`) now takes `sst` + `maritime_sst`:
+  coasts moderate toward `maritime_sst` (replacing the old `insolation` proxy)
+  and ocean cells are overwritten to `sst` so the current is authoritative.
+- **Moisture**: `transport_moisture` gained an `sst` parameter; the ocean
+  evaporation refill is `evaporation · sst` (was `· temperature`). The chill
+  term still reads `temperature`. No ITCZ shift (§6 future work).
+- **Pipeline** reordered to `Insolation → Wind → OceanCurrent → Temperature →
+  Moisture`; `sst` is on `MeshFields`/`GridFields` and bakes through the generic
+  path. Viewer gained **Sea temperature** and **Current anomaly** (`sst −
+  insolation`) layers.
+- **Validation** (`test/worldgen/test_ocean_currents.py`): synthetic-mesh
+  signature tests (zonal band adds no zonal variance beyond the baseline;
+  meridional flow makes warm+cold anomalies; coastal BC deflects wind; bounded)
+  plus pipeline invariants (range, land = baseline, perturb-not-erase across
+  `|latitude|` bands, currents-not-a-no-op, determinism). The "circumpolar
+  homogenization" band was reframed from "SST ≈ baseline" to "**within-band
+  zonal variance ≤ the baseline's own**", because zonal advection on the
+  irregular mesh slightly *meridionally* smooths band peaks — that shifts band
+  means, not zonal uniformity, so comparing against the baseline is the honest
+  test. Full suite: 232 worldgen tests green.

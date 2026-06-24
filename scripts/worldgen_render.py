@@ -42,6 +42,8 @@ class Layer(StrEnum):
     DRAINAGE = "drainage"
     INSOLATION = "insolation"
     TEMPERATURE = "temperature"
+    SST = "sst"
+    SST_ANOMALY = "sst_anomaly"
     WIND = "wind"
     PRECIPITATION = "precipitation"
     DISCHARGE = "discharge"
@@ -61,6 +63,8 @@ LAYER_ORDER: tuple[Layer, ...] = (
     Layer.DRAINAGE,
     Layer.INSOLATION,
     Layer.TEMPERATURE,
+    Layer.SST,
+    Layer.SST_ANOMALY,
     Layer.WIND,
     Layer.PRECIPITATION,
     Layer.DISCHARGE,
@@ -81,6 +85,8 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.DRAINAGE: "Drainage",
     Layer.INSOLATION: "Insolation",
     Layer.TEMPERATURE: "Temperature",
+    Layer.SST: "Sea temperature",
+    Layer.SST_ANOMALY: "Current anomaly",
     Layer.WIND: "Wind",
     Layer.PRECIPITATION: "Precipitation",
     Layer.DISCHARGE: "Discharge",
@@ -101,6 +107,8 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.DRAINAGE: "Upstream drainage area per cell (log). Brighter = more flow. River valleys visible as bright veins.",
     Layer.INSOLATION: "Authored energy field. Bright = hot sunband, dark = cold frostbelt; wraps seamlessly.",
     Layer.TEMPERATURE: "Warmth [0,1]. Cold frostbelt and mountain peaks blue; hot sunband red; mild coasts.",
+    Layer.SST: "Sea-surface temperature [0,1]. Wind-advected ocean currents: warm water carried poleward, cold equatorward; land shows its baseline.",
+    Layer.SST_ANOMALY: "Current warming/cooling: SST minus latitude baseline. Red = warm current, blue = cold current/upwelling; land neutral.",
     Layer.WIND: "Wind: hue = direction (atan2 v,u), brightness = speed. Belts deflect around ranges.",
     Layer.PRECIPITATION: "Rainfall [0,1]. Wet windward coasts bright; dry interiors and rain shadows dark.",
     Layer.DISCHARGE: "Rain-weighted water flow (log). Brighter = more water. River valleys glow brighter in wet regions.",
@@ -236,6 +244,21 @@ def _tile_color(
         t: float = max(0.0, min(1.0, float(grid.temperature[tile_index])))
         # cold = blue, mild = pale, hot = red
         return _lerp_color(low=(40, 80, 200), high=(220, 60, 50), t=t)
+
+    if layer == Layer.SST:
+        t: float = max(0.0, min(1.0, float(grid.sst[tile_index])))
+        return _lerp_color(low=(40, 80, 200), high=(220, 60, 50), t=t)
+
+    if layer == Layer.SST_ANOMALY:
+        # SST minus latitude baseline: warm current (red) vs cold current (blue).
+        anomaly: float = float(grid.sst[tile_index]) - float(
+            world.insolation[tile_index]
+        )
+        # ±0.2 spans the palette; neutral grey at 0.
+        t: float = max(-1.0, min(1.0, anomaly / 0.2))
+        if t >= 0.0:
+            return _lerp_color(low=(120, 120, 120), high=(220, 60, 50), t=t)
+        return _lerp_color(low=(120, 120, 120), high=(40, 80, 200), t=-t)
 
     if layer == Layer.PRECIPITATION:
         t: float = max(0.0, min(1.0, float(grid.precipitation[tile_index])))
@@ -435,6 +458,16 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
 
     elif layer == Layer.TEMPERATURE:
         out = _lerp_arr((40, 80, 200), (220, 60, 50), grid.temperature.astype(np.float64))
+
+    elif layer == Layer.SST:
+        out = _lerp_arr((40, 80, 200), (220, 60, 50), grid.sst.astype(np.float64))
+
+    elif layer == Layer.SST_ANOMALY:
+        anomaly = grid.sst.astype(np.float64) - world.insolation
+        t = np.clip(anomaly / 0.2, -1.0, 1.0)
+        warm = _lerp_arr((120, 120, 120), (220, 60, 50), t)
+        cold = _lerp_arr((120, 120, 120), (40, 80, 200), -t)
+        out = np.where((t >= 0.0)[:, None], warm, cold)
 
     elif layer == Layer.PRECIPITATION:
         out = _lerp_arr((200, 180, 120), (20, 90, 130), grid.precipitation.astype(np.float64))

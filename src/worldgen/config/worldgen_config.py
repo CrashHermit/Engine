@@ -160,6 +160,29 @@ class TemperatureConfig:
     maritime_strength: float = 0.4  # How strongly coasts pull toward sea temperature
 
 # ---------------------------------------------------------------------------
+# Ocean currents (sea-surface temperature)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class OceanCurrentConfig:
+    """Wind-advected sea-surface temperature — toroidal ocean currents.
+
+    Heat is seeded from the ocean's latitude baseline (= insolation), advected
+    along the prevailing wind over the *ocean-only* graph (land is a barrier, so
+    currents deflect along coasts and gyres/circumpolar bands emerge), and
+    relaxed back toward the baseline at the air-sea thermal relaxation rate.  No
+    Coriolis is faked: the warm-coast/cold-coast asymmetry comes from the wind's
+    meridional sign plus continent geometry.  See
+    ``docs/worldgen-ocean-currents-plan.md``.
+    """
+
+    passes: int = 40           # advect+relax iterations to steady state
+    relaxation: float = 0.05   # air-sea relaxation fraction per pass (physical
+                               # timescale; smaller = currents reach further)
+
+
+# ---------------------------------------------------------------------------
 # Wind
 # ---------------------------------------------------------------------------
 
@@ -376,6 +399,7 @@ class WorldgenConfig:
     landmass: LandmassConfig = field(default_factory=LandmassConfig)  # Connected-component land classification
     insolation: InsolationConfig = field(default_factory=InsolationConfig)  # Authored energy pattern
     temperature: TemperatureConfig = field(default_factory=TemperatureConfig)  # Lapse rate + maritime moderation
+    ocean_current: OceanCurrentConfig = field(default_factory=OceanCurrentConfig)  # Wind-advected sea-surface temperature
     wind: WindConfig = field(default_factory=WindConfig)
     moisture: MoistureConfig = field(default_factory=MoistureConfig)
     river: RiverConfig = field(default_factory=RiverConfig)

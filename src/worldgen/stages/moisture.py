@@ -21,6 +21,12 @@ class MoistureStage:
             raise RuntimeError(msg)
         temperature: Float64Array = temperature_field
 
+        sst_field: Float64Array | None = ctx.fields.sst
+        if sst_field is None:
+            msg = "sst must be set before MoistureStage"
+            raise RuntimeError(msg)
+        sst: Float64Array = sst_field
+
         elevation_field: Float64Array | None = ctx.fields.elevation
         if elevation_field is None:
             msg: str = "elevation must be set before MoistureStage"
@@ -63,6 +69,7 @@ class MoistureStage:
             geometry=ctx.geometry,
             downwind=downwind,
             temperature=temperature,
+            sst=sst,
             elevation=elevation,
             is_land=is_land,
             latitude=latitude,

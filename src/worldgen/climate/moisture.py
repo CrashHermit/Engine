@@ -134,6 +134,7 @@ def transport_moisture(
     geometry: MeshGeometry,
     downwind: tuple[Int32Array, Int32Array, Float64Array],
     temperature: Float64Array,
+    sst: Float64Array,
     elevation: Float64Array,
     is_land: BoolArray,
     latitude: Float64Array,
@@ -142,7 +143,9 @@ def transport_moisture(
     """Advect ocean-sourced moisture downwind, raining it out.
 
     Double-buffered advection loop:
-      1. Refill ocean moisture as ``evaporation × temperature``.
+      1. Refill ocean moisture as ``evaporation × sst`` (Clausius-Clapeyron:
+         warm water charges the air with more vapor, so warm currents feed wet
+         downwind coasts and cold currents starve them).
       2. For each cell, compute ``rainout`` from base drying, orographic
          forcing (rising into higher downwind terrain), and temperature chill
          (cooling toward the downwind cells).
@@ -160,7 +163,9 @@ def transport_moisture(
     Args:
         geometry: Torus mesh (used for cell count).
         downwind: CSR ``(indptr, indices, weights)`` from :func:`build_downwind`.
-        temperature: Per-cell temperature in ``[0, 1]``.
+        temperature: Per-cell temperature in ``[0, 1]`` (drives the chill term).
+        sst: Per-cell sea-surface temperature in ``[0, 1]`` (drives ocean
+            evaporation; warm currents evaporate more).
         elevation: Per-cell elevation in ``[-1, 1]``; 0 = sea level.
         is_land: ``True`` for land cells, ``False`` for ocean.
         cfg: Moisture transport parameters.
@@ -199,8 +204,8 @@ def transport_moisture(
     ocean_mask: BoolArray = ~is_land
 
     for _ in range(cfg.passes):
-        # Refill ocean moisture at the start of every pass.
-        moisture[ocean_mask] = cfg.evaporation * temperature[ocean_mask]
+        # Refill ocean moisture at the start of every pass (evaporation ∝ SST).
+        moisture[ocean_mask] = cfg.evaporation * sst[ocean_mask]
 
         rain: Float64Array = moisture * rainout
         precipitation += rain

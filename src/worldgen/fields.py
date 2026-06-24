@@ -50,6 +50,9 @@ class MeshFields:
     temperature: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] warmth; 1 = equator
+    sst: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] sea-surface temperature (ocean: wind-advected current; land: insolation baseline)
     precipitation: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] rainfall
@@ -165,6 +168,9 @@ class GridFields:
     temperature: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] warmth; 1 = equator
+    sst: Float64Array | None = field(
+        default=None, metadata={"dtype": np.float64}
+    )  # [0,1] sea-surface temperature (ocean: wind-advected current; land: insolation baseline)
     precipitation: Float64Array | None = field(
         default=None, metadata={"dtype": np.float64}
     )  # [0,1] rainfall
