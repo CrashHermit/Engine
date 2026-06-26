@@ -16,7 +16,7 @@ class MeshConfig:
     # explicitly (tests do this for speed).  Note: changing this reseeds the
     # geometry, so it is part of a world's identity — pin it per saved world.
     cell_count: int = 0
-    cell_count_cap: int = 40000  # Ceiling on the size-derived count (gen time ~linear)
+    cell_count_cap: int = 400000  # Ceiling on the size-derived count (gen time ~linear)
     lloyd_iterations: int = 2  # Lloyd relaxation passes for more uniform cell sizes
     width: float = 0.0  # Torus width in world units; 0 uses float(world size)
     height: float = 0.0  # Torus height in world units; 0 uses float(world size)
@@ -31,12 +31,12 @@ class MeshConfig:
 class PlatesConfig:
     """Tectonic plate partitioning and boundary uplift."""
 
-    n_plates: int = 12  # Number of seed plates grown across the mesh
+    n_plates: int = 35  # Number of seed plates grown across the mesh
     growth_raggedness: float = (
         2.0  # Random cost added to heap priority for organic borders; 0 = round blobs
     )
     continental_fraction: float = (
-        0.45  # Probability each plate is continental vs oceanic
+        0.35  # Probability each plate is continental vs oceanic
     )
     continental_uplift: float = 1.0  # Base uplift rate assigned to continental plates
     oceanic_uplift: float = 0.0  # Base uplift rate assigned to oceanic plates
@@ -421,7 +421,7 @@ class WorldgenConfig:
     """Top-level config for the entire worldgen pipeline."""
 
     seed: int = 0  # Master RNG seed; sub-seeds are derived per stage
-    size: int = 100  # Gameplay grid edge length in tiles
+    size: int = 1000  # Gameplay grid edge length in tiles
     mesh: MeshConfig = field(default_factory=MeshConfig)  # Voronoi simulation mesh
     plates: PlatesConfig = field(default_factory=PlatesConfig)  # Plate partitioning and boundary uplift
     sea_level: SeaLevelConfig = field(default_factory=SeaLevelConfig)  # Land/ocean split and normalisation

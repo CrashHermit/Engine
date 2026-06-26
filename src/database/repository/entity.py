@@ -14,29 +14,6 @@ class EntityRepository:
     def __init__(self, base: BaseRepository) -> None:
         self._base: BaseRepository = base
 
-    def create_entity(
-        self,
-        name: str,
-        description: str,
-        scene_position: str = "",
-        kind: str = "object",
-        danger: str = "standard",
-        threat_channels: str = "",
-        wound_capacity: int = 0,
-        wound_filled: int = 0,
-    ) -> Vertex:
-        return self._base.create_vertex(
-            type_name=VertexType.ENTITY,
-            name=name,
-            description=description,
-            scene_position=scene_position,
-            kind=kind,
-            danger=danger,
-            threat_channels=threat_channels,
-            wound_capacity=wound_capacity,
-            wound_filled=wound_filled,
-        )
-
     def get_entity(self, id: str) -> Vertex | None:
         return self._base.get_vertex(type_name=VertexType.ENTITY, id=id)
 

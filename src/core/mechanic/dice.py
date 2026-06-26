@@ -77,9 +77,9 @@ def result_from_dice(dice: Sequence[int], *, zero_pool: bool = False) -> RollRes
 
 
 def roll_pool(pool: int, *, rng: Random | None = None) -> RollResult:
-    rng: Random = rng or Random()
+    rng_value: Random = rng or Random()
     if pool <= 0:
-        dice: tuple[int, ...] = (_d6(rng), _d6(rng))
+        dice: tuple[int, ...] = (_d6(rng_value), _d6(rng_value))
         return result_from_dice(dice, zero_pool=True)
-    dice: tuple[int, ...] = tuple(_d6(rng) for _ in range(pool))
+    dice: tuple[int, ...] = tuple(_d6(rng_value) for _ in range(pool))
     return result_from_dice(dice, zero_pool=False)
