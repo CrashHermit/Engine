@@ -32,7 +32,7 @@ from src.worldgen.config.worldgen_config import OceanCurrentConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.types import BoolArray, Float64Array
 
 
@@ -255,7 +255,10 @@ class OceanCurrentStage:
     Moisture (evaporation) then consume.
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("insolation", "is_land", "wind_u", "wind_v")
+    writes: tuple[str, ...] = ("sst",)
+
+    def run(self, ctx: Workspace) -> None:
         """Compute SST and write ``ctx.fields.sst``."""
         cfg: OceanCurrentConfig = ctx.config.ocean_current
 

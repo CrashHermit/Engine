@@ -32,7 +32,7 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.terrain.boundaries import BoundaryFacts, BoundaryKind
 from src.worldgen.terrain.plate_personalities import PlateProperties
 from src.worldgen.types import BoolArray, Float64Array, Int8Array, Int32Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.core.model.environment.terrain.volcano import (
     Volcano,
 )
@@ -541,11 +541,14 @@ def _components(*, geometry: MeshGeometry, mask: BoolArray) -> Int32Array:
 class VulcanismStage:
     """Add volcanic uplift, write the volcanism field, stash volcano candidates."""
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("plate_id", "uplift")
+    writes: tuple[str, ...] = ("volcanism",)
+
+    def run(self, ctx: Workspace) -> None:
         """Contribute edifice height and the volcanism field (pre-erosion)."""
         cfg: VulcanismConfig = ctx.config.vulcanism
 
-        facts: BoundaryFacts | None = ctx.boundary_facts
+        facts: BoundaryFacts | None = ctx.scratch.boundary_facts
         if facts is None:
             msg: str = "boundary_facts must be set before VulcanismStage"
             raise RuntimeError(msg)
@@ -553,7 +556,7 @@ class VulcanismStage:
         if plate_id is None:
             msg = "plate_id must be set before VulcanismStage"
             raise RuntimeError(msg)
-        properties: PlateProperties | None = ctx.plate_properties
+        properties: PlateProperties | None = ctx.scratch.plate_properties
         if properties is None:
             msg = "plate_properties must be set before VulcanismStage"
             raise RuntimeError(msg)
@@ -578,16 +581,19 @@ class VulcanismStage:
 
         # Discrete volcanoes are materialised after finalize, when we know which
         # edifices breached (see VolcanoesStage).
-        ctx.volcano_candidates = result.volcanoes
+        ctx.scratch.volcano_candidates = result.volcanoes
 
 
 class VolcanoesStage:
     """Turn surfaced candidates into discrete ``Volcano`` landmarks (post-finalize)."""
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("is_land",)
+    writes: tuple[str, ...] = ("is_volcano", "volcano_id")
+
+    def run(self, ctx: Workspace) -> None:
         """Select landmark volcanoes and write their fields and objects."""
         cfg: VulcanismConfig = ctx.config.vulcanism
-        candidates: list[VolcanoSeed] = ctx.volcano_candidates or []
+        candidates: list[VolcanoSeed] = ctx.scratch.volcano_candidates or []
 
         is_land: BoolArray | None = ctx.fields.is_land
         if is_land is None:
@@ -622,4 +628,4 @@ class VolcanoesStage:
 
         ctx.fields.is_volcano = is_volcano
         ctx.fields.volcano_id = volcano_id
-        ctx.volcanoes = volcanoes
+        ctx.outputs.volcanoes = volcanoes

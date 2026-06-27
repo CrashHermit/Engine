@@ -16,7 +16,7 @@ from src.core.model.environment.water.lake import Lake
 from src.worldgen.config.worldgen_config import LakeConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.core.model.environment.terrain.volcano import Volcano
 
 
@@ -208,8 +208,11 @@ class LakesStage:
     Pipeline order: after RiversStage, before Flow stage.
     """
 
-    def run(self, ctx: WorldContext) -> None:
-        """Extract lakes and write is_lake, lake_id, and ctx.lakes."""
+    reads: tuple[str, ...] = ("elevation", "is_land", "z_route")
+    writes: tuple[str, ...] = ("is_lake", "lake_id")
+
+    def run(self, ctx: Workspace) -> None:
+        """Extract lakes and write is_lake, lake_id, and ctx.outputs.lakes."""
         n: int = ctx.geometry.n_cells
         cfg: LakeConfig = ctx.config.lake
 
@@ -241,7 +244,7 @@ class LakesStage:
             cfg=cfg,
         )
         # --- Inject crater lakes for land calderas (cross-stage coupling) ---
-        volcanoes: list[Volcano] | None = ctx.volcanoes
+        volcanoes: list[Volcano] | None = ctx.outputs.volcanoes
         if volcanoes:
             next_id: int = len(lakes)
             for volcano in volcanoes:
@@ -260,7 +263,7 @@ class LakesStage:
                 )
                 next_id += 1
 
-        ctx.lakes = lakes
+        ctx.outputs.lakes = lakes
 
         # --- Write to fields ---
         ctx.fields.is_lake = is_lake

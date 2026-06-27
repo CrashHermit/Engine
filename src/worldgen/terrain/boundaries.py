@@ -18,7 +18,7 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta
 from src.worldgen.terrain.plate_personalities import PlateProperties
 from src.worldgen.types import BoolArray, Float64Array, Int8Array, Int32Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.types import Int32Array
 
 
@@ -157,21 +157,24 @@ def classify_boundaries(
 
 
 class BoundaryClassifyStage:
-    """Walk plate borders once and write ``ctx.boundary_facts``."""
+    """Walk plate borders once and write ``ctx.scratch.boundary_facts``."""
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("plate_id",)
+    writes: tuple[str, ...] = ()
+
+    def run(self, ctx: Workspace) -> None:
         """Classify every plate boundary and store the per-cell facts."""
         plate_id_field: Int32Array | None = ctx.fields.plate_id
         if plate_id_field is None:
             msg: str = "plate_id must be set before BoundaryClassifyStage"
             raise RuntimeError(msg)
 
-        properties: PlateProperties | None = ctx.plate_properties
+        properties: PlateProperties | None = ctx.scratch.plate_properties
         if properties is None:
             msg = "plate_properties must be set before BoundaryClassifyStage"
             raise RuntimeError(msg)
 
-        ctx.boundary_facts = classify_boundaries(
+        ctx.scratch.boundary_facts = classify_boundaries(
             geometry=ctx.geometry,
             plate_id=plate_id_field,
             properties=properties,

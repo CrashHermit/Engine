@@ -8,7 +8,7 @@ discharge is a land concept.
 import numpy as np
 
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.terrain.routing import (
     compute_receivers,
     priority_flood,
@@ -68,7 +68,10 @@ class DischargeStage:
     matching the carved terrain, not the last erosion iteration's values.
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("elevation", "is_land", "precipitation")
+    writes: tuple[str, ...] = ("discharge", "receiver", "z_route")
+
+    def run(self, ctx: Workspace) -> None:
         """Compute rain-weighted discharge and write flow tree + discharge."""
         n: int = ctx.geometry.n_cells
 

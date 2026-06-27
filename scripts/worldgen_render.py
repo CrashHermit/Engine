@@ -8,7 +8,7 @@ from enum import StrEnum
 import numpy as np
 
 from src.worldgen.bake import bake_to_grid, nearest_cell_per_tile, stamp_rivers
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.fields import Fields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.pipeline import WorldgenPipeline
@@ -184,7 +184,7 @@ def generate_world(
     (up to ``cell_count`` cells) instead of the coarse gameplay grid.  When
     ``None`` (the interactive default), detail equals the gameplay ``size``.
     """
-    ctx: WorldContext
+    ctx: Workspace
     _world, ctx = WorldgenPipeline().run_debug(seed=seed, size=size)
 
     render_size: int = resolution if resolution is not None else ctx.config.size
@@ -196,10 +196,10 @@ def generate_world(
     # at that resolution (the product grid bakes at gameplay size; this is a
     # diagnostic re-bake that keeps sub-tile detail).
     grid: Fields = bake_to_grid(fields=ctx.fields, nearest=nearest)
-    if ctx.rivers:
+    if ctx.outputs.rivers:
         stamp_rivers(
             grid=grid,
-            rivers=ctx.rivers,
+            rivers=ctx.outputs.rivers,
             geometry=ctx.geometry,
             fields=ctx.fields,
             size=render_size,

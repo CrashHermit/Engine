@@ -1,6 +1,20 @@
+"""The worldgen generation ``Workspace`` — the shared mutable buffer stages drive.
+
+Restructures the old flat context into three legible parts:
+
+* ``fields`` — the eager bulk arrays (the ``Fields`` container);
+* ``scratch`` — internal artifacts consumed by later stages but never shipped
+  (boundary facts, plate properties, volcano candidates, the ley potential);
+* ``outputs`` — the product entity lists harvested into ``WorldData``.
+
+The product-vs-plumbing split is now structural, mirroring the core/model rule on
+the worldgen side.  The whole workspace remains the viewer/debug surface via
+``WorldgenPipeline.run_debug``.
+"""
+
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 
 from src.core.model.environment.magic.nexus import Nexus
@@ -16,32 +30,45 @@ from src.worldgen.noise.rng import NoiseSource, subseed
 from src.worldgen.types import Float64Array
 
 if TYPE_CHECKING:
-    # Scratch types defined in terrain algorithm modules.  Imported for
-    # annotations only, under TYPE_CHECKING, so co-located terrain stages can
-    # import WorldContext without an import cycle (the terrain modules host both
-    # the algorithm and its Stage; this context only *references* their types).
+    # Scratch types defined in terrain algorithm modules.  Annotation-only imports
+    # under TYPE_CHECKING so those modules (which host both algorithm and Stage,
+    # and import this Workspace) avoid an import cycle.
     from src.worldgen.terrain.boundaries import BoundaryFacts
     from src.worldgen.terrain.plate_personalities import PlateProperties
     from src.worldgen.terrain.vulcanism import VolcanoSeed
 
 
 @dataclass
-class WorldContext:
-    """Shared state for the worldgen pipeline"""
+class Scratch:
+    """Internal generation artifacts — consumed by later stages, never shipped."""
 
-    config: WorldgenConfig
-    geometry: MeshGeometry
-    fields: Fields
     plate_properties: PlateProperties | None = None
     boundary_facts: BoundaryFacts | None = None
     volcano_candidates: list[VolcanoSeed] | None = None  # pre-erosion seeds; materialized post-finalize
+    magic_potential: Float64Array | None = None  # combined ley potential (mesh intermediate, for the viewer/tests)
+
+
+@dataclass
+class Outputs:
+    """Product entity lists, accumulated by stages and harvested into WorldData."""
+
     volcanoes: list[Volcano] | None = None
     rivers: list[River] | None = None
     lakes: list[Lake] | None = None
     veins: list[Vein] | None = None
     nexuses: list[Nexus] | None = None
-    magic_potential: Float64Array | None = None  # combined ley potential (mesh intermediate, for the viewer/tests)
     regions: list[Region] | None = None
+
+
+@dataclass
+class Workspace:
+    """Shared state for the worldgen pipeline: config, mesh, fields, scratch, outputs."""
+
+    config: WorldgenConfig
+    geometry: MeshGeometry
+    fields: Fields
+    scratch: Scratch = field(default_factory=Scratch)
+    outputs: Outputs = field(default_factory=Outputs)
 
     def seed_for(self, name: str) -> int:
         """Deterministic sub-seed for a named stage or purpose."""

@@ -22,7 +22,7 @@ from src.worldgen.config.worldgen_config import MoistureConfig
 from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.types import BoolArray, Float64Array
 
 
@@ -294,7 +294,10 @@ class MoistureStage:
     ``docs/worldgen-precipitation-redesign-plan.md``.
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("coast_distance", "convergence", "elevation", "is_land", "latitude", "sst", "wind_u", "wind_v")
+    writes: tuple[str, ...] = ("precipitation",)
+
+    def run(self, ctx: Workspace) -> None:
         """Compute precipitation and write ``ctx.fields.precipitation``."""
         cfg: MoistureConfig = ctx.config.moisture
 

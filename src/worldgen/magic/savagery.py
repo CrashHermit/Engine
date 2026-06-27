@@ -9,7 +9,7 @@ import numpy as np
 
 from src.worldgen.config.worldgen_config import SavageryConfig
 from src.worldgen.types import Float64Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import FIELD_SAVAGERY
@@ -90,7 +90,10 @@ class SavageryStage:
     Pipeline order: after the water stages, before Leylines.
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("coast_distance", "precipitation", "slope", "temperature", "volcanism")
+    writes: tuple[str, ...] = ("savagery",)
+
+    def run(self, ctx: Workspace) -> None:
         """Compute savagery and write ``ctx.fields.savagery``."""
         cfg: SavageryConfig = ctx.config.savagery
         geometry = ctx.geometry

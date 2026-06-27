@@ -7,7 +7,7 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_distance
 from src.worldgen.types import BoolArray, Float64Array, Int32Array, Int8Array
 from src.worldgen.config.worldgen_config import LandmassConfig, SeaLevelConfig
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 
 
 def smooth_elevation(
@@ -373,7 +373,10 @@ class FinalizeStage:
     Pipeline order: ``... -> Erosion -> Finalize -> Bake -> Viewer``
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("elevation",)
+    writes: tuple[str, ...] = ("coast_distance", "elevation", "is_land", "landmass_class", "landmass_id", "slope")
+
+    def run(self, ctx: Workspace) -> None:
         """Normalise elevation, label landmasses, and derive secondary fields.
 
         Args:

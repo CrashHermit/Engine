@@ -45,7 +45,7 @@ def test_at_least_some_volcanoes(seed: int) -> None:
 def test_no_arc_volcano_on_collision(seed: int) -> None:
     """The Himalaya gate: no stratovolcano sits on a continent-continent cell."""
     world, ctx = _debug(seed)
-    cc = ctx.boundary_facts.conv_kind == int(BoundaryKind.CONV_CC)
+    cc = ctx.scratch.boundary_facts.conv_kind == int(BoundaryKind.CONV_CC)
     for v in world.volcanoes:
         if v.kind is VolcanoKind.STRATO:
             assert not cc[v.cell], f"arc volcano on a collision cell {v.cell}"

@@ -31,7 +31,7 @@ from src.worldgen.regions.landscape import (
 )
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 from src.worldgen.water.lakes import components
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.ecology.biomes import derive_centers
 
 # Deterministic placeholder namer.  Real procedural naming (language-aware,
@@ -209,7 +209,10 @@ def assign_regions(
 class RegionsStage:
     """Write ``region_id`` / ``biome_region_id`` and the ``Region`` list."""
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("biome_weights", "is_lake", "is_land", "landmass_id")
+    writes: tuple[str, ...] = ("biome_region_id", "region_id")
+
+    def run(self, ctx: Workspace) -> None:
         """Segment land/ocean bodies and biome-regions into named regions."""
         is_land_field: BoolArray | None = ctx.fields.is_land
         if is_land_field is None:
@@ -247,4 +250,4 @@ class RegionsStage:
         )
         ctx.fields.region_id = region_id
         ctx.fields.biome_region_id = biome_region_id
-        ctx.regions = regions
+        ctx.outputs.regions = regions

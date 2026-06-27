@@ -5,7 +5,7 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta
 from src.worldgen.noise.field import FractalField
 from src.worldgen.types import Float64Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.noise.rng import FIELD_WIND_U
 from src.worldgen.noise.rng import FIELD_WIND_V
@@ -286,7 +286,10 @@ class WindStage:
     is wind-advected and coasts moderate toward the wind-borne sea temperature.
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("elevation", "latitude")
+    writes: tuple[str, ...] = ("convergence", "wind_magnitude", "wind_u", "wind_v")
+
+    def run(self, ctx: Workspace) -> None:
         """Compute wind fields and write ``ctx.fields.wind_u/v/magnitude``."""
         cfg: WindConfig = ctx.config.wind
 

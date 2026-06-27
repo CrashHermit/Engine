@@ -19,7 +19,7 @@ from src.worldgen.config.worldgen_config import BiomeConfig
 from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 
 
 def derive_centers() -> tuple[Float64Array, Float64Array, list[BiomeEnum]]:
@@ -156,7 +156,10 @@ class BiomeStage:
     Pipeline order: after Leylines (last ecology field the world needs).
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("is_lake", "is_land", "precipitation", "temperature")
+    writes: tuple[str, ...] = ("biome_weights",)
+
+    def run(self, ctx: Workspace) -> None:
         """Compute ``biome_weights`` and write it to ``ctx.fields``."""
         cfg: BiomeConfig = ctx.config.biome
 

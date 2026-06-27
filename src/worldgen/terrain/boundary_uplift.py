@@ -16,7 +16,7 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.field import FractalField
 from src.worldgen.terrain.boundaries import BoundaryFacts, BoundaryKind
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.noise.rng import FIELD_BOUNDARY_UPLIFT, FIELD_UPLIFT_FLOOR
 from src.worldgen.terrain.boundaries import BoundaryFacts
 from src.worldgen.terrain.plate_personalities import PlateProperties
@@ -190,10 +190,13 @@ def apply_boundary_uplift(
 class BoundaryUpliftStage:
     """Smear convergent/divergent plate-boundary intensity into ``uplift``."""
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("plate_id", "uplift")
+    writes: tuple[str, ...] = ()
+
+    def run(self, ctx: Workspace) -> None:
         """Mutate ``ctx.fields.uplift`` with mountain belts and rift seams."""
         cfg: PlatesConfig = ctx.config.plates
-        facts: BoundaryFacts | None = ctx.boundary_facts
+        facts: BoundaryFacts | None = ctx.scratch.boundary_facts
         if facts is None:
             msg: str = "boundary_facts must be set before BoundaryUpliftStage"
             raise RuntimeError(msg)
@@ -231,7 +234,7 @@ class BoundaryUpliftStage:
         if plate_id_field is None:
             msg = "plate_id must be set before BoundaryUpliftStage"
             raise RuntimeError(msg)
-        properties: PlateProperties | None = ctx.plate_properties
+        properties: PlateProperties | None = ctx.scratch.plate_properties
         if properties is None:
             msg = "plate_properties must be set before BoundaryUpliftStage"
             raise RuntimeError(msg)

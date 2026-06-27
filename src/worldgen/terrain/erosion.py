@@ -4,7 +4,7 @@ from src.worldgen.config.worldgen_config import ErosionConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_distance
 from src.worldgen.types import Float64Array, Int32Array, IntPArray
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.noise.field import FractalField
 from src.worldgen.noise.rng import FIELD_EROSION_INIT
 from src.worldgen.geometry.field_ops import diffuse
@@ -92,7 +92,10 @@ class ErosionStage:
     Pipeline order: ``Mesh → Plates → BoundaryUplift → Erosion → …``
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("uplift",)
+    writes: tuple[str, ...] = ("drainage", "elevation", "receiver", "z_route")
+
+    def run(self, ctx: Workspace) -> None:
         """Run the full erosion loop and write ``elevation``."""
         cfg: ErosionConfig = ctx.config.erosion
         n: int = ctx.geometry.n_cells

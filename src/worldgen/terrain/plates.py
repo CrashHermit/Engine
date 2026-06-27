@@ -6,7 +6,7 @@ import numpy as np
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import Int32Array
 from src.worldgen.config.worldgen_config import PlatesConfig
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 
 UNCLAIMED: int = -1
 
@@ -61,7 +61,10 @@ def build_plates(
 class PlatesStage:
     """Assign each mesh cell a tectonic plate id via ragged multi-source growth."""
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ()
+    writes: tuple[str, ...] = ("plate_id",)
+
+    def run(self, ctx: Workspace) -> None:
         """Write ``plate_id`` on the context fields from ``PlatesConfig``."""
         cfg: PlatesConfig = ctx.config.plates
         ctx.fields.plate_id = build_plates(

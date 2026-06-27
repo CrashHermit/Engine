@@ -145,9 +145,9 @@ def test_savagery_in_unit_range(seed: int) -> None:
 def test_nexus_polarity_matches_extrema(seed: int) -> None:
     """Every source nexus is a strict local max of the potential; sinks, a min."""
     _world, ctx = _debug(seed)
-    potential = ctx.magic_potential
+    potential = ctx.scratch.magic_potential
     geometry = ctx.geometry
-    for nexus in ctx.nexuses:
+    for nexus in ctx.outputs.nexuses:
         cell_val = float(potential[nexus.cell])
         neighbor_vals = potential[geometry.neighbors_of(cell_id=nexus.cell)]
         if nexus.polarity == NexusPolarity.SOURCE:

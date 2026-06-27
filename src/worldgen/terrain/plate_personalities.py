@@ -6,7 +6,7 @@ import numpy as np
 
 from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.types import Float64Array, Int32Array
 
 
@@ -82,7 +82,10 @@ def fill_uplift_from_plates(
 class PlatePersonalityStage:
     """Assign continental/oceanic type, drift, and base uplift per plate."""
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("plate_id",)
+    writes: tuple[str, ...] = ("uplift",)
+
+    def run(self, ctx: Workspace) -> None:
         """Write ``uplift`` and store per-plate drift on the context."""
         cfg: PlatesConfig = ctx.config.plates
         plate_id_field: Int32Array | None = ctx.fields.plate_id
@@ -101,7 +104,7 @@ class PlatePersonalityStage:
             seed=seed,
             config=cfg,
         )
-        ctx.plate_properties: PlateProperties = properties
+        ctx.scratch.plate_properties: PlateProperties = properties
         ctx.fields.uplift: Float64Array = fill_uplift_from_plates(
             plate_id=plate_id,
             base_uplift=properties.base_uplift,

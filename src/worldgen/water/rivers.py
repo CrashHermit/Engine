@@ -11,7 +11,7 @@ from src.worldgen.config.worldgen_config import RiverConfig
 from src.core.model.environment.water.river import River
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 
 
 def classify_rivers(
@@ -221,8 +221,12 @@ class RiversStage:
     Pipeline order: after DischargeStage, before LakesStage.
     """
 
-    def run(self, ctx: WorldContext) -> None:
-        """Classify river cells, extract rivers, write river_id and ctx.rivers."""
+    reads: tuple[str, ...] = ("discharge", "elevation", "is_lake", "is_land", "is_river", "receiver", "z_route")
+    writes: tuple[str, ...] = ("is_river", "river_id")
+    reads_optional: tuple[str, ...] = ("is_lake",)
+
+    def run(self, ctx: Workspace) -> None:
+        """Classify river cells, extract rivers, write river_id and ctx.outputs.rivers."""
         cfg: RiverConfig = ctx.config.river
 
         # --- prerequisites ---
@@ -286,7 +290,7 @@ class RiversStage:
             is_river=ctx.fields.is_river,
             is_lake=is_lake,
         )
-        ctx.rivers = rivers
+        ctx.outputs.rivers = rivers
 
         # Stamp river_id into fields
         ctx.fields.river_id = river_id

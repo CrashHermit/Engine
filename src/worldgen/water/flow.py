@@ -23,7 +23,7 @@ import numpy as np
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta_batch
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 
 
 def compute_flow(
@@ -150,7 +150,10 @@ class FlowStage:
     Pipeline order: after LakesStage (is_lake must be populated).
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("discharge", "elevation", "is_lake", "is_river", "receiver")
+    writes: tuple[str, ...] = ("flow_speed", "flow_u", "flow_v")
+
+    def run(self, ctx: Workspace) -> None:
         """Compute flow direction and speed; write flow_u, flow_v, flow_speed."""
         # --- prerequisites ---
         receiver_field = ctx.fields.receiver

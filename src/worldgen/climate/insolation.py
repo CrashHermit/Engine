@@ -4,7 +4,7 @@ from src.worldgen.config.worldgen_config import InsolationConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.field import FractalField
 from src.worldgen.types import Float64Array
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 from src.worldgen.noise.rng import FIELD_INSOLATION_WOBBLE
 
 
@@ -110,7 +110,10 @@ class InsolationStage:
     ``Finalize → Insolation → Wind → OceanCurrent → Temperature → Moisture``
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ()
+    writes: tuple[str, ...] = ("insolation", "latitude")
+
+    def run(self, ctx: Workspace) -> None:
         """Compute latitude + insolation; write both to ``ctx.fields``."""
         cfg: InsolationConfig = ctx.config.insolation
 

@@ -3,7 +3,7 @@ import numpy as np
 from src.worldgen.config.worldgen_config import TemperatureConfig
 from src.worldgen.types import BoolArray, Float64Array
 from src.worldgen.climate.ocean_current import maritime_sst_onshore
-from src.worldgen.context import WorldContext
+from src.worldgen.workspace import Workspace
 
 
 def compute_temperature(
@@ -81,7 +81,10 @@ class TemperatureStage:
     SST directly and coasts moderate toward the wind-borne ocean SST.
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("coast_distance", "elevation", "insolation", "is_land", "sst", "wind_u", "wind_v")
+    writes: tuple[str, ...] = ("temperature",)
+
+    def run(self, ctx: Workspace) -> None:
         """Compute temperature and write ``ctx.fields.temperature``."""
         cfg: TemperatureConfig = ctx.config.temperature
 
