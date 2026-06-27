@@ -276,9 +276,19 @@ class RiverConfig:
 
 @dataclass
 class LakeConfig:
-    """Lake extraction parameters."""
+    """Lake extraction parameters.
 
-    epsilon: float = 1e-6  # Minimum depth for a lake cell (avoids noise)
+    Lakes are water-balanced: a depression fills only as far as its catchment
+    inflow (accumulated upstream precipitation) can offset surface evaporation.
+    Wet basins fill to their spill and overflow; arid basins reach a partial
+    equilibrium level or stay dry (salt-flat) — so lakes are precipitation-
+    bounded, just like rivers.
+    """
+
+    epsilon: float = 1e-6  # Minimum depth for a candidate depression cell (avoids noise)
+    evap_scale: float = 4.0  # Potential evaporation per cell = evap_scale * temperature,
+    #                          in precipitation-equivalent units (the lake water balance's
+    #                          loss term).  Higher = thirstier climate, fewer/smaller lakes.
 
 
 # ---------------------------------------------------------------------------

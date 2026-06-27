@@ -79,83 +79,162 @@ def extract_lakes(
     z: Float64Array,
     z_filled: Float64Array,
     is_land: BoolArray,
+    discharge: Float64Array,
+    evaporation: Float64Array,
     cfg: LakeConfig,
 ) -> tuple[list[Lake], Int32Array, BoolArray]:
-    """Extract lakes as connected components of water-filled depressions.
+    """Extract water-balanced lakes from terrain depressions.
 
-    A lake is a connected blob of cells where ``z_filled > z + epsilon``,
-    its surface is their shared spill level, and its outlet is the spill
-    cell where water would overflow.
+    Geometry alone tells us where water *could* pool (a depression is a
+    connected blob of cells where ``z_filled > z + epsilon`` — the bias-free
+    spill surface rising above terrain).  But a depression only *holds* a lake
+    if its catchment delivers enough water to offset surface evaporation, so
+    each depression is filled by a water balance rather than flooded to its
+    brim unconditionally:
 
-    ``z_route`` here is the **physical spill surface** ``z_filled`` (the
-    bias-free priority-flood result), not the routing surface.  Reading the
-    routing surface would over-detect lakes: its ``eps * hops`` flat-draining
-    bias accumulates with path length and, at large world sizes, lifts vast
-    non-bowl regions a hair above ``z``, drowning the map in phantom lakes.
-    The spill surface is ``z`` exactly on slopes, so only true bowls qualify.
+    - **Inflow** ``Q_in`` is the catchment rainfall reaching the basin: the
+      maximum ``discharge`` over its cells (all basin cells drain to the pit,
+      whose discharge is the accumulated upstream precipitation).
+    - **Loss** at water level ``h`` is the surface evaporation of the submerged
+      cells, ``sum(evaporation[c] for c in basin if z[c] < h)``.
+    - The lake fills to the level where loss equals inflow.  Sort the basin
+      cells by elevation and submerge the lowest ones until their cumulative
+      evaporation reaches ``Q_in``.  If even the full pool (up to the spill)
+      evaporates less than ``Q_in``, the lake brims over its spill and is
+      **exorheic** (overflow continues downstream).  Otherwise it equilibrates
+      at a partial level below the spill and is **endorheic** (all inflow
+      evaporates; arid basins may submerge nothing at all — a salt flat).
 
-    **Outlet finding:** the boundary cell of the lake whose outside neighbor
-    has the lowest ``z_filled`` — that's where the flood spilled in, and
-    therefore where water spills out.  If every outside neighbor is higher,
-    the lake is terminal: ``outlet_cell = None``.
+    ``z_filled`` (not the routing surface ``z_route``) defines the depressions:
+    ``z_route``'s ``eps * hops`` flat-draining bias accumulates with path length
+    and, at large world sizes, would lift vast non-bowl regions a hair above
+    ``z`` and drown the map in phantom lakes.
 
     Args:
         geometry: Torus mesh with CSR adjacency.
-        z: Per-cell terrain elevation (for mask computation).
+        z: Per-cell terrain elevation.
         z_filled: Per-cell physical spill surface (bias-free priority-flood).
         is_land: Boolean mask identifying land cells.
-        cfg: Lake configuration with ``epsilon`` (minimum depth threshold).
+        discharge: Per-cell accumulated upstream precipitation (inflow source).
+        evaporation: Per-cell potential evaporation, in the same units as
+            ``discharge`` (precipitation-equivalent), summed over submerged
+            cells as the loss term.
+        cfg: Lake configuration (``epsilon`` candidate-depth floor).
 
     Returns:
-        lakes: List of ``Lake`` objects (0-based ids).
-        lake_id: Per-cell lake id (``-1`` = no lake).
-        is_lake: Boolean array marking lake cells.
+        lakes: List of water-balanced ``Lake`` objects (0-based ids).
+        lake_id: Per-cell lake id (``-1`` = no lake / not submerged).
+        is_lake: Boolean array marking submerged lake cells.
     """
     n: int = len(z)
     epsilon: float = cfg.epsilon
+    is_lake: BoolArray = np.zeros(n, dtype=bool)
+    lake_id: Int32Array = np.full(n, -1, dtype=np.int32)
 
-    # --- 1. Lake mask ---
-    lake_mask: BoolArray = is_land & (z_filled > z + epsilon)
-    is_lake: BoolArray = lake_mask
-
-    # --- 2. Connected components via the shared BFS helper ---
-    lake_id: Int32Array = components(geometry=geometry, mask=lake_mask)
-    n_lakes: int = int(lake_id.max()) + 1 if lake_id.size else 0
-    if n_lakes <= 0:
+    # --- 1. Candidate depressions: connected components of the geometric pool ---
+    depression_mask: BoolArray = is_land & (z_filled > z + epsilon)
+    component_id: Int32Array = components(geometry=geometry, mask=depression_mask)
+    n_components: int = int(component_id.max()) + 1 if component_id.size else 0
+    if n_components <= 0:
         return [], lake_id, is_lake
 
-    # Group cell ids by component label in a single pass.
-    cells_by_lake: list[list[int]] = [[] for _ in range(n_lakes)]
+    cells_by_component: list[list[int]] = [[] for _ in range(n_components)]
     cell_id: int
     for cell_id in range(n):
-        label: int = int(lake_id[cell_id])
+        label: int = int(component_id[cell_id])
         if label >= 0:
-            cells_by_lake[label].append(cell_id)
+            cells_by_component[label].append(cell_id)
 
-    # --- 3. Build Lake objects and find outlets ---
+    # --- 2. Water-balance each depression into a (possibly partial) lake ---
     lakes: list[Lake] = []
-    lake_idx: int
-    component_cells: list[int]
-    for lake_idx, component_cells in enumerate(cells_by_lake):
-        # A filled lake shares one spill surface; any member reports it.
-        surface_level: float = float(z_filled[component_cells[0]])
-
-        outlet_cell: int | None = _find_outlet(
+    next_lake_id: int = 0
+    for component_cells in cells_by_component:
+        submerged, level, brims = _fill_basin(
             component_cells=component_cells,
-            geometry=geometry,
+            z=z,
             z_filled=z_filled,
+            discharge=discharge,
+            evaporation=evaporation,
         )
+        if not submerged:
+            continue  # arid basin: dry / salt flat, no standing water
+
+        inflow: float = max(float(discharge[c]) for c in component_cells)
+        outlet_cell: int | None = (
+            _find_outlet(
+                component_cells=submerged,
+                geometry=geometry,
+                z_filled=z_filled,
+            )
+            if brims
+            else None
+        )
+
+        for c in submerged:
+            is_lake[c] = True
+            lake_id[c] = next_lake_id
 
         lakes.append(
             Lake(
-                id=lake_idx,
-                cells=component_cells,
-                surface_level=surface_level,
+                id=next_lake_id,
+                cells=submerged,
+                surface_level=level,
                 outlet_cell=outlet_cell,
+                endorheic=not brims,
+                inflow=inflow,
             )
         )
+        next_lake_id += 1
 
     return lakes, lake_id, is_lake
+
+
+def _fill_basin(
+    *,
+    component_cells: list[int],
+    z: Float64Array,
+    z_filled: Float64Array,
+    discharge: Float64Array,
+    evaporation: Float64Array,
+) -> tuple[list[int], float, bool]:
+    """Solve a depression's equilibrium water level from its water balance.
+
+    Submerge the basin's lowest cells until their cumulative evaporation
+    reaches the inflow; the lake brims over its spill if even the full pool
+    evaporates less than the inflow.
+
+    Args:
+        component_cells: Mesh cell ids of the geometric depression.
+        z: Per-cell terrain elevation.
+        z_filled: Per-cell spill surface (its shared value is the spill level).
+        discharge: Per-cell accumulated upstream precipitation.
+        evaporation: Per-cell potential evaporation (precip-equivalent units).
+
+    Returns:
+        (submerged_cells, surface_level, brims): cells under water (lowest-first),
+        the equilibrium surface elevation, and whether the lake reached its spill.
+    """
+    spill_level: float = float(z_filled[component_cells[0]])
+    inflow: float = max(float(discharge[c]) for c in component_cells)
+
+    # Lowest cells flood first; accumulate evaporation as the water rises.
+    ordered: list[int] = sorted(component_cells, key=lambda c: float(z[c]))
+
+    cumulative_evap: float = 0.0
+    submerged: list[int] = []
+    for c in ordered:
+        next_evap: float = cumulative_evap + float(evaporation[c])
+        if next_evap > inflow:
+            # This cell would tip evaporation past inflow: water equilibrates
+            # at its rim.  The lake is partial (endorheic) and stops here.
+            level: float = float(z[c])
+            return submerged, level, False
+        cumulative_evap = next_evap
+        submerged.append(c)
+
+    # Inflow outlasts evaporation over the whole pool: fills to the spill and
+    # overflows (exorheic).
+    return submerged, spill_level, True
 
 
 def _find_outlet(
@@ -216,7 +295,9 @@ class LakesStage:
     Pipeline order: after RiversStage, before Flow stage.
     """
 
-    reads: tuple[str, ...] = ("elevation", "is_land", "z_filled")
+    reads: tuple[str, ...] = (
+        "elevation", "is_land", "z_filled", "discharge", "temperature",
+    )
     writes: tuple[str, ...] = ("is_lake", "lake_id")
 
     def run(self, ctx: Workspace) -> None:
@@ -243,12 +324,30 @@ class LakesStage:
             raise RuntimeError(msg)
         is_land = is_land_field
 
+        discharge_field = ctx.fields.discharge
+        if discharge_field is None:
+            msg = "discharge must be set before LakesStage"
+            raise RuntimeError(msg)
+        discharge = discharge_field
+
+        temperature_field = ctx.fields.temperature
+        if temperature_field is None:
+            msg = "temperature must be set before LakesStage"
+            raise RuntimeError(msg)
+        # Potential evaporation as the lake water balance's loss term, in the
+        # same precipitation-equivalent units as discharge: warmer climate
+        # evaporates more.  Clamp temperature to non-negative so frozen cells
+        # don't subtract water.
+        evaporation = cfg.evap_scale * np.maximum(temperature_field, 0.0)
+
         # --- Extract lakes ---
         lakes, lake_id, is_lake = extract_lakes(
             geometry=ctx.geometry,
             z=elevation,
             z_filled=z_filled,
             is_land=is_land,
+            discharge=discharge,
+            evaporation=evaporation,
             cfg=cfg,
         )
         # --- Inject crater lakes for land calderas (cross-stage coupling) ---
@@ -267,6 +366,7 @@ class LakesStage:
                         cells=[cell],
                         surface_level=float(elevation[cell]),
                         outlet_cell=None,  # terminal crater lake
+                        endorheic=True,
                     )
                 )
                 next_id += 1

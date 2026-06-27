@@ -74,7 +74,8 @@ def test_empty_mesh():
     geom = _mock_geometry(n, [])
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg,
+        discharge=np.full(n, 1e9), evaporation=np.zeros(n),
     )
 
     assert lakes == []
@@ -104,7 +105,8 @@ def test_single_lake():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg,
+        discharge=np.full(n, 1e9), evaporation=np.zeros(n),
     )
 
     assert len(lakes) == 1
@@ -144,7 +146,8 @@ def test_multiple_lakes():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg,
+        discharge=np.full(n, 1e9), evaporation=np.zeros(n),
     )
 
     assert len(lakes) == 2
@@ -179,7 +182,8 @@ def test_multi_cell_lake_is_one_component():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg,
+        discharge=np.full(n, 1e9), evaporation=np.zeros(n),
     )
 
     assert len(lakes) == 1
@@ -214,7 +218,8 @@ def test_lake_with_outlet():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg,
+        discharge=np.full(n, 1e9), evaporation=np.zeros(n),
     )
 
     assert len(lakes) == 1
@@ -243,7 +248,8 @@ def test_ocean_cells_not_lakes():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg,
+        discharge=np.full(n, 1e9), evaporation=np.zeros(n),
     )
 
     assert len(lakes) == 0
@@ -269,7 +275,8 @@ def test_lake_mask_epsilon():
     cfg = LakeConfig(epsilon=epsilon)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg,
+        discharge=np.full(n, 1e9), evaporation=np.zeros(n),
     )
 
     # z_route > z + epsilon is False when z_route == z + epsilon.
@@ -296,7 +303,8 @@ def test_lake_mask_epsilon_above():
     cfg = LakeConfig(epsilon=epsilon)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg,
+        discharge=np.full(n, 1e9), evaporation=np.zeros(n),
     )
 
     assert len(lakes) == 1
@@ -322,7 +330,8 @@ def test_lake_id_consistency():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg,
+        discharge=np.full(n, 1e9), evaporation=np.zeros(n),
     )
 
     # lake_id >= 0 iff is_lake
@@ -357,8 +366,82 @@ def test_lake_surface_level():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg,
+        discharge=np.full(n, 1e9), evaporation=np.zeros(n),
     )
 
     assert len(lakes) == 1
     assert abs(lakes[0].surface_level - expected_surface) < 1e-9
+
+
+# ---------------------------------------------------------------------------
+# Water balance: inflow vs evaporation decides how far a depression fills.
+# ---------------------------------------------------------------------------
+
+
+def _bowl():
+    """A 3-cell bowl in a line: z = [0.0, 0.1, 0.2], spill at 0.3."""
+    n = 3
+    adj = [[1], [0, 2], [1]]
+    geom = _mock_geometry(n, adj)
+    z = np.array([0.0, 0.1, 0.2], dtype=np.float64)
+    z_filled = np.full(n, 0.3, dtype=np.float64)  # filled to spill
+    is_land = np.ones(n, dtype=bool)
+    return n, geom, z, z_filled, is_land
+
+
+def test_partial_lake_is_endorheic():
+    """Inflow that covers only the lowest cells yields a partial, endorheic lake."""
+    n, geom, z, z_filled, is_land = _bowl()
+    cfg = LakeConfig(epsilon=1e-6)
+    # evaporation 1/cell, inflow 1.5: cell 0 submerges (cum 1.0), cell 1 would
+    # tip to 2.0 > 1.5, so the lake equilibrates at cell 1's rim.
+    evaporation = np.ones(n, dtype=np.float64)
+    discharge = np.full(n, 1.5, dtype=np.float64)
+
+    lakes, lake_id, is_lake = extract_lakes(
+        geometry=geom, z=z, z_filled=z_filled, is_land=is_land, cfg=cfg,
+        discharge=discharge, evaporation=evaporation,
+    )
+
+    assert len(lakes) == 1
+    assert lakes[0].cells == [0]
+    assert lakes[0].endorheic is True
+    assert lakes[0].outlet_cell is None
+    assert abs(lakes[0].surface_level - 0.1) < 1e-9
+    assert is_lake[0] and not is_lake[1] and not is_lake[2]
+
+
+def test_arid_basin_stays_dry():
+    """When evaporation outstrips inflow even at the pit, no lake forms."""
+    n, geom, z, z_filled, is_land = _bowl()
+    cfg = LakeConfig(epsilon=1e-6)
+    evaporation = np.ones(n, dtype=np.float64)
+    discharge = np.full(n, 0.5, dtype=np.float64)  # below the pit's own evaporation
+
+    lakes, lake_id, is_lake = extract_lakes(
+        geometry=geom, z=z, z_filled=z_filled, is_land=is_land, cfg=cfg,
+        discharge=discharge, evaporation=evaporation,
+    )
+
+    assert lakes == []
+    assert not np.any(is_lake)
+
+
+def test_wet_basin_brims_and_overflows():
+    """Inflow exceeding whole-pool evaporation fills to the spill (exorheic)."""
+    n, geom, z, z_filled, is_land = _bowl()
+    cfg = LakeConfig(epsilon=1e-6)
+    evaporation = np.ones(n, dtype=np.float64)
+    discharge = np.full(n, 5.0, dtype=np.float64)  # outlasts 3.0 total evaporation
+
+    lakes, lake_id, is_lake = extract_lakes(
+        geometry=geom, z=z, z_filled=z_filled, is_land=is_land, cfg=cfg,
+        discharge=discharge, evaporation=evaporation,
+    )
+
+    assert len(lakes) == 1
+    assert sorted(lakes[0].cells) == [0, 1, 2]
+    assert lakes[0].endorheic is False
+    assert abs(lakes[0].surface_level - 0.3) < 1e-9
+    assert bool(np.all(is_lake))
