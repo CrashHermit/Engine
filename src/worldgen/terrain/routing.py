@@ -11,19 +11,27 @@ def priority_flood(
     geometry: MeshGeometry,
     z: Float64Array,
     base_cells: Int32Array,
-) -> Float64Array:
-    """Compute the water-surface elevation for flow routing.
+) -> tuple[Float64Array, Float64Array]:
+    """Compute water-surface elevations for flow routing and for lakes.
 
     Barnes (2014) priority-flood: grow a water surface upward from
     base (ocean) cells through a min-heap ordered by water-surface
-    elevation.  Every cell's ``z_route`` is the level water must reach
-    to flow from that cell to the ocean — ``z`` for ridges, flat
-    spill-level inside bowls.  The original terrain ``z`` is never
-    mutated.
+    elevation.  Two surfaces fall out of the same flood, serving two
+    different jobs — keeping them separate is deliberate:
 
-    A tiny ``eps * hops`` bias is baked into ``z_route`` itself so
-    flat bowl floors drain toward the spill instead of dead-ending in
-    a tie that ``compute_receivers`` cannot resolve.
+    - ``z_filled`` is the **physical spill surface**: ``z`` on ridges and
+      slopes, the flat spill-level inside a bowl.  This is the real water
+      surface a lake would have, so lake detection (``z_filled > z``) sees
+      *only* genuine depressions.
+
+    - ``z_route`` is ``z_filled`` plus a tiny ``eps * hops`` bias so flat
+      bowl floors drain toward the spill instead of dead-ending in a tie
+      that ``compute_receivers`` cannot resolve.  The bias is essential for
+      routing but, accumulating with path length, would masquerade as lake
+      depth if read as a water surface — which is why lakes must read
+      ``z_filled``, not ``z_route``.
+
+    The original terrain ``z`` is never mutated.
 
     Args:
         geometry: Torus mesh with CSR adjacency.
@@ -33,10 +41,12 @@ def priority_flood(
             of ``z``).
 
     Returns:
-        z_route: Per-cell water-surface elevation (float64).
+        (z_route, z_filled): Routing surface (with flat-draining bias) and
+            physical spill surface (bias-free), both float64.
     """
     n: int = geometry.n_cells
     z_route: Float64Array = np.empty(n, dtype=np.float64)
+    z_filled: Float64Array = np.empty(n, dtype=np.float64)
     visited: BoolArray = np.zeros(n, dtype=bool)
 
     # Priority-flood uses the same min-heap pattern as plate growth
@@ -49,6 +59,7 @@ def priority_flood(
     for cell_id in base_cells:
         z_val: float = float(z[cell_id])
         z_route[cell_id] = z_val
+        z_filled[cell_id] = z_val
         visited[cell_id] = True
         heapq.heappush(heap, (float(z_route[cell_id]), 0, int(cell_id)))
 
@@ -64,6 +75,7 @@ def priority_flood(
             # Water cannot descend below the level it arrived at.
             neighbor_z: float = float(z[neighbor_id])
             fill_z: float = max(current_z, neighbor_z)
+            z_filled[neighbor_id] = fill_z
             z_route[neighbor_id] = fill_z + eps * (hops + 1)
             visited[neighbor_id] = True
 
@@ -72,7 +84,7 @@ def priority_flood(
                 (float(z_route[neighbor_id]), hops + 1, int(neighbor_id)),
             )
 
-    return z_route
+    return z_route, z_filled
 
 
 def compute_receivers(

@@ -69,7 +69,7 @@ class DischargeStage:
     """
 
     reads: tuple[str, ...] = ("elevation", "is_land", "precipitation")
-    writes: tuple[str, ...] = ("discharge", "receiver", "z_route")
+    writes: tuple[str, ...] = ("discharge", "receiver", "z_route", "z_filled")
 
     def run(self, ctx: Workspace) -> None:
         """Compute rain-weighted discharge and write flow tree + discharge."""
@@ -91,12 +91,15 @@ class DischargeStage:
             :n_base
         ].astype(np.int32)
 
-        z_route: Float64Array = priority_flood(
+        z_route: Float64Array
+        z_filled: Float64Array
+        z_route, z_filled = priority_flood(
             geometry=ctx.geometry,
             z=elevation,
             base_cells=base_cells,
         )
         ctx.fields.z_route = z_route
+        ctx.fields.z_filled = z_filled
 
         # --- 2. Compute receivers on final terrain ---
         receiver: Int32Array = compute_receivers(

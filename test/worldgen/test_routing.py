@@ -48,7 +48,8 @@ def test_priority_flood_reaches_all_cells() -> None:
     z: Float64Array = np.random.default_rng(seed=42).normal(size=geometry.n_cells)
     base_cells: Int32Array = _build_base_cells(z)
 
-    z_route: Float64Array = priority_flood(
+    z_route: Float64Array
+    z_route, _ = priority_flood(
         geometry=geometry,
         z=z,
         base_cells=base_cells,
@@ -65,7 +66,8 @@ def test_priority_flood_water_surface_is_non_decreasing() -> None:
     z: Float64Array = np.random.default_rng(seed=42).normal(size=geometry.n_cells)
     base_cells: Int32Array = _build_base_cells(z)
 
-    z_route: Float64Array = priority_flood(
+    z_route: Float64Array
+    z_route, _ = priority_flood(
         geometry=geometry,
         z=z,
         base_cells=base_cells,
@@ -82,7 +84,8 @@ def test_priority_flood_base_cells_have_exact_z() -> None:
     z: Float64Array = rng.normal(size=geometry.n_cells)
     base_cells: Int32Array = _build_base_cells(z)
 
-    z_route: Float64Array = priority_flood(
+    z_route: Float64Array
+    z_route, _ = priority_flood(
         geometry=geometry,
         z=z,
         base_cells=base_cells,
@@ -104,7 +107,8 @@ def test_receivers_no_cycles() -> None:
     z: Float64Array = rng.normal(size=geometry.n_cells)
     base_cells: Int32Array = _build_base_cells(z)
 
-    z_route: Float64Array = priority_flood(
+    z_route: Float64Array
+    z_route, _ = priority_flood(
         geometry=geometry,
         z=z,
         base_cells=base_cells,
@@ -134,7 +138,8 @@ def test_receivers_are_downhill() -> None:
     z: Float64Array = rng.normal(size=geometry.n_cells)
     base_cells: Int32Array = _build_base_cells(z)
 
-    z_route: Float64Array = priority_flood(
+    z_route: Float64Array
+    z_route, _ = priority_flood(
         geometry=geometry,
         z=z,
         base_cells=base_cells,
@@ -166,7 +171,8 @@ def test_receivers_base_level_reach_pits() -> None:
     z: Float64Array = rng.normal(size=geometry.n_cells)
     base_cells: Int32Array = _build_base_cells(z)
 
-    z_route: Float64Array = priority_flood(
+    z_route: Float64Array
+    z_route, _ = priority_flood(
         geometry=geometry,
         z=z,
         base_cells=base_cells,
@@ -200,7 +206,8 @@ def test_drainage_all_positive() -> None:
     z: Float64Array = rng.normal(size=geometry.n_cells)
     base_cells: Int32Array = _build_base_cells(z)
 
-    z_route: Float64Array = priority_flood(
+    z_route: Float64Array
+    z_route, _ = priority_flood(
         geometry=geometry,
         z=z,
         base_cells=base_cells,
@@ -228,7 +235,8 @@ def test_drainage_monotonic_along_receiver() -> None:
     z: Float64Array = rng.normal(size=geometry.n_cells)
     base_cells: Int32Array = _build_base_cells(z)
 
-    z_route: Float64Array = priority_flood(
+    z_route: Float64Array
+    z_route, _ = priority_flood(
         geometry=geometry,
         z=z,
         base_cells=base_cells,
@@ -259,7 +267,8 @@ def test_drainage_deterministic() -> None:
     z: Float64Array = rng.normal(size=geometry.n_cells)
     base_cells: Int32Array = _build_base_cells(z)
 
-    z_route_a: Float64Array = priority_flood(
+    z_route_a: Float64Array
+    z_route_a, _ = priority_flood(
         geometry=geometry,
         z=z.copy(),
         base_cells=base_cells,
@@ -273,7 +282,8 @@ def test_drainage_deterministic() -> None:
         z_route=z_route_a,
     )
 
-    z_route_b: Float64Array = priority_flood(
+    z_route_b: Float64Array
+    z_route_b, _ = priority_flood(
         geometry=geometry,
         z=z.copy(),
         base_cells=base_cells,

@@ -52,6 +52,7 @@ class Fields:
     plate_id: Int32Array  # Which plate owns the cell
     uplift: Float64Array  # Tectonic push-up rate
     z_route: Float64Array  # Water-routing elevation (separate from terrain)
+    z_filled: Float64Array  # Physical spill surface (depression fill, no routing bias)
     receiver: Int32Array  # Downstream cell id; -1 = base level
     drainage: Float64Array  # Upstream area (river size)
     slope: Float64Array  # Steepest descent

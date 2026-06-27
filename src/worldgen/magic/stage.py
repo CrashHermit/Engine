@@ -87,7 +87,8 @@ class MagicStage:
         base_cells: Int32Array = np.argpartition(a=combined_potential, kth=n_base)[
             :n_base
         ].astype(np.int32)
-        potential_routed: Float64Array = priority_flood(
+        potential_routed: Float64Array
+        potential_routed, _ = priority_flood(
             geometry=geometry, z=combined_potential, base_cells=base_cells
         )
         receiver: Int32Array = compute_receivers(

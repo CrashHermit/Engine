@@ -48,7 +48,8 @@ def _make_routing(
 ) -> tuple[Float64Array, Int32Array, Float64Array]:
     """Build z_route, receiver, drainage from terrain z."""
     base_cells: Int32Array = np.argpartition(z, max(1, int(0.1 * len(z))))[: max(1, int(0.1 * len(z)))].astype(np.int32)
-    z_route: Float64Array = priority_flood(geometry=geometry, z=z, base_cells=base_cells)
+    z_route: Float64Array
+    z_route, _ = priority_flood(geometry=geometry, z=z, base_cells=base_cells)
     receiver: Int32Array = compute_receivers(geometry=geometry, z_route=z_route)
     drainage: Float64Array = accumulate_drainage(receiver=receiver, z_route=z_route)
     return z_route, receiver, drainage
@@ -273,7 +274,8 @@ def test_full_erosion_loop_stable() -> None:
         n_base: int = max(1, int(cfg.base_level_fraction * n))
         base_cells: Int32Array = np.argpartition(z, n_base)[:n_base].astype(np.int32)
 
-        z_route: Float64Array = priority_flood(
+        z_route: Float64Array
+        z_route, _ = priority_flood(
             geometry=geometry, z=z, base_cells=base_cells,
         )
         receiver: Int32Array = compute_receivers(
@@ -308,7 +310,7 @@ def test_full_erosion_loop_creves_valleys() -> None:
     for _iteration in range(cfg.iterations):
         n_base = max(1, int(cfg.base_level_fraction * n))
         base_cells = np.argpartition(z, n_base)[:n_base].astype(np.int32)
-        z_route = priority_flood(geometry=geometry, z=z, base_cells=base_cells)
+        z_route, _ = priority_flood(geometry=geometry, z=z, base_cells=base_cells)
         receiver = compute_receivers(geometry=geometry, z_route=z_route)
         drainage = accumulate_drainage(receiver=receiver, z_route=z_route)
         stream_power_pass(

@@ -14,6 +14,7 @@ TERRAIN_FIELDS: tuple[FieldSpec, ...] = (
     FieldSpec("plate_id", DTYPE_I4, doc="Which plate owns the cell"),
     FieldSpec("uplift", DTYPE_F8, doc="Tectonic push-up rate"),
     FieldSpec("z_route", DTYPE_F8, doc="Water-routing elevation (separate from terrain)"),
+    FieldSpec("z_filled", DTYPE_F8, ships_to_product=False, doc="Physical spill surface (depression fill, no routing bias); for lakes"),
     FieldSpec("receiver", DTYPE_I4, doc="Downstream cell id; -1 = base level"),
     FieldSpec("drainage", DTYPE_F8, doc="Upstream area (river size)"),
     FieldSpec("slope", DTYPE_F8, doc="Steepest descent"),

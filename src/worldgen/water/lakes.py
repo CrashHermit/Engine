@@ -2,10 +2,14 @@
 
 Phase 3 step 4: lakes as connected components of water-filled depressions.
 
-A lake is a connected blob of cells where ``z_route > z + epsilon``
-(terrain below the water surface).  Its surface is the shared ``z_route``
+A lake is a connected blob of cells where ``z_filled > z + epsilon``
+(terrain below the spill surface).  Its surface is the shared ``z_filled``
 value, and its outlet is the spill cell where water would overflow — the
-boundary cell whose outside neighbor has the lowest ``z_route``.
+boundary cell whose outside neighbor has the lowest ``z_filled``.
+
+``z_filled`` is the bias-free priority-flood surface, *not* the routing
+surface ``z_route``: the latter's ``eps * hops`` flat-draining bias would
+masquerade as lake depth and drown large worlds in phantom lakes.
 """
 
 from collections import deque
@@ -73,28 +77,32 @@ def extract_lakes(
     *,
     geometry: MeshGeometry,
     z: Float64Array,
-    z_route: Float64Array,
+    z_filled: Float64Array,
     is_land: BoolArray,
     cfg: LakeConfig,
 ) -> tuple[list[Lake], Int32Array, BoolArray]:
     """Extract lakes as connected components of water-filled depressions.
 
-    A lake is a connected blob of cells where ``z_route > z + epsilon``,
-    its surface is their shared ``z_route`` value, and its outlet is the
-    spill cell where water would overflow.
+    A lake is a connected blob of cells where ``z_filled > z + epsilon``,
+    its surface is their shared spill level, and its outlet is the spill
+    cell where water would overflow.
 
-    The lake mask is ``is_land & (z_route > z + epsilon)`` — the epsilon
-    avoids labeling numerically-flat-but-not-bowl cells as lakes.
+    ``z_route`` here is the **physical spill surface** ``z_filled`` (the
+    bias-free priority-flood result), not the routing surface.  Reading the
+    routing surface would over-detect lakes: its ``eps * hops`` flat-draining
+    bias accumulates with path length and, at large world sizes, lifts vast
+    non-bowl regions a hair above ``z``, drowning the map in phantom lakes.
+    The spill surface is ``z`` exactly on slopes, so only true bowls qualify.
 
     **Outlet finding:** the boundary cell of the lake whose outside neighbor
-    has the lowest ``z_route`` — that's where the flood spilled in, and
+    has the lowest ``z_filled`` — that's where the flood spilled in, and
     therefore where water spills out.  If every outside neighbor is higher,
     the lake is terminal: ``outlet_cell = None``.
 
     Args:
         geometry: Torus mesh with CSR adjacency.
         z: Per-cell terrain elevation (for mask computation).
-        z_route: Per-cell water-surface elevation from priority-flood.
+        z_filled: Per-cell physical spill surface (bias-free priority-flood).
         is_land: Boolean mask identifying land cells.
         cfg: Lake configuration with ``epsilon`` (minimum depth threshold).
 
@@ -107,7 +115,7 @@ def extract_lakes(
     epsilon: float = cfg.epsilon
 
     # --- 1. Lake mask ---
-    lake_mask: BoolArray = is_land & (z_route > z + epsilon)
+    lake_mask: BoolArray = is_land & (z_filled > z + epsilon)
     is_lake: BoolArray = lake_mask
 
     # --- 2. Connected components via the shared BFS helper ---
@@ -129,13 +137,13 @@ def extract_lakes(
     lake_idx: int
     component_cells: list[int]
     for lake_idx, component_cells in enumerate(cells_by_lake):
-        # A filled lake shares one z_route surface; any member reports it.
-        surface_level: float = float(z_route[component_cells[0]])
+        # A filled lake shares one spill surface; any member reports it.
+        surface_level: float = float(z_filled[component_cells[0]])
 
         outlet_cell: int | None = _find_outlet(
             component_cells=component_cells,
             geometry=geometry,
-            z_route=z_route,
+            z_filled=z_filled,
         )
 
         lakes.append(
@@ -154,27 +162,27 @@ def _find_outlet(
     *,
     component_cells: list[int],
     geometry: MeshGeometry,
-    z_route: Float64Array,
+    z_filled: Float64Array,
 ) -> int | None:
     """Find the outlet cell of a lake component.
 
     The outlet is the boundary cell of the lake whose outside neighbor
-    has the lowest ``z_route``.  If every outside neighbor is higher
+    has the lowest ``z_filled``.  If every outside neighbor is higher
     than the lake's surface (the lake is a hydrological sink), the lake
     is terminal: returns ``None``.
 
     Args:
         component_cells: Mesh cell ids belonging to this lake.
         geometry: Torus mesh with CSR adjacency.
-        z_route: Per-cell water-surface elevation.
+        z_filled: Per-cell physical spill surface.
 
     Returns:
         Outlet cell id, or ``None`` for terminal (endorheic) lakes.
     """
     lake_set: set[int] = set(component_cells)
 
-    # Surface level: use the minimum z_route in the lake (water is level).
-    surface_level: float = min(float(z_route[c]) for c in component_cells)
+    # Surface level: use the minimum z_filled in the lake (water is level).
+    surface_level: float = min(float(z_filled[c]) for c in component_cells)
 
     best_outside_z: float = float("inf")
     outlet_cell: int | None = None
@@ -185,7 +193,7 @@ def _find_outlet(
             if neighbor_id in lake_set:
                 continue
 
-            outside_z: float = float(z_route[neighbor_id])
+            outside_z: float = float(z_filled[neighbor_id])
             if outside_z < best_outside_z:
                 best_outside_z = outside_z
                 outlet_cell = cell_id
@@ -202,13 +210,13 @@ class LakesStage:
     """Extract lakes and write is_lake / lake_id to fields.
 
     Phase 3 step 4: ``extract_lakes`` — BFS connected components on the
-    lake mask ``is_land & (z_route > z + epsilon)``, outlet finding, and
+    lake mask ``is_land & (z_filled > z + epsilon)``, outlet finding, and
     ``Lake`` object construction.
 
     Pipeline order: after RiversStage, before Flow stage.
     """
 
-    reads: tuple[str, ...] = ("elevation", "is_land", "z_route")
+    reads: tuple[str, ...] = ("elevation", "is_land", "z_filled")
     writes: tuple[str, ...] = ("is_lake", "lake_id")
 
     def run(self, ctx: Workspace) -> None:
@@ -217,11 +225,11 @@ class LakesStage:
         cfg: LakeConfig = ctx.config.lake
 
         # --- prerequisites ---
-        z_field = ctx.fields.z_route
+        z_field = ctx.fields.z_filled
         if z_field is None:
-            msg: str = "z_route must be set before LakesStage"
+            msg: str = "z_filled must be set before LakesStage"
             raise RuntimeError(msg)
-        z_route = z_field
+        z_filled = z_field
 
         elevation_field = ctx.fields.elevation
         if elevation_field is None:
@@ -239,7 +247,7 @@ class LakesStage:
         lakes, lake_id, is_lake = extract_lakes(
             geometry=ctx.geometry,
             z=elevation,
-            z_route=z_route,
+            z_filled=z_filled,
             is_land=is_land,
             cfg=cfg,
         )

@@ -141,7 +141,8 @@ class ErosionStage:
                 np.int32
             )
 
-            z_route: Float64Array = priority_flood(
+            z_route: Float64Array
+            z_route, _ = priority_flood(
                 geometry=ctx.geometry,
                 z=z,
                 base_cells=base_cells,

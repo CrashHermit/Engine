@@ -221,7 +221,7 @@ class RiversStage:
     Pipeline order: after DischargeStage, before LakesStage.
     """
 
-    reads: tuple[str, ...] = ("discharge", "elevation", "is_lake", "is_land", "is_river", "receiver", "z_route")
+    reads: tuple[str, ...] = ("discharge", "elevation", "is_lake", "is_land", "is_river", "receiver", "z_filled", "z_route")
     writes: tuple[str, ...] = ("is_river", "river_id")
     reads_optional: tuple[str, ...] = ("is_lake",)
 
@@ -241,11 +241,14 @@ class RiversStage:
         is_lake_field: BoolArray | None = ctx.fields.is_lake
         if is_lake_field is None:
             # LakesStage runs after this stage, so is_lake is not written yet.
-            # Use the lake-mask stand-in `z_route > z + epsilon` — identical to
-            # the mask LakesStage will compute — so the two stages agree.
+            # Use the lake-mask stand-in `z_filled > z + epsilon` — identical to
+            # the mask LakesStage will compute — so the two stages agree.  Read
+            # the physical spill surface, not z_route, whose flat-draining bias
+            # would over-detect lakes (see priority_flood / extract_lakes).
             elevation_field: Float64Array = ctx.fields.elevation
+            z_filled: Float64Array = ctx.fields.z_filled
             is_lake: BoolArray = is_land & (
-                z_route > elevation_field + ctx.config.lake.epsilon
+                z_filled > elevation_field + ctx.config.lake.epsilon
             )
         else:
             is_lake: BoolArray = is_lake_field

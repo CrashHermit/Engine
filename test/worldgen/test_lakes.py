@@ -74,7 +74,7 @@ def test_empty_mesh():
     geom = _mock_geometry(n, [])
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
     )
 
     assert lakes == []
@@ -104,7 +104,7 @@ def test_single_lake():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
     )
 
     assert len(lakes) == 1
@@ -144,7 +144,7 @@ def test_multiple_lakes():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
     )
 
     assert len(lakes) == 2
@@ -179,7 +179,7 @@ def test_multi_cell_lake_is_one_component():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
     )
 
     assert len(lakes) == 1
@@ -214,7 +214,7 @@ def test_lake_with_outlet():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
     )
 
     assert len(lakes) == 1
@@ -243,7 +243,7 @@ def test_ocean_cells_not_lakes():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
     )
 
     assert len(lakes) == 0
@@ -269,7 +269,7 @@ def test_lake_mask_epsilon():
     cfg = LakeConfig(epsilon=epsilon)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
     )
 
     # z_route > z + epsilon is False when z_route == z + epsilon.
@@ -296,7 +296,7 @@ def test_lake_mask_epsilon_above():
     cfg = LakeConfig(epsilon=epsilon)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
     )
 
     assert len(lakes) == 1
@@ -322,7 +322,7 @@ def test_lake_id_consistency():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
     )
 
     # lake_id >= 0 iff is_lake
@@ -357,7 +357,7 @@ def test_lake_surface_level():
     cfg = LakeConfig(epsilon=1e-6)
 
     lakes, lake_id, is_lake = extract_lakes(
-        geometry=geom, z=z, z_route=z_route, is_land=is_land, cfg=cfg
+        geometry=geom, z=z, z_filled=z_route, is_land=is_land, cfg=cfg
     )
 
     assert len(lakes) == 1
