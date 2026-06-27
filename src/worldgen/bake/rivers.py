@@ -151,6 +151,11 @@ def _stamp_disk_around(
             if dx * dx + dy2 > r_int * r_int:
                 continue
             idx = ny * size + nx
+            # Rivers are a land concept; never stamp into ocean tiles (river
+            # mouths up to max_w wide would otherwise spill fat disks of
+            # ``is_river`` into the sea).
+            if not grid.is_land[idx]:
+                continue
             # Larger discharge wins (the "wetter stamp" rule).
             if discharge > float(grid.discharge[idx]):
                 grid.is_river[idx] = True

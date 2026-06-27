@@ -49,6 +49,8 @@ class Layer(StrEnum):
     CONVERGENCE = "convergence"
     PRECIPITATION = "precipitation"
     DISCHARGE = "discharge"
+    RIVERS = "rivers"
+    LAKES = "lakes"
     VOLCANISM = "volcanism"
     SAVAGERY = "savagery"
     MAGIC_STRENGTH = "magic_strength"
@@ -92,7 +94,7 @@ LAYER_GROUPS: tuple[tuple[str, tuple[Layer, ...]], ...] = (
     ),
     (
         "Water",
-        (Layer.DISCHARGE,),
+        (Layer.DISCHARGE, Layer.RIVERS, Layer.LAKES),
     ),
     (
         "Magic & Ecology",
@@ -132,6 +134,8 @@ LAYER_LABELS: dict[Layer, str] = {
     Layer.CONVERGENCE: "Convergence",
     Layer.PRECIPITATION: "Precipitation",
     Layer.DISCHARGE: "Discharge",
+    Layer.RIVERS: "Rivers",
+    Layer.LAKES: "Lakes",
     Layer.VOLCANISM: "Volcanism",
     Layer.SAVAGERY: "Savagery",
     Layer.MAGIC_STRENGTH: "Magic strength",
@@ -160,6 +164,8 @@ LAYER_DESCRIPTIONS: dict[Layer, str] = {
     Layer.CONVERGENCE: "Signed vertical motion [-1,1]. Blue = rising/converging air (ITCZ, subpolar lows, windward ranges) that rains; tan = sinking/diverging (subtropical deserts).",
     Layer.PRECIPITATION: "Rainfall [0,1]. Wet windward coasts bright; dry interiors and rain shadows dark.",
     Layer.DISCHARGE: "Rain-weighted water flow (log). Brighter = more water. River valleys glow brighter in wet regions.",
+    Layer.RIVERS: "Classified river network: the thresholded, stamped river paths over dimmed terrain. Trunk rivers brighter (discharge-weighted); lakes faint steel-blue.",
+    Layer.LAKES: "Lake water bodies (filled depressions) over dimmed terrain; feeding rivers shown faint for context.",
     Layer.VOLCANISM: "Present-day volcanic activity [0,1]. Bright subduction arcs, hotspot trails, and mid-ocean ridges; dark elsewhere.",
     Layer.SAVAGERY: "Legible danger [0,1]. Bright deep interiors, deserts, frostbelt, and ranges; calm temperate coasts.",
     Layer.MAGIC_STRENGTH: "Accumulated mana strength [0,1] (log). Bright dendritic veins along the ley potential; dim floor elsewhere.",
@@ -347,6 +353,32 @@ def _tile_color(
         log_d: float = math.log(d) / math.log(10000.0)  # normalize so d=10000 -> 1
         t: float = max(0.0, min(1.0, log_d))
         return _lerp_color(low=(30, 60, 120), high=(100, 200, 255), t=t)
+
+    if layer in {Layer.RIVERS, Layer.LAKES}:
+        # Dimmed terrain base so the water network reads in geographic context.
+        if not grid.is_land[tile_index]:
+            base: RGB = (15, 30, 55)  # ocean
+        else:
+            tz: float = (float(grid.elevation[tile_index]) - z_min) / z_span
+            br, bg, bb = _hypsometric_color(tz)
+            base = (int(br * 0.4), int(bg * 0.4), int(bb * 0.4))
+        is_river: bool = bool(grid.is_river[tile_index])
+        is_lake: bool = bool(grid.is_lake[tile_index])
+        if layer == Layer.RIVERS:
+            if is_river:
+                d = float(grid.discharge[tile_index])
+                log_d = math.log(d) / math.log(10000.0) if d > 0.0 else 0.0
+                t = max(0.0, min(1.0, log_d))
+                return _lerp_color(low=(40, 90, 150), high=(180, 225, 255), t=t)
+            if is_lake:
+                return (45, 70, 110)  # faint lake fill for context
+            return base
+        # Layer.LAKES
+        if is_lake:
+            return (60, 130, 220)
+        if is_river:
+            return (40, 65, 100)  # faint river lines for context
+        return base
 
     if layer == Layer.VOLCANISM:
         t: float = max(0.0, min(1.0, float(grid.volcanism[tile_index])))
@@ -624,6 +656,29 @@ def colorize(world: Phase0World, layer: Layer) -> Float64Array:
             t = np.where(values > 0.0, np.log(values) / np.log(scale), 0.0)
         out = _lerp_arr(low, high, t)
         out[(values <= 0.0) | (~is_land)] = np.array((10, 20, 30))
+
+    elif layer in (Layer.RIVERS, Layer.LAKES):
+        # Dimmed terrain base so the water network reads in geographic context.
+        z = grid.elevation.astype(np.float64)
+        land_z = z[is_land]
+        z_max = float(land_z.max()) if land_z.size else 1.0
+        span = z_max if z_max > 0.0 else 1.0
+        out = _hypsometric(np.clip(z / span, 0.0, 1.0)) * 0.4
+        out[~is_land] = np.array((15, 30, 55))
+        is_river = grid.is_river.astype(bool)
+        is_lake = grid.is_lake.astype(bool)
+        if layer == Layer.RIVERS:
+            discharge = grid.discharge.astype(np.float64)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                t = np.where(
+                    discharge > 0.0, np.log(discharge) / np.log(10000.0), 0.0
+                )
+            river_col = _lerp_arr((40, 90, 150), (180, 225, 255), t)
+            out[is_lake] = np.array((45, 70, 110))  # faint lake context
+            out[is_river] = river_col[is_river]
+        else:  # Layer.LAKES
+            out[is_river] = np.array((40, 65, 100))  # faint river context
+            out[is_lake] = np.array((60, 130, 220))
 
     elif layer == Layer.INSOLATION:
         out = _lerp_arr((20, 30, 90), (255, 240, 180), world.insolation)
