@@ -6,7 +6,7 @@ import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Type
 
 import arcadedb_embedded as arcadedb
 
@@ -70,12 +70,15 @@ class BaseRepository:
     def get_vertex(self, type_name: VertexType, id: str) -> Vertex | None:
         return self.lookup_vertex(type_name=type_name, keys=["id"], values=[id])
 
-    def update_vertex(self, vertex: Vertex, **properties: Any) -> None:
+    def update_vertex(self, vertex: Vertex | None, **properties: Any) -> Vertex:
+        if vertex is None:
+            raise TypeError("Vertex must not be None.")
         properties.setdefault("updated_at", self._current_time())
         mutable: Vertex = vertex.modify()
         for name, value in properties.items():
             mutable.set(name=name, value=value)
         mutable.save()
+        return Vertex
 
     def upsert_vertex(
         self,
@@ -91,8 +94,9 @@ class BaseRepository:
         self.update_vertex(vertex=vertex, **properties)
         return vertex
 
-    def delete_vertex(self, vertex: Vertex) -> None:
-        vertex.delete()
+    def delete_vertex(self, vertex: Vertex | None) -> None:
+        if vertex is not None:
+            vertex.delete()
 
     def invalidate_vertex(self, vertex: Vertex) -> None:
         vertex.modify().set(
@@ -132,12 +136,15 @@ class BaseRepository:
         )
         return record if isinstance(record, Edge) else None
 
-    def update_edge(self, edge: Edge, **properties: Any) -> None:
+    def update_edge(self, edge: Edge | None, **properties: Any) -> Vertex:
+        if edge is None:
+            raise TypeError("Edge must not be None.")
         properties.setdefault("updated_at", self._current_time())
         mutable: Edge = edge.modify()
         for name, value in properties.items():
             mutable.set(name=name, value=value)
         mutable.save()
+        return edge
 
     def lookup_edge(
         self,
@@ -151,8 +158,9 @@ class BaseRepository:
             values=values,
         )
 
-    def delete_edge(self, edge: Edge) -> None:
-        edge.delete()
+    def delete_edge(self, edge: Edge | None) -> None:
+        if edge is not None:
+            edge.delete()
 
     def invalidate_edge(self, edge: Edge) -> None:
         edge.modify().set(

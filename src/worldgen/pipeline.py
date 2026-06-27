@@ -108,9 +108,7 @@ class WorldgenPipeline:
         world, _ctx = self.run_debug(seed=seed, size=size)
         return world
 
-    def run_debug(
-        self, seed: int, size: int
-    ) -> tuple[WorldData, WorldContext]:
+    def run_debug(self, seed: int, size: int) -> tuple[WorldData, WorldContext]:
         """Generate a world and return ``(WorldData, WorldContext)`` for debug.
 
         The viewer uses this door for mesh-side intermediates; the product
@@ -135,9 +133,7 @@ class WorldgenPipeline:
             height=mesh_cfg.height,
         )
         fields: MeshFields = MeshFields.allocate(n=geometry.n_cells)
-        ctx: WorldContext = WorldContext(
-            config=cfg, geometry=geometry, fields=fields
-        )
+        ctx: WorldContext = WorldContext(config=cfg, geometry=geometry, fields=fields)
 
         for stage in _build_stages():
             stage.run(ctx)
