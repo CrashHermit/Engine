@@ -2,7 +2,12 @@ from dataclasses import dataclass, replace
 
 from src.worldgen.config.worldgen_config import MeshConfig
 from src.worldgen.config.worldgen_config import WorldgenConfig
-from src.worldgen.features import Lake, Nexus, Region, River, Vein, Volcano
+from src.core.model.environment.magic.nexus import Nexus
+from src.core.model.environment.magic.vein import Vein
+from src.core.model.environment.regions.region import Region
+from src.core.model.environment.terrain.volcano import Volcano
+from src.core.model.environment.water.lake import Lake
+from src.core.model.environment.water.river import River
 from src.worldgen.fields import Fields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed

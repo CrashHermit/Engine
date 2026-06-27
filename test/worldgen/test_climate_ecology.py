@@ -13,7 +13,7 @@ from src.core.model.environment.shared.temperature import ORDER as TEMP_ORDER
 from src.worldgen.climate.moisture import coastal_sst_source, continentality
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.ecology.biomes import biome_weights, derive_centers
-from src.worldgen.features import NexusPolarity
+from src.core.model.environment.magic.nexus import NexusPolarity
 from src.worldgen.pipeline import WorldgenPipeline
 
 # Climate causality (coasts wetter than interiors) needs landmasses big enough

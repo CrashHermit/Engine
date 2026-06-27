@@ -27,6 +27,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 from src.worldgen.config.worldgen_config import VulcanismConfig
+from src.core.model.environment.terrain.volcano import VolcanoKind, VolcanoStatus
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.terrain.boundaries import BoundaryFacts, BoundaryKind
 from src.worldgen.terrain.plate_personalities import PlateProperties
@@ -38,8 +39,8 @@ class VolcanoSeed:
     """A discrete volcano before it gets a global id (filled by the stage)."""
 
     cell: int
-    kind: int  # VolcanoKind value
-    status: int  # VolcanoStatus value
+    kind: VolcanoKind
+    status: VolcanoStatus
     chain_id: int
     activity: float
     has_caldera: bool = False
@@ -54,18 +55,13 @@ class VulcanismResult:
     volcanoes: list[VolcanoSeed]
 
 
-# --- volcano morphology / status (mirror features.VolcanoKind/Status values) ---
-_STRATO, _SHIELD, _FISSURE = 0, 1, 2
-_ACTIVE, _DORMANT, _EXTINCT = 0, 1, 2
-
-
-def _status_from_activity(activity: float) -> int:
+def _status_from_activity(activity: float) -> VolcanoStatus:
     """Bucket a [0,1] activity level into active / dormant / extinct."""
     if activity > 0.66:
-        return _ACTIVE
+        return VolcanoStatus.ACTIVE
     if activity > 0.33:
-        return _DORMANT
-    return _EXTINCT
+        return VolcanoStatus.DORMANT
+    return VolcanoStatus.EXTINCT
 
 
 def _torus_distance(
@@ -253,7 +249,7 @@ def _hotspot_trails(
             volcanoes.append(
                 VolcanoSeed(
                     cell=cell,
-                    kind=_SHIELD,
+                    kind=VolcanoKind.SHIELD,
                     status=_status_from_activity(decay),
                     chain_id=chain_id,
                     activity=decay,
@@ -359,13 +355,15 @@ def compute_vulcanism(
     )
     for c in arc_cells:
         norm: float = float(min(1.0, arc_activity[c]))
-        status: int = (
-            _DORMANT if rng.random() < cfg.dormant_fraction else _ACTIVE
+        status: VolcanoStatus = (
+            VolcanoStatus.DORMANT
+            if rng.random() < cfg.dormant_fraction
+            else VolcanoStatus.ACTIVE
         )
         volcanoes.append(
             VolcanoSeed(
                 cell=c,
-                kind=_STRATO,
+                kind=VolcanoKind.STRATO,
                 status=status,
                 chain_id=chain_base + int(arc_labels[c]),
                 # Arc cones read as present-day active ground even where the raw
@@ -388,8 +386,8 @@ def compute_vulcanism(
         volcanoes.append(
             VolcanoSeed(
                 cell=c,
-                kind=_FISSURE,
-                status=_ACTIVE,
+                kind=VolcanoKind.FISSURE,
+                status=VolcanoStatus.ACTIVE,
                 chain_id=-1,
                 activity=float(min(1.0, max(0.5, fissure_score[c]))),
             )

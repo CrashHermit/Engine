@@ -12,7 +12,10 @@ import pytest
 
 from src.worldgen.config.presets import PRESETS
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
-from src.worldgen.features import Nexus, River, Vein, WorldData
+from src.core.model.environment.magic.nexus import Nexus
+from src.core.model.environment.magic.vein import Vein
+from src.core.model.environment.water.river import River
+from src.worldgen.features import WorldData
 from src.worldgen.fields import Fields
 from src.worldgen.pipeline import WorldgenPipeline
 

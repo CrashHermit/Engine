@@ -12,8 +12,8 @@ from collections import deque
 
 import numpy as np
 
+from src.core.model.environment.water.lake import Lake
 from src.worldgen.config.worldgen_config import LakeConfig
-from src.worldgen.features import Lake
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 

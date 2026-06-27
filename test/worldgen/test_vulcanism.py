@@ -7,7 +7,7 @@ import pytest
 
 from src.worldgen.bake.grid import nearest_cell_per_tile
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
-from src.worldgen.features import VolcanoKind
+from src.core.model.environment.terrain.volcano import VolcanoKind
 from src.worldgen.pipeline import WorldgenPipeline
 from src.worldgen.terrain.boundaries import BoundaryKind
 

@@ -8,7 +8,7 @@ through the receiver forest over the ley potential, the magic mirror of rivers.
 import numpy as np
 
 from src.worldgen.config.worldgen_config import MagicConfig
-from src.worldgen.features import Vein
+from src.core.model.environment.magic.vein import Vein
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 
@@ -142,8 +142,11 @@ def extract_veins(
             Vein(
                 id=vein_id,
                 cells=cells,
-                strength=np.array(vein_strength[vein_id], dtype=np.float64),
-                channels=np.array(vein_channels[vein_id], dtype=np.float64),
+                strength=tuple(float(value) for value in vein_strength[vein_id]),
+                channels=tuple(
+                    tuple(float(component) for component in row)
+                    for row in vein_channels[vein_id]
+                ),
                 source_nexus=source_nexus,
                 mouth_nexus=mouth_nexus,
                 tributary_of=tributary_map.get(vein_id),

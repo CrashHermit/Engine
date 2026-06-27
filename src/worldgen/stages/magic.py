@@ -14,7 +14,8 @@ import numpy as np
 
 from src.worldgen.config.worldgen_config import MagicConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.features import Nexus, Vein
+from src.core.model.environment.magic.nexus import Nexus
+from src.core.model.environment.magic.vein import Vein
 from src.worldgen.magic.accumulate import (
     accumulate_strength,
     compute_source_emission,

@@ -10,7 +10,7 @@ import numpy as np
 
 from src.worldgen.config.worldgen_config import RiverConfig
 from src.worldgen.fields import Fields
-from src.worldgen.features import River
+from src.core.model.environment.water.river import River
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import Float64Array
 

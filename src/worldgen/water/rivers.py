@@ -8,7 +8,7 @@ objects (paths with identity, tributaries, mouths) from the receiver forest.
 import numpy as np
 
 from src.worldgen.config.worldgen_config import RiverConfig
-from src.worldgen.features import River
+from src.core.model.environment.water.river import River
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 
@@ -185,8 +185,8 @@ def extract_rivers(
         else:
             mouth = last_cell
 
-        discharge_arr: Float64Array = np.array(
-            river_discharge[river_id], dtype=np.float64
+        discharge_along: tuple[float, ...] = tuple(
+            float(value) for value in river_discharge[river_id]
         )
 
         tributary_of: int | None = tributary_map.get(river_id)
@@ -195,7 +195,7 @@ def extract_rivers(
             River(
                 id=river_id,
                 cells=cells,
-                discharge=discharge_arr,
+                discharge=discharge_along,
                 mouth=mouth,
                 tributary_of=tributary_of,
             )

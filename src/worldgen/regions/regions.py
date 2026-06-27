@@ -21,9 +21,10 @@ gameplay has one lookup; per-tile membership is per-layer (separate id columns).
 import numpy as np
 
 from src.core.model.environment.ecology.biome import BiomeEnum
-from src.worldgen.features import Region, RegionKind
+from src.core.model.environment.regions.region import Region, RegionKind
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.regions.landscape import (
+    LANDSCAPE_CODE,
     LANDSCAPE_KIND,
     LANDSCAPE_NOUN,
     LANDSCAPE_ORDER,
@@ -97,7 +98,8 @@ def _cell_landscape(
 ) -> Int32Array:
     """Per-cell landscape :class:`RegionKind` value (as int); ``-1`` off the mask."""
     col_to_kind: Int32Array = np.array(
-        [int(LANDSCAPE_KIND[biome]) for biome in biome_order], dtype=np.int32
+        [LANDSCAPE_CODE[LANDSCAPE_KIND[biome]] for biome in biome_order],
+        dtype=np.int32,
     )
     kinds: Int32Array = np.full(dominant_biome.shape[0], -1, dtype=np.int32)
     kinds[biome_mask] = col_to_kind[dominant_biome[biome_mask]]
@@ -185,7 +187,7 @@ def assign_regions(
     )
     n_biomes: int = len(biome_order)
     for kind in LANDSCAPE_ORDER:
-        category_mask: BoolArray = biome_mask & (cell_kind == int(kind))
+        category_mask: BoolArray = biome_mask & (cell_kind == LANDSCAPE_CODE[kind])
         labels: Int32Array = components(geometry=geometry, mask=category_mask)
         for component in range(int(labels.max()) + 1):
             members = labels == component

@@ -86,9 +86,9 @@ def test_tributary_of_larger_discharge(seed: int) -> None:
             assert trunk is not None, (
                 f"river {river.id} tributary_of={river.tributary_of} not found"
             )
-            assert river.discharge.max() < trunk.discharge.max(), (
-                f"river {river.id} (max={river.discharge.max():.2f}) -> "
-                f"trunk {trunk.id} (max={trunk.discharge.max():.2f})"
+            assert max(river.discharge) < max(trunk.discharge), (
+                f"river {river.id} (max={max(river.discharge):.2f}) -> "
+                f"trunk {trunk.id} (max={max(trunk.discharge):.2f})"
             )
 
 

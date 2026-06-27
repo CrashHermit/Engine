@@ -20,7 +20,9 @@ import numpy as np
 
 from src.worldgen.config.worldgen_config import VulcanismConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.features import Volcano, VolcanoKind, VolcanoStatus
+from src.core.model.environment.terrain.volcano import (
+    Volcano,
+)
 from src.worldgen.terrain.boundaries import BoundaryFacts
 from src.worldgen.terrain.plate_personalities import PlateProperties
 from src.worldgen.terrain.vulcanism import (
@@ -103,8 +105,8 @@ class VolcanoesStage:
                 Volcano(
                     id=new_id,
                     cell=seed.cell,
-                    kind=VolcanoKind(seed.kind),
-                    status=VolcanoStatus(seed.status),
+                    kind=seed.kind,
+                    status=seed.status,
                     chain_id=seed.chain_id,
                     activity=seed.activity,
                     has_caldera=seed.has_caldera,

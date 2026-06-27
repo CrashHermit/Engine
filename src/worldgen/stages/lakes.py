@@ -11,7 +11,8 @@ bowl, the stage injects the lake directly from ``ctx.volcanoes``.
 
 from src.worldgen.config.worldgen_config import LakeConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.features import Lake, Volcano
+from src.core.model.environment.terrain.volcano import Volcano
+from src.core.model.environment.water.lake import Lake
 from src.worldgen.water.lakes import extract_lakes
 
 

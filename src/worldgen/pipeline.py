@@ -3,7 +3,11 @@ import numpy as np
 from src.worldgen.bake.grid import bake_and_stamp, nearest_cell_per_tile
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.context import WorldContext
-from src.worldgen.features import Landmass, Nexus, Region, Vein, WorldData
+from src.core.model.environment.magic.nexus import Nexus
+from src.core.model.environment.magic.vein import Vein
+from src.core.model.environment.regions.region import Region
+from src.core.model.environment.terrain.landmass import Landmass
+from src.worldgen.features import WorldData
 from src.worldgen.fields import Fields
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.stages.base import Stage
