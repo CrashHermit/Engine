@@ -81,6 +81,7 @@ class Duration:
 class WorldDateTime:
     year: int
     month: int
+    week: int
     day: int
     hour: int
     minute: int

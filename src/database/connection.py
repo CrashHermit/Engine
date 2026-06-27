@@ -31,6 +31,8 @@ class DatabaseConnection:
 
     def delete_database(self, name: str) -> None:
         java_server = self._server.arcadedb_server._java_server
+        if java_server is None:
+            raise RuntimeError("ArcadeDB server not initialized.")
         if not java_server.existsDatabase(name):
             raise FileNotFoundError(f"Database {name!r} does not exist")
         try:

@@ -1,13 +1,12 @@
-from arcadedb_embedded.graph import Vertex
-from arcadedb_embedded.results import ResultSet
-
-from arcadedb_embedded.graph import Document, Edge
-import uuid
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
-from typing import Any, Type
+from typing import Any
+import uuid
 
+from arcadedb_embedded.graph import Vertex
+from arcadedb_embedded.results import ResultSet
+from arcadedb_embedded.graph import Vertex, Edge, Document
 import arcadedb_embedded as arcadedb
 
 from src.core.model.database import EdgeType, VertexType
@@ -61,11 +60,12 @@ class BaseRepository:
         keys: list[str],
         values: list[Any],
     ) -> Vertex | None:
-        return self._database.lookup_by_key(
+        vertex: Vertex | Edge | Document | None = self._database.lookup_by_key(
             type_name=type_name,
             keys=keys,
             values=values,
         )
+        return vertex if isinstance(vertex, Vertex) else None
 
     def get_vertex(self, type_name: VertexType, id: str) -> Vertex | None:
         return self.lookup_vertex(type_name=type_name, keys=["id"], values=[id])
@@ -78,7 +78,7 @@ class BaseRepository:
         for name, value in properties.items():
             mutable.set(name=name, value=value)
         mutable.save()
-        return Vertex
+        return vertex
 
     def upsert_vertex(
         self,
@@ -136,7 +136,7 @@ class BaseRepository:
         )
         return record if isinstance(record, Edge) else None
 
-    def update_edge(self, edge: Edge | None, **properties: Any) -> Vertex:
+    def update_edge(self, edge: Edge | None, **properties: Any) -> Edge:
         if edge is None:
             raise TypeError("Edge must not be None.")
         properties.setdefault("updated_at", self._current_time())
@@ -152,11 +152,12 @@ class BaseRepository:
         keys: list[str],
         values: list[Any],
     ) -> Edge | None:
-        return self._database.lookup_by_key(
+        edge: Vertex | Edge | Document | None = self._database.lookup_by_key(
             type_name=type_name,
             keys=keys,
             values=values,
         )
+        return edge if isinstance(edge, Edge) else None
 
     def delete_edge(self, edge: Edge | None) -> None:
         if edge is not None:
