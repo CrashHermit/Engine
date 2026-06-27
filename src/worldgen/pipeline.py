@@ -1,5 +1,6 @@
 import numpy as np
 
+from src.worldgen.bake.features import features_to_tiles
 from src.worldgen.bake.grid import bake_and_stamp, nearest_cell_per_tile
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.workspace import Workspace
@@ -192,17 +193,30 @@ class WorldgenPipeline:
             msg = "regions must be set before assembling WorldData"
             raise RuntimeError(msg)
 
+        # Translate feature geometry from (ephemeral) mesh-cell ids to tile ids so
+        # the shipped product is self-contained.  The bake/stamp above already
+        # consumed the mesh-coordinate rivers, so this is the last step.
+        rivers_t, lakes_t, veins_t, nexuses_t, volcanoes_t = features_to_tiles(
+            geometry=ctx.geometry,
+            size=size,
+            rivers=ctx.outputs.rivers or [],
+            lakes=ctx.outputs.lakes or [],
+            veins=veins,
+            nexuses=nexuses,
+            volcanoes=ctx.outputs.volcanoes or [],
+        )
+
         return WorldData(
             seed=ctx.config.seed,
             size=size,
             config=ctx.config,
             grid=grid,
-            rivers=ctx.outputs.rivers or [],
-            lakes=ctx.outputs.lakes or [],
-            veins=veins,
-            nexuses=nexuses,
+            rivers=rivers_t,
+            lakes=lakes_t,
+            veins=veins_t,
+            nexuses=nexuses_t,
             landmasses=_build_landmasses(ctx, grid),
-            volcanoes=ctx.outputs.volcanoes or [],
+            volcanoes=volcanoes_t,
             regions=regions,
         )
 

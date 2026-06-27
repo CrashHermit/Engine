@@ -1,10 +1,12 @@
 # Worldgen Architecture Redesign
 
-Status: **design agreed; not yet implemented.** This document is the execution
-contract for the redesign on branch `claude/worldgen-architecture-redesign-xzixr9`.
-It supersedes the *organisational* guidance in `worldgen-redesign-plan.md` (which
-remains the record of the algorithms that shipped); the algorithms themselves are
-unchanged unless a phase below says otherwise.
+Status: **implemented (Phases 1–6).** See "Implementation notes & divergences"
+at the end for where the build differs from this map.  This document is the
+execution contract for the redesign on branch
+`claude/worldgen-architecture-redesign-xzixr9`.  It supersedes the *organisational*
+guidance in `worldgen-redesign-plan.md` (which remains the record of the algorithms
+that shipped); the algorithms themselves are unchanged (determinism was re-asserted
+every phase).
 
 ---
 
@@ -335,3 +337,77 @@ contract:
 - Entities are serialization-ready (`StrEnum` kinds, plain-Python payloads).
 - `region_id` remains the per-tile socket for the future geography-clustering
   tier.
+
+---
+
+## 9. Implementation notes & divergences
+
+The plan was a map. What shipped, and where it diverged:
+
+- **Phases landed incrementally, each green.** Determinism (two runs → identical
+  `WorldData`) held at every phase; the only red across the work was a single
+  pre-existing flaky plausibility threshold (`test_continentality_dries_interiors[42]`,
+  corr −0.173 vs −0.20), whose value never moved — proof behaviour was preserved.
+
+- **Field schema (Phase 1).** `FIELD_SCHEMA` lives in
+  `core/model/environment/field_schema.py`, composed from per-domain
+  `<domain>/fields.py` groups, with `FieldSpec` in `field_spec.py` (numpy-free,
+  dtype as string tokens).  The unified `Fields` container (`worldgen/fields.py`)
+  is hand-declared for autocomplete and driven by the schema; `test_fields_schema`
+  guards drift.  Eager allocation was already the runtime reality (the old
+  `allocate()` zero-filled everything), so this was a types-and-ceremony change.
+
+- **ships_to_product kept the generation intermediates.** Only `insolation` is
+  mesh-only.  `uplift`, `z_route`, `receiver`, `plate_id`, `drainage`, `slope`
+  still ship on the grid product — per Decision 5's "one type, intermediates are
+  cheap and handy for debugging" rationale, and because the viewer reads
+  `grid.plate_id` / `grid.uplift` / `grid.drainage`.  §3.3's tighter curation is
+  deferred to a later round that also moves those viewer layers onto the mesh.
+
+- **Entities (Phase 2)** moved to `core/model/environment/<domain>/` as numpy-free
+  plain-Python dataclasses (`tuple`/`list` payloads); all kind/status/polarity
+  enums are `StrEnum`.  `core/model` has no upward import into `worldgen` and no
+  numpy dependency.  `VolcanoSeed` scratch carries the enums directly.
+
+- **Co-location (Phase 3)** deleted the flat `stages/` mirror; each `Stage` lives
+  in its domain algorithm module (`MagicStage` → `magic/stage.py`; the `Stage`
+  protocol → `worldgen/stage.py`).  The context↔terrain import cycle is broken by
+  importing the three terrain scratch-type annotations under `TYPE_CHECKING`.
+
+- **Workspace (Phase 4)** replaced the flat context with `config` + `geometry` +
+  `fields` + a typed `Scratch` namespace and `Outputs` collector.  The stage
+  parameter is still named `ctx` (type `Workspace`) to bound churn.  Every stage
+  declares `reads`/`writes` (auto-derived from its `ctx.fields` accesses); the
+  pipeline validates at startup that each required read is produced by an earlier
+  stage.  `reads_optional` carries the one legitimate forward reference
+  (`RiversStage` reading `is_lake` at its zero state).  Validation covers *fields*;
+  scratch ordering is not validated, so a few scratch `None`-checks remain.
+
+- **Types (Phase 5).** Concrete contract aliases (`Float64Array =
+  NDArray[np.float64]`, ...) for storage; broad `FloatArray`/`IntArray` for
+  internals.  Dtype coercion is applied at the **bake boundary** (`grid.X =
+  value[nearest].astype(schema_dtype)`) rather than via an intrusive `__setattr__`,
+  so the product honours the schema dtypes.  ~50 dead per-stage `None`-narrowing
+  blocks were removed; `RiversStage` keeps its documented `is_lake` fallback.
+
+- **Feature coordinates (Phase 6).** Shipped feature objects carry **tile ids**
+  (`list[int]`), translated from mesh-cell ids at assembly via a cell → home-tile
+  mapping (`bake/features.py`), using the same `site / span * size` formula the
+  river rasterizer stamps with.  The mapping is 1:1 per cell (payload alignment
+  preserved; consecutive duplicates possible, since mesh→tile is many→one).
+  Negative/`None` sentinels pass through.  `Region` carries world-unit centroids
+  (already mesh-independent) and is not translated.  The `WorldContext`/viewer path
+  (`run_debug`) keeps mesh coordinates; only `WorldData` is translated, so no
+  shipped object references the discarded mesh.
+
+### Downstream contract (next round)
+
+`service/world.py` and `factory/world.py` still speak the old shape and remain
+known-broken (out of scope).  Their adoption round inherits:
+
+- `WorldData` = grid `Fields` product (ships-subset) + `WorldgenConfig` + numpy-free
+  core entity lists in **tile coordinates**.
+- `FIELD_SCHEMA` (the `ships_to_product` subset) is authoritative for persistence
+  DDL and gameplay field access; dtypes are the concrete schema dtypes.
+- Entities are serialization-ready (`StrEnum` kinds, plain-Python payloads).
+- `region_id` remains the per-tile socket for the geography-clustering tier.
