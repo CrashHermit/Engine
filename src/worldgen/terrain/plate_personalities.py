@@ -7,7 +7,6 @@ import numpy as np
 from src.worldgen.config.worldgen_config import PlatesConfig
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 from src.worldgen.workspace import Workspace
-from src.worldgen.types import Float64Array, Int32Array
 
 
 @dataclass(frozen=True)

@@ -17,9 +17,8 @@ import numpy as np
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta
 from src.worldgen.terrain.plate_personalities import PlateProperties
-from src.worldgen.types import BoolArray, Float64Array, Int8Array, Int32Array
+from src.worldgen.types import BoolArray, Float64Array, Int32Array, Int8Array
 from src.worldgen.workspace import Workspace
-from src.worldgen.types import Int32Array
 
 
 class BoundaryKind(IntEnum):

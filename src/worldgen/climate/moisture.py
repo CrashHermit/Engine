@@ -23,7 +23,6 @@ from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 from src.worldgen.workspace import Workspace
-from src.worldgen.types import BoolArray, Float64Array
 
 
 def precip_belt(*, latitude: Float64Array, cfg: MoistureConfig) -> Float64Array:

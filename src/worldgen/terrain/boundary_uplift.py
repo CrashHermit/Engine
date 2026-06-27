@@ -18,7 +18,6 @@ from src.worldgen.terrain.boundaries import BoundaryFacts, BoundaryKind
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 from src.worldgen.workspace import Workspace
 from src.worldgen.noise.rng import FIELD_BOUNDARY_UPLIFT, FIELD_UPLIFT_FLOOR
-from src.worldgen.terrain.boundaries import BoundaryFacts
 from src.worldgen.terrain.plate_personalities import PlateProperties
 
 

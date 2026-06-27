@@ -7,8 +7,7 @@ from src.worldgen.noise.field import FractalField
 from src.worldgen.types import Float64Array
 from src.worldgen.workspace import Workspace
 from src.worldgen.geometry.field_ops import diffuse
-from src.worldgen.noise.rng import FIELD_WIND_U
-from src.worldgen.noise.rng import FIELD_WIND_V
+from src.worldgen.noise.rng import FIELD_WIND_U, FIELD_WIND_V
 
 
 def wind_belts(

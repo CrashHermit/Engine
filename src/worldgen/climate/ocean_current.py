@@ -33,7 +33,6 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 from src.worldgen.workspace import Workspace
-from src.worldgen.types import BoolArray, Float64Array
 
 
 def _coast_projected_wind(

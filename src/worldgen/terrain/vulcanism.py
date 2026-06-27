@@ -26,18 +26,17 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.spatial import cKDTree
 
+from src.core.model.environment.terrain.volcano import (
+    Volcano,
+    VolcanoKind,
+    VolcanoStatus,
+)
 from src.worldgen.config.worldgen_config import VulcanismConfig
-from src.core.model.environment.terrain.volcano import VolcanoKind, VolcanoStatus
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.terrain.boundaries import BoundaryFacts, BoundaryKind
 from src.worldgen.terrain.plate_personalities import PlateProperties
 from src.worldgen.types import BoolArray, Float64Array, Int8Array, Int32Array
 from src.worldgen.workspace import Workspace
-from src.core.model.environment.terrain.volcano import (
-    Volcano,
-)
-from src.worldgen.terrain.boundaries import BoundaryFacts
-from src.worldgen.types import BoolArray, Float64Array, Int32Array
 
 
 @dataclass

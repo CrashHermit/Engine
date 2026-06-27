@@ -13,7 +13,6 @@ from src.worldgen.terrain.routing import (
     compute_receivers,
     priority_flood,
 )
-from src.worldgen.types import Float64Array, Int32Array
 
 
 def stream_power_pass(
