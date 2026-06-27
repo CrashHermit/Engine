@@ -4,7 +4,7 @@ import numpy as np
 from scipy.spatial import cKDTree
 
 from src.core.model.environment.field_schema import PRODUCT_FIELDS
-from src.worldgen.fields import Fields
+from src.worldgen.fields import _DTYPE_MAP, Fields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import Float64Array, Int32Array
 
@@ -42,7 +42,10 @@ def bake_to_grid(fields: Fields, nearest: Int32Array) -> Fields:
     grid: Fields = Fields.allocate(n=nearest.shape[0])
     for spec in PRODUCT_FIELDS:
         value = getattr(fields, spec.name)
-        setattr(grid, spec.name, value[nearest])
+        # Coerce to the schema dtype at the product boundary, so the shipped grid
+        # honours the contract even if an algorithm produced a wider dtype.
+        gathered = value[nearest].astype(_DTYPE_MAP[spec.dtype], copy=False)
+        setattr(grid, spec.name, gathered)
     return grid
 
 

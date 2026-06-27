@@ -230,39 +230,20 @@ class RiversStage:
         cfg: RiverConfig = ctx.config.river
 
         # --- prerequisites ---
-        discharge_field: Float64Array | None = ctx.fields.discharge
-        if discharge_field is None:
-            msg: str = "discharge must be set before RiversStage"
-            raise RuntimeError(msg)
-        discharge: Float64Array = discharge_field
+        discharge: Float64Array = ctx.fields.discharge
 
-        is_land_field: BoolArray | None = ctx.fields.is_land
-        if is_land_field is None:
-            msg: str = "is_land must be set before RiversStage"
-            raise RuntimeError(msg)
-        is_land: BoolArray = is_land_field
+        is_land: BoolArray = ctx.fields.is_land
 
-        receiver_field: Int32Array | None = ctx.fields.receiver
-        if receiver_field is None:
-            msg: str = "receiver must be set before RiversStage"
-            raise RuntimeError(msg)
-        receiver: Int32Array = receiver_field
+        receiver: Int32Array = ctx.fields.receiver
 
-        z_route_field: Float64Array | None = ctx.fields.z_route
-        if z_route_field is None:
-            msg: str = "z_route must be set before RiversStage"
-            raise RuntimeError(msg)
-        z_route: Float64Array = z_route_field
+        z_route: Float64Array = ctx.fields.z_route
 
         is_lake_field: BoolArray | None = ctx.fields.is_lake
         if is_lake_field is None:
             # LakesStage runs after this stage, so is_lake is not written yet.
             # Use the lake-mask stand-in `z_route > z + epsilon` — identical to
             # the mask LakesStage will compute — so the two stages agree.
-            elevation_field: Float64Array | None = ctx.fields.elevation
-            if elevation_field is None:
-                msg: str = "elevation must be set before RiversStage"
-                raise RuntimeError(msg)
+            elevation_field: Float64Array = ctx.fields.elevation
             is_lake: BoolArray = is_land & (
                 z_route > elevation_field + ctx.config.lake.epsilon
             )

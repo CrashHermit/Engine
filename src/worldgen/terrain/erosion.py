@@ -101,11 +101,7 @@ class ErosionStage:
         n: int = ctx.geometry.n_cells
 
         # --- prerequisites ---
-        uplift_field: Float64Array | None = ctx.fields.uplift
-        if uplift_field is None:
-            msg: str = "uplift must be set before ErosionStage"
-            raise RuntimeError(msg)
-        uplift: Float64Array = uplift_field
+        uplift: Float64Array = ctx.fields.uplift
 
         # --- initial elevation ---
         # z = uplift * initial_scale + small_noise

@@ -388,11 +388,7 @@ class FinalizeStage:
         land_cfg: LandmassConfig = ctx.config.landmass
 
         # --- prerequisites ---
-        elevation_field: Float64Array | None = ctx.fields.elevation
-        if elevation_field is None:
-            msg: str = "elevation must be set before FinalizeStage"
-            raise RuntimeError(msg)
-        elevation: Float64Array = elevation_field
+        elevation: Float64Array = ctx.fields.elevation
 
         # --- 0. Coastal de-speckle (relax high-frequency wiggle pre-cut) ---
         elevation = smooth_elevation(

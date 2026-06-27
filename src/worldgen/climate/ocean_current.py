@@ -263,29 +263,13 @@ class OceanCurrentStage:
         cfg: OceanCurrentConfig = ctx.config.ocean_current
 
         # --- prerequisites ---
-        insolation_field: Float64Array | None = ctx.fields.insolation
-        if insolation_field is None:
-            msg: str = "insolation must be set before OceanCurrentStage"
-            raise RuntimeError(msg)
-        insolation: Float64Array = insolation_field
+        insolation: Float64Array = ctx.fields.insolation
 
-        is_land_field: BoolArray | None = ctx.fields.is_land
-        if is_land_field is None:
-            msg = "is_land must be set before OceanCurrentStage"
-            raise RuntimeError(msg)
-        is_land: BoolArray = is_land_field
+        is_land: BoolArray = ctx.fields.is_land
 
-        wind_u_field: Float64Array | None = ctx.fields.wind_u
-        if wind_u_field is None:
-            msg = "wind_u must be set before OceanCurrentStage"
-            raise RuntimeError(msg)
-        wind_u: Float64Array = wind_u_field
+        wind_u: Float64Array = ctx.fields.wind_u
 
-        wind_v_field: Float64Array | None = ctx.fields.wind_v
-        if wind_v_field is None:
-            msg = "wind_v must be set before OceanCurrentStage"
-            raise RuntimeError(msg)
-        wind_v: Float64Array = wind_v_field
+        wind_v: Float64Array = ctx.fields.wind_v
 
         # --- compute ---
         ctx.fields.sst = compute_sst(

@@ -164,29 +164,13 @@ class BiomeStage:
         cfg: BiomeConfig = ctx.config.biome
 
         # --- prerequisites ---
-        temperature_field: Float64Array | None = ctx.fields.temperature
-        if temperature_field is None:
-            msg: str = "temperature must be set before BiomeStage"
-            raise RuntimeError(msg)
-        temperature: Float64Array = temperature_field
+        temperature: Float64Array = ctx.fields.temperature
 
-        precipitation_field: Float64Array | None = ctx.fields.precipitation
-        if precipitation_field is None:
-            msg = "precipitation must be set before BiomeStage"
-            raise RuntimeError(msg)
-        precipitation: Float64Array = precipitation_field
+        precipitation: Float64Array = ctx.fields.precipitation
 
-        is_land_field: BoolArray | None = ctx.fields.is_land
-        if is_land_field is None:
-            msg = "is_land must be set before BiomeStage"
-            raise RuntimeError(msg)
-        is_land: BoolArray = is_land_field
+        is_land: BoolArray = ctx.fields.is_land
 
-        is_lake_field: BoolArray | None = ctx.fields.is_lake
-        if is_lake_field is None:
-            msg = "is_lake must be set before BiomeStage"
-            raise RuntimeError(msg)
-        is_lake: BoolArray = is_lake_field
+        is_lake: BoolArray = ctx.fields.is_lake
 
         # Biomes live on dry land only; lake-covered cells carry no biome.
         biome_mask: BoolArray = is_land & ~is_lake

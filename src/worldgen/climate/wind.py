@@ -296,17 +296,9 @@ class WindStage:
         # --- prerequisites ---
         geometry = ctx.geometry
 
-        elevation_field: Float64Array | None = ctx.fields.elevation
-        if elevation_field is None:
-            msg: str = "elevation must be set before WindStage"
-            raise RuntimeError(msg)
-        elevation: Float64Array = elevation_field
+        elevation: Float64Array = ctx.fields.elevation
 
-        latitude_field: Float64Array | None = ctx.fields.latitude
-        if latitude_field is None:
-            msg = "latitude must be set before WindStage"
-            raise RuntimeError(msg)
-        latitude: Float64Array = latitude_field
+        latitude: Float64Array = ctx.fields.latitude
 
         # --- turbulence noise fields (two independent sub-seeded sources) ---
         turbulence_u: FractalField = FractalField(

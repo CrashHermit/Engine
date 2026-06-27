@@ -552,18 +552,12 @@ class VulcanismStage:
         if facts is None:
             msg: str = "boundary_facts must be set before VulcanismStage"
             raise RuntimeError(msg)
-        plate_id: Int32Array | None = ctx.fields.plate_id
-        if plate_id is None:
-            msg = "plate_id must be set before VulcanismStage"
-            raise RuntimeError(msg)
+        plate_id: Int32Array = ctx.fields.plate_id
         properties: PlateProperties | None = ctx.scratch.plate_properties
         if properties is None:
             msg = "plate_properties must be set before VulcanismStage"
             raise RuntimeError(msg)
-        uplift: Float64Array | None = ctx.fields.uplift
-        if uplift is None:
-            msg = "uplift must be set before VulcanismStage"
-            raise RuntimeError(msg)
+        uplift: Float64Array = ctx.fields.uplift
 
         result = compute_vulcanism(
             geometry=ctx.geometry,
@@ -595,10 +589,7 @@ class VolcanoesStage:
         cfg: VulcanismConfig = ctx.config.vulcanism
         candidates: list[VolcanoSeed] = ctx.scratch.volcano_candidates or []
 
-        is_land: BoolArray | None = ctx.fields.is_land
-        if is_land is None:
-            msg: str = "is_land must be set before VolcanoesStage"
-            raise RuntimeError(msg)
+        is_land: BoolArray = ctx.fields.is_land
 
         selected: list[VolcanoSeed] = select_landmark_volcanoes(
             geometry=ctx.geometry,

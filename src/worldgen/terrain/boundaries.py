@@ -164,10 +164,7 @@ class BoundaryClassifyStage:
 
     def run(self, ctx: Workspace) -> None:
         """Classify every plate boundary and store the per-cell facts."""
-        plate_id_field: Int32Array | None = ctx.fields.plate_id
-        if plate_id_field is None:
-            msg: str = "plate_id must be set before BoundaryClassifyStage"
-            raise RuntimeError(msg)
+        plate_id_field: Int32Array = ctx.fields.plate_id
 
         properties: PlateProperties | None = ctx.scratch.plate_properties
         if properties is None:

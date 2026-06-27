@@ -64,11 +64,7 @@ class MagicStage:
             msg: str = "boundary_facts must be set before MagicStage"
             raise RuntimeError(msg)
 
-        slope_field: Float64Array | None = ctx.fields.slope
-        if slope_field is None:
-            msg = "slope must be set before MagicStage"
-            raise RuntimeError(msg)
-        slope: Float64Array = slope_field
+        slope: Float64Array = ctx.fields.slope
 
         # --- 1. ley potential: ley-mantle baseline minus rock-bone troughs ---
         mantle_noise: FractalField = FractalField(

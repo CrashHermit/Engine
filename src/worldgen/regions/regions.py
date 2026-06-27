@@ -214,25 +214,13 @@ class RegionsStage:
 
     def run(self, ctx: Workspace) -> None:
         """Segment land/ocean bodies and biome-regions into named regions."""
-        is_land_field: BoolArray | None = ctx.fields.is_land
-        if is_land_field is None:
-            msg: str = "is_land must be set before RegionsStage"
-            raise RuntimeError(msg)
+        is_land_field: BoolArray = ctx.fields.is_land
 
-        is_lake_field: BoolArray | None = ctx.fields.is_lake
-        if is_lake_field is None:
-            msg = "is_lake must be set before RegionsStage"
-            raise RuntimeError(msg)
+        is_lake_field: BoolArray = ctx.fields.is_lake
 
-        landmass_field: Int32Array | None = ctx.fields.landmass_id
-        if landmass_field is None:
-            msg = "landmass_id must be set before RegionsStage"
-            raise RuntimeError(msg)
+        landmass_field: Int32Array = ctx.fields.landmass_id
 
-        weights_field: Float64Array | None = ctx.fields.biome_weights
-        if weights_field is None:
-            msg = "biome_weights must be set before RegionsStage"
-            raise RuntimeError(msg)
+        weights_field: Float64Array = ctx.fields.biome_weights
 
         # Biome-regions live on dry land; their landscape is the dominant biome.
         biome_mask: BoolArray = is_land_field & ~is_lake_field

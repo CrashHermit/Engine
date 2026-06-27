@@ -200,11 +200,7 @@ class BoundaryUpliftStage:
         if facts is None:
             msg: str = "boundary_facts must be set before BoundaryUpliftStage"
             raise RuntimeError(msg)
-        uplift_field: Float64Array | None = ctx.fields.uplift
-        if uplift_field is None:
-            msg = "uplift must be set before BoundaryUpliftStage"
-            raise RuntimeError(msg)
-        uplift: Float64Array = uplift_field
+        uplift: Float64Array = ctx.fields.uplift
 
         span: float = min(ctx.geometry.width, ctx.geometry.height)
         frequency: float = 4.0 / span
@@ -230,10 +226,7 @@ class BoundaryUpliftStage:
 
         # Continental crust rides high: turn flat slabs into platforms so whole
         # continents surface as blobs instead of just the boundary belts.
-        plate_id_field: Int32Array | None = ctx.fields.plate_id
-        if plate_id_field is None:
-            msg = "plate_id must be set before BoundaryUpliftStage"
-            raise RuntimeError(msg)
+        plate_id_field: Int32Array = ctx.fields.plate_id
         properties: PlateProperties | None = ctx.scratch.plate_properties
         if properties is None:
             msg = "plate_properties must be set before BoundaryUpliftStage"

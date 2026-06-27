@@ -88,13 +88,7 @@ class PlatePersonalityStage:
     def run(self, ctx: Workspace) -> None:
         """Write ``uplift`` and store per-plate drift on the context."""
         cfg: PlatesConfig = ctx.config.plates
-        plate_id_field: Int32Array | None = ctx.fields.plate_id
-        if plate_id_field is None:
-            msg: str = (
-                "plate_id must be set by PlatesStage before PlatePersonalityStage"
-            )
-            raise RuntimeError(msg)
-        plate_id: Int32Array = plate_id_field
+        plate_id: Int32Array = ctx.fields.plate_id
 
         seed: int = ctx.seed_for(name="plate_personality")
         n_plates: int = cfg.n_plates

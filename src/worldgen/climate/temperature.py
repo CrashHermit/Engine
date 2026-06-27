@@ -89,41 +89,18 @@ class TemperatureStage:
         cfg: TemperatureConfig = ctx.config.temperature
 
         # --- prerequisites ---
-        insolation_field: Float64Array | None = ctx.fields.insolation
-        if insolation_field is None:
-            msg: str = "insolation must be set before TemperatureStage"
-            raise RuntimeError(msg)
-        insolation: Float64Array = insolation_field
+        insolation: Float64Array = ctx.fields.insolation
 
-        elevation_field: Float64Array | None = ctx.fields.elevation
-        if elevation_field is None:
-            msg: str = "elevation must be set before TemperatureStage"
-            raise RuntimeError(msg)
-        elevation: Float64Array = elevation_field
+        elevation: Float64Array = ctx.fields.elevation
 
-        coast_distance_field: Float64Array | None = ctx.fields.coast_distance
-        if coast_distance_field is None:
-            msg: str = "coast_distance must be set before TemperatureStage"
-            raise RuntimeError(msg)
-        coast_distance: Float64Array = coast_distance_field
+        coast_distance: Float64Array = ctx.fields.coast_distance
 
-        is_land_field: BoolArray | None = ctx.fields.is_land
-        if is_land_field is None:
-            msg: str = "is_land must be set before TemperatureStage"
-            raise RuntimeError(msg)
-        is_land: BoolArray = is_land_field
+        is_land: BoolArray = ctx.fields.is_land
 
-        sst_field: Float64Array | None = ctx.fields.sst
-        if sst_field is None:
-            msg = "sst must be set before TemperatureStage"
-            raise RuntimeError(msg)
-        sst: Float64Array = sst_field
+        sst: Float64Array = ctx.fields.sst
 
-        wind_u_field: Float64Array | None = ctx.fields.wind_u
-        wind_v_field: Float64Array | None = ctx.fields.wind_v
-        if wind_u_field is None or wind_v_field is None:
-            msg = "wind must be set before TemperatureStage"
-            raise RuntimeError(msg)
+        wind_u_field: Float64Array = ctx.fields.wind_u
+        wind_v_field: Float64Array = ctx.fields.wind_v
 
         # --- carry ocean SST onshore along the wind for maritime moderation ---
         maritime_sst: Float64Array = maritime_sst_onshore(

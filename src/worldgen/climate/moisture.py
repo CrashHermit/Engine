@@ -302,45 +302,21 @@ class MoistureStage:
         cfg: MoistureConfig = ctx.config.moisture
 
         # --- prerequisites ---
-        latitude_field: Float64Array | None = ctx.fields.latitude
-        if latitude_field is None:
-            msg: str = "latitude must be set before MoistureStage"
-            raise RuntimeError(msg)
+        latitude_field: Float64Array = ctx.fields.latitude
 
-        coast_distance_field: Float64Array | None = ctx.fields.coast_distance
-        if coast_distance_field is None:
-            msg = "coast_distance must be set before MoistureStage"
-            raise RuntimeError(msg)
+        coast_distance_field: Float64Array = ctx.fields.coast_distance
 
-        sst_field: Float64Array | None = ctx.fields.sst
-        if sst_field is None:
-            msg = "sst must be set before MoistureStage"
-            raise RuntimeError(msg)
+        sst_field: Float64Array = ctx.fields.sst
 
-        elevation_field: Float64Array | None = ctx.fields.elevation
-        if elevation_field is None:
-            msg = "elevation must be set before MoistureStage"
-            raise RuntimeError(msg)
+        elevation_field: Float64Array = ctx.fields.elevation
 
-        is_land_field: BoolArray | None = ctx.fields.is_land
-        if is_land_field is None:
-            msg = "is_land must be set before MoistureStage"
-            raise RuntimeError(msg)
+        is_land_field: BoolArray = ctx.fields.is_land
 
-        wind_u_field: Float64Array | None = ctx.fields.wind_u
-        if wind_u_field is None:
-            msg = "wind_u must be set before MoistureStage"
-            raise RuntimeError(msg)
+        wind_u_field: Float64Array = ctx.fields.wind_u
 
-        wind_v_field: Float64Array | None = ctx.fields.wind_v
-        if wind_v_field is None:
-            msg = "wind_v must be set before MoistureStage"
-            raise RuntimeError(msg)
+        wind_v_field: Float64Array = ctx.fields.wind_v
 
-        convergence_field: Float64Array | None = ctx.fields.convergence
-        if convergence_field is None:
-            msg = "convergence must be set before MoistureStage"
-            raise RuntimeError(msg)
+        convergence_field: Float64Array = ctx.fields.convergence
 
         ctx.fields.precipitation = compute_precipitation(
             geometry=ctx.geometry,

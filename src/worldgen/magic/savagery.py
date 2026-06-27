@@ -99,35 +99,15 @@ class SavageryStage:
         geometry = ctx.geometry
 
         # --- prerequisites ---
-        coast_distance_field: Float64Array | None = ctx.fields.coast_distance
-        if coast_distance_field is None:
-            msg: str = "coast_distance must be set before SavageryStage"
-            raise RuntimeError(msg)
-        coast_distance: Float64Array = coast_distance_field
+        coast_distance: Float64Array = ctx.fields.coast_distance
 
-        temperature_field: Float64Array | None = ctx.fields.temperature
-        if temperature_field is None:
-            msg = "temperature must be set before SavageryStage"
-            raise RuntimeError(msg)
-        temperature: Float64Array = temperature_field
+        temperature: Float64Array = ctx.fields.temperature
 
-        precipitation_field: Float64Array | None = ctx.fields.precipitation
-        if precipitation_field is None:
-            msg = "precipitation must be set before SavageryStage"
-            raise RuntimeError(msg)
-        precipitation: Float64Array = precipitation_field
+        precipitation: Float64Array = ctx.fields.precipitation
 
-        slope_field: Float64Array | None = ctx.fields.slope
-        if slope_field is None:
-            msg = "slope must be set before SavageryStage"
-            raise RuntimeError(msg)
-        slope: Float64Array = slope_field
+        slope: Float64Array = ctx.fields.slope
 
-        volcanism_field: Float64Array | None = ctx.fields.volcanism
-        if volcanism_field is None:
-            msg = "volcanism must be set before SavageryStage"
-            raise RuntimeError(msg)
-        volcanism: Float64Array = volcanism_field
+        volcanism: Float64Array = ctx.fields.volcanism
 
         # --- surprise noise ---
         noise_field: FractalField = FractalField(
