@@ -88,7 +88,12 @@ def stamp_rivers(
                 max(cfg.w_scale * math.sqrt(max(q, 0.0)), cfg.min_w),
                 cfg.max_w,
             )
-            r_int = int(math.ceil(radius))
+            # Floor, not ceil: a sub-tile radius (e.g. min_w = 0.5) must stamp a
+            # single-tile-wide line, not get rounded up to a radius-1 disk (a
+            # 3-tile plus-shape).  Ceil here inflated every river into a fat
+            # blob; floor keeps small rivers as 1-wide lines and only widens the
+            # high-discharge trunks.
+            r_int = int(radius)
 
             # --- step along the segment ---
             step_size = max(0.3, 0.5)  # ≈ 0.5 tile units
