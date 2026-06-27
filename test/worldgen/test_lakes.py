@@ -3,7 +3,7 @@
 import numpy as np
 
 from src.worldgen.config.worldgen_config import LakeConfig
-from src.worldgen.features import Lake
+from src.core.model.environment.water.lake import Lake
 from src.worldgen.geometry.torus import torus_distance
 from src.worldgen.water.lakes import extract_lakes
 

@@ -4,7 +4,8 @@ import numpy as np
 import pytest
 
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
-from src.worldgen.features import RegionKind, WorldData
+from src.core.model.environment.regions.region import RegionKind
+from src.worldgen.features import WorldData
 from src.worldgen.pipeline import WorldgenPipeline
 
 SEEDS: tuple[int, ...] = (0, 7, 42)

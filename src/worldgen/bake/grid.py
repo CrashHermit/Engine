@@ -1,11 +1,10 @@
 """Mesh → grid rasterization via nearest-cell Voronoi mapping."""
 
-from dataclasses import fields as dataclass_fields
-
 import numpy as np
 from scipy.spatial import cKDTree
 
-from src.worldgen.fields import GridFields, MeshFields
+from src.core.model.environment.field_schema import PRODUCT_FIELDS
+from src.worldgen.fields import _DTYPE_MAP, Fields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import Float64Array, Int32Array
 
@@ -32,33 +31,32 @@ def nearest_cell_per_tile(geometry: MeshGeometry, size: int) -> Int32Array:
     return np.asarray(a=indices, dtype=np.int32)
 
 
-def bake_to_grid(fields: MeshFields, nearest: Int32Array) -> GridFields:
-    """Copy every grid field onto the grid via nearest-cell fancy indexing.
+def bake_to_grid(fields: Fields, nearest: Int32Array) -> Fields:
+    """Gather the product fields onto a grid ``Fields`` via nearest-cell indexing.
 
-    Iterates ``GridFields`` (the product subset) rather than ``MeshFields`` so
-    mesh-side intermediates like ``insolation`` stay off the grid.
+    Only ``ships_to_product`` fields (``PRODUCT_FIELDS``) cross to the grid;
+    mesh-side intermediates like ``insolation`` stay at their zero allocation.
+    2-D fields (``magic_channels`` ``(n, 3)``, ``biome_weights`` ``(n, n_biomes)``)
+    ride the same path: ``value[nearest]`` indexes axis 0, giving ``(size*size, k)``.
     """
-    grid: GridFields = GridFields.allocate(n=nearest.shape[0])
-    for f in dataclass_fields(class_or_instance=grid):
-        value = getattr(fields, f.name, None)
-        if value is not None:
-            # 2-D fields (magic_channels (n, 3), biome_weights (n, n_biomes))
-            # ride this same path: value[nearest] indexes axis 0, giving
-            # (size*size, k) without any special handling.
-            setattr(grid, f.name, value[nearest])
-        else:
-            setattr(grid, f.name, None)
+    grid: Fields = Fields.allocate(n=nearest.shape[0])
+    for spec in PRODUCT_FIELDS:
+        value = getattr(fields, spec.name)
+        # Coerce to the schema dtype at the product boundary, so the shipped grid
+        # honours the contract even if an algorithm produced a wider dtype.
+        gathered = value[nearest].astype(_DTYPE_MAP[spec.dtype], copy=False)
+        setattr(grid, spec.name, gathered)
     return grid
 
 
 def bake_and_stamp(
     *,
-    fields: MeshFields,
+    fields: Fields,
     geometry: MeshGeometry,
     rivers: list | None,
     size: int,
     cfg,
-) -> GridFields:
+) -> Fields:
     """Bake mesh to grid and stamp rivers on top.
 
     Convenience function that calls
@@ -72,12 +70,12 @@ def bake_and_stamp(
         cfg: River rasterizer config.
 
     Returns:
-        Baked-and-stamped ``GridFields``.
+        Baked-and-stamped grid ``Fields``.
     """
     from src.worldgen.bake.rivers import stamp_rivers
 
     nearest: Int32Array = nearest_cell_per_tile(geometry, size)
-    grid: GridFields = bake_to_grid(fields, nearest)
+    grid: Fields = bake_to_grid(fields, nearest)
     if rivers:
         stamp_rivers(
             grid=grid,

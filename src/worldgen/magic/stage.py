@@ -13,8 +13,9 @@ Pipeline order: ``... → Savagery → Magic → Biomes``
 import numpy as np
 
 from src.worldgen.config.worldgen_config import MagicConfig
-from src.worldgen.context import WorldContext
-from src.worldgen.features import Nexus, Vein
+from src.worldgen.workspace import Workspace
+from src.core.model.environment.magic.nexus import Nexus
+from src.core.model.environment.magic.vein import Vein
 from src.worldgen.magic.accumulate import (
     accumulate_strength,
     compute_source_emission,
@@ -46,25 +47,24 @@ class MagicStage:
 
     Writes ``magic_strength`` / ``magic_channels`` / ``magic_flow_*`` /
     ``is_vein`` / ``vein_id`` / ``is_nexus`` / ``nexus_id`` and the
-    ``ctx.veins`` / ``ctx.nexuses`` feature lists.
+    ``ctx.outputs.veins`` / ``ctx.outputs.nexuses`` feature lists.
     """
 
-    def run(self, ctx: WorldContext) -> None:
+    reads: tuple[str, ...] = ("slope",)
+    writes: tuple[str, ...] = ("is_nexus", "is_vein", "magic_channels", "magic_flow_speed", "magic_flow_u", "magic_flow_v", "magic_strength", "nexus_id", "vein_id")
+
+    def run(self, ctx: Workspace) -> None:
         """Generate the mana hydrology and write all magic fields + features."""
         cfg: MagicConfig = ctx.config.magic
         geometry = ctx.geometry
         n: int = geometry.n_cells
 
-        facts: BoundaryFacts | None = ctx.boundary_facts
+        facts: BoundaryFacts | None = ctx.scratch.boundary_facts
         if facts is None:
             msg: str = "boundary_facts must be set before MagicStage"
             raise RuntimeError(msg)
 
-        slope_field: Float64Array | None = ctx.fields.slope
-        if slope_field is None:
-            msg = "slope must be set before MagicStage"
-            raise RuntimeError(msg)
-        slope: Float64Array = slope_field
+        slope: Float64Array = ctx.fields.slope
 
         # --- 1. ley potential: ley-mantle baseline minus rock-bone troughs ---
         mantle_noise: FractalField = FractalField(
@@ -178,6 +178,6 @@ class MagicStage:
         ctx.fields.vein_id = vein_id
         ctx.fields.is_nexus = is_nexus
         ctx.fields.nexus_id = nexus_id
-        ctx.veins = veins
-        ctx.nexuses = nexuses
-        ctx.magic_potential = combined_potential
+        ctx.outputs.veins = veins
+        ctx.outputs.nexuses = nexuses
+        ctx.scratch.magic_potential = combined_potential

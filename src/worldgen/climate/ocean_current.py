@@ -32,6 +32,7 @@ from src.worldgen.config.worldgen_config import OceanCurrentConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
+from src.worldgen.workspace import Workspace
 
 
 def _coast_projected_wind(
@@ -243,3 +244,38 @@ def maritime_sst_onshore(
         maritime[~is_land] = sst[~is_land]  # ocean stays a fixed source
 
     return np.clip(maritime, 0.0, 1.0)
+
+
+class OceanCurrentStage:
+    """Compute wind-advected sea-surface temperature (toroidal currents).
+
+    Pipeline order: ``Insolation → Wind → OceanCurrent → Temperature → Moisture``.
+    Writes ``ctx.fields.sst``, which Temperature (maritime moderation) and
+    Moisture (evaporation) then consume.
+    """
+
+    reads: tuple[str, ...] = ("insolation", "is_land", "wind_u", "wind_v")
+    writes: tuple[str, ...] = ("sst",)
+
+    def run(self, ctx: Workspace) -> None:
+        """Compute SST and write ``ctx.fields.sst``."""
+        cfg: OceanCurrentConfig = ctx.config.ocean_current
+
+        # --- prerequisites ---
+        insolation: Float64Array = ctx.fields.insolation
+
+        is_land: BoolArray = ctx.fields.is_land
+
+        wind_u: Float64Array = ctx.fields.wind_u
+
+        wind_v: Float64Array = ctx.fields.wind_v
+
+        # --- compute ---
+        ctx.fields.sst = compute_sst(
+            geometry=ctx.geometry,
+            wind_u=wind_u,
+            wind_v=wind_v,
+            insolation=insolation,
+            is_land=is_land,
+            cfg=cfg,
+        )

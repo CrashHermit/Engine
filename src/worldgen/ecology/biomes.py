@@ -19,6 +19,7 @@ from src.worldgen.config.worldgen_config import BiomeConfig
 from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array
+from src.worldgen.workspace import Workspace
 
 
 def derive_centers() -> tuple[Float64Array, Float64Array, list[BiomeEnum]]:
@@ -147,3 +148,47 @@ def smooth_biome_weights(
     row_sums: Float64Array = out.sum(axis=1, keepdims=True)
     out = np.divide(out, row_sums, out=np.zeros_like(out), where=row_sums > 0.0)
     return out
+
+
+class BiomeStage:
+    """Derive biome centers from ``BIOME_GRID`` and write IDW soft weights.
+
+    Pipeline order: after Leylines (last ecology field the world needs).
+    """
+
+    reads: tuple[str, ...] = ("is_lake", "is_land", "precipitation", "temperature")
+    writes: tuple[str, ...] = ("biome_weights",)
+
+    def run(self, ctx: Workspace) -> None:
+        """Compute ``biome_weights`` and write it to ``ctx.fields``."""
+        cfg: BiomeConfig = ctx.config.biome
+
+        # --- prerequisites ---
+        temperature: Float64Array = ctx.fields.temperature
+
+        precipitation: Float64Array = ctx.fields.precipitation
+
+        is_land: BoolArray = ctx.fields.is_land
+
+        is_lake: BoolArray = ctx.fields.is_lake
+
+        # Biomes live on dry land only; lake-covered cells carry no biome.
+        biome_mask: BoolArray = is_land & ~is_lake
+
+        center_temp, center_precip, _biome_order = derive_centers()
+
+        weights: Float64Array = biome_weights(
+            temperature=temperature,
+            precipitation=precipitation,
+            is_land=biome_mask,
+            center_temp=center_temp,
+            center_precip=center_precip,
+            cfg=cfg,
+        )
+        # Coherent regions instead of per-cell speckle (gradual ecotones).
+        ctx.fields.biome_weights = smooth_biome_weights(
+            geometry=ctx.geometry,
+            weights=weights,
+            biome_mask=biome_mask,
+            cfg=cfg,
+        )

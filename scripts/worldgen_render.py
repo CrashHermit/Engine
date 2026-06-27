@@ -8,8 +8,8 @@ from enum import StrEnum
 import numpy as np
 
 from src.worldgen.bake import bake_to_grid, nearest_cell_per_tile, stamp_rivers
-from src.worldgen.context import WorldContext
-from src.worldgen.fields import GridFields
+from src.worldgen.workspace import Workspace
+from src.worldgen.fields import Fields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.pipeline import WorldgenPipeline
 from src.worldgen.types import Float64Array, Int32Array
@@ -27,7 +27,7 @@ class Phase0World:
 
     seed: int
     size: int
-    grid: GridFields
+    grid: Fields
     geometry: MeshGeometry
     nearest: Int32Array
     insolation: Float64Array  # mesh-side intermediate, baked per-tile for display only
@@ -184,7 +184,7 @@ def generate_world(
     (up to ``cell_count`` cells) instead of the coarse gameplay grid.  When
     ``None`` (the interactive default), detail equals the gameplay ``size``.
     """
-    ctx: WorldContext
+    ctx: Workspace
     _world, ctx = WorldgenPipeline().run_debug(seed=seed, size=size)
 
     render_size: int = resolution if resolution is not None else ctx.config.size
@@ -195,11 +195,11 @@ def generate_world(
     # Bake the mesh fields at the render resolution, then stamp rivers crisply
     # at that resolution (the product grid bakes at gameplay size; this is a
     # diagnostic re-bake that keeps sub-tile detail).
-    grid: GridFields = bake_to_grid(fields=ctx.fields, nearest=nearest)
-    if ctx.rivers:
+    grid: Fields = bake_to_grid(fields=ctx.fields, nearest=nearest)
+    if ctx.outputs.rivers:
         stamp_rivers(
             grid=grid,
-            rivers=ctx.rivers,
+            rivers=ctx.outputs.rivers,
             geometry=ctx.geometry,
             fields=ctx.fields,
             size=render_size,
@@ -248,7 +248,7 @@ def _tile_color(
     z_span: float,
 ) -> RGB:
     """Map one baked grid tile to an RGB color for the requested layer."""
-    grid: GridFields = world.grid
+    grid: Fields = world.grid
 
     if not grid.is_land[tile_index]:
         if layer in {Layer.ELEVATION, Layer.LAND}:
@@ -449,7 +449,7 @@ def rasterize_display(
     """
     world_size: int = world.size
     display_size = max(1, min(display_size, world_size * 8))
-    grid: GridFields = world.grid
+    grid: Fields = world.grid
     pixels: dict[RGB, list[tuple[int, int]]] = {}
     # Land-normalized elevation (0..land-max) so the hypsometric tint resolves real
     # relief instead of squashing all land into the top of the ramp.
@@ -586,7 +586,7 @@ def _biome_palette() -> Float64Array:
 
 def colorize(world: Phase0World, layer: Layer) -> Float64Array:
     """Color every tile for ``layer`` at once; returns (n, 3) uint8, flat tile order."""
-    grid: GridFields = world.grid
+    grid: Fields = world.grid
     n: int = world.size * world.size
     is_land: np.ndarray = grid.is_land.astype(bool)
     out: Float64Array = np.zeros((n, 3), dtype=np.float64)

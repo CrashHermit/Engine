@@ -8,9 +8,10 @@ objects (paths with identity, tributaries, mouths) from the receiver forest.
 import numpy as np
 
 from src.worldgen.config.worldgen_config import RiverConfig
-from src.worldgen.features import River
+from src.core.model.environment.water.river import River
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
+from src.worldgen.workspace import Workspace
 
 
 def classify_rivers(
@@ -185,8 +186,8 @@ def extract_rivers(
         else:
             mouth = last_cell
 
-        discharge_arr: Float64Array = np.array(
-            river_discharge[river_id], dtype=np.float64
+        discharge_along: tuple[float, ...] = tuple(
+            float(value) for value in river_discharge[river_id]
         )
 
         tributary_of: int | None = tributary_map.get(river_id)
@@ -195,10 +196,82 @@ def extract_rivers(
             River(
                 id=river_id,
                 cells=cells,
-                discharge=discharge_arr,
+                discharge=discharge_along,
                 mouth=mouth,
                 tributary_of=tributary_of,
             )
         )
 
     return rivers, cell_river_id
+
+
+class RiversStage:
+    """Classify river cells, extract River objects, write river_id to fields.
+
+    Phase 3 step 2: ``classify_rivers`` — percentile threshold on land
+    discharge.  Phase 3 step 3: ``extract_rivers`` — build downstream-first
+    River objects from the receiver forest.
+
+    Lake exclusion uses the ``is_lake`` field when LakesStage has already
+    populated it; in canonical pipeline order (Rivers before Lakes) it has
+    not, so the stage derives the lake-mask stand-in ``is_land & (z_route > z
+    + epsilon)`` — the same mask LakesStage computes.  This keeps river cells
+    out of water-filled depressions and lets rivers terminate at lake cells.
+
+    Pipeline order: after DischargeStage, before LakesStage.
+    """
+
+    reads: tuple[str, ...] = ("discharge", "elevation", "is_lake", "is_land", "is_river", "receiver", "z_route")
+    writes: tuple[str, ...] = ("is_river", "river_id")
+    reads_optional: tuple[str, ...] = ("is_lake",)
+
+    def run(self, ctx: Workspace) -> None:
+        """Classify river cells, extract rivers, write river_id and ctx.outputs.rivers."""
+        cfg: RiverConfig = ctx.config.river
+
+        # --- prerequisites ---
+        discharge: Float64Array = ctx.fields.discharge
+
+        is_land: BoolArray = ctx.fields.is_land
+
+        receiver: Int32Array = ctx.fields.receiver
+
+        z_route: Float64Array = ctx.fields.z_route
+
+        is_lake_field: BoolArray | None = ctx.fields.is_lake
+        if is_lake_field is None:
+            # LakesStage runs after this stage, so is_lake is not written yet.
+            # Use the lake-mask stand-in `z_route > z + epsilon` — identical to
+            # the mask LakesStage will compute — so the two stages agree.
+            elevation_field: Float64Array = ctx.fields.elevation
+            is_lake: BoolArray = is_land & (
+                z_route > elevation_field + ctx.config.lake.epsilon
+            )
+        else:
+            is_lake: BoolArray = is_lake_field
+
+        # --- Step 2: classify river cells ---
+        ctx.fields.is_river = classify_rivers(
+            discharge=discharge,
+            is_land=is_land,
+            is_lake=is_lake,
+            cfg=cfg,
+        )
+
+        # --- Step 3: extract River objects ---
+        # Initialize river_id to -1 (no river) before stamping.
+        n: int = ctx.geometry.n_cells
+        ctx.fields.river_id = np.full(n, -1, dtype=np.int32)
+
+        rivers, river_id = extract_rivers(
+            geometry=ctx.geometry,
+            receiver=receiver,
+            discharge=discharge,
+            z_route=z_route,
+            is_river=ctx.fields.is_river,
+            is_lake=is_lake,
+        )
+        ctx.outputs.rivers = rivers
+
+        # Stamp river_id into fields
+        ctx.fields.river_id = river_id

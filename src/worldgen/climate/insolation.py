@@ -4,6 +4,8 @@ from src.worldgen.config.worldgen_config import InsolationConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.field import FractalField
 from src.worldgen.types import Float64Array
+from src.worldgen.workspace import Workspace
+from src.worldgen.noise.rng import FIELD_INSOLATION_WOBBLE
 
 
 def _wrapped_yc(
@@ -99,3 +101,39 @@ def insolation_field(
     insolation: Float64Array = 0.5 + 0.5 * centered
     insolation = 0.5 + (insolation - 0.5) * cfg.contrast
     return np.clip(insolation, 0.0, 1.0)
+
+
+class InsolationStage:
+    """Compute the signed ``latitude`` driver and the insolation field.
+
+    Pipeline order:
+    ``Finalize → Insolation → Wind → OceanCurrent → Temperature → Moisture``
+    """
+
+    reads: tuple[str, ...] = ()
+    writes: tuple[str, ...] = ("insolation", "latitude")
+
+    def run(self, ctx: Workspace) -> None:
+        """Compute latitude + insolation; write both to ``ctx.fields``."""
+        cfg: InsolationConfig = ctx.config.insolation
+
+        # --- prerequisites ---
+        geometry = ctx.geometry
+
+        # --- optional wobble noise (warps the latitude lines) ---
+        wobble_noise: FractalField | None = None
+        if cfg.wobble > 0.0:
+            wobble_noise = FractalField(
+                sampler=ctx.noise_for("insolation_wobble"),
+                field_id=FIELD_INSOLATION_WOBBLE,
+                octaves=3,
+            )
+
+        # --- compute latitude first, then insolation from it ---
+        latitude = latitude_field(
+            geometry=geometry, cfg=cfg, wobble_noise=wobble_noise
+        )
+        ctx.fields.latitude = latitude
+        ctx.fields.insolation = insolation_field(
+            geometry=geometry, cfg=cfg, latitude=latitude
+        )

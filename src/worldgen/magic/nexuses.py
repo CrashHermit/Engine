@@ -10,7 +10,7 @@ iconic rather than a scatter of tiny bumps.
 import numpy as np
 
 from src.worldgen.config.worldgen_config import MagicConfig
-from src.worldgen.features import Nexus, NexusPolarity
+from src.core.model.environment.magic.nexus import Nexus, NexusPolarity
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_distance
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
@@ -109,7 +109,7 @@ def extract_nexuses(
                 cell=c,
                 polarity=polarity,
                 charge=float(charge[c]),
-                channels=source_channels[c].astype(np.float64).copy(),
+                channels=tuple(float(value) for value in source_channels[c]),
             )
         )
         nexus_id[c] = new_id

@@ -9,18 +9,18 @@ import math
 import numpy as np
 
 from src.worldgen.config.worldgen_config import RiverConfig
-from src.worldgen.fields import GridFields, MeshFields
-from src.worldgen.features import River
+from src.worldgen.fields import Fields
+from src.core.model.environment.water.river import River
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import Float64Array
 
 
 def stamp_rivers(
     *,
-    grid: GridFields,
+    grid: Fields,
     rivers: list[River],
     geometry: MeshGeometry,
-    fields: MeshFields,
+    fields: Fields,
     size: int,
     cfg: RiverConfig,
 ) -> None:
@@ -97,12 +97,9 @@ def stamp_rivers(
             dy_step = dy_total / n_steps
 
             # Read flow values directly from the mesh fields.
-            flow_u_arr = fields.flow_u if fields.flow_u is not None else None
-            flow_v_arr = fields.flow_v if fields.flow_v is not None else None
-            flow_speed_arr = fields.flow_speed if fields.flow_speed is not None else None
-            mesh_flow_u = float(flow_u_arr[cell_a]) if flow_u_arr is not None else 0.0
-            mesh_flow_v = float(flow_v_arr[cell_a]) if flow_v_arr is not None else 0.0
-            mesh_flow_speed = float(flow_speed_arr[cell_a]) if flow_speed_arr is not None else 0.0
+            mesh_flow_u = float(fields.flow_u[cell_a])
+            mesh_flow_v = float(fields.flow_v[cell_a])
+            mesh_flow_speed = float(fields.flow_speed[cell_a])
 
             # Stamp disks at each step position.
             for step_i in range(n_steps + 1):
@@ -128,7 +125,7 @@ def stamp_rivers(
 
 def _stamp_disk_around(
     *,
-    grid: GridFields,
+    grid: Fields,
     cx: int,
     cy: int,
     r_int: int,

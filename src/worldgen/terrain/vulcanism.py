@@ -26,11 +26,17 @@ from dataclasses import dataclass
 import numpy as np
 from scipy.spatial import cKDTree
 
+from src.core.model.environment.terrain.volcano import (
+    Volcano,
+    VolcanoKind,
+    VolcanoStatus,
+)
 from src.worldgen.config.worldgen_config import VulcanismConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.terrain.boundaries import BoundaryFacts, BoundaryKind
 from src.worldgen.terrain.plate_personalities import PlateProperties
 from src.worldgen.types import BoolArray, Float64Array, Int8Array, Int32Array
+from src.worldgen.workspace import Workspace
 
 
 @dataclass
@@ -38,8 +44,8 @@ class VolcanoSeed:
     """A discrete volcano before it gets a global id (filled by the stage)."""
 
     cell: int
-    kind: int  # VolcanoKind value
-    status: int  # VolcanoStatus value
+    kind: VolcanoKind
+    status: VolcanoStatus
     chain_id: int
     activity: float
     has_caldera: bool = False
@@ -54,18 +60,13 @@ class VulcanismResult:
     volcanoes: list[VolcanoSeed]
 
 
-# --- volcano morphology / status (mirror features.VolcanoKind/Status values) ---
-_STRATO, _SHIELD, _FISSURE = 0, 1, 2
-_ACTIVE, _DORMANT, _EXTINCT = 0, 1, 2
-
-
-def _status_from_activity(activity: float) -> int:
+def _status_from_activity(activity: float) -> VolcanoStatus:
     """Bucket a [0,1] activity level into active / dormant / extinct."""
     if activity > 0.66:
-        return _ACTIVE
+        return VolcanoStatus.ACTIVE
     if activity > 0.33:
-        return _DORMANT
-    return _EXTINCT
+        return VolcanoStatus.DORMANT
+    return VolcanoStatus.EXTINCT
 
 
 def _torus_distance(
@@ -253,7 +254,7 @@ def _hotspot_trails(
             volcanoes.append(
                 VolcanoSeed(
                     cell=cell,
-                    kind=_SHIELD,
+                    kind=VolcanoKind.SHIELD,
                     status=_status_from_activity(decay),
                     chain_id=chain_id,
                     activity=decay,
@@ -359,13 +360,15 @@ def compute_vulcanism(
     )
     for c in arc_cells:
         norm: float = float(min(1.0, arc_activity[c]))
-        status: int = (
-            _DORMANT if rng.random() < cfg.dormant_fraction else _ACTIVE
+        status: VolcanoStatus = (
+            VolcanoStatus.DORMANT
+            if rng.random() < cfg.dormant_fraction
+            else VolcanoStatus.ACTIVE
         )
         volcanoes.append(
             VolcanoSeed(
                 cell=c,
-                kind=_STRATO,
+                kind=VolcanoKind.STRATO,
                 status=status,
                 chain_id=chain_base + int(arc_labels[c]),
                 # Arc cones read as present-day active ground even where the raw
@@ -388,8 +391,8 @@ def compute_vulcanism(
         volcanoes.append(
             VolcanoSeed(
                 cell=c,
-                kind=_FISSURE,
-                status=_ACTIVE,
+                kind=VolcanoKind.FISSURE,
+                status=VolcanoStatus.ACTIVE,
                 chain_id=-1,
                 activity=float(min(1.0, max(0.5, fissure_score[c]))),
             )
@@ -532,3 +535,87 @@ def _components(*, geometry: MeshGeometry, mask: BoolArray) -> Int32Array:
                 labels[nb_i] = component
                 queue.append(nb_i)
     return labels
+
+
+class VulcanismStage:
+    """Add volcanic uplift, write the volcanism field, stash volcano candidates."""
+
+    reads: tuple[str, ...] = ("plate_id", "uplift")
+    writes: tuple[str, ...] = ("volcanism",)
+
+    def run(self, ctx: Workspace) -> None:
+        """Contribute edifice height and the volcanism field (pre-erosion)."""
+        cfg: VulcanismConfig = ctx.config.vulcanism
+
+        facts: BoundaryFacts | None = ctx.scratch.boundary_facts
+        if facts is None:
+            msg: str = "boundary_facts must be set before VulcanismStage"
+            raise RuntimeError(msg)
+        plate_id: Int32Array = ctx.fields.plate_id
+        properties: PlateProperties | None = ctx.scratch.plate_properties
+        if properties is None:
+            msg = "plate_properties must be set before VulcanismStage"
+            raise RuntimeError(msg)
+        uplift: Float64Array = ctx.fields.uplift
+
+        result = compute_vulcanism(
+            geometry=ctx.geometry,
+            facts=facts,
+            plate_id=plate_id,
+            properties=properties,
+            cfg=cfg,
+            seed=ctx.seed_for("vulcanism"),
+        )
+
+        # Add edifice height; clamp so nothing goes negative.
+        uplift += result.uplift_add
+        np.maximum(uplift, 0.0, out=uplift)
+        ctx.fields.volcanism = result.volcanism
+
+        # Discrete volcanoes are materialised after finalize, when we know which
+        # edifices breached (see VolcanoesStage).
+        ctx.scratch.volcano_candidates = result.volcanoes
+
+
+class VolcanoesStage:
+    """Turn surfaced candidates into discrete ``Volcano`` landmarks (post-finalize)."""
+
+    reads: tuple[str, ...] = ("is_land",)
+    writes: tuple[str, ...] = ("is_volcano", "volcano_id")
+
+    def run(self, ctx: Workspace) -> None:
+        """Select landmark volcanoes and write their fields and objects."""
+        cfg: VulcanismConfig = ctx.config.vulcanism
+        candidates: list[VolcanoSeed] = ctx.scratch.volcano_candidates or []
+
+        is_land: BoolArray = ctx.fields.is_land
+
+        selected: list[VolcanoSeed] = select_landmark_volcanoes(
+            geometry=ctx.geometry,
+            candidates=candidates,
+            is_land=is_land,
+            cfg=cfg,
+        )
+
+        n: int = ctx.geometry.n_cells
+        is_volcano: BoolArray = np.zeros(n, dtype=bool)
+        volcano_id: Int32Array = np.full(n, -1, dtype=np.int32)
+        volcanoes: list[Volcano] = []
+        for new_id, seed in enumerate(selected):
+            volcanoes.append(
+                Volcano(
+                    id=new_id,
+                    cell=seed.cell,
+                    kind=seed.kind,
+                    status=seed.status,
+                    chain_id=seed.chain_id,
+                    activity=seed.activity,
+                    has_caldera=seed.has_caldera,
+                )
+            )
+            is_volcano[seed.cell] = True
+            volcano_id[seed.cell] = new_id
+
+        ctx.fields.is_volcano = is_volcano
+        ctx.fields.volcano_id = volcano_id
+        ctx.outputs.volcanoes = volcanoes

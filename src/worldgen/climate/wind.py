@@ -5,6 +5,9 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta
 from src.worldgen.noise.field import FractalField
 from src.worldgen.types import Float64Array
+from src.worldgen.workspace import Workspace
+from src.worldgen.geometry.field_ops import diffuse
+from src.worldgen.noise.rng import FIELD_WIND_U, FIELD_WIND_V
 
 
 def wind_belts(
@@ -272,3 +275,93 @@ def deflect_wind(
     wind_magnitude = wind_magnitude * deflection_factor
 
     return wind_u, wind_v, wind_magnitude
+
+
+class WindStage:
+    """Compute wind belts and terrain deflection.
+
+    Pipeline order: ``Insolation → Wind → OceanCurrent → Temperature → Moisture``.
+    Wind precedes the ocean-current and temperature stages because the current
+    is wind-advected and coasts moderate toward the wind-borne sea temperature.
+    """
+
+    reads: tuple[str, ...] = ("elevation", "latitude")
+    writes: tuple[str, ...] = ("convergence", "wind_magnitude", "wind_u", "wind_v")
+
+    def run(self, ctx: Workspace) -> None:
+        """Compute wind fields and write ``ctx.fields.wind_u/v/magnitude``."""
+        cfg: WindConfig = ctx.config.wind
+
+        # --- prerequisites ---
+        geometry = ctx.geometry
+
+        elevation: Float64Array = ctx.fields.elevation
+
+        latitude: Float64Array = ctx.fields.latitude
+
+        # --- turbulence noise fields (two independent sub-seeded sources) ---
+        turbulence_u: FractalField = FractalField(
+            sampler=ctx.noise_for("wind_u"),
+            field_id=FIELD_WIND_U,
+            octaves=3,
+        )
+        turbulence_v: FractalField = FractalField(
+            sampler=ctx.noise_for("wind_v"),
+            field_id=FIELD_WIND_V,
+            octaves=3,
+        )
+
+        # --- step 3: wind belts ---
+        wind_u, wind_v, wind_magnitude = wind_belts(
+            geometry=geometry,
+            cfg=cfg,
+            latitude=latitude,
+            turbulence_u=turbulence_u,
+            turbulence_v=turbulence_v,
+        )
+
+        # --- step 4: terrain deflection ---
+        grad_x, grad_y = elevation_gradient(
+            geometry=ctx.geometry,
+            elevation=elevation,
+        )
+
+        wind_u, wind_v, wind_magnitude = deflect_wind(
+            wind_u=wind_u,
+            wind_v=wind_v,
+            wind_magnitude=wind_magnitude,
+            grad_x=grad_x,
+            grad_y=grad_y,
+            cfg=cfg,
+        )
+
+        # --- normalize speed to [0, 1] (belt speed × deflection) ---
+        mag_max: float = float(wind_magnitude.max())
+        if mag_max > 0.0:
+            wind_magnitude = wind_magnitude / mag_max
+
+        # --- convergence of the wind velocity field (rising air → rain) ---
+        # Divergence is computed on the full velocity (unit direction × speed) so
+        # the calm, converging doldrums read as strong convergence.
+        divergence: Float64Array = wind_divergence(
+            geometry=geometry,
+            vel_u=wind_u * wind_magnitude,
+            vel_v=wind_v * wind_magnitude,
+        )
+        convergence: Float64Array = convergence_field(
+            divergence=divergence, percentile=cfg.convergence_percentile
+        )
+        # Smooth to a climatic normal: drop turbulence-scale noise, keep the
+        # belt/terrain-scale convergence that bands the rain.
+        convergence = diffuse(
+            geometry=geometry,
+            field=convergence,
+            strength=cfg.convergence_smoothing_strength,
+            passes=cfg.convergence_smoothing_passes,
+        )
+
+        # --- write results ---
+        ctx.fields.wind_u = wind_u
+        ctx.fields.wind_v = wind_v
+        ctx.fields.wind_magnitude = wind_magnitude
+        ctx.fields.convergence = convergence

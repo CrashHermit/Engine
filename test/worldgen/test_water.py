@@ -23,7 +23,7 @@ def _run(ctx_seed: int) -> tuple:
     )
     return (
         ctx,
-        ctx.rivers,
+        ctx.outputs.rivers,
         ctx.fields.receiver,
         ctx.fields.discharge,
         ctx.fields.is_river,
@@ -86,9 +86,9 @@ def test_tributary_of_larger_discharge(seed: int) -> None:
             assert trunk is not None, (
                 f"river {river.id} tributary_of={river.tributary_of} not found"
             )
-            assert river.discharge.max() < trunk.discharge.max(), (
-                f"river {river.id} (max={river.discharge.max():.2f}) -> "
-                f"trunk {trunk.id} (max={trunk.discharge.max():.2f})"
+            assert max(river.discharge) < max(trunk.discharge), (
+                f"river {river.id} (max={max(river.discharge):.2f}) -> "
+                f"trunk {trunk.id} (max={max(trunk.discharge):.2f})"
             )
 
 
@@ -156,7 +156,7 @@ def test_lake_outlets_reach_ocean(seed: int) -> None:
     receiver = ctx.fields.receiver
     n = len(receiver)
 
-    for lake in ctx.lakes:
+    for lake in ctx.outputs.lakes:
         if lake.outlet_cell is None:
             continue  # terminal (endorheic) lake — no outlet to trace
 

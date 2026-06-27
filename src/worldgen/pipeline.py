@@ -1,32 +1,37 @@
 import numpy as np
 
+from src.worldgen.bake.features import features_to_tiles
 from src.worldgen.bake.grid import bake_and_stamp, nearest_cell_per_tile
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
-from src.worldgen.context import WorldContext
-from src.worldgen.features import Landmass, Nexus, Region, Vein, WorldData
-from src.worldgen.fields import GridFields, MeshFields
+from src.worldgen.workspace import Workspace
+from src.core.model.environment.magic.nexus import Nexus
+from src.core.model.environment.magic.vein import Vein
+from src.core.model.environment.regions.region import Region
+from src.core.model.environment.terrain.landmass import Landmass
+from src.worldgen.features import WorldData
+from src.worldgen.fields import Fields
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
-from src.worldgen.stages.base import Stage
-from src.worldgen.stages.biomes import BiomeStage
-from src.worldgen.stages.boundary_classify import BoundaryClassifyStage
-from src.worldgen.stages.boundary_uplift import BoundaryUpliftStage
-from src.worldgen.stages.discharge import DischargeStage
-from src.worldgen.stages.erosion import ErosionStage
-from src.worldgen.stages.finalize import FinalizeStage
-from src.worldgen.stages.flow import FlowStage
-from src.worldgen.stages.insolation import InsolationStage
-from src.worldgen.stages.lakes import LakesStage
-from src.worldgen.stages.magic import MagicStage
-from src.worldgen.stages.moisture import MoistureStage
-from src.worldgen.stages.ocean_current import OceanCurrentStage
-from src.worldgen.stages.plate import PlatesStage
-from src.worldgen.stages.plate_personality import PlatePersonalityStage
-from src.worldgen.stages.regions import RegionsStage
-from src.worldgen.stages.rivers import RiversStage
-from src.worldgen.stages.savagery import SavageryStage
-from src.worldgen.stages.temperature import TemperatureStage
-from src.worldgen.stages.vulcanism import VolcanoesStage, VulcanismStage
-from src.worldgen.stages.wind import WindStage
+from src.worldgen.climate.insolation import InsolationStage
+from src.worldgen.climate.moisture import MoistureStage
+from src.worldgen.climate.ocean_current import OceanCurrentStage
+from src.worldgen.climate.temperature import TemperatureStage
+from src.worldgen.climate.wind import WindStage
+from src.worldgen.ecology.biomes import BiomeStage
+from src.worldgen.magic.savagery import SavageryStage
+from src.worldgen.magic.stage import MagicStage
+from src.worldgen.regions.regions import RegionsStage
+from src.worldgen.stage import Stage
+from src.worldgen.terrain.boundaries import BoundaryClassifyStage
+from src.worldgen.terrain.boundary_uplift import BoundaryUpliftStage
+from src.worldgen.terrain.erosion import ErosionStage
+from src.worldgen.terrain.finalize import FinalizeStage
+from src.worldgen.terrain.plate_personalities import PlatePersonalityStage
+from src.worldgen.terrain.plates import PlatesStage
+from src.worldgen.terrain.vulcanism import VolcanoesStage, VulcanismStage
+from src.worldgen.water.discharge import DischargeStage
+from src.worldgen.water.flow import FlowStage
+from src.worldgen.water.lakes import LakesStage
+from src.worldgen.water.rivers import RiversStage
 from src.worldgen.types import Int32Array
 
 
@@ -64,7 +69,31 @@ def _build_stages() -> list[Stage]:
     ]
 
 
-def _build_landmasses(ctx: WorldContext, grid: GridFields) -> list[Landmass]:
+def _validate_stage_deps(stages: list[Stage]) -> None:
+    """Fail loudly at startup if a stage reads a field no earlier stage produced.
+
+    With eager allocation every field is a zero array, so a misordered read would
+    silently return zeros instead of raising.  This turns that into a construction-
+    time error: each required read (``reads`` minus ``reads_optional``) must be in
+    the union of earlier stages' ``writes`` or the stage's own ``writes``.
+    ``reads_optional`` exempts deliberate zero-init forward references.
+    """
+    produced: set[str] = set()
+    for stage in stages:
+        writes: set[str] = set(stage.writes)
+        required: set[str] = set(stage.reads) - set(getattr(stage, "reads_optional", ()))
+        missing: set[str] = required - produced - writes
+        if missing:
+            name: str = type(stage).__name__
+            msg: str = (
+                f"{name} reads {sorted(missing)} but no earlier stage writes them "
+                f"(stage misordered, or its reads/writes are mis-declared)"
+            )
+            raise RuntimeError(msg)
+        produced |= writes
+
+
+def _build_landmasses(ctx: Workspace, grid: Fields) -> list[Landmass]:
     """Summarize the connected land components for the output contract."""
     mesh_ids: Int32Array = ctx.fields.landmass_id
     mesh_class = ctx.fields.landmass_class
@@ -97,7 +126,7 @@ class WorldgenPipeline:
 
     ``run`` returns the product ``WorldData`` (the mesh is an internal
     intermediate that does not ship).  ``run_debug`` additionally returns the
-    ``WorldContext`` for the viewer, which needs mesh-side intermediates.
+    ``Workspace`` for the viewer, which needs mesh-side intermediates.
     """
 
     def __init__(self, config: WorldgenConfig | None = None) -> None:
@@ -108,19 +137,19 @@ class WorldgenPipeline:
         world, _ctx = self.run_debug(seed=seed, size=size)
         return world
 
-    def run_debug(self, seed: int, size: int) -> tuple[WorldData, WorldContext]:
-        """Generate a world and return ``(WorldData, WorldContext)`` for debug.
+    def run_debug(self, seed: int, size: int) -> tuple[WorldData, Workspace]:
+        """Generate a world and return ``(WorldData, Workspace)`` for debug.
 
         The viewer uses this door for mesh-side intermediates; the product
         ``run`` entry point throws the context (and its mesh) away.
         """
-        ctx: WorldContext = self._run_pipeline(seed=seed, size=size)
+        ctx: Workspace = self._run_pipeline(seed=seed, size=size)
         world: WorldData = self._assemble(ctx)
         return world, ctx
 
-    def _run_pipeline(self, seed: int, size: int) -> WorldContext:
+    def _run_pipeline(self, seed: int, size: int) -> Workspace:
         """Build the mesh and run every stage; return the populated context."""
-        cfg: WorldgenConfig = WorldContext.resolve_config(
+        cfg: WorldgenConfig = Workspace.resolve_config(
             seed=seed, size=size, config=self._config
         )
         mesh_cfg: MeshConfig = cfg.mesh
@@ -132,47 +161,62 @@ class WorldgenPipeline:
             width=mesh_cfg.width,
             height=mesh_cfg.height,
         )
-        fields: MeshFields = MeshFields.allocate(n=geometry.n_cells)
-        ctx: WorldContext = WorldContext(config=cfg, geometry=geometry, fields=fields)
+        fields: Fields = Fields.allocate(n=geometry.n_cells)
+        ctx: Workspace = Workspace(config=cfg, geometry=geometry, fields=fields)
 
-        for stage in _build_stages():
+        stages: list[Stage] = _build_stages()
+        _validate_stage_deps(stages)
+        for stage in stages:
             stage.run(ctx)
 
         return ctx
 
-    def _assemble(self, ctx: WorldContext) -> WorldData:
+    def _assemble(self, ctx: Workspace) -> WorldData:
         """Bake the grid, stamp rivers, and assemble the output ``WorldData``."""
         size: int = ctx.config.size
-        grid: GridFields = bake_and_stamp(
+        grid: Fields = bake_and_stamp(
             fields=ctx.fields,
             geometry=ctx.geometry,
-            rivers=ctx.rivers,
+            rivers=ctx.outputs.rivers,
             size=size,
             cfg=ctx.config.river,
         )
 
-        veins: list[Vein] | None = ctx.veins
-        nexuses: list[Nexus] | None = ctx.nexuses
+        veins: list[Vein] | None = ctx.outputs.veins
+        nexuses: list[Nexus] | None = ctx.outputs.nexuses
         if veins is None or nexuses is None:
             msg: str = "veins/nexuses must be set before assembling WorldData"
             raise RuntimeError(msg)
 
-        regions: list[Region] | None = ctx.regions
+        regions: list[Region] | None = ctx.outputs.regions
         if regions is None:
             msg = "regions must be set before assembling WorldData"
             raise RuntimeError(msg)
+
+        # Translate feature geometry from (ephemeral) mesh-cell ids to tile ids so
+        # the shipped product is self-contained.  The bake/stamp above already
+        # consumed the mesh-coordinate rivers, so this is the last step.
+        rivers_t, lakes_t, veins_t, nexuses_t, volcanoes_t = features_to_tiles(
+            geometry=ctx.geometry,
+            size=size,
+            rivers=ctx.outputs.rivers or [],
+            lakes=ctx.outputs.lakes or [],
+            veins=veins,
+            nexuses=nexuses,
+            volcanoes=ctx.outputs.volcanoes or [],
+        )
 
         return WorldData(
             seed=ctx.config.seed,
             size=size,
             config=ctx.config,
             grid=grid,
-            rivers=ctx.rivers or [],
-            lakes=ctx.lakes or [],
-            veins=veins,
-            nexuses=nexuses,
+            rivers=rivers_t,
+            lakes=lakes_t,
+            veins=veins_t,
+            nexuses=nexuses_t,
             landmasses=_build_landmasses(ctx, grid),
-            volcanoes=ctx.volcanoes or [],
+            volcanoes=volcanoes_t,
             regions=regions,
         )
 

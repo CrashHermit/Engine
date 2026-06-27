@@ -21,15 +21,18 @@ gameplay has one lookup; per-tile membership is per-layer (separate id columns).
 import numpy as np
 
 from src.core.model.environment.ecology.biome import BiomeEnum
-from src.worldgen.features import Region, RegionKind
+from src.core.model.environment.regions.region import Region, RegionKind
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.regions.landscape import (
+    LANDSCAPE_CODE,
     LANDSCAPE_KIND,
     LANDSCAPE_NOUN,
     LANDSCAPE_ORDER,
 )
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
 from src.worldgen.water.lakes import components
+from src.worldgen.workspace import Workspace
+from src.worldgen.ecology.biomes import derive_centers
 
 # Deterministic placeholder namer.  Real procedural naming (language-aware,
 # kind-flavored) is a follow-up; this gives every region a stable, seed-derived
@@ -97,7 +100,8 @@ def _cell_landscape(
 ) -> Int32Array:
     """Per-cell landscape :class:`RegionKind` value (as int); ``-1`` off the mask."""
     col_to_kind: Int32Array = np.array(
-        [int(LANDSCAPE_KIND[biome]) for biome in biome_order], dtype=np.int32
+        [LANDSCAPE_CODE[LANDSCAPE_KIND[biome]] for biome in biome_order],
+        dtype=np.int32,
     )
     kinds: Int32Array = np.full(dominant_biome.shape[0], -1, dtype=np.int32)
     kinds[biome_mask] = col_to_kind[dominant_biome[biome_mask]]
@@ -185,7 +189,7 @@ def assign_regions(
     )
     n_biomes: int = len(biome_order)
     for kind in LANDSCAPE_ORDER:
-        category_mask: BoolArray = biome_mask & (cell_kind == int(kind))
+        category_mask: BoolArray = biome_mask & (cell_kind == LANDSCAPE_CODE[kind])
         labels: Int32Array = components(geometry=geometry, mask=category_mask)
         for component in range(int(labels.max()) + 1):
             members = labels == component
@@ -200,3 +204,38 @@ def assign_regions(
             )
 
     return region_id, biome_region_id, regions
+
+
+class RegionsStage:
+    """Write ``region_id`` / ``biome_region_id`` and the ``Region`` list."""
+
+    reads: tuple[str, ...] = ("biome_weights", "is_lake", "is_land", "landmass_id")
+    writes: tuple[str, ...] = ("biome_region_id", "region_id")
+
+    def run(self, ctx: Workspace) -> None:
+        """Segment land/ocean bodies and biome-regions into named regions."""
+        is_land_field: BoolArray = ctx.fields.is_land
+
+        is_lake_field: BoolArray = ctx.fields.is_lake
+
+        landmass_field: Int32Array = ctx.fields.landmass_id
+
+        weights_field: Float64Array = ctx.fields.biome_weights
+
+        # Biome-regions live on dry land; their landscape is the dominant biome.
+        biome_mask: BoolArray = is_land_field & ~is_lake_field
+        dominant_biome: Int32Array = np.argmax(weights_field, axis=1).astype(np.int32)
+        _center_temp, _center_precip, biome_order = derive_centers()
+
+        region_id, biome_region_id, regions = assign_regions(
+            geometry=ctx.geometry,
+            is_land=is_land_field,
+            landmass_id=landmass_field,
+            biome_mask=biome_mask,
+            dominant_biome=dominant_biome,
+            biome_order=biome_order,
+            seed=ctx.config.seed,
+        )
+        ctx.fields.region_id = region_id
+        ctx.fields.biome_region_id = biome_region_id
+        ctx.outputs.regions = regions

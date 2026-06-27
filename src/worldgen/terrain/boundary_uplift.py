@@ -16,6 +16,9 @@ from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.field import FractalField
 from src.worldgen.terrain.boundaries import BoundaryFacts, BoundaryKind
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
+from src.worldgen.workspace import Workspace
+from src.worldgen.noise.rng import FIELD_BOUNDARY_UPLIFT, FIELD_UPLIFT_FLOOR
+from src.worldgen.terrain.plate_personalities import PlateProperties
 
 
 def _smear_intensity(
@@ -181,3 +184,58 @@ def apply_boundary_uplift(
     uplift -= config.rift_strength * smeared_rift
     uplift += config.uplift_noise_floor * floor_fbm
     np.maximum(uplift, 0.0, out=uplift)
+
+
+class BoundaryUpliftStage:
+    """Smear convergent/divergent plate-boundary intensity into ``uplift``."""
+
+    reads: tuple[str, ...] = ("plate_id", "uplift")
+    writes: tuple[str, ...] = ()
+
+    def run(self, ctx: Workspace) -> None:
+        """Mutate ``ctx.fields.uplift`` with mountain belts and rift seams."""
+        cfg: PlatesConfig = ctx.config.plates
+        facts: BoundaryFacts | None = ctx.scratch.boundary_facts
+        if facts is None:
+            msg: str = "boundary_facts must be set before BoundaryUpliftStage"
+            raise RuntimeError(msg)
+        uplift: Float64Array = ctx.fields.uplift
+
+        span: float = min(ctx.geometry.width, ctx.geometry.height)
+        frequency: float = 4.0 / span
+        belt_noise: FractalField = FractalField(
+            sampler=ctx.noise_for("boundary_uplift"),
+            field_id=FIELD_BOUNDARY_UPLIFT,
+            octaves=3,
+        )
+        uplift_noise: FractalField = FractalField(
+            sampler=ctx.noise_for("uplift_floor"),
+            field_id=FIELD_UPLIFT_FLOOR,
+            octaves=3,
+        )
+        apply_boundary_uplift(
+            geometry=ctx.geometry,
+            facts=facts,
+            uplift=uplift,
+            config=cfg,
+            belt_noise=belt_noise,
+            uplift_noise=uplift_noise,
+            frequency=frequency,
+        )
+
+        # Continental crust rides high: turn flat slabs into platforms so whole
+        # continents surface as blobs instead of just the boundary belts.
+        plate_id_field: Int32Array = ctx.fields.plate_id
+        properties: PlateProperties | None = ctx.scratch.plate_properties
+        if properties is None:
+            msg = "plate_properties must be set before BoundaryUpliftStage"
+            raise RuntimeError(msg)
+        is_continental_cell: BoolArray = properties.is_continental[plate_id_field]
+        apply_continental_freeboard(
+            geometry=ctx.geometry,
+            plate_id=plate_id_field,
+            is_continental_cell=is_continental_cell,
+            uplift=uplift,
+            strength=cfg.continental_freeboard,
+            reach_frac=cfg.freeboard_reach,
+        )

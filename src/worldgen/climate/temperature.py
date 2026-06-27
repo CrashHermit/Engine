@@ -2,6 +2,8 @@ import numpy as np
 
 from src.worldgen.config.worldgen_config import TemperatureConfig
 from src.worldgen.types import BoolArray, Float64Array
+from src.worldgen.climate.ocean_current import maritime_sst_onshore
+from src.worldgen.workspace import Workspace
 
 
 def compute_temperature(
@@ -69,3 +71,55 @@ def compute_temperature(
     np.clip(temperature, 0.0, 1.0, out=temperature)
 
     return temperature
+
+
+class TemperatureStage:
+    """Compute temperature from insolation, elevation, and maritime effects.
+
+    Pipeline order: ``Insolation → Wind → OceanCurrent → Temperature → Moisture``.
+    Consumes the SST field from ``OceanCurrentStage``: ocean cells take their
+    SST directly and coasts moderate toward the wind-borne ocean SST.
+    """
+
+    reads: tuple[str, ...] = ("coast_distance", "elevation", "insolation", "is_land", "sst", "wind_u", "wind_v")
+    writes: tuple[str, ...] = ("temperature",)
+
+    def run(self, ctx: Workspace) -> None:
+        """Compute temperature and write ``ctx.fields.temperature``."""
+        cfg: TemperatureConfig = ctx.config.temperature
+
+        # --- prerequisites ---
+        insolation: Float64Array = ctx.fields.insolation
+
+        elevation: Float64Array = ctx.fields.elevation
+
+        coast_distance: Float64Array = ctx.fields.coast_distance
+
+        is_land: BoolArray = ctx.fields.is_land
+
+        sst: Float64Array = ctx.fields.sst
+
+        wind_u_field: Float64Array = ctx.fields.wind_u
+        wind_v_field: Float64Array = ctx.fields.wind_v
+
+        # --- carry ocean SST onshore along the wind for maritime moderation ---
+        maritime_sst: Float64Array = maritime_sst_onshore(
+            geometry=ctx.geometry,
+            wind_u=wind_u_field,
+            wind_v=wind_v_field,
+            sst=sst,
+            insolation=insolation,
+            is_land=is_land,
+            reach=cfg.maritime_reach,
+        )
+
+        # --- compute ---
+        ctx.fields.temperature = compute_temperature(
+            insolation=insolation,
+            elevation=elevation,
+            coast_distance=coast_distance,
+            is_land=is_land,
+            sst=sst,
+            maritime_sst=maritime_sst,
+            cfg=cfg,
+        )

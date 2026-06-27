@@ -8,7 +8,7 @@ not tundra.  Each landscape is a :class:`~src.worldgen.features.RegionKind`.
 """
 
 from src.core.model.environment.ecology.biome import BiomeEnum
-from src.worldgen.features import RegionKind
+from src.core.model.environment.regions.region import RegionKind
 
 # Display noun per landscape kind, used to name biome-regions ("Blackpine Forest").
 LANDSCAPE_NOUN: dict[RegionKind, str] = {
@@ -20,7 +20,7 @@ LANDSCAPE_NOUN: dict[RegionKind, str] = {
     RegionKind.SHRUBLAND: "Scrub",
 }
 
-# Deterministic iteration order for biome-region extraction (by RegionKind value).
+# Deterministic iteration order for biome-region extraction.
 LANDSCAPE_ORDER: tuple[RegionKind, ...] = (
     RegionKind.FOREST,
     RegionKind.GRASSLAND,
@@ -29,6 +29,13 @@ LANDSCAPE_ORDER: tuple[RegionKind, ...] = (
     RegionKind.WETLAND,
     RegionKind.SHRUBLAND,
 )
+
+# Stable integer code per landscape kind, for fast per-cell array matching during
+# region extraction (RegionKind is a StrEnum, so it cannot index numpy arrays
+# directly).  Internal only — never shipped.  Order matches LANDSCAPE_ORDER.
+LANDSCAPE_CODE: dict[RegionKind, int] = {
+    kind: index for index, kind in enumerate(LANDSCAPE_ORDER)
+}
 
 LANDSCAPE_KIND: dict[BiomeEnum, RegionKind] = {
     # -- FRIGID --

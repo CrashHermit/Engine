@@ -5,6 +5,8 @@ import numpy as np
 
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import Int32Array
+from src.worldgen.config.worldgen_config import PlatesConfig
+from src.worldgen.workspace import Workspace
 
 UNCLAIMED: int = -1
 
@@ -54,3 +56,20 @@ def build_plates(
                 heapq.heappush(heap, (priority, neighbor_id, plate))
 
     return plate_id
+
+
+class PlatesStage:
+    """Assign each mesh cell a tectonic plate id via ragged multi-source growth."""
+
+    reads: tuple[str, ...] = ()
+    writes: tuple[str, ...] = ("plate_id",)
+
+    def run(self, ctx: Workspace) -> None:
+        """Write ``plate_id`` on the context fields from ``PlatesConfig``."""
+        cfg: PlatesConfig = ctx.config.plates
+        ctx.fields.plate_id = build_plates(
+            geometry=ctx.geometry,
+            n_plates=cfg.n_plates,
+            seed=ctx.seed_for("plates"),
+            growth_raggedness=cfg.growth_raggedness,
+        )

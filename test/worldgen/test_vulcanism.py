@@ -7,7 +7,7 @@ import pytest
 
 from src.worldgen.bake.grid import nearest_cell_per_tile
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
-from src.worldgen.features import VolcanoKind
+from src.core.model.environment.terrain.volcano import VolcanoKind
 from src.worldgen.pipeline import WorldgenPipeline
 from src.worldgen.terrain.boundaries import BoundaryKind
 
@@ -44,9 +44,11 @@ def test_at_least_some_volcanoes(seed: int) -> None:
 @pytest.mark.parametrize("seed", SEEDS)
 def test_no_arc_volcano_on_collision(seed: int) -> None:
     """The Himalaya gate: no stratovolcano sits on a continent-continent cell."""
-    world, ctx = _debug(seed)
-    cc = ctx.boundary_facts.conv_kind == int(BoundaryKind.CONV_CC)
-    for v in world.volcanoes:
+    _world, ctx = _debug(seed)
+    cc = ctx.scratch.boundary_facts.conv_kind == int(BoundaryKind.CONV_CC)
+    # Mesh-domain invariant: use the mesh-coordinate volcanoes (ctx.outputs), not
+    # the tile-space WorldData product, to index mesh fields.
+    for v in ctx.outputs.volcanoes:
         if v.kind is VolcanoKind.STRATO:
             assert not cc[v.cell], f"arc volcano on a collision cell {v.cell}"
 
@@ -54,11 +56,12 @@ def test_no_arc_volcano_on_collision(seed: int) -> None:
 @pytest.mark.parametrize("seed", SEEDS)
 def test_volcano_columns_consistent(seed: int) -> None:
     """is_volcano <=> volcano_id >= 0, and each id points back to its summit cell."""
-    world, ctx = _debug(seed)
+    _world, ctx = _debug(seed)
     is_volcano = ctx.fields.is_volcano
     volcano_id = ctx.fields.volcano_id
     np.testing.assert_array_equal(is_volcano, volcano_id >= 0)
-    for v in world.volcanoes:
+    # Mesh-domain: ctx.outputs.volcanoes carry mesh-cell ids matching the fields.
+    for v in ctx.outputs.volcanoes:
         assert is_volcano[v.cell]
         assert int(volcano_id[v.cell]) == v.id
 
@@ -93,12 +96,14 @@ def test_land_calderas_hold_water(seed: int) -> None:
     Usually that is a freshly injected single-cell terminal crater lake; if the
     summit already sits inside a natural lake, the caldera simply shares it.
     """
-    world, ctx = _debug(seed)
+    _world, ctx = _debug(seed)
     is_land = ctx.fields.is_land
     is_lake = ctx.fields.is_lake
-    lake_by_id = {lk.id: lk for lk in world.lakes}
+    # Mesh-domain invariant: cross-reference mesh fields with the mesh-coordinate
+    # volcanoes and lakes (ctx.outputs), not the tile-space WorldData product.
+    lake_by_id = {lk.id: lk for lk in ctx.outputs.lakes}
     injected = 0
-    for v in world.volcanoes:
+    for v in ctx.outputs.volcanoes:
         if v.has_caldera and is_land[v.cell]:
             assert is_lake[v.cell], f"land caldera {v.cell} holds no water"
             lake = lake_by_id[int(ctx.fields.lake_id[v.cell])]

@@ -22,6 +22,7 @@ from src.worldgen.config.worldgen_config import MoistureConfig
 from src.worldgen.geometry.field_ops import diffuse
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
+from src.worldgen.workspace import Workspace
 
 
 def precip_belt(*, latitude: Float64Array, cfg: MoistureConfig) -> Float64Array:
@@ -280,3 +281,51 @@ def compute_precipitation(
             passes=cfg.smoothing_passes,
         )
     return precip
+
+
+class MoistureStage:
+    """Geography-driven precipitation (a climate normal).
+
+    Pipeline order: ``Insolation -> Wind -> OceanCurrent -> Temperature ->
+    Moisture``.  Precipitation composes the latitude belt, continentality (coast
+    distance) scaled by the wind-advected ``sst`` ocean source, orographic rain
+    shadows, and a convergence perturbation — no iterative advection.  See
+    ``docs/worldgen-precipitation-redesign-plan.md``.
+    """
+
+    reads: tuple[str, ...] = ("coast_distance", "convergence", "elevation", "is_land", "latitude", "sst", "wind_u", "wind_v")
+    writes: tuple[str, ...] = ("precipitation",)
+
+    def run(self, ctx: Workspace) -> None:
+        """Compute precipitation and write ``ctx.fields.precipitation``."""
+        cfg: MoistureConfig = ctx.config.moisture
+
+        # --- prerequisites ---
+        latitude_field: Float64Array = ctx.fields.latitude
+
+        coast_distance_field: Float64Array = ctx.fields.coast_distance
+
+        sst_field: Float64Array = ctx.fields.sst
+
+        elevation_field: Float64Array = ctx.fields.elevation
+
+        is_land_field: BoolArray = ctx.fields.is_land
+
+        wind_u_field: Float64Array = ctx.fields.wind_u
+
+        wind_v_field: Float64Array = ctx.fields.wind_v
+
+        convergence_field: Float64Array = ctx.fields.convergence
+
+        ctx.fields.precipitation = compute_precipitation(
+            geometry=ctx.geometry,
+            latitude=latitude_field,
+            coast_distance=coast_distance_field,
+            sst=sst_field,
+            elevation=elevation_field,
+            is_land=is_land_field,
+            wind_u=wind_u_field,
+            wind_v=wind_v_field,
+            convergence=convergence_field,
+            cfg=cfg,
+        )
