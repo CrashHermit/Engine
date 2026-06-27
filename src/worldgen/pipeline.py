@@ -4,7 +4,7 @@ from src.worldgen.bake.grid import bake_and_stamp, nearest_cell_per_tile
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.context import WorldContext
 from src.worldgen.features import Landmass, Nexus, Region, Vein, WorldData
-from src.worldgen.fields import GridFields, MeshFields
+from src.worldgen.fields import Fields
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
 from src.worldgen.stages.base import Stage
 from src.worldgen.stages.biomes import BiomeStage
@@ -64,7 +64,7 @@ def _build_stages() -> list[Stage]:
     ]
 
 
-def _build_landmasses(ctx: WorldContext, grid: GridFields) -> list[Landmass]:
+def _build_landmasses(ctx: WorldContext, grid: Fields) -> list[Landmass]:
     """Summarize the connected land components for the output contract."""
     mesh_ids: Int32Array = ctx.fields.landmass_id
     mesh_class = ctx.fields.landmass_class
@@ -132,7 +132,7 @@ class WorldgenPipeline:
             width=mesh_cfg.width,
             height=mesh_cfg.height,
         )
-        fields: MeshFields = MeshFields.allocate(n=geometry.n_cells)
+        fields: Fields = Fields.allocate(n=geometry.n_cells)
         ctx: WorldContext = WorldContext(config=cfg, geometry=geometry, fields=fields)
 
         for stage in _build_stages():
@@ -143,7 +143,7 @@ class WorldgenPipeline:
     def _assemble(self, ctx: WorldContext) -> WorldData:
         """Bake the grid, stamp rivers, and assemble the output ``WorldData``."""
         size: int = ctx.config.size
-        grid: GridFields = bake_and_stamp(
+        grid: Fields = bake_and_stamp(
             fields=ctx.fields,
             geometry=ctx.geometry,
             rivers=ctx.rivers,

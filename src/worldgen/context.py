@@ -3,7 +3,7 @@ from dataclasses import dataclass, replace
 from src.worldgen.config.worldgen_config import MeshConfig
 from src.worldgen.config.worldgen_config import WorldgenConfig
 from src.worldgen.features import Lake, Nexus, Region, River, Vein, Volcano
-from src.worldgen.fields import MeshFields
+from src.worldgen.fields import Fields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed
 from src.worldgen.terrain.boundaries import BoundaryFacts
@@ -18,7 +18,7 @@ class WorldContext:
 
     config: WorldgenConfig
     geometry: MeshGeometry
-    fields: MeshFields
+    fields: Fields
     plate_properties: PlateProperties | None = None
     boundary_facts: BoundaryFacts | None = None
     volcano_candidates: list[VolcanoSeed] | None = None  # pre-erosion seeds; materialized post-finalize

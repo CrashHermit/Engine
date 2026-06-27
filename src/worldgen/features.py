@@ -11,7 +11,7 @@ from enum import IntEnum
 
 from src.core.model.environment.ecology.biome import BiomeEnum
 from src.worldgen.config.worldgen_config import WorldgenConfig
-from src.worldgen.fields import GridFields
+from src.worldgen.fields import Fields
 from src.worldgen.types import Float64Array
 
 
@@ -191,7 +191,7 @@ class WorldData:
     seed: int  #: World seed.
     size: int  #: Gameplay grid edge length in tiles.
     config: WorldgenConfig  #: Resolved config snapshot (reproducibility).
-    grid: GridFields  #: Per-tile fields (the product surface).
+    grid: Fields  #: Per-tile fields (the product surface).
     rivers: list[River]  #: River objects in mesh-cell coordinates.
     lakes: list[Lake]  #: Lake objects in mesh-cell coordinates.
     veins: list[Vein]  #: Leyline veins (mana drainage paths) in mesh-cell coords.

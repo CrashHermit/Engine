@@ -13,7 +13,7 @@ import pytest
 from src.worldgen.config.presets import PRESETS
 from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.features import Nexus, River, Vein, WorldData
-from src.worldgen.fields import GridFields
+from src.worldgen.fields import Fields
 from src.worldgen.pipeline import WorldgenPipeline
 
 FAST_SIZE: int = 40
@@ -26,7 +26,7 @@ def _fast(preset: str) -> WorldgenConfig:
     return replace(PRESETS[preset], mesh=MeshConfig(cell_count=500))
 
 
-def _assert_grids_equal(a: GridFields, b: GridFields) -> None:
+def _assert_grids_equal(a: Fields, b: Fields) -> None:
     for f in dataclass_fields(a):
         va = getattr(a, f.name)
         vb = getattr(b, f.name)
