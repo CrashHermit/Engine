@@ -32,6 +32,8 @@ from src.worldgen.config.worldgen_config import OceanCurrentConfig
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.geometry.torus import torus_delta
 from src.worldgen.types import BoolArray, Float64Array, Int32Array
+from src.worldgen.context import WorldContext
+from src.worldgen.types import BoolArray, Float64Array
 
 
 def _coast_projected_wind(
@@ -243,3 +245,51 @@ def maritime_sst_onshore(
         maritime[~is_land] = sst[~is_land]  # ocean stays a fixed source
 
     return np.clip(maritime, 0.0, 1.0)
+
+
+class OceanCurrentStage:
+    """Compute wind-advected sea-surface temperature (toroidal currents).
+
+    Pipeline order: ``Insolation → Wind → OceanCurrent → Temperature → Moisture``.
+    Writes ``ctx.fields.sst``, which Temperature (maritime moderation) and
+    Moisture (evaporation) then consume.
+    """
+
+    def run(self, ctx: WorldContext) -> None:
+        """Compute SST and write ``ctx.fields.sst``."""
+        cfg: OceanCurrentConfig = ctx.config.ocean_current
+
+        # --- prerequisites ---
+        insolation_field: Float64Array | None = ctx.fields.insolation
+        if insolation_field is None:
+            msg: str = "insolation must be set before OceanCurrentStage"
+            raise RuntimeError(msg)
+        insolation: Float64Array = insolation_field
+
+        is_land_field: BoolArray | None = ctx.fields.is_land
+        if is_land_field is None:
+            msg = "is_land must be set before OceanCurrentStage"
+            raise RuntimeError(msg)
+        is_land: BoolArray = is_land_field
+
+        wind_u_field: Float64Array | None = ctx.fields.wind_u
+        if wind_u_field is None:
+            msg = "wind_u must be set before OceanCurrentStage"
+            raise RuntimeError(msg)
+        wind_u: Float64Array = wind_u_field
+
+        wind_v_field: Float64Array | None = ctx.fields.wind_v
+        if wind_v_field is None:
+            msg = "wind_v must be set before OceanCurrentStage"
+            raise RuntimeError(msg)
+        wind_v: Float64Array = wind_v_field
+
+        # --- compute ---
+        ctx.fields.sst = compute_sst(
+            geometry=ctx.geometry,
+            wind_u=wind_u,
+            wind_v=wind_v,
+            insolation=insolation,
+            is_land=is_land,
+            cfg=cfg,
+        )

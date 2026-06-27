@@ -1,20 +1,28 @@
-from dataclasses import dataclass, replace
+from __future__ import annotations
 
-from src.worldgen.config.worldgen_config import MeshConfig
-from src.worldgen.config.worldgen_config import WorldgenConfig
+from dataclasses import dataclass, replace
+from typing import TYPE_CHECKING
+
 from src.core.model.environment.magic.nexus import Nexus
 from src.core.model.environment.magic.vein import Vein
 from src.core.model.environment.regions.region import Region
 from src.core.model.environment.terrain.volcano import Volcano
 from src.core.model.environment.water.lake import Lake
 from src.core.model.environment.water.river import River
+from src.worldgen.config.worldgen_config import MeshConfig, WorldgenConfig
 from src.worldgen.fields import Fields
 from src.worldgen.geometry.mesh import MeshGeometry
 from src.worldgen.noise.rng import NoiseSource, subseed
-from src.worldgen.terrain.boundaries import BoundaryFacts
-from src.worldgen.terrain.plate_personalities import PlateProperties
-from src.worldgen.terrain.vulcanism import VolcanoSeed
 from src.worldgen.types import Float64Array
+
+if TYPE_CHECKING:
+    # Scratch types defined in terrain algorithm modules.  Imported for
+    # annotations only, under TYPE_CHECKING, so co-located terrain stages can
+    # import WorldContext without an import cycle (the terrain modules host both
+    # the algorithm and its Stage; this context only *references* their types).
+    from src.worldgen.terrain.boundaries import BoundaryFacts
+    from src.worldgen.terrain.plate_personalities import PlateProperties
+    from src.worldgen.terrain.vulcanism import VolcanoSeed
 
 
 @dataclass

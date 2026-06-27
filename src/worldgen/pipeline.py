@@ -10,27 +10,27 @@ from src.core.model.environment.terrain.landmass import Landmass
 from src.worldgen.features import WorldData
 from src.worldgen.fields import Fields
 from src.worldgen.geometry.mesh import MeshGeometry, build_mesh
-from src.worldgen.stages.base import Stage
-from src.worldgen.stages.biomes import BiomeStage
-from src.worldgen.stages.boundary_classify import BoundaryClassifyStage
-from src.worldgen.stages.boundary_uplift import BoundaryUpliftStage
-from src.worldgen.stages.discharge import DischargeStage
-from src.worldgen.stages.erosion import ErosionStage
-from src.worldgen.stages.finalize import FinalizeStage
-from src.worldgen.stages.flow import FlowStage
-from src.worldgen.stages.insolation import InsolationStage
-from src.worldgen.stages.lakes import LakesStage
-from src.worldgen.stages.magic import MagicStage
-from src.worldgen.stages.moisture import MoistureStage
-from src.worldgen.stages.ocean_current import OceanCurrentStage
-from src.worldgen.stages.plate import PlatesStage
-from src.worldgen.stages.plate_personality import PlatePersonalityStage
-from src.worldgen.stages.regions import RegionsStage
-from src.worldgen.stages.rivers import RiversStage
-from src.worldgen.stages.savagery import SavageryStage
-from src.worldgen.stages.temperature import TemperatureStage
-from src.worldgen.stages.vulcanism import VolcanoesStage, VulcanismStage
-from src.worldgen.stages.wind import WindStage
+from src.worldgen.climate.insolation import InsolationStage
+from src.worldgen.climate.moisture import MoistureStage
+from src.worldgen.climate.ocean_current import OceanCurrentStage
+from src.worldgen.climate.temperature import TemperatureStage
+from src.worldgen.climate.wind import WindStage
+from src.worldgen.ecology.biomes import BiomeStage
+from src.worldgen.magic.savagery import SavageryStage
+from src.worldgen.magic.stage import MagicStage
+from src.worldgen.regions.regions import RegionsStage
+from src.worldgen.stage import Stage
+from src.worldgen.terrain.boundaries import BoundaryClassifyStage
+from src.worldgen.terrain.boundary_uplift import BoundaryUpliftStage
+from src.worldgen.terrain.erosion import ErosionStage
+from src.worldgen.terrain.finalize import FinalizeStage
+from src.worldgen.terrain.plate_personalities import PlatePersonalityStage
+from src.worldgen.terrain.plates import PlatesStage
+from src.worldgen.terrain.vulcanism import VolcanoesStage, VulcanismStage
+from src.worldgen.water.discharge import DischargeStage
+from src.worldgen.water.flow import FlowStage
+from src.worldgen.water.lakes import LakesStage
+from src.worldgen.water.rivers import RiversStage
 from src.worldgen.types import Int32Array
 
 
