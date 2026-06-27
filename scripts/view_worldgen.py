@@ -313,8 +313,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--size",
         type=int,
-        default=80,
-        help="World grid size in tiles (default: 80)",
+        default=1000,
+        help=(
+            "World grid size in tiles (default: 1000, matching gameplay). "
+            "Generation scales with size**2; 1000 hits the mesh cap and runs the "
+            "full erosion loop, so a single world can take many minutes. Pass a "
+            "smaller value (e.g. --size 160) for fast interactive browsing."
+        ),
     )
     parser.add_argument(
         "--view-size",

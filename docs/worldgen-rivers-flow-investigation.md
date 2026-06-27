@@ -54,24 +54,15 @@ watercourses.
 
 **Layer:** `src/worldgen/water/rivers.py::classify_rivers` / `extract_rivers`
 
-### 3. The terrain has no interior — *the dominant cause (terrain/erosion)*
+### 3. The world was too small to *have* interior — *the dominant cause (scale, not erosion)*
 
 Even ignoring (1) and (2), rivers can't be long because the land has nowhere for
 water to travel. Across seeds 0/1/2 the largest landmass is 2000–3000 cells, yet
-its **maximum distance from the coast is only 8–9 cells, mean ≈2**. A compact
-landmass that size should have interior cells 20+ hops deep. Mean coast-distance
-of ~2 means the continents are thin, stringy, fractal tangles where essentially
-every land cell is coastal. Consequences on seed 0:
-
-- Land-only drainage path length: mean 3.5, p90 7, max 19.
-- 25% of land cells drain *directly* into the ocean in a single hop.
-
-There are no sustained regional gradients to collect flow into long trunk
-rivers, and few enclosed basins to pool sizeable lakes. The river/lake logic is
-correctly draining a terrain that simply has no river-supporting structure.
-
-**Layer:** terrain shaping — uplift / erosion / landmass generation
-(`src/worldgen/terrain/*`).
+its **maximum distance from the coast is only 8–9 cells, mean ≈2**. Mean
+coast-distance of ~2 means the continents are thin, stringy tangles where
+essentially every land cell is coastal. On seed 0: land-only drainage paths
+average 3.5 cells (p90 7, max 19), and 25% of land drains *directly* into the
+ocean in a single hop.
 
 | Seed | Land cells | Biggest landmass | Coast-dist max | Coast-dist mean |
 |------|-----------:|-----------------:|---------------:|----------------:|
@@ -79,49 +70,67 @@ correctly draining a terrain that simply has no river-supporting structure.
 | 1    | 3018       | 2991             | 9              | 2.4             |
 | 2    | 2562       | 1926             | 9              | 2.0             |
 
-## Already fixed in this branch
+**This is a scale mismatch, not a shape or erosion defect.** `PlatesConfig.n_plates
+= 35` is fixed independent of world size, and the continental interior ramp
+(`continental_freeboard` / `freeboard_reach = 0.06` of span) only builds an
+interior when there are enough cells across a plate to ramp into. The diagnostics
+above were taken at **size 80** — the old viewer default — which crams 35 plates
+into an 80-cell torus, so each continent is ~13 cells wide and has no interior.
+The config comment at `worldgen_config.py:43-48` predicts exactly this: *"only the
+boundary belts surface and land reads as a stringy skeleton."*
 
-A genuine stamping bug surfaced while building the new viewer layers and is
-fixed: `bake/rivers.py::_stamp_disk_around` stamped `is_river = True` onto every
-tile in the disk with no land check, so river mouths (up to `max_w = 8` wide)
-spilled fat disks of "river" into the ocean — 63% of river tiles on seed 0 were
-in the sea. It now skips ocean tiles. New `Rivers` and `Lakes` viewer layers were
-also added so this network can be inspected at all (previously only the
-all-land `Discharge` accumulation field was exposed).
+The same pipeline, same seed, just larger, produces real rivers — interiors and
+drainage scale straight up with world size until coast-distance plateaus around
+the per-plate limit:
 
-## Recommended fix plan
+| size | cells  | coast-dist max / mean | longest drainage path | top-3 river lengths |
+|-----:|-------:|----------------------:|----------------------:|---------------------|
+| 80   | 6,400  | 8 / 1.9               | 19                    | 14, 8, 7            |
+| 160  | 25,600 | 24 / 5.5              | 70                    | **60, 35, 32**      |
+| 240  | 57,600 | 23 / 6.3              | 70                    | **60, 54, 52**      |
 
-**A. River logic (causes 1 + 2) — contained, ~1 stage:**
-- Replace the bare percentile cut with an upstream trace: find trunk cells by
-  threshold, then walk the receiver tree upstream (following the
-  highest-discharge inflow at each junction) to extend each river to its source.
-  This yields full-length head→mouth rivers regardless of the skew.
-- Let rivers pass *through* lakes for continuity (treat a river→lake→river
-  sequence as one watercourse for rendering/identity), instead of severing.
+Erosion is **not** the limiter: it already runs 50 iterations at `K = 0.3`
+(`ErosionConfig`), and it carves valleys into existing land rather than creating
+interior. The fix is to view/generate at gameplay scale, not to erode harder.
 
-**B. Terrain shape (cause 3) — the real fix, larger:**
-- The continents need deep interiors. Investigate why coast-distance maxes out at
-  ~8: likely the uplift/landmass mask produces stringy noise rather than solid
-  cratons. Candidate levers: stronger low-frequency continental mask, fewer/larger
-  landmasses, erosion that carves sustained valleys, or an explicit interior
-  bonus. Long rivers and real lake basins follow once interiors exist.
+**Layer:** world size / `MeshConfig` density vs `PlatesConfig.n_plates` — not a
+bug in the water or terrain stages.
 
-Recommendation: do **B** — without it, **A** only makes the short rivers denser,
-not longer. **A** is still worth doing but is cosmetic until the terrain hosts
-real drainage. (**A** alone is the cheap stopgap; **B** is the actual answer to
-"flow and pool based on geography.")
+## Fixed in this branch
+
+1. **Ocean-spill stamping bug.** `bake/rivers.py::_stamp_disk_around` stamped
+   `is_river = True` onto every tile in the disk with no land check, so river
+   mouths (up to `max_w` wide) spilled fat disks of "river" into the ocean — 63%
+   of river tiles on seed 0 were in the sea. It now skips ocean tiles.
+2. **New `Rivers` and `Lakes` viewer layers** so the network can be inspected at
+   all — previously only the all-land `Discharge` accumulation field was exposed.
+3. **Viewer default size 80 → 1000** (cause 3). The preview now matches the
+   gameplay world scale (`WorldgenConfig.size = 1000`), so rivers and lakes show
+   up as they actually exist in play. Trade-off: a size-1000 world hits the mesh
+   cap (400k cells) and the full 50-iteration erosion loop, so a single
+   generation takes minutes — pass `--size 160` for fast interactive browsing.
+4. **`RiverConfig.max_w` 8.0 → 3.0** (cause 2's cosmetic tail). Trunk rivers were
+   clamped to 8 tiles wide, which read as blobs; 3 renders them as thin lines.
+
+Causes 1 and 2 (headwater clipping by the percentile threshold; lakes severing
+rivers) remain as *tuning/design* choices, not bugs. If we later want
+full-length head→mouth rivers regardless of discharge skew, the contained fix is
+to extend each classified river upstream along its receiver tree (following the
+largest-discharge inflow at each junction) and let rivers pass *through* lakes
+for continuity instead of being cut. Left as a follow-up.
 
 ## How to reproduce
 
 ```bash
 # Visual: cycle to the Water group → Rivers / Lakes layers
-uv run python scripts/view_worldgen.py --seed 0 --size 80
+uv run python scripts/view_worldgen.py --seed 0                # default size 1000 (slow)
+uv run python scripts/view_worldgen.py --seed 0 --size 160     # fast browsing
 
 # Export the layers
-uv run python scripts/view_worldgen.py --seed 0 --size 80 --layer rivers --export rivers.png
-uv run python scripts/view_worldgen.py --seed 0 --size 80 --layer lakes  --export lakes.png
+uv run python scripts/view_worldgen.py --seed 0 --size 160 --layer rivers --export rivers.png
+uv run python scripts/view_worldgen.py --seed 0 --size 160 --layer lakes  --export lakes.png
 ```
 
 The diagnostics in this doc come from `WorldgenPipeline().run_debug(seed=…,
-size=80)`, inspecting `ctx.fields` (`receiver`, `discharge`, `z_route`,
+size=…)`, inspecting `ctx.fields` (`receiver`, `discharge`, `z_route`,
 `is_land`, `is_lake`, `coast_distance`, `landmass_id`) and `ctx.outputs.rivers`.

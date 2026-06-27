@@ -271,7 +271,7 @@ class RiverConfig:
     river_fraction: float = 0.05  # Percentile of land discharge that qualifies as a river
     w_scale: float = 0.3          # Visual width scale factor on the tile grid
     min_w: float = 0.5            # Minimum river width in tiles
-    max_w: float = 8.0            # Maximum river width in tiles
+    max_w: float = 3.0            # Maximum river width in tiles (thin lines, not blobs)
 
 
 @dataclass
