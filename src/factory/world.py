@@ -35,5 +35,3 @@ class WorldFactory:
         world_data: WorldData = pipeline.run(seed=seed, size=size)
 
         grid_fields: GridFields = world_data.grid
-
-

@@ -17,3 +17,6 @@ data/
 .env
 # Node
 client/node_modules/
+
+# Old code we don't use anymore
+old_code/
