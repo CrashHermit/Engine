@@ -8,3 +8,5 @@ class Tile:
     y: float
     z: float
     neighbors: list[int] = field(default_factory=list)
+
+    elevation: float = 0.0
