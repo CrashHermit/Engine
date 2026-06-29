@@ -386,6 +386,7 @@ dependencies = [
     { name = "arcadedb-embedded" },
     { name = "dspy-ai" },
     { name = "fastapi" },
+    { name = "icosphere" },
     { name = "langchain-core" },
     { name = "langgraph" },
     { name = "langgraph-checkpoint-sqlite" },
@@ -414,6 +415,7 @@ requires-dist = [
     { name = "arcadedb-embedded", specifier = ">=26.5.1.post1" },
     { name = "dspy-ai", specifier = ">=3.2.1" },
     { name = "fastapi", specifier = ">=0.115.0" },
+    { name = "icosphere", specifier = ">=0.2.0" },
     { name = "langchain-core", specifier = ">=1.4.0" },
     { name = "langgraph", specifier = ">=1.2.0" },
     { name = "langgraph-checkpoint-sqlite", specifier = ">=3.1.0" },
@@ -692,6 +694,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/bb/b6/e22bd20a25299c34b8c5922c1545a6320825b13906eb0f7298edfd034a0b/huggingface_hub-1.15.0.tar.gz", hash = "sha256:28abfdddda3927fd4de6a63cf26ab012498a2c24dae52baf150c5c6edf98a1d5", size = 784100, upload-time = "2026-05-15T11:42:52.149Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/6e/11/0b64cc9024329b76d7547c19a67604a61d21d3ba678a69d1b220c29d5112/huggingface_hub-1.15.0-py3-none-any.whl", hash = "sha256:a4a59af04cbc41a3fe3fec429b171ef994ef8c971eda10136746f408dd4e3744", size = 663602, upload-time = "2026-05-15T11:42:50.487Z" },
+]
+
+[[package]]
+name = "icosphere"
+version = "0.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/95/71/f04c567027913b7423d8c59db7ee83fa3f091a9901b4f6fc00f0bee023e5/icosphere-0.2.0.tar.gz", hash = "sha256:36fc68f4343435873486fcc78e8e6ee9735b8141a9ef9d1afe5c0a66e6056648", size = 14828, upload-time = "2026-04-11T11:33:05.334Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8c/fe/62ec5e3a6deb2a736f80908cbd97ca9e8eefec69b707445e21572f720bb8/icosphere-0.2.0-py2.py3-none-any.whl", hash = "sha256:51daed55e216773110395e35a70a714ad27bcb44189813c8e66ad9c034ffc465", size = 15506, upload-time = "2026-04-11T11:33:03.761Z" },
 ]
 
 [[package]]
