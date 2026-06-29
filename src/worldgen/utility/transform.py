@@ -1,16 +1,28 @@
 import numpy as np
+from scipy.special import expit
 
-def normalize_noise_array(noise_array: np.ndarray) -> np.ndarray:
-    min_val = np.min(noise_array)
-    max_val = np.max(noise_array)
 
-    if max_val == min_val:
-        return np.zeros_like(noise_array)
+def interpolate_noise_array(noise_array: np.ndarray, range: tuple) -> np.ndarray:
+    min = noise_array.min()
+    max = noise_array.max()
 
-    normalized_noise_array = 2.0 * ((noise_array - min_val) / (max_val - min_val)) - 1.0
+    if min == max:
+        transformed_noise_array: np.ndarray = np.full_like(noise_array, range[0])
+        return transformed_noise_array
 
-    return normalized_noise_array
+    transformed_noise_array: np.ndarray = np.interp(noise_array, (min, max), range)
+    return transformed_noise_array
 
-def shift_range(normalized_noise_array: np.ndarray) -> np.ndarray:
-    shifted_noise_array = (normalized_noise_array + 1.0) / 2.0
-    return shifted_noise_array
+def power_curve_noise_array(noise_array: np.ndarray, expontent: float) -> np.ndarray:
+    min = noise_array.min()
+    max = noise_array.max()
+
+    if min < 0.0 or max > 1.0:
+        raise ValueError("power_curve_noise_array expects values in [0.0, 1.0]")
+
+    transformed_noise_array: np.ndarray = np.power(noise_array, expontent)
+    return transformed_noise_array
+
+def s_curve_noise_array(noise_array: np.ndarray, steepness: float) -> np.ndarray:
+    transformed_noise_array: np.ndarray = expit((noise_array - 0.5) * steepness)
+    return transformed_noise_array
