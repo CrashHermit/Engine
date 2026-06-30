@@ -3,8 +3,8 @@ from scipy.special import expit
 
 
 def power_curve_noise_array(noise_array: np.ndarray, expontent: float) -> np.ndarray:
-    min = noise_array.min()
-    max = noise_array.max()
+    min: float = noise_array.min()
+    max: float = noise_array.max()
 
     if min < 0.0 or max > 1.0:
         raise ValueError("power_curve_noise_array expects values in [0.0, 1.0]")
