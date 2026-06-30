@@ -9,4 +9,4 @@ class MagmaFlow:
         self.tiles = tiles
 
     def _generate_magma_flow_fbm(self) -> np.ndarray:
-        
+        pass
