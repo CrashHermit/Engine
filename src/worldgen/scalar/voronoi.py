@@ -1,16 +1,17 @@
-import numpy as np
+import heapq
+from collections.abc import Callable
 
-from src.worldgen.noise import NoiseFn
+from src.core.model.worldgen.tile import Tile
 
 
 def generate_graph_voronoi(
     tiles: dict[int, Tile],
     seeds: dict[int, int],
-    cost_function: Callable[[Tile, Tile], float]
+    cost_function: Callable[[Tile, Tile], float],
 ) -> dict[int, int]:
     region_map: dict[int, int] = {}
 
-    pq = []
+    pq: list = []
 
     for start_tile_id, region_id in seeds.items():
         region_map[start_tile_id] = region_id
@@ -30,4 +31,4 @@ def generate_graph_voronoi(
                 total_cost = current_cost + step_cost
                 heapq.heappush(pq, (total_cost, region_id, neighbor_id))
 
-        return region_map
+    return region_map

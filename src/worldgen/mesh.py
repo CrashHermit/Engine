@@ -36,4 +36,4 @@ class Mesh:
 
             self.tiles[i] = new_tile
 
-    print("Mesh generated successfully.\n")
+        print("Mesh generated successfully.\n")

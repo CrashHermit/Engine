@@ -1,14 +1,14 @@
 import numpy as np
 
-from src.worldgen.noise import NoiseFn
+from src.worldgen.scalar import ScalarFn
 
 
 def warp(
-    noise_fn: NoiseFn,
+    noise_fn: ScalarFn,
     xs: np.ndarray,
     ys: np.ndarray,
     zs: np.ndarray,
     warp_strength: float,
-    warp_noise: NoiseFn,
+    warp_noise: ScalarFn,
 ) -> np.ndarray:
     pass
