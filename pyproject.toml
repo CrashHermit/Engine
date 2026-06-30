@@ -22,7 +22,8 @@ dependencies = [
     "numpy>=2.4.6",
     "scipy-stubs",
     "numba>=0.61.0",
-    "icosphere>=0.2.0"
+    "icosphere>=0.2.0",
+    "polyscope>=2.6.1"
 ]
 
 [dependency-groups]
