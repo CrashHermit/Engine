@@ -18,12 +18,10 @@ dependencies = [
     "miniaudio>=1.71",
     "opensimplex>=0.4.5",
     "scipy>=1.14.0",
-    "pillow>=11.0.0",
     "numpy>=2.4.6",
     "scipy-stubs",
     "numba>=0.61.0",
-    "icosphere>=0.2.0",
-    "polyscope>=2.6.1"
+    "pyvista>=0.48.4"
 ]
 
 [dependency-groups]
@@ -48,3 +46,12 @@ filterwarnings = [
 [tool.ruff.lint]
 # Whitespace/layout: ruff format. Lint: unused imports (F401) and modern syntax (UP).
 select = ["F401", "UP"]
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["src*"]
+
+
