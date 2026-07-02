@@ -1,45 +1,45 @@
 import numpy as np
 
 
-def compute_surface_gradient(
-    positions: np.ndarray,
-    neighbors: list[list[int]],
-    scalar: np.ndarray,
-    descending: bool = False,
-) -> np.ndarray:
-    """Surface gradient of a scalar field over points on the unit sphere.
+class Gradient:
+    """Gradient sampler over a mesh on the unit sphere.
 
-    Computes the standard gradient (weighted by scalar difference) then
-    projects each vector onto the tangent plane at that point by subtracting
-    the radial component: ``g_proj = g - (g · p) * p``.
-
-    Args:
-        positions: Per-cell positions, shape ``(n, 3)``.
-        neighbors: Adjacency list — ``neighbors[i]`` is the list of
-            neighbor indices for cell ``i``.
-        scalar: Per-cell scalar values, shape ``(n,)``.
-        descending: If True, flip gradient direction (steepest descent).
-
-    Returns:
-        Tangent-plane gradient vectors, shape ``(n, 3)``.
+    Binds the static mesh geometry (positions, adjacency) once, then
+    evaluates per-vertex gradients on demand.
     """
-    n: int = len(positions)
-    gradient: np.ndarray = np.zeros((n, 3), dtype=np.float64)
 
-    for i in range(n):
-        base_val: float = float(scalar[i])
-        pos: np.ndarray = positions[i]
+    def __init__(
+        self,
+        positions: np.ndarray,
+        neighbors: list[list[int]],
+    ) -> None:
+        self.positions: np.ndarray = positions
+        self.neighbors: list[list[int]] = neighbors
+
+    def at(self, idx: int, scalar: np.ndarray, descending: bool = False) -> np.ndarray:
+        """Gradient at a single vertex.
+
+        Args:
+            idx: Vertex index.
+            scalar: Per-cell scalar values, shape ``(n,)``.
+            descending: If True, flip gradient direction (steepest descent).
+
+        Returns:
+            Tangent-plane gradient vector, shape ``(3,)``.
+        """
+        base_val: float = float(scalar[idx])
+        pos: np.ndarray = self.positions[idx]
 
         vx: float = 0.0
         vy: float = 0.0
         vz: float = 0.0
 
-        for nid in neighbors[i]:
+        for nid in self.neighbors[idx]:
             delta: float = float(scalar[nid] - base_val)
             if descending:
                 delta = -delta
 
-            nb_pos: np.ndarray = positions[nid]
+            nb_pos: np.ndarray = self.positions[nid]
             dx: float = float(nb_pos[0] - pos[0])
             dy: float = float(nb_pos[1] - pos[1])
             dz: float = float(nb_pos[2] - pos[2])
@@ -50,8 +50,26 @@ def compute_surface_gradient(
 
         dot: float = (vx * pos[0]) + (vy * pos[1]) + (vz * pos[2])
 
-        gradient[i, 0] = vx - (dot * pos[0])
-        gradient[i, 1] = vy - (dot * pos[1])
-        gradient[i, 2] = vz - (dot * pos[2])
+        return np.array([
+            vx - (dot * pos[0]),
+            vy - (dot * pos[1]),
+            vz - (dot * pos[2]),
+        ])
 
-    return gradient
+    def batch(self, scalar: np.ndarray, descending: bool = False) -> np.ndarray:
+        """Gradient at every vertex.
+
+        Args:
+            scalar: Per-cell scalar values, shape ``(n,)``.
+            descending: If True, flip gradient direction (steepest descent).
+
+        Returns:
+            Tangent-plane gradient vectors, shape ``(n, 3)``.
+        """
+        n: int = len(self.positions)
+        gradient: np.ndarray = np.zeros((n, 3), dtype=np.float64)
+
+        for i in range(n):
+            gradient[i] = self.at(i, scalar=scalar, descending=descending)
+
+        return gradient
