@@ -1,3 +1,5 @@
+"""Power-curve and sigmoidal remapping utilities."""
+
 import numpy as np
 from scipy.special import expit
 

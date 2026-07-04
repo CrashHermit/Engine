@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from src.worldgen.geometry.mesh import Mesh
+from src.core.geometry.mesh import Mesh
 
 
 def _write_obj(vertices: np.ndarray, faces: np.ndarray, path: str) -> None:

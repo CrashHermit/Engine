@@ -1,12 +1,12 @@
 import numpy as np
 
-from worldgen.field.gradient import Gradient
+from core.field.gradient import Gradient
 from worldgen.geometry.mesh import Mesh
-from worldgen.scalar.noise import generate_3d_fbm
-from worldgen.transform.normalize import scale_vector_magnitudes
+from core.scalar.noise import generate_3d_fbm
+from core.transform.normalize import scale_vector_magnitudes
 
 
-class MagmaFlow:
+class Geology:
     def __init__(
         self,
         mesh: Mesh,

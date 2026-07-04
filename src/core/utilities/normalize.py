@@ -1,3 +1,5 @@
+"""Vector and scalar normalization utilities."""
+
 import numpy as np
 
 

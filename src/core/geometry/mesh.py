@@ -1,3 +1,5 @@
+"""Geodesic icosphere mesh generation."""
+
 import numpy as np
 
 
