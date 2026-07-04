@@ -29,7 +29,7 @@ class Geology:
             self._flow = self._compute_flow()
         return self._flow
 
-    def _generate_magma_scalar_values(self) -> np.ndarray:
+    def _generate_magma_intensity(self) -> np.ndarray:
 
         positions = self.mesh.vertices
         neighbors = self.mesh.neighbors
@@ -45,7 +45,10 @@ class Geology:
 
         return flow
 
-    def _generate_magma_vector_field(positions: np.ndarray, neighbors: np.ndarray) -> np.ndarray:
+    def _generate_plates(self):
+        pass
+
+    def _generate_magma_flow(positions: np.ndarray, neighbors: np.ndarray) -> np.ndarray:
         gradient: Gradient = Gradient(positions=positions, neighbors=neighbors)
         flow: np.ndarray = gradient.batch(values=fbm, descending=True)
         flow: np.ndarray = scale_vector_magnitudes(vectors=flow)
