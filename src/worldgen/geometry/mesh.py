@@ -2,8 +2,7 @@ import numpy as np
 
 
 class Mesh:
-    def __init__(self, subdivisions: int, nu: int, radius: float) -> None:
-        self.subdivisions: int = subdivisions
+    def __init__(self, nu: int, radius: float) -> None:
         self.nu: int = nu
         self.radius: float = radius
 
@@ -27,23 +26,53 @@ class Mesh:
     def _get_base_icosahedron() -> tuple[np.ndarray, np.ndarray]:
         phi = (1.0 + np.sqrt(5.0)) / 2.0
 
-        base_vertices = np.array([
-            [-1, phi, 0], [1, phi, 0], [-1, -phi, 0], [1, -phi, 0],
-            [0, -1, phi], [0, 1, phi], [0, -1, -phi], [0, 1, -phi],
-            [phi, 0, -1], [phi, 0, 1], [-phi, 0, -1], [-phi, 0, 1]
-        ])
+        base_vertices = np.array(
+            [
+                [-1, phi, 0],
+                [1, phi, 0],
+                [-1, -phi, 0],
+                [1, -phi, 0],
+                [0, -1, phi],
+                [0, 1, phi],
+                [0, -1, -phi],
+                [0, 1, -phi],
+                [phi, 0, -1],
+                [phi, 0, 1],
+                [-phi, 0, -1],
+                [-phi, 0, 1],
+            ]
+        )
 
-        base_faces = np.array([
-            [0, 5, 1], [0, 1, 7], [0, 7, 10], [0, 10, 11], [0, 11, 5],
-            [5, 11, 4], [11, 10, 2], [10, 7, 6], [7, 1, 8],
-            [3, 4, 2], [3, 2, 6], [3, 6, 8], [3, 8, 9], [3, 9, 4],
-            [2, 4, 11], [6, 2, 10], [8, 6, 7], [9, 8, 1],
-            [1, 9, 5], [5, 9, 4]
-        ])
+        base_faces = np.array(
+            [
+                [0, 5, 1],
+                [0, 1, 7],
+                [0, 7, 10],
+                [0, 10, 11],
+                [0, 11, 5],
+                [5, 11, 4],
+                [11, 10, 2],
+                [10, 7, 6],
+                [7, 1, 8],
+                [3, 4, 2],
+                [3, 2, 6],
+                [3, 6, 8],
+                [3, 8, 9],
+                [3, 9, 4],
+                [2, 4, 11],
+                [6, 2, 10],
+                [8, 6, 7],
+                [9, 8, 1],
+                [1, 9, 5],
+                [5, 9, 4],
+            ]
+        )
 
         return base_vertices, base_faces
 
-    def _subdivide_face_grid(self, face: np.ndarray, base_vertices: np.ndarray) -> dict[tuple[int, int], int]:
+    def _subdivide_face_grid(
+        self, face: np.ndarray, base_vertices: np.ndarray
+    ) -> dict[tuple[int, int], int]:
         a = base_vertices[face[0]]
         b = base_vertices[face[1]]
         c = base_vertices[face[2]]
@@ -61,10 +90,14 @@ class Mesh:
         nu = self.nu
         for i in range(nu):
             for j in range(nu - i):
-                self._raw_faces.append([grid[(i, j)], grid[(i + 1, j)], grid[(i, j + 1)]])
+                self._raw_faces.append(
+                    [grid[(i, j)], grid[(i + 1, j)], grid[(i, j + 1)]]
+                )
 
                 if j < nu - i - 1:
-                    self._raw_faces.append([grid[(i + 1, j)], grid[(i + 1, j + 1)], grid[(i, j + 1)]])
+                    self._raw_faces.append(
+                        [grid[(i + 1, j)], grid[(i + 1, j + 1)], grid[(i, j + 1)]]
+                    )
 
     def _build_adjacency(self) -> list[list[int]]:
         num_vertices = len(self.vertices)
@@ -102,16 +135,13 @@ class Mesh:
         centroids = self.dual_vertices[face_indices]
         vecs = centroids - pos
 
-        # Use the first centroid as the reference direction.
         ref = vecs[0] / np.linalg.norm(vecs[0])
 
-        # Build a tangent basis from the reference.
         tangent_u = ref
         tangent_v = np.cross(pos, tangent_u)
         tangent_v = tangent_v / np.linalg.norm(tangent_v)
         tangent_u = np.cross(tangent_v, pos)
 
-        # Project onto the tangent plane and sort by angle.
         u = np.dot(vecs, tangent_u)
         v = np.dot(vecs, tangent_v)
         order = np.argsort(np.arctan2(v, u))
@@ -123,7 +153,8 @@ class Mesh:
         self.dual_vertices = self._build_face_centroids()
         vertex_faces = self._build_vertex_faces()
 
-        self.dual_faces = []
+        self.dual_faces: list[list[int]] = []
+
         for v in range(len(self.vertices)):
             sorted_indices = self._sort_vertex_faces(v, vertex_faces[v])
             self.dual_faces.append(sorted_indices)
@@ -140,9 +171,6 @@ class Mesh:
         self.neighbors = self._build_adjacency()
         self._build_dual_mesh()
 
-        # Free intermediate build state.
         self._vertex_map = {}
         self._raw_vertices = []
         self._raw_faces = []
-
-

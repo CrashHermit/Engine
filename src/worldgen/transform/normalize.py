@@ -36,13 +36,13 @@ def scale_vector_magnitudes(
     return vectors / max_mag
 
 
-def interpolate_noise_array(noise_array: np.ndarray, domain: tuple) -> np.ndarray:
-    min: float = noise_array.min()
-    max: float = noise_array.max()
+def interpolate_values(values: np.ndarray, domain: tuple) -> np.ndarray:
+    """Remap values from their current range to a target domain.
 
-    if min == max:
-        transformed_noise_array: np.ndarray = np.full_like(noise_array, domain[0])
-        return transformed_noise_array
+    Args:
+        values: Input values, shape ``(n,)``.
+        domain: Target ``(low, high)`` range to remap to.
 
-    transformed_noise_array: np.ndarray = np.interp(noise_array, (min, max), domain)
-    return transformed_noise_array
+    Returns:
+        Remapped values, shape ``(n,)``.
+    """

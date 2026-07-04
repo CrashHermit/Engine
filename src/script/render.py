@@ -32,7 +32,7 @@ class Render:
             offset = 0
             for face in self.dual_faces:
                 flat[offset] = len(face)
-                flat[offset + 1:offset + 1 + len(face)] = face
+                flat[offset + 1 : offset + 1 + len(face)] = face
                 offset += 1 + len(face)
             return pv.PolyData(self.dual_vertices, flat)
 
