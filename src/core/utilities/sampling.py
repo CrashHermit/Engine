@@ -38,25 +38,30 @@ def poisson_disk_sample(
         raise ValueError(msg)
 
     while len(seed_indices) < num_points and retries < max_retries:
-        candidate_idx: int = int(np.random.choice(valid_indices))
+        candidate_index: int = int(np.random.choice(valid_indices))
 
         if not seed_indices:
-            seed_indices.append(candidate_idx)
+            seed_indices.append(candidate_index)
             retries = 0
             continue
 
-        candidate_xyz: np.ndarray = positions[candidate_idx]
-        seeds_xyz: np.ndarray = positions[seed_indices]
+        candidate_position: np.ndarray = positions[candidate_index]
+        seed_positions: np.ndarray = positions[seed_indices]
 
-        distances: np.ndarray = np.linalg.norm(seeds_xyz - candidate_xyz, axis=1)
+        distances: np.ndarray = np.linalg.norm(
+            seed_positions - candidate_position, axis=1,
+        )
 
         if np.min(distances) >= min_distance:
-            seed_indices.append(candidate_idx)
+            seed_indices.append(candidate_index)
             retries = 0
         else:
             retries += 1
 
     if retries >= max_retries:
-        print(f"Only found {len(seed_indices)} seeds before hitting max retries.")
+        print(
+            f"Only found {len(seed_indices)} seeds before hitting "
+            f"max retries."
+        )
 
     return seed_indices

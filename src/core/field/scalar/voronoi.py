@@ -1,27 +1,30 @@
 import heapq
-from collections.abc import Callable
+
 
 def voronoi_msd(
     adjacency: list[list[int]],
     seeds: dict[int, int],
-    cost_function: Callable[[int, int], float],
+    edge_weights: dict[tuple[int, int], float],
 ) -> dict[int, int]:
-    region_map = {}
-    pq = []
+    node_region: dict[int, int] = {}
+    priority_queue: list[tuple[float, int, int]] = []
 
-    for start_id, region_id in seeds.items():
-        region_map[start_id] = region_id
-        heapq.heappush(pq, (0.0, region_id, start_id))
+    for seed_node, region_id in seeds.items():
+        node_region[seed_node] = region_id
+        heapq.heappush(priority_queue, (0.0, region_id, seed_node))
 
-    while pq:
-        current_cost, region_id, current_id = heapq.heappop(pq)
+    while priority_queue:
+        accumulated_weight, region_id, current_node = heapq.heappop(priority_queue)
 
-        for neighbor_id in adjacency[current_id]:
-            if neighbor_id not in region_map:
-                region_map[neighbor_id] = region_id
+        for neighbor_node in adjacency[current_node]:
+            if neighbor_node not in node_region:
+                node_region[neighbor_node] = region_id
 
-                step_cost = cost_function(current_id, neighbor_id)
+                weight = edge_weights[(current_node, neighbor_node)]
 
-                heapq.heappush(pq, (current_cost + step_cost, region_id, neighbor_id))
+                heapq.heappush(
+                    priority_queue,
+                    (accumulated_weight + weight, region_id, neighbor_node),
+                )
 
-    return region_map
+    return node_region

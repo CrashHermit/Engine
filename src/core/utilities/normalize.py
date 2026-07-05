@@ -48,3 +48,18 @@ def interpolate_values(values: np.ndarray, domain: tuple) -> np.ndarray:
     Returns:
         Remapped values, shape ``(n,)``.
     """
+
+    low = domain[0]
+    high = domain[1]
+
+    values_min = values.min()
+    values_max = values.max()
+
+    if values_max == values_min:
+        return np.full_lie(values, low)
+
+    normalized = (values - values_min) / (values_max - values_min)
+
+    interpolated_values = normalized * (high - low) + low
+
+    return interpolated_values
