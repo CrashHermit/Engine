@@ -39,6 +39,13 @@ class Render:
         msg = "Provide either face_array (triangles) or dual_faces (polygons)."
         raise ValueError(msg)
 
+    def generate_plate_regions(self) -> pv.PolyData:
+        pass
+
+    def generate_magma_velocity_vectors(self) -> pv.PolyData:
+        pass
+        
+
     def display(self) -> None:
         self.mesh = self.generate_mesh()
         self.mesh.plot(show_edges=True, color="lightblue")

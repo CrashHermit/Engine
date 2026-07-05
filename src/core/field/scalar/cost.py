@@ -8,8 +8,6 @@ Builders iterate the adjacency list — positions and node values
 are build-time inputs only; the resulting dict is pure graph data.
 """
 
-import enum
-
 import numpy as np
 
 

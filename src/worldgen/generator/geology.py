@@ -2,8 +2,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from core.field.vector.gradient import gradient
-from core.geometry.mesh import Mesh
+from src.core.field.vector.gradient import gradient
+from src.core.geometry.mesh import Mesh
 from src.core.field.scalar.cost import noise_average
 from src.core.field.scalar.noise import fbm
 from src.core.field.scalar.voronoi import voronoi_msd
@@ -26,23 +26,23 @@ class PlatesConfig:
     num_points: int
     min_distance: float
     max_retries: int
+    strength: float
 
 
 @dataclass
 class MagmaVelocityConfig:
-    node_values: np.ndarray
     descending: bool = True
 
 
 @dataclass
 class GeologyReturn:
-    pass
+    plates: dict[int, int]
+    magma_velocity: np.ndarray
 
 
 class Geology:
     def __init__(self, mesh: Mesh) -> None:
-        self.mesh = mesh
-        self.raw_noise = None
+        self.mesh: Mesh = mesh
 
     def _generate_magma_intensity(
         self,
@@ -54,7 +54,7 @@ class Geology:
 
         positions: np.ndarray = self.mesh.vertices
 
-        self.raw_noise: np.ndarray = fbm(
+        raw_noise: np.ndarray = fbm(
             positions=positions,
             octaves=octaves,
             base_frequency=base_frequency,
@@ -73,6 +73,7 @@ class Geology:
 
     def _generate_plates(
         self,
+        edge_weights: dict[tuple[int, int], float],
         num_points: int,
         min_distance: float,
         max_retries: int,
@@ -89,13 +90,6 @@ class Geology:
         )
 
         seeds: dict[int, int] = {idx: pid for pid, idx in enumerate(seed_indices)}
-
-        node_values: np.ndarray = self.raw_noise
-
-        edge_weights: dict[tuple[int, int], float] = noise_average(
-            adjacency=adjacency,
-            node_values=
-        )
 
         plate_regions: dict[int, int] = voronoi_msd(
             adjacency=adjacency,
@@ -130,14 +124,16 @@ class Geology:
         magma_intensity_config: MagmaIntensityConfig,
         plates_config: PlatesConfig,
         magma_velocity_config: MagmaVelocityConfig,
-    ) -> None:
+    ) -> GeologyReturn:
+
+        adjacency: list[list[int]] = self.mesh.neighbors
 
         octaves: int = magma_intensity_config.octaves
         base_frequency: float = magma_intensity_config.base_frequency
         lacunarity: float = magma_intensity_config.lacunarity
         persistence: float = magma_intensity_config.persistence
 
-        magma_intensity: np.ndarray = self._generate_magma_intensity(
+        node_values: np.ndarray = self._generate_magma_intensity(
             octaves=octaves,
             base_frequency=base_frequency,
             lacunarity=lacunarity,
@@ -147,6 +143,11 @@ class Geology:
         num_points: int = plates_config.num_points
         min_distance: float = plates_config.min_distance
         max_retries: int = plates_config.max_retries
+        strength: float = plates_config.strength
+
+        edge_weights: dict[tuple[int, int], float] = noise_average(
+            adjacency=adjacency, node_values=node_values, strength=strength
+        )
 
         plates: dict[int, int] = self._generate_plates(
             edge_weights=edge_weights,
@@ -155,10 +156,15 @@ class Geology:
             max_retries=max_retries,
         )
 
-        node_values: np.ndarray = magma_velocity_config.node_values
         descending: bool = magma_velocity_config.descending
 
-        magma_velocity: np.ndarray = self._generate_magma_vectors(
+        magma_velocity: np.ndarray = self._generate_magma_velocity(
             node_values=node_values,
             descending=descending,
         )
+
+        geology_return: GeologyReturn = GeologyReturn(
+            plates=plates, magma_velocity=magma_velocity
+        )
+
+        return geology_return
