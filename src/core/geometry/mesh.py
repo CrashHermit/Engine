@@ -137,10 +137,21 @@ class Mesh:
                 position: np.ndarray = self.vertices[vertex_index]
                 centroid_vectors: np.ndarray = centroids[face_indices] - position
 
-                reference_vector: np.ndarray = centroid_vectors[0] / np.linalg.norm(centroid_vectors[0])
+                reference_norm: float = float(np.linalg.norm(centroid_vectors[0]))
+                if reference_norm == 0.0:
+                    raise ValueError(
+                        f"Vertex {vertex_index}: face centroid coincides with vertex position"
+                    )
+                reference_vector: np.ndarray = centroid_vectors[0] / reference_norm
+
                 tangent_u: np.ndarray = reference_vector
                 tangent_v: np.ndarray = np.cross(position, tangent_u)
-                tangent_v = tangent_v / np.linalg.norm(tangent_v)
+                tangent_v_norm: float = float(np.linalg.norm(tangent_v))
+                if tangent_v_norm == 0.0:
+                    raise ValueError(
+                        f"Vertex {vertex_index}: position and reference vector are parallel"
+                    )
+                tangent_v = tangent_v / tangent_v_norm
                 tangent_u = np.cross(tangent_v, position)
 
                 tangent_u_component: np.ndarray = np.dot(centroid_vectors, tangent_u)
