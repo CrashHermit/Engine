@@ -1,20 +1,32 @@
-from src.worldgen.pipeline import WorldgenPipeline
-from src.worldgen.config.worldgen_config import WorldgenConfig, MeshConfig
-from src.worldgen.bake import nearest_cell_per_tile, bake_to_grid
+from src.core.geometry.mesh import generate_icosphere, Mesh
+from src.worldgen.render.render import Render
+from src.worldgen.generator.geology import Geology
 
-ctx = WorldgenPipeline(
-    WorldgenConfig(mesh=MeshConfig(cell_count=2000))
-).run(seed=42, size=100)
 
-nearest = nearest_cell_per_tile(ctx.geometry, size=ctx.config.size)
-grid = bake_to_grid(ctx.fields, nearest)
+def main() -> None:
+    vertices, faces = generate_icosphere(nu=8)
 
-assert grid.elevation.shape == (10_000,)
-assert grid.elevation.min() >= 0.0
-assert grid.elevation.max() <= 1.0
+    mesh = Mesh(vertices, faces)
 
-mesh_land = float(ctx.fields.is_land.mean())
-grid_land = float(grid.is_land.mean())
-print(f"mesh land fraction: {mesh_land:.3f}")
-print(f"grid land fraction: {grid_land:.3f}")
-assert abs(mesh_land - grid_land) < 0.05  # "roughly matches"
+    geology = Geology(mesh=mesh)
+
+    intensity = geology.generate_magma_intensity(
+        octaves=4, base_frequency=2.0, lacunarity=2.0, persistence=0.5
+    )
+
+    plates = geology.generate_plates(
+        node_values=intensity,
+        num_points=12,
+        min_distance=0.3,
+        max_retries=10,
+        strength=1.0,
+    )
+
+    velocity = geology.generate_magma_velocity(node_values=intensity, descending=True)
+
+    renderer = Render(mesh=mesh, plates=plates, velocity=velocity)
+
+    renderer.show_plates(arrow_scale=0.08)
+
+if __name__ == "__main__":
+    main()

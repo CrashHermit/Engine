@@ -21,7 +21,7 @@ dependencies = [
     "numpy>=2.4.6",
     "scipy-stubs",
     "numba>=0.61.0",
-    "pyvista>=0.48.4"
+    "pyvista>=0.48.4",
 ]
 
 [dependency-groups]

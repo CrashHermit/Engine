@@ -1,51 +1,45 @@
 import numpy as np
 import pyvista as pv
 
+from src.core.geometry.mesh import Mesh
 
 class Render:
-    def __init__(
-        self,
-        vertex_array: np.ndarray,
-        face_array: np.ndarray | None = None,
-        dual_vertices: np.ndarray | None = None,
-        dual_faces: list[list[int]] | None = None,
-    ) -> None:
-        self.vertex_array: np.ndarray = vertex_array
-        self.face_array: np.ndarray | None = face_array
-        self.dual_vertices: np.ndarray | None = dual_vertices
-        self.dual_faces: list[list[int]] | None = dual_faces
-        self.mesh: pv.PolyData | None = None
+    def __init__(self, mesh: Mesh, plates: dict[int, int], velocity: np.ndarray) -> None:
+        self.mesh = mesh
+        self.plates = plates
+        self.velocity = velocity
+        self.pv_mesh = self._build_dual_polydata()
+        self._attach_plate_data()
 
-    def generate_mesh(self) -> pv.PolyData:
-        if self.face_array is not None:
-            n_faces = self.face_array.shape[0]
-            faces = np.empty(n_faces * 4, dtype=np.int64)
-            faces[::4] = 3
-            faces[1::4] = self.face_array[:, 0]
-            faces[2::4] = self.face_array[:, 1]
-            faces[3::4] = self.face_array[:, 2]
-            return pv.PolyData(self.vertex_array, faces)
+    def _build_dual_polydata(self) -> pv.PolyData:
+        vertices = self.mesh.dual_vertices
+        faces = self.mesh.dual_faces
 
-        if self.dual_faces is not None:
-            face_counts = [len(f) for f in self.dual_faces]
-            flat = np.empty(sum(c + 1 for c in face_counts), dtype=np.int64)
-            offset = 0
-            for face in self.dual_faces:
-                flat[offset] = len(face)
-                flat[offset + 1 : offset + 1 + len(face)] = face
-                offset += 1 + len(face)
-            return pv.PolyData(self.dual_vertices, flat)
+        counts = [len(face) for face in faces]
 
-        msg = "Provide either face_array (triangles) or dual_faces (polygons)."
-        raise ValueError(msg)
+        flat = np.empty(sum(count + 1 for count in counts), dtype=np.int64)
+        offset = 0
 
-    def generate_plate_regions(self) -> pv.PolyData:
-        pass
+        for face in faces:
+            flat[offset] = len(face)
+            flat[offset + 1 : offset + 1 + len(face)] = face
+            offset += 1 + len(face)
 
-    def generate_magma_velocity_vectors(self) -> pv.PolyData:
-        pass
-        
+        return pv.PolyData(vertices, flat)
 
-    def display(self) -> None:
-        self.mesh = self.generate_mesh()
-        self.mesh.plot(show_edges=True, color="lightblue")
+    def _attach_plate_data(self) -> None:
+        arr = np.full(len(self.mesh.dual_faces), -1, dtype=int)
+        for vertex_index, plate_id in self.plates.items():
+            arr[vertex_index] = plate_id
+
+        self.pv_mesh.cell_data["plate_id"] = arr
+
+    def show_plates(self, arrow_scale: float) -> None:
+        plotter = pv.Plotter()
+        plotter.add_mesh(mesh=self.pv_mesh, scalars="plate_id", cmap="tab10", show_edges=True, lighting=True)
+        plotter.add_arrows(cent=self.mesh.vertices, direction=self.velocity, mag=arrow_scale, color="white", )
+        plotter.show()
+
+
+
+

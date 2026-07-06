@@ -1,4 +1,7 @@
 import numpy as np
+import numba
+from numba import types
+from numba.typed import Dict, List
 
 PHI: float = (1.0 + np.sqrt(5.0)) / 2.0
 
@@ -44,44 +47,112 @@ BASE_FACES: np.ndarray = np.array(
     ]
 )
 
+# -------------------------------------------------------------------------
+# Define Numba types globally so they are evaluated by standard Python 
+# (The JIT compiler requires type objects to be pre-existing constants)
+# -------------------------------------------------------------------------
+FLOAT3_TYPE = types.UniTuple(types.float64, 3)
+INT2_TYPE = types.UniTuple(types.int64, 2)
+FLOAT_1D_ARRAY = types.float64[:]
 
+
+@numba.njit(cache=True)
 def generate_icosphere(nu: int) -> tuple[np.ndarray, np.ndarray]:
-    vertex_map: dict[tuple[float, float, float], int] = {}
-    raw_vertices: list[np.ndarray] = []
-    raw_faces: list[list[int]] = []
+    """Subdivide a regular icosahedron into a geodesic sphere.
 
-    for face in BASE_FACES:
-        vertex_a: np.ndarray = BASE_VERTICES[face[0]]
-        vertex_b: np.ndarray = BASE_VERTICES[face[1]]
-        vertex_c: np.ndarray = BASE_VERTICES[face[2]]
+    Args:
+        nu: Subdivision frequency.  Produces ``20 * nu^2`` faces.
 
-        grid: dict[tuple[int, int], int] = {}
+    Returns:
+        (vertices, faces) as numpy arrays.  Vertices are unit-length.
+    """
+    vertex_map = Dict.empty(
+        key_type=FLOAT3_TYPE,
+        value_type=types.int64,
+    )
 
+    raw_vertices = List.empty_list(item_type=FLOAT_1D_ARRAY)  # type: ignore
+    raw_faces_flat = List.empty_list(item_type=types.int64)  # type: ignore
+
+    inv_nu = 1.0 / float(nu)
+    n_faces_base = BASE_FACES.shape[0]
+
+    for face_idx in range(n_faces_base):
+        face = BASE_FACES[face_idx]
+        va0, va1, va2 = BASE_VERTICES[face[0]]
+        vb0, vb1, vb2 = BASE_VERTICES[face[1]]
+        vc0, vc1, vc2 = BASE_VERTICES[face[2]]
+
+        grid = Dict.empty(
+            key_type=INT2_TYPE,
+            value_type=types.int64,
+        )
+
+        # ---- grid-point generation ----
         for i in range(nu + 1):
+            fi = float(i)
             for j in range(nu + 1 - i):
-                barycentric_weight: int = nu - i - j
-                raw_position: np.ndarray = ((i * vertex_a) + (j * vertex_b) + (barycentric_weight * vertex_c)) / nu
-                normalized_position: np.ndarray = raw_position / np.linalg.norm(raw_position)
-                rounded_key: tuple[float, float, float] = tuple(np.round(normalized_position, 6))
+                fj = float(j)
+                fk = float(nu - i - j)
 
-                if rounded_key not in vertex_map:
-                    vertex_map[rounded_key] = len(raw_vertices)
-                    raw_vertices.append(raw_position)
+                rx = (fi * va0 + fj * vb0 + fk * vc0) * inv_nu
+                ry = (fi * va1 + fj * vb1 + fk * vc1) * inv_nu
+                rz = (fi * va2 + fj * vb2 + fk * vc2) * inv_nu
 
-                grid[(i, j)] = vertex_map[rounded_key]
+                norm = np.sqrt(rx * rx + ry * ry + rz * rz)
+                inv_norm = 1.0 / norm
 
+                rounded = (
+                    round(rx * inv_norm, 6),
+                    round(ry * inv_norm, 6),
+                    round(rz * inv_norm, 6),
+                )
+
+                if rounded not in vertex_map:
+                    vertex_map[rounded] = len(raw_vertices)
+                    raw_vertices.append(np.array([rx, ry, rz], dtype=np.float64))
+
+                grid[(i, j)] = vertex_map[rounded]
+
+        # ---- triangle construction (2 per quad cell) ----
         for i in range(nu):
             for j in range(nu - i):
-                raw_faces.append([grid[(i, j)], grid[(i + 1, j)], grid[(i, j + 1)]])
-                if j < nu - i - 1:
-                    raw_faces.append([grid[(i + 1, j)], grid[(i + 1, j + 1)], grid[(i, j + 1)]])
+                a = grid[(i, j)]
+                b = grid[(i + 1, j)]
+                c = grid[(i, j + 1)]
+                raw_faces_flat.append(a)
+                raw_faces_flat.append(b)
+                raw_faces_flat.append(c)
 
-    vertices: np.ndarray = np.array(raw_vertices)
-    vertices /= np.linalg.norm(vertices, axis=1, keepdims=True)
-    faces: np.ndarray = np.array(raw_faces)
+                if j < nu - i - 1:
+                    d = grid[(i + 1, j)]
+                    e = grid[(i + 1, j + 1)]
+                    f = grid[(i, j + 1)]
+                    raw_faces_flat.append(d)
+                    raw_faces_flat.append(e)
+                    raw_faces_flat.append(f)
+
+    # ---- convert typed lists → numpy arrays ----
+    nv = len(raw_vertices)
+    vertices = np.zeros((nv, 3), dtype=np.float64)
+    for idx in range(nv):
+        v = raw_vertices[idx]
+        # v is pre-normalized because of logic above, but we enforce it just in case
+        n = np.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2])
+        inv = 1.0 / n
+        vertices[idx, 0] = v[0] * inv
+        vertices[idx, 1] = v[1] * inv
+        vertices[idx, 2] = v[2] * inv
+
+    nf = len(raw_faces_flat) // 3
+    faces = np.zeros((nf, 3), dtype=np.int64)
+    for idx in range(nf):
+        base = idx * 3
+        faces[idx, 0] = raw_faces_flat[base]
+        faces[idx, 1] = raw_faces_flat[base + 1]
+        faces[idx, 2] = raw_faces_flat[base + 2]
 
     return vertices, faces
-
 
 class Mesh:
     def __init__(self, vertices: np.ndarray, faces: np.ndarray) -> None:
@@ -110,14 +181,24 @@ class Mesh:
                 neighbor_sets[vertex_c].add(vertex_a)
                 neighbor_sets[vertex_c].add(vertex_b)
 
-            self._neighbors = [sorted(neighbor_set) for neighbor_set in neighbor_sets]
+            neighbors_list: list[list[int]] = [
+                sorted(neighbor_set) for neighbor_set in neighbor_sets
+            ]
 
+            self._neighbors = neighbors_list
+
+        assert self._neighbors is not None
         return self._neighbors
 
     @property
     def dual_vertices(self) -> np.ndarray:
         if self._dual_vertices is None:
-            self._dual_vertices = self.vertices[self.faces].mean(axis=1)
+            centroids: np.ndarray = self.vertices[self.faces].mean(axis=1)
+
+            norms: np.ndarray = np.linalg.norm(centroids, axis=1, keepdims=True)
+            self._dual_vertices = centroids / norms
+
+        assert self._dual_vertices is not None
         return self._dual_vertices
 
     @property
@@ -131,7 +212,7 @@ class Mesh:
                 for vertex in face:
                     vertex_faces[int(vertex)].append(face_index)
 
-            dual: list[list[int]] = []
+            dual_faces_list: list[list[int]] = []
             for vertex_index in range(num_vertices):
                 face_indices: list[int] = vertex_faces[vertex_index]
                 position: np.ndarray = self.vertices[vertex_index]
@@ -156,11 +237,13 @@ class Mesh:
 
                 tangent_u_component: np.ndarray = np.dot(centroid_vectors, tangent_u)
                 tangent_v_component: np.ndarray = np.dot(centroid_vectors, tangent_v)
-                angular_order: np.ndarray = np.argsort(np.arctan2(tangent_v_component, tangent_u_component))
+                angular_order: np.ndarray = np.argsort(
+                    np.arctan2(tangent_v_component, tangent_u_component)
+                )
 
-                dual.append([face_indices[i] for i in angular_order])
+                dual_faces_list.append([face_indices[i] for i in angular_order])
 
-            self._dual_faces = dual
+            self._dual_faces = dual_faces_list
+
+        assert self._dual_faces is not None
         return self._dual_faces
-
-
