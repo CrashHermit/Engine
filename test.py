@@ -8,7 +8,7 @@ from src.worldgen.generator.geology import Geology
 
 
 def main() -> None:
-    vertices, faces = generate_icosphere(nu=20)
+    vertices, faces = generate_icosphere(nu=14)
 
     mesh = Mesh(vertices, faces)
 
@@ -18,7 +18,7 @@ def main() -> None:
         octaves=4, base_frequency=2.0, lacunarity=2.0, persistence=0.5
     )
 
-    plates = geology.generate_plates(
+    plate_regions = geology.generate_plate_regions(
         node_values=intensity,
         num_points=12,
         min_distance=0.3,
@@ -26,23 +26,13 @@ def main() -> None:
         strength=1.0,
     )
 
-    velocity = geology.generate_magma_velocity(node_values=intensity, descending=True)
+    magma_velocity = geology.generate_magma_velocity(node_values=intensity, descending=True)
 
-    ids = np.array([plates[i] for i in range(len(velocity))], dtype=int)
+    plate_velocity = geology.generate_plate_velocity(magma_velocity=magma_velocity, plate_regions=plate_regions)
 
-    plate_velocities = grouped_mean(velocity, ids)
+    renderer = Render(mesh=mesh, plates=plate_regions, plate_velocity=plate_velocity)
 
-    tile_velocities = plate_velocities[ids]
-
-    dot = np.sum(tile_velocities * vertices, axis=1, keepdims=True)
-    tile_velocities = tile_velocities - dot * vertices
-
-
-    tile_velocities = scale_vector_magnitudes(tile_velocities)
-
-    renderer = Render(mesh=mesh, plates=plates, plate_velocity=tile_velocities)
-
-    renderer.show_plates(arrow_scale=0.08)
+    renderer.show_plates(arrow_scale=0.80)
 
 
 if __name__ == "__main__":

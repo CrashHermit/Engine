@@ -7,7 +7,8 @@ from src.core.field.vector.operator import gradient, surface_curl
 from src.core.field.scalar.cost import noise_average
 from src.core.field.scalar.noise import fbm
 from src.core.field.scalar.voronoi import voronoi_msd
-from src.core.utilities.normalize import interpolate_values, scale_vector_magnitudes
+from src.core.utilities.groupby import grouped_mean
+from src.core.utilities.normalize import interpolate_values, normalize_vectors, scale_vector_magnitudes
 from src.core.utilities.sampling import poisson_disk_sample
 from src.core.geometry.mesh import Mesh
 
@@ -64,7 +65,7 @@ class Geology:
 
         return intensity
 
-    def generate_plates(
+    def generate_plate_regions(
         self,
         node_values: np.ndarray,
         num_points: int,
@@ -113,8 +114,19 @@ class Geology:
             descending=descending,
         )
 
-        normalized_vectors: np.ndarray = scale_vector_magnitudes(
-            vectors=vectors
-        )
+        normalized_vectors: np.ndarray = scale_vector_magnitudes(vectors=vectors)
 
         return normalized_vectors
+
+    def generate_plate_velocity(self, magma_velocity: np.ndarray, plate_regions: dict[int, int]):
+        plate_ids: np.ndarray = np.array([plate_regions[i] for i in range(len(magma_velocity))], dtype=int)
+        plate_velocities: np.ndarray = grouped_mean(
+            values=magma_velocity, group_ids=plate_ids
+        )
+        
+        normalized_plate_velocities = normalize_vectors(plate_velocities)
+
+        cell_velocities = plate_velocities[plate_ids]
+
+        return cell_velocities
+
