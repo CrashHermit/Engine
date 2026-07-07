@@ -1,6 +1,3 @@
-from dataclasses import dataclass
-from operator import pos
-
 import numpy as np
 
 from src.core.field.vector.operator import gradient, surface_curl
@@ -8,30 +5,12 @@ from src.core.field.scalar.cost import noise_average
 from src.core.field.scalar.noise import fbm
 from src.core.field.scalar.voronoi import voronoi_msd
 from src.core.utilities.groupby import grouped_mean
-from src.core.utilities.normalize import interpolate_values, normalize_vectors, scale_vector_magnitudes
+from src.core.utilities.normalize import (
+    interpolate_values,
+    scale_vector_magnitudes,
+)
 from src.core.utilities.sampling import poisson_disk_sample
 from src.core.geometry.mesh import Mesh
-
-
-@dataclass
-class MagmaIntensityConfig:
-    octaves: int
-    base_frequency: float
-    lacunarity: float
-    persistence: float
-
-
-@dataclass
-class PlatesConfig:
-    num_points: int
-    min_distance: float
-    max_retries: int
-    strength: float
-
-
-@dataclass
-class MagmaVelocityConfig:
-    descending: bool = True
 
 
 class Geology:
@@ -118,15 +97,23 @@ class Geology:
 
         return normalized_vectors
 
-    def generate_plate_velocity(self, magma_velocity: np.ndarray, plate_regions: dict[int, int]):
-        plate_ids: np.ndarray = np.array([plate_regions[i] for i in range(len(magma_velocity))], dtype=int)
-        plate_velocities: np.ndarray = grouped_mean(
-            values=magma_velocity, group_ids=plate_ids
-        )
-        
-        normalized_plate_velocities = normalize_vectors(plate_velocities)
-
-        cell_velocities = plate_velocities[plate_ids]
-
-        return cell_velocities
-
+    def generate_plate_velocity(self, magma_velocity: np.ndarray, plate_regions: dict[int, int]  ) -> np.ndarray:                                                     
+        positions: np.ndarray = self.mesh.vertices                       
+                                                                            
+        plate_ids: np.ndarray = np.array([plate_regions[i] for i in range(len(magma_velocity))], dtype=int)                                                                
+                                                                            
+        # Per-cell angular momentum: r × v (rotation axis consistent with                                                                       
+        # each cell's local magma velocity on the sphere surface).       
+        angular_momenta: np.ndarray = np.cross(positions, magma_velocity)                                                            
+                                                                            
+        # Average per plate → one angular velocity ω per plate           
+        plate_omega: np.ndarray = grouped_mean(values=angular_momenta, group_ids=plate_ids)                                                                
+                                                                            
+            # Surface velocity: v = ω × r  (naturally tangent, no radial component)                                                                 
+        cell_omega: np.ndarray = plate_omega[plate_ids]                  
+        cell_velocities: np.ndarray = np.cross(cell_omega, positions)    
+                                                                            
+        # Uniform length                                                 
+        magnitudes: np.ndarray = np.linalg.norm(cell_velocities, axis=1, keepdims=True)
+            
+        return np.divide(cell_velocities, magnitudes, where=magnitudes > 0)

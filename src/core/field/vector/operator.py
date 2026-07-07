@@ -45,9 +45,7 @@ def gradient(
     weighted_edges: np.ndarray = edge_deltas * delta[:, np.newaxis]
 
     # Accumulate into per-vertex gradient
-    gradient_accumulator: np.ndarray = np.zeros(
-        (len(positions), 3), dtype=np.float64
-    )
+    gradient_accumulator: np.ndarray = np.zeros((len(positions), 3), dtype=np.float64)
     np.add.at(gradient_accumulator, source_node, weighted_edges)
 
     # Project out the radial component (tangent-plane on unit sphere)
@@ -69,9 +67,15 @@ def gradient(
         )
     )
 
+
 def rotate_tangent(positions: np.ndarray, vectors: np.ndarray) -> np.ndarray:
     return np.cross(positions, vectors)
 
-def surface_curl(positions: np.ndarray, adjacency: list[list[int]], node_values: np.ndarray) -> np.ndarray:
-    vectors: np.ndarray = gradient(positions=positions, adjacency=adjacency, node_values=node_values)
-    return rotate_tanget(positions=positions, vectors=vectors)
+
+def surface_curl(
+    positions: np.ndarray, adjacency: list[list[int]], node_values: np.ndarray
+) -> np.ndarray:
+    vectors: np.ndarray = gradient(
+        positions=positions, adjacency=adjacency, node_values=node_values
+    )
+    return rotate_tangent(positions=positions, vectors=vectors)

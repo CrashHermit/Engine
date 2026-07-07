@@ -32,7 +32,7 @@ def main() -> None:
 
     renderer = Render(mesh=mesh, plates=plate_regions, plate_velocity=plate_velocity)
 
-    renderer.show_plates(arrow_scale=0.80)
+    renderer.show_plates(arrow_scale=0.08)
 
 
 if __name__ == "__main__":
