@@ -1,8 +1,9 @@
 from dataclasses import dataclass
+from operator import pos
 
 import numpy as np
 
-from src.core.field.vector.gradient import gradient
+from src.core.field.vector.operator import gradient, surface_curl
 from src.core.field.scalar.cost import noise_average
 from src.core.field.scalar.noise import fbm
 from src.core.field.scalar.voronoi import voronoi_msd
@@ -69,7 +70,7 @@ class Geology:
         num_points: int,
         min_distance: float,
         max_retries: int,
-        strength: float
+        strength: float,
     ) -> dict[int, int]:
 
         positions: np.ndarray = self.mesh.vertices
@@ -112,6 +113,8 @@ class Geology:
             descending=descending,
         )
 
-        normalized_vectors: np.ndarray = scale_vector_magnitudes(vectors=vectors)
+        normalized_vectors: np.ndarray = scale_vector_magnitudes(
+            vectors=vectors
+        )
 
         return normalized_vectors

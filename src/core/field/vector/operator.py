@@ -68,3 +68,10 @@ def gradient(
             gradient_accumulator[:, 2] - dot * pz,
         )
     )
+
+def rotate_tangent(positions: np.ndarray, vectors: np.ndarray) -> np.ndarray:
+    return np.cross(positions, vectors)
+
+def surface_curl(positions: np.ndarray, adjacency: list[list[int]], node_values: np.ndarray) -> np.ndarray:
+    vectors: np.ndarray = gradient(positions=positions, adjacency=adjacency, node_values=node_values)
+    return rotate_tanget(positions=positions, vectors=vectors)

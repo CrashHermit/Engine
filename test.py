@@ -1,10 +1,14 @@
+import numpy as np
+
 from src.core.geometry.mesh import generate_icosphere, Mesh
+from src.core.utilities.groupby import grouped_mean
+from src.core.utilities.normalize import scale_vector_magnitudes
 from src.worldgen.render.render import Render
 from src.worldgen.generator.geology import Geology
 
 
 def main() -> None:
-    vertices, faces = generate_icosphere(nu=8)
+    vertices, faces = generate_icosphere(nu=20)
 
     mesh = Mesh(vertices, faces)
 
@@ -24,9 +28,22 @@ def main() -> None:
 
     velocity = geology.generate_magma_velocity(node_values=intensity, descending=True)
 
-    renderer = Render(mesh=mesh, plates=plates, velocity=velocity)
+    ids = np.array([plates[i] for i in range(len(velocity))], dtype=int)
+
+    plate_velocities = grouped_mean(velocity, ids)
+
+    tile_velocities = plate_velocities[ids]
+
+    dot = np.sum(tile_velocities * vertices, axis=1, keepdims=True)
+    tile_velocities = tile_velocities - dot * vertices
+
+
+    tile_velocities = scale_vector_magnitudes(tile_velocities)
+
+    renderer = Render(mesh=mesh, plates=plates, plate_velocity=tile_velocities)
 
     renderer.show_plates(arrow_scale=0.08)
+
 
 if __name__ == "__main__":
     main()

@@ -4,10 +4,10 @@ import pyvista as pv
 from src.core.geometry.mesh import Mesh
 
 class Render:
-    def __init__(self, mesh: Mesh, plates: dict[int, int], velocity: np.ndarray) -> None:
+    def __init__(self, mesh: Mesh, plates: dict[int, int], plate_velocity: np.ndarray) -> None:
         self.mesh = mesh
         self.plates = plates
-        self.velocity = velocity
+        self.plate_velocity = plate_velocity
         self.pv_mesh = self._build_dual_polydata()
         self._attach_plate_data()
 
@@ -37,7 +37,7 @@ class Render:
     def show_plates(self, arrow_scale: float) -> None:
         plotter = pv.Plotter()
         plotter.add_mesh(mesh=self.pv_mesh, scalars="plate_id", cmap="tab10", show_edges=True, lighting=True)
-        plotter.add_arrows(cent=self.mesh.vertices, direction=self.velocity, mag=arrow_scale, color="white", )
+        plotter.add_arrows(cent=self.mesh.vertices, direction=self.plate_velocity, mag=arrow_scale, color="white", )
         plotter.show()
 
 
