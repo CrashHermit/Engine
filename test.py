@@ -1,27 +1,25 @@
 import numpy as np
 
 from src.core.geometry.mesh import generate_icosphere, Mesh
-from src.core.utilities.groupby import grouped_mean
-from src.core.utilities.normalize import scale_vector_magnitudes
 from src.worldgen.render.render import Render
 from src.worldgen.generator.geology import Geology
 
 
 def main() -> None:
-    vertices, faces = generate_icosphere(nu=14)
+    vertices, faces = generate_icosphere(nu=30)
 
     mesh = Mesh(vertices, faces)
 
     geology = Geology(mesh=mesh)
 
     intensity = geology.generate_magma_intensity(
-        octaves=4, base_frequency=2.0, lacunarity=2.0, persistence=0.5
+        octaves=8, base_frequency=6.0, lacunarity=3.0, persistence=0.7
     )
 
     plate_regions = geology.generate_plate_regions(
         node_values=intensity,
-        num_points=12,
-        min_distance=0.3,
+        num_points=15,
+        min_distance=0.2,
         max_retries=10,
         strength=1.0,
     )

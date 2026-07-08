@@ -1,7 +1,7 @@
 import numpy as np
 
 from src.core.field.vector.operator import gradient, surface_curl
-from src.core.field.scalar.cost import noise_average
+from src.core.field.scalar.cost import noise_average, noise_multiplicative
 from src.core.field.scalar.noise import fbm
 from src.core.field.scalar.voronoi import voronoi_msd
 from src.core.utilities.groupby import grouped_mean
@@ -65,7 +65,7 @@ class Geology:
 
         seeds: dict[int, int] = {idx: pid for pid, idx in enumerate(seed_indices)}
 
-        edge_weights: dict[tuple[int, int], float] = noise_average(
+        edge_weights: dict[tuple[int, int], float] = noise_multiplicative(
             adjacency=adjacency, node_values=node_values, strength=strength
         )
 
@@ -97,23 +97,35 @@ class Geology:
 
         return normalized_vectors
 
-    def generate_plate_velocity(self, magma_velocity: np.ndarray, plate_regions: dict[int, int]  ) -> np.ndarray:                                                     
-        positions: np.ndarray = self.mesh.vertices                       
-                                                                            
-        plate_ids: np.ndarray = np.array([plate_regions[i] for i in range(len(magma_velocity))], dtype=int)                                                                
-                                                                            
-        # Per-cell angular momentum: r × v (rotation axis consistent with                                                                       
-        # each cell's local magma velocity on the sphere surface).       
-        angular_momenta: np.ndarray = np.cross(positions, magma_velocity)                                                            
-                                                                            
-        # Average per plate → one angular velocity ω per plate           
-        plate_omega: np.ndarray = grouped_mean(values=angular_momenta, group_ids=plate_ids)                                                                
-                                                                            
-            # Surface velocity: v = ω × r  (naturally tangent, no radial component)                                                                 
-        cell_omega: np.ndarray = plate_omega[plate_ids]                  
-        cell_velocities: np.ndarray = np.cross(cell_omega, positions)    
-                                                                            
-        # Uniform length                                                 
-        magnitudes: np.ndarray = np.linalg.norm(cell_velocities, axis=1, keepdims=True)
+    def generate_plate_velocity(self, magma_velocity: np.ndarray, plate_regions: dict[int, int]) -> np.ndarray:
+        positions: np.ndarray = self.mesh.vertices
+        
+        # Array of plate IDs corresponding to each vertex
+        plate_ids: np.ndarray = np.array([plate_regions[i] for i in range(len(magma_velocity))], dtype=int)
+
+        # 1. Local angular momentum: r × v
+        # This converts the linear magma push under each cell into a rotational axis for that specific point.
+        angular_momenta: np.ndarray = np.cross(positions, magma_velocity)
+
+        # 2. Average the rotational axes per plate to find the true Euler Pole (ω) for the whole plate.
+        # This forces the plate to act as a single rigid object on the sphere.
+        plate_omega: np.ndarray = grouped_mean(values=angular_momenta, group_ids=plate_ids)
+        
+        # 3. Apply this unified rotation back to every cell on the plate.
+        # Surface velocity: v = ω × r. 
+        # This naturally creates varying speeds depending on how close a cell is to the axis of rotation.
+        cell_omega: np.ndarray = plate_omega[plate_ids]
+        cell_velocities: np.ndarray = np.cross(cell_omega, positions)
+
+        # 4. Global Scaling (0.0 to 1.0)
+        # We calculate the speed of every individual cell, find the absolute fastest point on the globe,
+        # and scale all vectors proportionally so the max length is exactly 1.0.
+        speeds: np.ndarray = np.linalg.norm(cell_velocities, axis=1, keepdims=True)
+        max_speed = np.max(speeds)
+        
+        if max_speed > 0:
+            final_velocities = cell_velocities / max_speed
+        else:
+            final_velocities = cell_velocities
             
-        return np.divide(cell_velocities, magnitudes, where=magnitudes > 0)
+        return final_velocities
