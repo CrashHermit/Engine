@@ -13,7 +13,7 @@ def main() -> None:
     geology = Geology(mesh=mesh)
 
     intensity = geology.generate_magma_intensity(
-        octaves=8, base_frequency=6.0, lacunarity=3.0, persistence=0.7
+        octaves=4, base_frequency=0.5, lacunarity=2.0, persistence=0.8
     )
 
     plate_regions = geology.generate_plate_regions(

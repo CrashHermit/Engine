@@ -86,12 +86,20 @@ class Geology:
         positions = self.mesh.vertices
         adjacency = self.mesh.neighbors
 
-        vectors: np.ndarray = gradient(
+        gradient_vectors: np.ndarray = gradient(
             positions=positions,
             adjacency=adjacency,
             node_values=node_values,
             descending=descending,
         )
+
+        curl_vectors: np.ndarray = surface_curl(
+            positions=positions,
+            adjacency=adjacency,
+            node_values=node_values
+        )
+
+        vectors = gradient_vectors + curl_vectors
 
         normalized_vectors: np.ndarray = scale_vector_magnitudes(vectors=vectors)
 
@@ -99,33 +107,22 @@ class Geology:
 
     def generate_plate_velocity(self, magma_velocity: np.ndarray, plate_regions: dict[int, int]) -> np.ndarray:
         positions: np.ndarray = self.mesh.vertices
-        
-        # Array of plate IDs corresponding to each vertex
         plate_ids: np.ndarray = np.array([plate_regions[i] for i in range(len(magma_velocity))], dtype=int)
 
-        # 1. Local angular momentum: r × v
-        # This converts the linear magma push under each cell into a rotational axis for that specific point.
+        # 1. Calculate pure angular momentum from the (now swirling!) magma
         angular_momenta: np.ndarray = np.cross(positions, magma_velocity)
-
-        # 2. Average the rotational axes per plate to find the true Euler Pole (ω) for the whole plate.
-        # This forces the plate to act as a single rigid object on the sphere.
-        plate_omega: np.ndarray = grouped_mean(values=angular_momenta, group_ids=plate_ids)
         
-        # 3. Apply this unified rotation back to every cell on the plate.
-        # Surface velocity: v = ω × r. 
-        # This naturally creates varying speeds depending on how close a cell is to the axis of rotation.
+        # 2. Average it to find the plate's true physical Euler Pole
+        plate_omega: np.ndarray = grouped_mean(values=angular_momenta, group_ids=plate_ids)
+
+        # 3. Apply it to the cells
         cell_omega: np.ndarray = plate_omega[plate_ids]
         cell_velocities: np.ndarray = np.cross(cell_omega, positions)
 
-        # 4. Global Scaling (0.0 to 1.0)
-        # We calculate the speed of every individual cell, find the absolute fastest point on the globe,
-        # and scale all vectors proportionally so the max length is exactly 1.0.
+        # 4. Global scaling (0.0 to 1.0)
         speeds: np.ndarray = np.linalg.norm(cell_velocities, axis=1, keepdims=True)
         max_speed = np.max(speeds)
         
         if max_speed > 0:
-            final_velocities = cell_velocities / max_speed
-        else:
-            final_velocities = cell_velocities
-            
-        return final_velocities
+            return cell_velocities / max_speed
+        return cell_velocities
