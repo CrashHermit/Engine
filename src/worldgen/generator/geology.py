@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.core.field.vector.operator import gradient, surface_curl
-from src.core.field.scalar.cost import noise_average, noise_multiplicative
+from src.core.field.vector.operator import gradient
+from src.core.field.scalar.cost import noise_multiplicative
 from src.core.field.scalar.noise import fbm
 from src.core.field.scalar.voronoi import voronoi_msd
 from src.core.utilities.groupby import grouped_mean
@@ -97,15 +97,21 @@ class Geology:
 
         return normalized_vectors
 
-    def generate_plate_velocity(self, magma_velocity: np.ndarray, plate_regions: dict[int, int]) -> np.ndarray:
+    def generate_plate_velocity(
+        self, magma_velocity: np.ndarray, plate_regions: dict[int, int]
+    ) -> np.ndarray:
         positions: np.ndarray = self.mesh.vertices
-        plate_ids: np.ndarray = np.array([plate_regions[i] for i in range(len(magma_velocity))], dtype=int)
+        plate_ids: np.ndarray = np.array(
+            [plate_regions[i] for i in range(len(magma_velocity))], dtype=int
+        )
 
         # 1. Calculate pure angular momentum from the (now swirling!) magma
         angular_momenta: np.ndarray = np.cross(positions, magma_velocity)
-        
+
         # 2. Average it to find the plate's true physical Euler Pole
-        plate_omega: np.ndarray = grouped_mean(values=angular_momenta, group_ids=plate_ids)
+        plate_omega: np.ndarray = grouped_mean(
+            values=angular_momenta, group_ids=plate_ids
+        )
 
         # 3. Apply it to the cells
         cell_omega: np.ndarray = plate_omega[plate_ids]
@@ -114,12 +120,14 @@ class Geology:
         # 4. Global scaling (0.0 to 1.0)
         speeds: np.ndarray = np.linalg.norm(cell_velocities, axis=1, keepdims=True)
         max_speed = np.max(speeds)
-        
+
         if max_speed > 0:
             return cell_velocities / max_speed
         return cell_velocities
 
-    def plate_region_boundaries(self, plate_regions: dict[int, int]) -> dict[int, list[int]]:
+    def plate_region_boundaries(
+        self, plate_regions: dict[int, int]
+    ) -> dict[int, list[int]]:
         adjacency: list[list[int]] = self.mesh.neighbors
         plate_boundaries: dict[int, list[int]] = {}
 
@@ -131,5 +139,5 @@ class Geology:
                     if cell not in plate_boundaries:
                         plate_boundaries[cell] = []
                     plate_boundaries[cell].append(neighbor)
-        
+
         return plate_boundaries

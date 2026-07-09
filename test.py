@@ -31,7 +31,7 @@ def main() -> None:
     plate_region_boundaries: dict[int, list[int]] = geology.plate_region_boundaries(plate_regions=plate_regions)
     print(plate_region_boundaries)
 
-    renderer = Render(mesh=mesh, plates=plate_regions, plate_velocity=plate_velocity)
+    renderer = Render(mesh=mesh, plates=plate_regions, plate_velocity=plate_velocity, plate_region_boundaries=plate_region_boundaries)
 
     renderer.show_plates(arrow_scale=0.08)
 
