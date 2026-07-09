@@ -86,20 +86,12 @@ class Geology:
         positions = self.mesh.vertices
         adjacency = self.mesh.neighbors
 
-        gradient_vectors: np.ndarray = gradient(
+        vectors: np.ndarray = gradient(
             positions=positions,
             adjacency=adjacency,
             node_values=node_values,
             descending=descending,
         )
-
-        curl_vectors: np.ndarray = surface_curl(
-            positions=positions,
-            adjacency=adjacency,
-            node_values=node_values
-        )
-
-        vectors = gradient_vectors + curl_vectors
 
         normalized_vectors: np.ndarray = scale_vector_magnitudes(vectors=vectors)
 
@@ -126,3 +118,18 @@ class Geology:
         if max_speed > 0:
             return cell_velocities / max_speed
         return cell_velocities
+
+    def plate_region_boundaries(self, plate_regions: dict[int, int]) -> dict[int, list[int]]:
+        adjacency: list[list[int]] = self.mesh.neighbors
+        plate_boundaries: dict[int, list[int]] = {}
+
+        for cell, neighbors in enumerate(adjacency):
+            cell_plate_region_id: int = plate_regions[cell]
+            for neighbor in neighbors:
+                # Check if the neighbor plate is the same plate region id as the cells plate region id
+                if plate_regions[neighbor] != cell_plate_region_id:
+                    if cell not in plate_boundaries:
+                        plate_boundaries[cell] = []
+                    plate_boundaries[cell].append(neighbor)
+        
+        return plate_boundaries
