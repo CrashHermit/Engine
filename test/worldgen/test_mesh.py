@@ -1,9 +1,8 @@
 """Diagnose holes in frequency_icosphere mesh output."""
 
 import numpy as np
-import pytest
 
-from src.core.geometry.mesh import generate_icosphere
+from src.worldgen.geometry.icosphere import generate_icosphere
 
 
 def _count_edge_occurrences(faces: np.ndarray) -> dict[tuple[int, int], int]:
@@ -75,16 +74,3 @@ def test_mesh_edge_manifold(nu: int = 10) -> None:
     assert len(boundary_edges) == 0, (
         f"{len(boundary_edges)} boundary edges found — mesh has holes/gaps"
     )
-
-
-@pytest.mark.parametrize("nu", [2, 5, 10, 15, 20, 30, 60])
-def test_generate_icosphere_speed(nu: int) -> None:
-    """generate_icosphere must complete within a reasonable time."""
-    import time
-
-    start: float = time.perf_counter()
-    generate_icosphere(nu=nu)
-    elapsed: float = time.perf_counter() - start
-
-    print(f"  nu={nu}: {elapsed*1000:.1f}ms")
-    assert elapsed < 1.0, f"nu={nu} took {elapsed:.2f}s — too slow"

@@ -1,0 +1,1 @@
+"""Procedural spherical world generation."""

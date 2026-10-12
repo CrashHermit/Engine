@@ -37,7 +37,7 @@ asyncio_mode = "auto"
 pythonpath = ["."]
 testpaths = ["test"]
 python_files = ["*.py"]
-addopts = "--import-mode=importlib"
+addopts = "--import-mode=importlib --assert=plain"
 filterwarnings = [
     "ignore:The 'prefix' argument in InputField:DeprecationWarning",
 ]
