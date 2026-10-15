@@ -19,9 +19,9 @@ def test_world_generation_is_seeded_and_complete() -> None:
     assert not np.array_equal(
         first.geology.magma_intensity, other.geology.magma_intensity
     )
-    assert len(np.unique(first.geology.plate_ids)) == config.geology.plate_count
+    assert len(np.unique(first.geology.plate_ids)) == config.geology.plates.plate_count
     assert np.all(first.geology.plate_ids >= 0)
-    assert np.all(first.geology.plate_ids < config.geology.plate_count)
+    assert np.all(first.geology.plate_ids < config.geology.plates.plate_count)
 
 
 def test_geology_velocity_fields_are_tangent_and_boundaries_are_exact() -> None:

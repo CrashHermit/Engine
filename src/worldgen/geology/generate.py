@@ -1,73 +1,62 @@
-"""Generation of procedural plates and their coherent motion."""
+"""Orchestration of magma, plates, boundaries, and crust generation."""
 
 import numpy as np
 
-from src.worldgen.field.cost import noise_difference_cost
-from src.worldgen.field.noise import fbm
-from src.worldgen.field.partition import weighted_regions
-from src.worldgen.field.vector import gradient
 from src.worldgen.geometry.mesh import Mesh
 from src.worldgen.geology.boundary import boundary_interactions
 from src.worldgen.geology.config import GeologyConfig
+from src.worldgen.geology.crust import generate_crust
+from src.worldgen.geology.magma import generate_magma
 from src.worldgen.geology.model import GeologyResult
-from src.worldgen.utilities.groupby import grouped_mean
-from src.worldgen.utilities.normalize import interpolate_values, scale_vector_magnitudes
-from src.worldgen.utilities.sampling import poisson_disk_sample
-
-
-def _readonly(array: np.ndarray) -> np.ndarray:
-    array.setflags(write=False)
-    return array
+from src.worldgen.geology.plates import generate_plates
 
 
 def generate_geology(
     mesh: Mesh,
     config: GeologyConfig,
     *,
-    noise_seed: int,
-    seed_rng: np.random.Generator,
+    magma_noise_seed: int,
+    plate_seed_rng: np.random.Generator,
+    plate_noise_seed: int,
+    crust_noise_seed: int,
+    crust_rng: np.random.Generator,
 ) -> GeologyResult:
-    """Generate scalar magma variation, plates, flow, and boundaries."""
-    raw_intensity = fbm(
-        mesh.vertices,
-        seed=noise_seed,
-        octaves=config.octaves,
-        base_frequency=config.base_frequency,
-        lacunarity=config.lacunarity,
-        persistence=config.persistence,
+    """Generate geology using independent magma, plate, and crust streams."""
+    magma_intensity, magma_velocity = generate_magma(
+        mesh, config.magma, noise_seed=magma_noise_seed
     )
-    magma_intensity = interpolate_values(raw_intensity, (0.0, 1.0))
-    seed_indices = poisson_disk_sample(
-        mesh.vertices,
-        config.plate_count,
-        config.min_seed_distance,
-        rng=seed_rng,
+    plates = generate_plates(
+        mesh,
+        config.plates,
+        magma_intensity,
+        magma_velocity,
+        seed_rng=plate_seed_rng,
+        noise_seed=plate_noise_seed,
     )
-    edge_costs = noise_difference_cost(mesh, magma_intensity)
-    plate_ids = weighted_regions(mesh, seed_indices, edge_costs)
-    magma_velocity = scale_vector_magnitudes(
-        gradient(mesh, magma_intensity, descending=config.descending)
-    )
-    angular_momentum = np.cross(mesh.vertices, magma_velocity)
-    plate_rotation = grouped_mean(angular_momentum, plate_ids)
-    plate_velocity = scale_vector_magnitudes(
-        np.cross(plate_rotation[plate_ids], mesh.vertices)
-    )
-    boundary_edge_indices = np.flatnonzero(
-        plate_ids[mesh.edges[:, 0]] != plate_ids[mesh.edges[:, 1]]
-    ).astype(np.int64)
     convergence, divergence, shear = boundary_interactions(
-        mesh, plate_ids, plate_rotation, boundary_edge_indices
+        mesh,
+        plates.plate_ids,
+        plates.plate_rotation,
+        plates.boundary_edge_indices,
+    )
+    for array in (convergence, divergence, shear):
+        array.setflags(write=False)
+    crust = generate_crust(
+        mesh,
+        config.crust,
+        noise_seed=crust_noise_seed,
+        rng=crust_rng,
     )
     return GeologyResult(
-        magma_intensity=_readonly(magma_intensity),
-        seed_indices=_readonly(seed_indices),
-        plate_ids=_readonly(plate_ids),
-        magma_velocity=_readonly(magma_velocity),
-        plate_rotation=_readonly(plate_rotation),
-        plate_velocity=_readonly(plate_velocity),
-        boundary_edge_indices=_readonly(boundary_edge_indices),
-        boundary_convergence=_readonly(convergence),
-        boundary_divergence=_readonly(divergence),
-        boundary_shear=_readonly(shear),
+        magma_intensity=magma_intensity,
+        seed_indices=plates.seed_indices,
+        plate_ids=plates.plate_ids,
+        magma_velocity=magma_velocity,
+        plate_rotation=plates.plate_rotation,
+        plate_velocity=plates.plate_velocity,
+        boundary_edge_indices=plates.boundary_edge_indices,
+        boundary_convergence=convergence,
+        boundary_divergence=divergence,
+        boundary_shear=shear,
+        crust=crust,
     )
