@@ -2,14 +2,14 @@
 
 from dataclasses import dataclass
 
+from src.worldgen.elevation.model import ElevationResult
 from src.worldgen.geometry.mesh import Mesh
-
 from src.worldgen.geology.model import GeologyResult
-from src.worldgen.terrain.model import TerrainResult
 
 
 @dataclass(frozen=True, slots=True)
 class GeneratedWorld:
     mesh: Mesh
     geology: GeologyResult
-    terrain: TerrainResult
+    elevation: ElevationResult
+    radius_m: float

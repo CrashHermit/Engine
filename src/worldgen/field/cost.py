@@ -3,6 +3,7 @@
 import numpy as np
 
 from src.worldgen.geometry.mesh import Mesh
+from src.worldgen.geometry.spherical import angular_distances
 
 
 def field_traversal_cost(
@@ -11,10 +12,7 @@ def field_traversal_cost(
     """Weight spherical edge distance by the average endpoint field value."""
     left = mesh.vertices[mesh.edges[:, 0]]
     right = mesh.vertices[mesh.edges[:, 1]]
-    distance = np.arctan2(
-        np.linalg.norm(np.cross(left, right), axis=1),
-        np.sum(left * right, axis=1),
-    )
+    distance = angular_distances(left, right)
     multipliers = 1.0 + irregularity_strength * node_values
     average_multiplier = (
         multipliers[mesh.edges[:, 0]] + multipliers[mesh.edges[:, 1]]

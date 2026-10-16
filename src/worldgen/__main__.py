@@ -14,6 +14,9 @@ def main() -> None:
     parser.add_argument("--frequency", type=int, default=20)
     parser.add_argument("--radius-m", type=float, default=6_371_000.0)
     parser.add_argument("--plate-irregularity", type=float, default=1.0)
+    parser.add_argument("--plate-motion-scale", type=float, default=1.0)
+    parser.add_argument("--plate-min-speed", type=float, default=0.05)
+    parser.add_argument("--plate-max-speed", type=float, default=0.20)
     parser.add_argument("--crust-irregularity", type=float, default=1.0)
     parser.add_argument(
         "--plate-growth",
@@ -33,6 +36,14 @@ def main() -> None:
         default="plates",
     )
     parser.add_argument("--arrow-scale", type=float, default=0.08)
+    parser.add_argument("--terrain-relief", action="store_true")
+    parser.add_argument("--vertical-exaggeration", type=float, default=1.0)
+    parser.add_argument("--sea-level", action="store_true")
+    parser.add_argument("--elevation-min", type=float)
+    parser.add_argument("--elevation-max", type=float)
+    parser.add_argument(
+        "--no-hex-edges", action="store_true", help="Start with cell outlines hidden"
+    )
     parser.add_argument("--off-screen", action="store_true")
     parser.add_argument("--screenshot")
     args = parser.parse_args()
@@ -45,6 +56,9 @@ def main() -> None:
             plates=replace(
                 config.geology.plates,
                 irregularity_strength=args.plate_irregularity,
+                motion_scale=args.plate_motion_scale,
+                min_angular_speed=args.plate_min_speed,
+                max_angular_speed=args.plate_max_speed,
                 growth_method=args.plate_growth,
                 flood=replace(
                     config.geology.plates.flood, influence=args.plate_flood_influence
@@ -84,6 +98,13 @@ def main() -> None:
         arrow_scale=args.arrow_scale,
         off_screen=args.off_screen,
         screenshot=args.screenshot,
+        terrain_relief=args.terrain_relief,
+        vertical_exaggeration=args.vertical_exaggeration,
+        sea_level=args.sea_level,
+        hex_edges=not args.no_hex_edges,
+        elevation_range=(args.elevation_min, args.elevation_max)
+        if args.elevation_min is not None
+        else None,
     )
 
 

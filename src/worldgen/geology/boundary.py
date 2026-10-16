@@ -3,6 +3,7 @@
 import numpy as np
 
 from src.worldgen.geometry.mesh import Mesh
+from src.worldgen.geometry.spherical import edge_frames
 
 
 def boundary_interactions(
@@ -18,13 +19,7 @@ def boundary_interactions(
     Values retain the shared rotation scale rather than normalizing each field.
     """
     edges = mesh.edges[boundary_edge_indices]
-    left = mesh.vertices[edges[:, 0]]
-    right = mesh.vertices[edges[:, 1]]
-    midpoint = left + right
-    midpoint /= np.linalg.norm(midpoint, axis=1, keepdims=True)
-    across = right - left
-    across /= np.linalg.norm(across, axis=1, keepdims=True)
-    along = np.cross(midpoint, across)
+    midpoint, across, along = edge_frames(mesh, boundary_edge_indices)
     left_rotation = plate_rotation[plate_ids[edges[:, 0]]]
     right_rotation = plate_rotation[plate_ids[edges[:, 1]]]
     relative_velocity = np.cross(right_rotation - left_rotation, midpoint)

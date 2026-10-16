@@ -3,9 +3,9 @@
 import numpy as np
 
 from src.worldgen.config import WorldgenConfig
+from src.worldgen.elevation import generate_elevation
 from src.worldgen.geometry import Mesh, generate_icosphere
 from src.worldgen.geology import generate_geology
-from src.worldgen.terrain.generate import generate_terrain
 from src.worldgen.model import GeneratedWorld
 
 
@@ -15,10 +15,9 @@ def _signed_seed(sequence: np.random.SeedSequence) -> int:
 
 
 def generate_world(config: WorldgenConfig) -> GeneratedWorld:
-    """Generate a seeded spherical mesh and its geology and terrain fields."""
-    magma_noise, plate_sampling, crust_noise, crust_sampling, plate_growth = (
-        np.random.SeedSequence(config.seed).spawn(5)
-    )
+    """Generate a seeded spherical mesh, geology, and elevation fields."""
+    streams = np.random.SeedSequence(config.seed).spawn(11)
+    magma_noise, plate_sampling, crust_noise, crust_sampling, plate_growth = streams[:5]
     vertices, faces = generate_icosphere(config.subdivision_frequency)
     mesh = Mesh(vertices, faces)
     geology = generate_geology(
@@ -26,11 +25,28 @@ def generate_world(config: WorldgenConfig) -> GeneratedWorld:
         config.geology,
         magma_noise_seed=_signed_seed(magma_noise),
         plate_seed_rng=np.random.default_rng(plate_sampling),
+        plate_motion_rng=np.random.default_rng(streams[9]),
         plate_noise_seed=_signed_seed(plate_growth),
         crust_noise_seed=_signed_seed(crust_noise),
         crust_rng=np.random.default_rng(crust_sampling),
+        density_noise_seed=_signed_seed(streams[8]),
     )
-    terrain = generate_terrain(
-        mesh, geology.crust.continental_mask, config.terrain, config.planet.radius_m
+    elevation = generate_elevation(
+        mesh,
+        config.elevation,
+        config.planet.radius_m,
+        crust=geology.crust,
+        plate_ids=geology.plate_ids,
+        boundary_edge_indices=geology.boundary_edge_indices,
+        boundary_sections=geology.boundary_sections,
+        boundary_convergence=geology.boundary_convergence,
+        boundary_divergence=geology.boundary_divergence,
+        noise_seeds=tuple(_signed_seed(stream) for stream in streams[5:8]),
+        arc_noise_seed=_signed_seed(streams[10]),
     )
-    return GeneratedWorld(mesh=mesh, geology=geology, terrain=terrain)
+    return GeneratedWorld(
+        mesh=mesh,
+        geology=geology,
+        elevation=elevation,
+        radius_m=config.planet.radius_m,
+    )

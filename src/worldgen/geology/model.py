@@ -1,8 +1,14 @@
 """Generated geology and crust fields aligned with a spherical mesh."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from src.worldgen.geology.boundary_sections import BoundarySections
 
 
 @dataclass(frozen=True, slots=True)
@@ -12,6 +18,9 @@ class CrustResult:
     continental_regions: np.ndarray
     continental_mask: np.ndarray
     shaping_field: np.ndarray
+    effective_density: np.ndarray
+    density_anomaly: np.ndarray
+    region_effective_density: np.ndarray
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,4 +44,5 @@ class GeologyResult:
     boundary_convergence: np.ndarray
     boundary_divergence: np.ndarray
     boundary_shear: np.ndarray
+    boundary_sections: BoundarySections
     crust: CrustResult

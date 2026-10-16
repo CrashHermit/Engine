@@ -30,3 +30,23 @@ def fbm(
         amplitude *= persistence
         frequency *= lacunarity
     return values
+
+
+def noise_multiplier(
+    positions: np.ndarray,
+    *,
+    seed: int,
+    frequency: float,
+    strength: float,
+) -> np.ndarray:
+    """Return a seeded broad noise multiplier around one."""
+    noise = fbm(
+        positions,
+        seed=seed,
+        octaves=1,
+        base_frequency=frequency,
+        lacunarity=2.0,
+        persistence=0.5,
+    )
+    return 1.0 + strength * noise
+    return values

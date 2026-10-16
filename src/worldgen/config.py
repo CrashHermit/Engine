@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 from src.worldgen.geology.config import GeologyConfig
-from src.worldgen.terrain.config import TerrainConfig
+from src.worldgen.elevation.config import ElevationConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -14,7 +14,7 @@ class PlanetConfig:
 @dataclass(frozen=True, slots=True)
 class WorldgenConfig:
     seed: int = 123
-    subdivision_frequency: int = 20
+    subdivision_frequency: int = 40
     geology: GeologyConfig = field(default_factory=GeologyConfig)
-    terrain: TerrainConfig = field(default_factory=TerrainConfig)
+    elevation: ElevationConfig = field(default_factory=ElevationConfig)
     planet: PlanetConfig = field(default_factory=PlanetConfig)

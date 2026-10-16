@@ -48,3 +48,16 @@ def test_generation_does_not_change_global_numpy_random_state() -> None:
     assert before[0] == after[0]
     np.testing.assert_array_equal(before[1], after[1])
     assert before[2:] == after[2:]
+
+
+def test_plate_motion_stream_is_appended_after_existing_worldgen_streams():
+    seed = 314159
+    previous_streams = np.random.SeedSequence(seed).spawn(9)
+    current_streams = np.random.SeedSequence(seed).spawn(10)
+    for previous, current in zip(previous_streams, current_streams[:9]):
+        np.testing.assert_array_equal(
+            previous.generate_state(4), current.generate_state(4)
+        )
+    assert not np.array_equal(
+        current_streams[9].generate_state(4), current_streams[0].generate_state(4)
+    )
