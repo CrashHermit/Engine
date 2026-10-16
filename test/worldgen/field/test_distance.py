@@ -3,6 +3,7 @@ import numpy as np
 from src.worldgen.field.distance import (
     multi_source_distances,
     nearest_source_distances,
+    weighted_adjacency,
 )
 from src.worldgen.geometry.mesh import Mesh
 
@@ -41,8 +42,40 @@ def test_multi_source_distances_leave_empty_sources_unreachable() -> None:
         np.ones(len(mesh.edges)),
         np.zeros(len(mesh.vertices), dtype=np.int64),
     )
-
     assert np.all(np.isinf(distances))
+
+
+def test_arbitrary_edge_weights_are_rebuilt_for_each_distance_call() -> None:
+    mesh = Mesh(
+        np.array(
+            [
+                [1.0, 0.0, 0.0],
+                [0.0, 1.0, 0.0],
+                [0.0, 0.0, 1.0],
+            ]
+        ),
+        np.array([[0, 1, 2]]),
+    )
+    first_lengths = np.array([2.0, 7.0, 3.0])
+    second_lengths = np.array([11.0, 5.0, 13.0])
+
+    first_adjacency = weighted_adjacency(mesh, first_lengths)
+    second_adjacency = weighted_adjacency(mesh, second_lengths)
+    assert first_adjacency[0] == [(1, 2.0), (2, 7.0)]
+    assert second_adjacency[0] == [(1, 11.0), (2, 5.0)]
+
+    sources = np.array([0])
+    initial_distances = np.array([0.0])
+    labels = np.zeros(len(mesh.vertices), dtype=np.int64)
+    first_distances = multi_source_distances(
+        mesh, sources, initial_distances, first_lengths, labels
+    )
+    second_distances = multi_source_distances(
+        mesh, sources, initial_distances, second_lengths, labels
+    )
+
+    np.testing.assert_array_equal(first_distances, [0.0, 2.0, 5.0])
+    np.testing.assert_array_equal(second_distances, [0.0, 11.0, 5.0])
 
 
 def test_nearest_source_distances_ties_offsets_cutoff_and_regions() -> None:

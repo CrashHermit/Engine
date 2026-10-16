@@ -11,9 +11,9 @@ from src.worldgen.elevation.config import (
     DivergenceConfig,
     ElevationConfig,
     SubductionConfig,
+    TransformConfig,
 )
 from src.worldgen.elevation.deformation import tectonic_relief
-from src.worldgen.geometry.spherical import edge_lengths_percent
 from src.worldgen.elevation.generate import generate_elevation
 from src.worldgen.elevation.profiles import (
     divergent_profile,
@@ -31,6 +31,8 @@ def _relief(
     height_percent=0.03,
     divergence_width_percent=1.5,
     divergence_height_percent=0.03,
+    transform_width_percent=8.0,
+    transform_height_percent=0.0,
     arc_variation=None,
     **crest_settings,
 ):
@@ -47,6 +49,10 @@ def _relief(
             width_percent=divergence_width_percent,
             height_percent=divergence_height_percent,
         ),
+        transform=TransformConfig(
+            width_percent=transform_width_percent,
+            height_percent=transform_height_percent,
+        ),
     )
     return tectonic_relief(
         world.mesh,
@@ -58,6 +64,7 @@ def _relief(
         boundary_sections=geology.boundary_sections,
         boundary_convergence=geology.boundary_convergence,
         boundary_divergence=geology.boundary_divergence,
+        boundary_shear=geology.boundary_shear,
         arc_variation=(
             np.ones(len(world.mesh.vertices))
             if arc_variation is None
@@ -104,10 +111,18 @@ def _source_distance(world, source_edge, target, plate, *, initial, lengths):
     return float("inf")
 
 
-def _motion_geology(world, section_id: int, motion: float, *, divergent: bool = False):
+def _motion_geology(
+    world,
+    section_id: int,
+    motion: float,
+    *,
+    divergent: bool = False,
+    shear: float | None = None,
+):
     geology = world.geology
     convergence = np.zeros_like(geology.boundary_convergence)
     divergence = np.zeros_like(geology.boundary_divergence)
+    boundary_shear = np.zeros_like(geology.boundary_shear)
     selected = int(
         np.flatnonzero(geology.boundary_sections.edge_section_ids == section_id)[0]
     )
@@ -115,10 +130,13 @@ def _motion_geology(world, section_id: int, motion: float, *, divergent: bool = 
         divergence[selected] = motion
     else:
         convergence[selected] = motion
+    if shear is not None:
+        boundary_shear[selected] = shear
     return replace(
         geology,
         boundary_convergence=convergence,
         boundary_divergence=divergence,
+        boundary_shear=boundary_shear,
     ), selected
 
 
@@ -198,6 +216,105 @@ def test_divergence_rifts_continents_and_builds_oceanic_ridges():
         )
         assert relief[vertex] * expected_sign > 0.0
     np.testing.assert_allclose(_relief(world, geology, world.radius_m * 2), relief * 2)
+
+
+def test_transform_restraining_and_releasing_relief_acts_on_both_boundary_sides():
+    world = _world()
+    sections = world.geology.boundary_sections
+    collision = int(np.flatnonzero(np.all(sections.continental_sides, axis=1))[0])
+    for motion, shear, sign in ((1.0, 1.0, 1.0), (-1.0, 1.0, -1.0)):
+        geology, selected = _motion_geology(world, collision, motion, shear=shear)
+        relief = _relief(
+            world,
+            geology,
+            width_percent=0.0,
+            divergence_width_percent=0.0,
+            transform_height_percent=0.05,
+            transform_width_percent=8.0,
+        )
+        edge = world.mesh.edges[geology.boundary_edge_indices[selected]]
+        assert np.all(relief[edge] * sign > 0.0)
+
+
+def test_transform_requires_both_normal_motion_and_shear():
+    world = _world()
+    collision = int(
+        np.flatnonzero(
+            np.all(world.geology.boundary_sections.continental_sides, axis=1)
+        )[0]
+    )
+    for motion, shear in ((0.0, 1.0), (1.0, 0.0)):
+        geology, _ = _motion_geology(world, collision, motion, shear=shear)
+        relief = _relief(
+            world,
+            geology,
+            width_percent=0.0,
+            divergence_width_percent=0.0,
+            transform_height_percent=0.05,
+            transform_width_percent=8.0,
+        )
+        np.testing.assert_array_equal(relief, np.zeros(len(world.mesh.vertices)))
+
+
+def test_transform_strength_scales_without_world_max_normalization():
+    world = _world()
+    collision = int(
+        np.flatnonzero(
+            np.all(world.geology.boundary_sections.continental_sides, axis=1)
+        )[0]
+    )
+    first, selected = _motion_geology(world, collision, 1.0, shear=1.0)
+    second, _ = _motion_geology(world, collision, 2.0, shear=1.0)
+    kwargs = dict(
+        width_percent=0.0,
+        divergence_width_percent=0.0,
+        transform_height_percent=0.05,
+        transform_width_percent=8.0,
+    )
+    first_relief = _relief(world, first, **kwargs)
+    second_relief = _relief(world, second, **kwargs)
+    edge = world.mesh.edges[first.boundary_edge_indices[selected]]
+    np.testing.assert_allclose(second_relief[edge], first_relief[edge] * (4.0 / 3.0))
+
+
+def test_transform_respects_source_plate_and_crust_regions():
+    world = _world()
+    sections = world.geology.boundary_sections
+    collision = int(np.flatnonzero(np.all(sections.continental_sides, axis=1))[0])
+    geology, selected = _motion_geology(world, collision, 1.0, shear=1.0)
+    relief = _relief(
+        world,
+        geology,
+        width_percent=0.0,
+        divergence_width_percent=0.0,
+        transform_width_percent=8.0,
+        transform_height_percent=0.05,
+    )
+    edge = world.mesh.edges[geology.boundary_edge_indices[selected]]
+    assert np.all(relief[edge] > 0.0)
+    source_plates = sections.plate_pairs[collision]
+    source_region = (
+        np.isin(geology.plate_ids, source_plates) & geology.crust.continental_mask
+    )
+    np.testing.assert_array_equal(
+        relief[~source_region],
+        np.zeros(np.count_nonzero(~source_region)),
+    )
+
+
+def test_disabled_transform_preserves_nontransform_relief():
+    world = _world()
+    collision = int(
+        np.flatnonzero(
+            np.all(world.geology.boundary_sections.continental_sides, axis=1)
+        )[0]
+    )
+    without_shear, _ = _motion_geology(world, collision, 1.0, shear=0.0)
+    with_shear, _ = _motion_geology(world, collision, 1.0, shear=1.0)
+    np.testing.assert_array_equal(
+        _relief(world, without_shear),
+        _relief(world, with_shear),
+    )
 
 
 def test_convergence_settings_do_not_change_divergent_relief():
@@ -289,7 +406,7 @@ def test_nearest_divergent_source_prevents_farther_oceanic_flanks_filling_axis()
     primary_edge_index = int(world.geology.boundary_edge_indices[selected])
     target = int(primary_edge[0])
     plate = int(world.geology.plate_ids[target])
-    lengths = edge_lengths_percent(world.mesh)
+    lengths = world.mesh.edge_lengths_percent
     primary_distance = float(lengths[primary_edge_index]) * 0.5
     secondary = next(
         int(index)
@@ -343,16 +460,48 @@ def test_nearest_divergent_source_prevents_farther_oceanic_flanks_filling_axis()
 
 def test_subduction_profiles_trench_arc_forearc_and_compact_support():
     width = 4.0
-    trench = subduction_profile(0.0, width, True)
-    forearc = subduction_profile(width * 0.2, width, False)
-    arc = subduction_profile(width * 0.25, width, False)
-    outside = subduction_profile(width, width, False)
-    beyond = subduction_profile(width * 1.1, width, False)
+    trench = subduction_profile(0.0, width)
+    forearc = subduction_profile(width * 0.2, width)
+    arc = subduction_profile(width * 0.25, width)
+    outside = subduction_profile(width, width)
+    beyond = subduction_profile(width * 1.1, width)
     assert trench < 0.0
     assert forearc < arc
     assert arc > 0.0
     assert outside == 0.0
     assert beyond == 0.0
+    assert subduction_profile(-width, width) == 0.0
+
+
+def test_subduction_trench_is_continuous_from_both_sides_despite_arc_variation():
+    for width in (1.0, 4.0):
+        for arc_width in (0.2, 0.4):
+            for variation in (0.0, 1.0, 2.5):
+                values = [
+                    subduction_profile(
+                        distance * width,
+                        width,
+                        arc_width_fraction=arc_width,
+                        arc_variation=variation,
+                    )
+                    for distance in (-1e-7, 0.0, 1e-7)
+                ]
+                np.testing.assert_allclose(values, [-1.0, -1.0, -1.0], atol=1e-10)
+
+
+def test_arc_variation_preserves_trench_and_forearc_but_changes_arc_peak():
+    width = 4.0
+    for distance in (-0.1, 0.0, 0.025):
+        assert subduction_profile(distance * width, width, arc_variation=0.0) == (
+            subduction_profile(distance * width, width, arc_variation=2.0)
+        )
+    assert subduction_profile(width * 0.25, width, arc_variation=0.0) == 0.0
+    np.testing.assert_allclose(
+        subduction_profile(width * 0.25, width, arc_variation=2.0),
+        2.0 * subduction_profile(width * 0.25, width),
+    )
+    forearc = [subduction_profile(d * width, width) for d in np.linspace(0, 0.25, 51)]
+    assert np.all(np.diff(forearc) >= 0.0)
 
 
 def test_arc_variation_changes_only_overriding_subduction_relief():
@@ -367,12 +516,19 @@ def test_arc_variation_changes_only_overriding_subduction_relief():
         if sections.subducting_plate_ids[i] in sections.plate_pairs[i]
     )
     geology, selected = _motion_geology(world, section_id, 1.0)
-    baseline = _relief(world, geology)
-    varied = _relief(world, geology, arc_variation=np.zeros(len(world.mesh.vertices)))
+    baseline = _relief(world, geology, width_percent=8.0)
+    varied = _relief(
+        world,
+        geology,
+        width_percent=8.0,
+        arc_variation=np.zeros(len(world.mesh.vertices)),
+    )
     edge = world.mesh.edges[geology.boundary_edge_indices[selected]]
     subducting = int(sections.subducting_plate_ids[section_id])
     trench_vertex = next(int(v) for v in edge if geology.plate_ids[v] == subducting)
     assert varied[trench_vertex] == baseline[trench_vertex]
+    assert np.all(baseline[edge] < 0.0)
+    np.testing.assert_array_equal(varied[edge], baseline[edge])
     assert np.any(varied != baseline)
 
 
@@ -438,15 +594,21 @@ def test_final_land_mask_uses_combined_elevation_and_ranges_cover_relief():
         boundary_sections=world.geology.boundary_sections,
         boundary_convergence=world.geology.boundary_convergence,
         boundary_divergence=world.geology.boundary_divergence,
+        boundary_shear=world.geology.boundary_shear,
         noise_seeds=(1, 2, 3),
         arc_noise_seed=4,
+        hotspots=world.geology.hotspots,
     )
     np.testing.assert_array_equal(
-        terrain.elevation, terrain.base_elevation + terrain.tectonic_relief
+        terrain.elevation,
+        terrain.base_elevation + terrain.tectonic_relief + terrain.volcanic_relief,
     )
     np.testing.assert_array_equal(terrain.land_mask, terrain.elevation >= 0.0)
     assert terrain.elevation_range_m[0] <= terrain.elevation.min()
     assert terrain.elevation_range_m[1] >= terrain.elevation.max()
+    assert terrain.elevation_range_m[1] >= (
+        terrain.base_elevation_range_m[1] + terrain.volcanic_relief.max()
+    )
     assert terrain.base_elevation_range_m[0] <= terrain.base_elevation.min()
     assert terrain.base_elevation_range_m[1] >= terrain.base_elevation.max()
 
@@ -457,6 +619,7 @@ def test_zero_motion_produces_no_tectonic_relief():
         world.geology,
         boundary_convergence=np.zeros_like(world.geology.boundary_convergence),
         boundary_divergence=np.zeros_like(world.geology.boundary_divergence),
+        boundary_shear=np.zeros_like(world.geology.boundary_shear),
     )
     relief = _relief(world, geology)
     np.testing.assert_array_equal(relief, np.zeros(len(world.mesh.vertices)))

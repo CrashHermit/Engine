@@ -5,7 +5,6 @@ import numpy as np
 from src.worldgen.config import PlanetConfig, WorldgenConfig
 from src.worldgen.generate import generate_world
 from src.worldgen.geometry import generate_icosphere
-from src.worldgen.geometry.spherical import edge_lengths_percent
 from src.worldgen.elevation.config import CoastalWidthConfig, ElevationConfig
 from src.worldgen.elevation.coastal import _base_elevation, _sample_width
 
@@ -109,7 +108,7 @@ def test_margin_distances_have_class_signs_and_start_half_edge_lengths() -> None
     mesh = world.mesh
     mask = world.geology.crust.continental_mask
     terrain = world.elevation
-    lengths = edge_lengths_percent(mesh)
+    lengths = mesh.edge_lengths_percent
 
     assert np.all(terrain.margin_distance[mask] > 0)
     assert np.all(terrain.margin_distance[~mask] < 0)
@@ -122,6 +121,7 @@ def test_margin_distances_have_class_signs_and_start_half_edge_lengths() -> None
     assert not terrain.base_elevation.flags.writeable
     assert not terrain.tectonic_relief.flags.writeable
     assert not terrain.elevation.flags.writeable
+    assert not terrain.volcanic_relief.flags.writeable
     assert not terrain.land_mask.flags.writeable
     assert not terrain.crust_boundary_edge_indices.flags.writeable
 
@@ -171,6 +171,10 @@ def test_radius_scales_elevation_without_changing_geography() -> None:
     np.testing.assert_allclose(
         larger.elevation.base_elevation,
         first.elevation.base_elevation * 2.0,
+    )
+    np.testing.assert_allclose(
+        larger.elevation.volcanic_relief,
+        first.elevation.volcanic_relief * 2.0,
     )
 
 

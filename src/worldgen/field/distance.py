@@ -1,6 +1,7 @@
 """Graph distance propagation helpers."""
 
 import heapq
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -11,22 +12,21 @@ def weighted_adjacency(
     mesh: Mesh, edge_lengths: np.ndarray
 ) -> list[list[tuple[int, float]]]:
     """Return sorted mesh neighbors paired with their edge lengths."""
-    edge_lookup = {
-        (int(left), int(right)): index for index, (left, right) in enumerate(mesh.edges)
-    }
     adjacency: list[list[tuple[int, float]]] = [[] for _ in range(len(mesh.vertices))]
     for vertex, neighbors in enumerate(adjacency):
-        start = mesh.neighbor_offsets[vertex]
-        end = mesh.neighbor_offsets[vertex + 1]
-        for neighbor_value in mesh.neighbor_indices[start:end]:
+        start = int(mesh.neighbor_offsets[vertex])
+        end = int(mesh.neighbor_offsets[vertex + 1])
+        for neighbor_value, edge_index in zip(
+            mesh.neighbor_indices[start:end],
+            mesh.neighbor_edge_indices[start:end],
+        ):
             neighbor = int(neighbor_value)
-            edge = (min(vertex, neighbor), max(vertex, neighbor))
-            neighbors.append((neighbor, float(edge_lengths[edge_lookup[edge]])))
+            neighbors.append((neighbor, float(edge_lengths[edge_index])))
     return adjacency
 
 
 def nearest_source_distances(
-    adjacency: list[list[tuple[int, float]]],
+    adjacency: Sequence[Sequence[tuple[int, float]]],
     source_indices: np.ndarray,
     source_distances: np.ndarray,
     source_ids: np.ndarray,
@@ -82,10 +82,12 @@ def multi_source_distances(
     source_distances: np.ndarray,
     edge_lengths: np.ndarray,
     region_ids: np.ndarray,
+    *,
+    adjacency: Sequence[Sequence[tuple[int, float]]] | None = None,
 ) -> np.ndarray:
     """Propagate shortest distances without crossing region labels."""
     distances, _ = nearest_source_distances(
-        weighted_adjacency(mesh, edge_lengths),
+        adjacency if adjacency is not None else weighted_adjacency(mesh, edge_lengths),
         source_indices,
         source_distances,
         source_indices,

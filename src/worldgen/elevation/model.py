@@ -9,6 +9,7 @@ import numpy as np
 class ElevationResult:
     base_elevation: np.ndarray
     tectonic_relief: np.ndarray
+    volcanic_relief: np.ndarray
     elevation: np.ndarray
     margin_distance: np.ndarray
     land_mask: np.ndarray

@@ -9,9 +9,3 @@ def interpolate_values(values: np.ndarray, domain: tuple[float, float]) -> np.nd
     values_max = values.max()
     normalized = (values - values_min) / (values_max - values_min)
     return normalized * (domain[1] - domain[0]) + domain[0]
-
-
-def scale_vector_magnitudes(vectors: np.ndarray) -> np.ndarray:
-    """Scale all vector magnitudes by the largest magnitude."""
-    magnitudes = np.linalg.norm(vectors, axis=1, keepdims=True)
-    return vectors / magnitudes.max()

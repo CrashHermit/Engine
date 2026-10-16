@@ -13,25 +13,50 @@ def test_world_generation_is_seeded_and_complete() -> None:
     np.testing.assert_array_equal(first.mesh.vertices, second.mesh.vertices)
     np.testing.assert_array_equal(first.mesh.faces, second.mesh.faces)
     np.testing.assert_array_equal(
-        first.geology.magma_intensity, second.geology.magma_intensity
+        first.geology.hotspots.potential, second.geology.hotspots.potential
     )
     np.testing.assert_array_equal(first.geology.plate_ids, second.geology.plate_ids)
     assert not np.array_equal(
-        first.geology.magma_intensity, other.geology.magma_intensity
+        first.geology.hotspots.potential, other.geology.hotspots.potential
     )
     assert len(np.unique(first.geology.plate_ids)) == config.geology.plates.plate_count
     assert np.all(first.geology.plate_ids >= 0)
     assert np.all(first.geology.plate_ids < config.geology.plates.plate_count)
+    assert not first.geology.hotspots.potential.flags.writeable
 
 
-def test_geology_velocity_fields_are_tangent_and_boundaries_are_exact() -> None:
+def test_default_priority_flood_regions_are_connected_and_seed_owned():
+    config = WorldgenConfig(seed=123, subdivision_frequency=3)
+    world = generate_world(config)
+    geology = world.geology
+    plate_count = config.geology.plates.plate_count
+    np.testing.assert_array_equal(
+        geology.plate_ids[geology.seed_indices], np.arange(plate_count)
+    )
+
+    neighbors = [[] for _ in range(len(world.mesh.vertices))]
+    for left, right in world.mesh.edges:
+        neighbors[int(left)].append(int(right))
+        neighbors[int(right)].append(int(left))
+    for plate in range(plate_count):
+        cells = np.flatnonzero(geology.plate_ids == plate)
+        visited = {int(cells[0])}
+        stack = [int(cells[0])]
+        while stack:
+            current = stack.pop()
+            for neighbor in neighbors[current]:
+                if geology.plate_ids[neighbor] == plate and neighbor not in visited:
+                    visited.add(neighbor)
+                    stack.append(neighbor)
+        assert visited == set(cells)
+
+
+def test_plate_velocity_is_tangent_and_boundaries_are_exact() -> None:
     world = generate_world(WorldgenConfig(seed=123, subdivision_frequency=3))
     mesh = world.mesh
     geology = world.geology
 
-    magma_dot = np.sum(geology.magma_velocity * mesh.vertices, axis=1)
     plate_dot = np.sum(geology.plate_velocity * mesh.vertices, axis=1)
-    assert np.allclose(magma_dot, 0.0)
     assert np.allclose(plate_dot, 0.0)
     expected_boundaries = np.flatnonzero(
         geology.plate_ids[mesh.edges[:, 0]] != geology.plate_ids[mesh.edges[:, 1]]

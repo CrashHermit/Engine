@@ -7,7 +7,6 @@ from src.worldgen.geology.boundary_sections import (
     section_plate_boundaries,
 )
 from src.worldgen.geometry.mesh import Mesh
-from src.worldgen.geometry.topology import edge_face_indices
 from src.worldgen.geology.model import CrustResult
 
 
@@ -70,7 +69,7 @@ def test_sections_use_dual_edge_length_weighting_and_ordered_plate_sides():
     assert result.plate_pairs.tolist() == [[2, 9]]
     assert result.continental_sides.tolist() == [[True, False]]
     assert result.subducting_plate_ids.tolist() == [9]
-    incidence = edge_face_indices(mesh)
+    incidence = mesh.edge_face_indices
     lengths = np.array(
         [
             np.arccos(np.clip(np.dot(*mesh.dual_vertices[incidence[e]]), -1, 1))

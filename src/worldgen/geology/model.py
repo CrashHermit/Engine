@@ -12,6 +12,15 @@ if TYPE_CHECKING:
 
 
 @dataclass(frozen=True, slots=True)
+class HotspotResult:
+    seed_indices: np.ndarray
+    plate_ids: np.ndarray
+    widths_percent: np.ndarray
+    heights_percent: np.ndarray
+    potential: np.ndarray
+
+
+@dataclass(frozen=True, slots=True)
 class CrustResult:
     region_ids: np.ndarray
     seed_indices: np.ndarray
@@ -34,10 +43,8 @@ class PlateResult:
 
 @dataclass(frozen=True, slots=True)
 class GeologyResult:
-    magma_intensity: np.ndarray
     seed_indices: np.ndarray
     plate_ids: np.ndarray
-    magma_velocity: np.ndarray
     plate_rotation: np.ndarray
     plate_velocity: np.ndarray
     boundary_edge_indices: np.ndarray
@@ -45,4 +52,5 @@ class GeologyResult:
     boundary_divergence: np.ndarray
     boundary_shear: np.ndarray
     boundary_sections: BoundarySections
+    hotspots: HotspotResult
     crust: CrustResult

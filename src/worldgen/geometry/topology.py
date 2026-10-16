@@ -7,23 +7,6 @@ import numpy as np
 from src.worldgen.geometry.mesh import Mesh
 
 
-def edge_face_indices(mesh: Mesh) -> tuple[np.ndarray, ...]:
-    """Return sorted primal face indices incident to each mesh edge."""
-    incident: dict[tuple[int, int], list[int]] = defaultdict(list)
-    for face_index, face in enumerate(mesh.faces):
-        for index in range(3):
-            left = int(face[index])
-            right = int(face[(index + 1) % 3])
-            incident[(min(left, right), max(left, right))].append(face_index)
-    result = []
-    for left, right in mesh.edges:
-        values = np.asarray(incident[(int(left), int(right))], dtype=np.int64)
-        values.sort()
-        values.setflags(write=False)
-        result.append(values)
-    return tuple(result)
-
-
 def boundary_components(
     mesh: Mesh, edge_indices: np.ndarray, labels: np.ndarray
 ) -> np.ndarray:
@@ -31,7 +14,7 @@ def boundary_components(
     edge_indices = np.asarray(edge_indices, dtype=np.int64)
     if len(edge_indices) == 0:
         return np.empty(0, dtype=np.int64)
-    incidence = edge_face_indices(mesh)
+    incidence = mesh.edge_face_indices
     by_face: dict[int, list[int]] = defaultdict(list)
     for selected, edge_value in enumerate(edge_indices):
         for face in incidence[int(edge_value)]:

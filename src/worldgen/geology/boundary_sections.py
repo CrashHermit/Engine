@@ -9,7 +9,7 @@ import numpy as np
 
 from src.worldgen.geometry.mesh import Mesh
 from src.worldgen.geometry.spherical import angular_distances
-from src.worldgen.geometry.topology import boundary_components, edge_face_indices
+from src.worldgen.geometry.topology import boundary_components
 
 if TYPE_CHECKING:
     from src.worldgen.geology.model import CrustResult
@@ -69,7 +69,7 @@ def section_plate_boundaries(
 
 
 def _dual_edge_lengths(mesh: Mesh, edge_indices: np.ndarray) -> np.ndarray:
-    incidence = edge_face_indices(mesh)
+    incidence = mesh.edge_face_indices
     lengths = np.empty(len(edge_indices), dtype=np.float64)
     for position, edge_value in enumerate(edge_indices):
         faces = incidence[int(edge_value)]

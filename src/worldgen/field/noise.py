@@ -1,6 +1,18 @@
 """Seeded OpenSimplex scalar fields."""
 
+from dataclasses import dataclass
+
 import numpy as np
+
+from src.worldgen.utilities.normalize import interpolate_values
+
+
+@dataclass(frozen=True, slots=True)
+class NoiseConfig:
+    octaves: int = 5
+    base_frequency: float = 0.3
+    lacunarity: float = 3.0
+    persistence: float = 0.5
 
 
 def fbm(
@@ -32,6 +44,25 @@ def fbm(
     return values
 
 
+def normalized_noise(
+    positions: np.ndarray, config: NoiseConfig, *, seed: int
+) -> np.ndarray:
+    """Return the sampled noise remapped to [0, 1] and marked read-only."""
+    values = interpolate_values(
+        fbm(
+            positions,
+            seed=seed,
+            octaves=config.octaves,
+            base_frequency=config.base_frequency,
+            lacunarity=config.lacunarity,
+            persistence=config.persistence,
+        ),
+        (0.0, 1.0),
+    )
+    values.setflags(write=False)
+    return values
+
+
 def noise_multiplier(
     positions: np.ndarray,
     *,
@@ -49,4 +80,3 @@ def noise_multiplier(
         persistence=0.5,
     )
     return 1.0 + strength * noise
-    return values

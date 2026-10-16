@@ -35,8 +35,9 @@ uv run python -m src.worldgen --layer elevation --terrain-relief \
 ```
 
 These display limits do not modify heights or sea level. Without an override,
-the viewer uses the configured conservative bounds. Layer data and colour policy
-live in `render/layers.py`; PyVista actors and controls stay in `render/viewer.py`.
+the viewer uses the configured conservative bounds. `LayerStyle` in
+`render/layers.py` owns scalar values, colours, ranges, titles and unit labels;
+PyVista actors and controls stay in `render/viewer.py`.
 
 
 The interactive window has clickable layer selectors on the left. One layer
@@ -45,10 +46,11 @@ The “hex outlines” checkbox toggles cell edges and retains its setting acros
 layer changes. Outlines are on by default; use `--no-hex-edges` to start with them
 hidden. This changes only the edge overlay, not cell colours, surface geometry,
 or tectonic boundary diagnostic lines.
-Available layers include `plates`, `intensity`, `magma`, `velocity`,
+Available layers include `plates`, `volcanic-potential`, `velocity`,
 `convergence`, `divergence`, `shear`, `crust`, `crust-regions`, `crust-field`,
 `crust-density`, `crust-region-density`, `boundary-sections`,
-`subducting-plate`, `base-elevation`, `tectonic-relief`, `elevation`, and `margin-distance`. `crust` shows
+`subducting-plate`, `base-elevation`, `tectonic-relief`, `volcanism`, `elevation`,
+and `margin-distance`. `crust` shows
 oceanic material in blue and continental material in tan; `crust-regions` shows
 region ownership; density layers show dimensionless effective-density proxies.
 Boundary sections retain geometric/material continuity and a preferred subducting side,
@@ -74,11 +76,12 @@ This is competitive, graph-based flooding, not ordinary Voronoi assignment or
 a globally optimal minimax partition. Every region stays connected to its seed.
 Ownership remains discrete; changing mesh resolution can change the geography.
 
-Plate and crust growth noise are independent. Magma does not drive plate motion.
-It remains available as a diagnostic field and supplies traversal costs when
-Dijkstra plate growth is selected; priority flooding uses its independent fields.
-Existing sampling streams are preserved, with independent plate-motion randomness
-appended as SeedSequence child 9.
+Plate growth, crust growth, and volcanic potential use independent fields.
+Priority flooding remains the default: each plate or crust seed uses its own
+noise-biased priority map, configured by that generator's `flood` settings.
+The retained Dijkstra plate option samples a plate-owned cost field instead.
+Existing random streams retain their roles; plate motion uses child 9,
+volcanic potential uses child 0, and hotspot source sampling uses child 11.
 
 Each plate receives a seeded random tangent direction at its normalized mean
 cell position and an angular speed uniformly sampled between
@@ -89,7 +92,7 @@ CLI controls are `--plate-min-speed`, `--plate-max-speed`, and
 `--plate-motion-scale`. Cell velocities and boundary interactions use the same
 rotations without normalization. Arrow size remains a separate `--arrow-scale`
 display setting. These are procedural units, not physical force or metres per
-second. The previous magma-fit rotation method has been removed.
+second.
 
 
 `PlateConfig.flood` and `CrustConfig.flood` each contain a `PriorityFloodConfig`:
@@ -143,17 +146,21 @@ disable buoyancy. This is a procedural buoyancy response, not physical isostasy;
 crust thickness and thermal history are not modeled.
 
 
-For Dijkstra, plates use magma intensity and independent crust regions use their
-own shaping field to set spherical-distance traversal costs. Each edge's geometric
+For Dijkstra, plates use `PlateConfig.field` and crust regions use
+`CrustConfig.field`, each a `NoiseConfig`, to set spherical-distance traversal costs.
+Each edge's geometric
 distance is multiplied by `1 + irregularity_strength * average(endpoint field
-values)`. The generic Dijkstra partitioner and its original cost model are unchanged.
-`WorldgenConfig.geology` composes `MagmaConfig`, `PlateConfig`, and `CrustConfig`
-as `magma`, `plates`, and `crust` respectively. Crust defaults to 4 continental
-and 11 oceanic seeds. Its Dijkstra noise settings remain `octaves=3`,
+values)`. The generic Dijkstra partitioner and cost model are unchanged, but its
+plate cost field is now independent of volcanic potential and uses the plate
+growth noise stream. This can change maps generated with the Dijkstra option;
+default priority-flood maps are preserved.
+`WorldgenConfig.geology` composes `PlateConfig`, `CrustConfig`, and `HotspotConfig`
+as `plates`, `crust`, and `hotspots`. Crust defaults to 18 continental and 33
+oceanic seeds. `CrustConfig.field` defaults remain `octaves=3`,
 `base_frequency=1.0`, `lacunarity=2.0`, and `persistence=0.35`; the separate
 `flood` settings apply to priority flooding. Seeds are jointly spaced and randomly
 assigned exactly those type counts; cells inherit their region's type.
-`GeneratedWorld.geology` retains the flat magma, plate, and boundary arrays and
+`GeneratedWorld.geology` retains the plate and boundary arrays and
 includes a `crust` result with region IDs, seeds, region types, a continental mask,
 and a read-only normalized `shaping_field`. In flood mode that diagnostic samples
 each cell's winning region priority; it is not a shared noise or arrival-time field.
@@ -166,8 +173,8 @@ Continental collisions combine positive source contributions by maximum, retaini
 the broad uplift and narrow crest. Subduction instead adds a signed nearest-source
 profile: trench on the descending side, offset arc on the overriding side.
 Divergence adds its separate signed response.
-`WorldgenConfig.elevation.deformation` groups three independent process settings:
-`collision`, `subduction`, and `divergence`. Collision and subduction each default
+`WorldgenConfig.elevation.deformation` groups four independent process settings:
+`collision`, `subduction`, `divergence`, and `transform`. Collision and subduction each default
 to `width_percent=2.5` (circumference percentage) and `height_percent=0.15`
 (radius percentage per unit raw interaction strength). Divergence defaults to
 `width_percent=1.0` and `height_percent=0.075`. Width is the reach on each side:
@@ -179,7 +186,8 @@ erosion or volcanic simulation.
 Profile settings live with their process: crest controls under
 `config.elevation.deformation.collision`, trench/arc controls under
 `config.elevation.deformation.subduction`, and ridge/rift controls under
-`config.elevation.deformation.divergence`. There is no duplicate elevation config
+`config.elevation.deformation.divergence`. Transform controls live under
+`config.elevation.deformation.transform`. There is no duplicate elevation config
 under geology and no retained terrain configuration alias.
 Continental collision uplift adds a narrower, squared-taper crest on its broad base.
 `crest_width_fraction=0.3` confines it to the inner 30% of the propagation width
@@ -193,13 +201,21 @@ motion strength and cell distance from the boundary; coarse meshes can miss the
 crest entirely. Use frequency 40 or higher to inspect the narrow component.
 
 Subduction uses `subduction_profile` from `profiles.py`, for both oceanic–oceanic
-and oceanic–continental boundaries. `trench_width_fraction=0.2` confines the
-descending-side trench to the inner fifth of the convergent width.
+and oceanic–continental boundaries. It takes signed distance: negative on the
+descending side, positive on the overriding side. `trench_width_fraction=0.2`
+sets the trench reach on each side of a shared floor at distance zero.
 On the overriding side, a compact smooth arc peaks at `arc_offset_fraction=0.25`
 of that width inland from the boundary, with half-width `arc_width_fraction=0.2`
 and amplitude `arc_height_multiplier=1.5` times the source amplitude.
-The intervening forearc has less uplift than the arc; no collision crest is added.
+The overriding forearc rises continuously from the trench into the arc; no
+collision crest is added. Arc variation multiplies only the volcanic component,
+not the trench or forearc depression. The arc fades to zero at the boundary even
+when its configured support overlaps the trench floor.
 These widths and offsets follow the existing percentage-of-circumference scale.
+`utilities/curves.py` owns generic curve math: `clamp_unit` and
+`smoothstep_scalar` serve per-cell scalar profiles, while NumPy `smoothstep`
+handles coastal and volcanic shield arrays. Scalar profiles avoid array
+operations without changing the clamped cubic curve.
 
 An independent simplex field varies arc heights using `arc_variation_strength=0.6`
 and `arc_noise_frequency=6.0`, sampled on unit-sphere positions without sample
@@ -270,16 +286,75 @@ length. The shelf break lies at the crust boundary; the coastline is offset
 inland by one shelf width. Increasing mesh resolution samples the intended
 widths more finely but does not change their configured scale.
 
+Transform relief combines existing normal and shear boundary motion without a
+discrete transform classification. Closing plus sliding produces restraining
+uplift; opening plus sliding produces a releasing basin. Pure sliding and pure
+normal motion produce no transform contribution. The signed strength is the
+normal component multiplied by the shear fraction of their combined magnitudes;
+it is not normalized against a world maximum.
+The pure `transform_strength` helper computes this coupling for both relief and
+conservative bounds. `transform_relief` owns spatial source propagation.
+
+`TransformConfig` defaults to `width_percent=0.75` of circumference per side
+(approximately 300 km at Earth radius) and `height_percent=0.05` of radius per
+unit coupled strength. A compact smooth profile is evaluated from the nearest
+active transform source within each plate/crust class and added to the existing
+tectonic relief. Set either setting to zero to disable it independently.
+This is a broad procedural transpression/transtension response, not a fault
+mechanics simulation: it uses the sampled local motion components, does not move
+cells sideways, and does not explicitly reconstruct bends or displacement history.
+
+Intraplate volcanism uses `config.geology.hotspots` (`HotspotConfig`).
+It samples 12 spaced interior cell centres by default, outside a plate-boundary
+clearance of 1.25% of circumference. `min_seed_distance=0.3` is a unit-sphere
+chord distance. Placement weights are `1 + potential_bias * potential`, with
+`potential_bias=4.0`; setting the bias to zero removes the field preference.
+Hotspot generation owns `config.geology.hotspots.potential`, a `NoiseConfig`
+with `octaves=5`, `base_frequency=0.3`, `lacunarity=3.0`, and `persistence=0.5`.
+The sampled fBm field is normalized to [0, 1] and retained read-only as
+`world.geology.hotspots.potential`. `PlateConfig.field` uses the same small
+noise-settings type, but samples its independent field only for Dijkstra costs.
+There is no simulated convection or flow-vector stage.
+
+Each source independently samples a shield radius between `min_width_percent=0.5`
+and `max_width_percent=1.0` of circumference, and uplift between
+`min_height_percent=0.03` and `max_height_percent=0.1` of radius. Volcanic potential
+does not multiply the sampled height; density affects only the existing base surface.
+The independent hotspot RNG uses appended SeedSequence child 11, preserving
+all earlier streams. Set `count=0` to disable hotspots.
+
+`geology/hotspots.py` owns source selection and metadata; `elevation/volcanism.py`
+samples compact, smooth shield profiles at spherical cell centres. Contributions
+are confined to the source plate and combine by maximum rather than stacking.
+`world.elevation.volcanic_relief` stores uplift in metres; final elevation is
+base elevation plus tectonic relief plus volcanic relief. Seamounts, ocean islands,
+and continental volcanoes emerge from that sum without a forced sea-level rule.
+This models static volcanic systems, not plume drift or time-evolving island chains.
+
+Use `--layer volcanism` to inspect volcanic uplift alone on the diagnostic globe.
+Use `--layer elevation --terrain-relief --sea-level --no-hex-edges` to see it in
+the final surface. Frequency 80 or higher helps resolve the shield flanks.
+Use `--layer volcanic-potential` to inspect the source-placement field.
+
 Elevation lives in the top-level `src/worldgen/elevation/` package. `coastal.py`
 contains margin distances and the coastal profile; `profiles.py` contains the
-mathematical cross-sections; `collision.py`, `subduction.py`, and `divergence.py`
-apply the respective geological responses. `generate.py` combines the results.
+mathematical cross-sections; `collision.py`, `subduction.py`, `divergence.py`,
+and `transform.py` apply the respective geological responses. `generate.py`
+combines the results; `bounds.py` calculates the conservative elevation ranges.
 The world orchestrator generates geology first, then elevation. Geology owns
 plate/crust structure and boundary motion, not elevation configuration or results.
 Boundary connectivity, density and polarity metadata live in
 `geology/boundary_sections.py`.
-`field/distance.py` owns weighted adjacency and generic nearest-source distance
-propagation, with source identity, label barriers, width cutoffs and deterministic
+`Mesh` lazily caches edge-to-face incidence, CSR-aligned neighbor edge indices,
+edge lengths as percentages of circumference, and geographic weighted adjacency.
+Cached arrays are read-only and geographic adjacency is an immutable tuple of
+tuples. Coastal distances, hotspot clearance, tectonic relief, boundary metadata,
+and rendering reuse the same mesh data rather than rebuilding it.
+`field/distance.py` owns generic nearest-source propagation and supports
+independent, algorithm-specific edge weights. Only geographic percentage-distance
+consumers use the cached geographic graph; Dijkstra growth costs are not replaced
+by that metric. Distance propagation retains source identity, label barriers,
+width cutoffs and deterministic
 ties. Collision preserves its strongest-source envelope rather than replacing it
 with nearest-source semantics.
 Detailed surface terrain, climate, and erosion are not implemented here.

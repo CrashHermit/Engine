@@ -1,6 +1,7 @@
 """Continental collision mountain-belt relief propagation."""
 
 import heapq
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -16,7 +17,7 @@ def collision_relief(
     radius_m: float,
     *,
     lengths: np.ndarray,
-    adjacency: list[list[tuple[int, float]]],
+    adjacency: Sequence[Sequence[tuple[int, float]]],
     crust: np.ndarray,
     plate_ids: np.ndarray,
     boundary_edge_indices: np.ndarray,

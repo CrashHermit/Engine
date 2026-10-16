@@ -3,6 +3,7 @@
 import numpy as np
 
 from src.worldgen.field.cost import field_traversal_cost
+from src.worldgen.field.noise import normalized_noise
 from src.worldgen.field.partition import (
     priority_flood_regions,
     region_boundary_edges,
@@ -18,7 +19,6 @@ from src.worldgen.utilities.sampling import poisson_disk_sample
 def generate_plate_regions(
     mesh: Mesh,
     config: PlateConfig,
-    magma_intensity: np.ndarray,
     *,
     seed_rng: np.random.Generator,
     noise_seed: int,
@@ -33,8 +33,9 @@ def generate_plate_regions(
         )
         plate_ids = priority_flood_regions(mesh, seed_indices, priorities)
     else:
+        plate_field = normalized_noise(mesh.vertices, config.field, seed=noise_seed)
         edge_costs = field_traversal_cost(
-            mesh, magma_intensity, config.irregularity_strength
+            mesh, plate_field, config.irregularity_strength
         )
         plate_ids = weighted_regions(mesh, seed_indices, edge_costs)
     seed_indices.setflags(write=False)
@@ -75,7 +76,6 @@ def calculate_plate_velocity(
 def generate_plates(
     mesh: Mesh,
     config: PlateConfig,
-    magma_intensity: np.ndarray,
     *,
     seed_rng: np.random.Generator,
     plate_motion_rng: np.random.Generator,
@@ -83,7 +83,7 @@ def generate_plates(
 ) -> PlateResult:
     """Generate plate regions, motion, and boundary edge indices."""
     seed_indices, plate_ids = generate_plate_regions(
-        mesh, config, magma_intensity, seed_rng=seed_rng, noise_seed=noise_seed
+        mesh, config, seed_rng=seed_rng, noise_seed=noise_seed
     )
     plate_rotation = generate_plate_rotation(
         mesh, plate_ids, config, rng=plate_motion_rng

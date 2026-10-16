@@ -1,18 +1,27 @@
 """Normalized collision, divergent, and subduction relief profiles."""
 
-from src.worldgen.utilities.curves import smoothstep
+import numpy as np
+
+from src.worldgen.utilities.curves import clamp_unit, smoothstep, smoothstep_scalar
 
 
-def clamp_unit(value: float) -> float:
-    """Clamp a scalar profile coordinate to its unit support interval."""
-    return min(max(value, 0.0), 1.0)
+def shield_profile(distance: np.ndarray | float, width: float) -> np.ndarray | float:
+    """Return compact shield attenuation for a positive support width."""
+    return smoothstep(1.0 - distance / width)
+
+
+def transform_profile(distance: float, width: float) -> float:
+    """Return compact smoothstep attenuation across transform relief width."""
+    if width <= 0.0:
+        return 0.0
+    return smoothstep_scalar(1.0 - distance / width)
 
 
 def collision_profile(
     distance: float, width: float, crest_width_fraction: float
 ) -> tuple[float, float]:
     """Return normalized broad mountain response and squared crest weight."""
-    broad = float(smoothstep(1.0 - distance / width))
+    broad = smoothstep_scalar(1.0 - distance / width)
     crest_weight = max(1.0 - distance / (width * crest_width_fraction), 0.0)
     return broad, crest_weight**2
 
@@ -36,9 +45,9 @@ def divergent_profile(
         return 0.0
     t = clamp_unit(distance / width)
     broad_input = 1.0 - t
-    axial_input = clamp_unit(1.0 - t / axial_width_fraction)
-    broad = broad_input * broad_input * (3.0 - 2.0 * broad_input)
-    axial = axial_input * axial_input * (3.0 - 2.0 * axial_input)
+    axial_input = 1.0 - t / axial_width_fraction
+    broad = smoothstep_scalar(broad_input)
+    axial = smoothstep_scalar(axial_input)
     signed_axial = divergent_response(continental) * axial_depth_multiplier * axial
     if continental:
         shoulders = shoulder_height_multiplier * 4.0 * t * (1.0 - t) * broad
@@ -47,20 +56,29 @@ def divergent_profile(
 
 
 def subduction_profile(
-    distance: float,
+    signed_distance: float,
     width: float,
-    subducting: bool,
     *,
     trench_width_fraction: float = 0.2,
     arc_offset_fraction: float = 0.25,
     arc_width_fraction: float = 0.2,
     arc_height_multiplier: float = 1.5,
+    arc_variation: float = 1.0,
 ) -> float:
-    """Return normalized trench or volcanic-arc relief from a source."""
+    """Return continuous relief: negative distance descends, positive overrides.
+
+    The trench floor is shared at zero. Only the offset volcanic arc varies.
+    """
     if width <= 0.0:
         return 0.0
-    if subducting:
-        return -float(smoothstep(1.0 - distance / (width * trench_width_fraction)))
-    arc_position = distance / width
+    trench = -smoothstep_scalar(
+        1.0 - abs(signed_distance) / (width * trench_width_fraction)
+    )
+    if signed_distance <= 0.0:
+        return trench
+    arc_position = signed_distance / width
     arc_input = 1.0 - abs(arc_position - arc_offset_fraction) / arc_width_fraction
-    return arc_height_multiplier * float(smoothstep(arc_input))
+    # Keep volcanic uplift zero at the trench even if its support overlaps zero.
+    forearc_rise = smoothstep_scalar(arc_position / arc_offset_fraction)
+    arc = arc_height_multiplier * smoothstep_scalar(arc_input) * forearc_rise
+    return trench + arc * arc_variation

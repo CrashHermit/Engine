@@ -13,13 +13,6 @@ def angular_distances(left: np.ndarray, right: np.ndarray) -> np.ndarray:
     )
 
 
-def edge_lengths_percent(mesh: Mesh) -> np.ndarray:
-    """Return mesh edge lengths as percentages of circumference."""
-    left = mesh.vertices[mesh.edges[:, 0]]
-    right = mesh.vertices[mesh.edges[:, 1]]
-    return angular_distances(left, right) * (100.0 / (2.0 * np.pi))
-
-
 def edge_frames(
     mesh: Mesh, edge_indices: np.ndarray
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:

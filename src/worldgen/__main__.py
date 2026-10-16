@@ -5,7 +5,8 @@ from dataclasses import replace
 
 from src.worldgen.config import WorldgenConfig
 from src.worldgen.generate import generate_world
-from src.worldgen.render.viewer import LAYERS, render_geology
+from src.worldgen.render.layers import LAYERS
+from src.worldgen.render.viewer import render_geology
 
 
 def main() -> None:

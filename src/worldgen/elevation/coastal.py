@@ -13,20 +13,20 @@ def _signed_margin_distances(
     mesh: Mesh,
     continental_mask: np.ndarray,
     crust_boundary_edge_indices: np.ndarray,
-    edge_lengths_percent: np.ndarray,
 ) -> np.ndarray:
     """Propagate margin distances through each crust class on the mesh graph."""
     edges = mesh.edges[crust_boundary_edge_indices]
     source_indices = edges.reshape(-1)
     source_distances = np.repeat(
-        edge_lengths_percent[crust_boundary_edge_indices] * 0.5, 2
+        mesh.edge_lengths_percent[crust_boundary_edge_indices] * 0.5, 2
     )
     distances = multi_source_distances(
         mesh,
         source_indices,
         source_distances,
-        edge_lengths_percent,
+        mesh.edge_lengths_percent,
         continental_mask,
+        adjacency=mesh.geographic_adjacency,
     )
     return np.where(continental_mask, distances, -distances)
 

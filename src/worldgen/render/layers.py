@@ -9,8 +9,7 @@ from src.worldgen.model import GeneratedWorld
 
 LAYERS = (
     "plates",
-    "intensity",
-    "magma",
+    "volcanic-potential",
     "velocity",
     "convergence",
     "divergence",
@@ -24,6 +23,7 @@ LAYERS = (
     "subducting-plate",
     "base-elevation",
     "tectonic-relief",
+    "volcanism",
     "elevation",
     "margin-distance",
 )
@@ -33,8 +33,22 @@ LAYERS = (
 class LayerStyle:
     values: np.ndarray
     cmap: object
+    title: str
     clim: tuple[float, float] | None = None
     vectors: np.ndarray | None = None
+
+
+def layer_title(layer: str) -> str:
+    """Return the user-facing scalar-bar title, including units where needed."""
+    if layer in ("base-elevation", "elevation"):
+        return "Elevation (m; sea level 0)"
+    if layer == "volcanism":
+        return "Volcanic uplift (m)"
+    if layer == "margin-distance":
+        return "Margin distance (% circumference; positive continental)"
+    if layer == "crust":
+        return "Crust: 0 oceanic, 1 continental"
+    return layer
 
 
 def elevation_colormap(clim: tuple[float, float]) -> LinearSegmentedColormap:
@@ -57,24 +71,44 @@ def layer_style(
     crust = geology.crust
     elevation = world.elevation
     if layer == "plates":
-        return LayerStyle(geology.plate_ids, "tab20")
-    if layer == "intensity":
-        return LayerStyle(geology.magma_intensity, "viridis", (0, 1))
-    if layer in ("magma", "velocity"):
-        vectors = geology.magma_velocity if layer == "magma" else geology.plate_velocity
-        return LayerStyle(np.linalg.norm(vectors, axis=1), "viridis", (0, 1), vectors)
+        return LayerStyle(geology.plate_ids, "tab20", title=layer_title(layer))
+    if layer == "volcanic-potential":
+        return LayerStyle(
+            geology.hotspots.potential,
+            "viridis",
+            title=layer_title(layer),
+            clim=(0, 1),
+        )
+    if layer == "velocity":
+        vectors = geology.plate_velocity
+        return LayerStyle(
+            np.linalg.norm(vectors, axis=1),
+            "viridis",
+            title=layer_title(layer),
+            clim=(0, 1),
+            vectors=vectors,
+        )
     if layer == "crust":
         return LayerStyle(
-            crust.continental_mask.astype(np.int64), ["royalblue", "tan"], (0, 1)
+            crust.continental_mask.astype(np.int64),
+            ["royalblue", "tan"],
+            title=layer_title(layer),
+            clim=(0, 1),
         )
     if layer == "crust-regions":
-        return LayerStyle(crust.region_ids, "tab20")
+        return LayerStyle(crust.region_ids, "tab20", title=layer_title(layer))
     if layer == "crust-field":
-        return LayerStyle(crust.shaping_field, "viridis", (0, 1))
+        return LayerStyle(
+            crust.shaping_field, "viridis", title=layer_title(layer), clim=(0, 1)
+        )
     if layer == "crust-density":
-        return LayerStyle(crust.effective_density, "viridis")
+        return LayerStyle(crust.effective_density, "viridis", title=layer_title(layer))
     if layer == "crust-region-density":
-        return LayerStyle(crust.region_effective_density[crust.region_ids], "viridis")
+        return LayerStyle(
+            crust.region_effective_density[crust.region_ids],
+            "viridis",
+            title=layer_title(layer),
+        )
     if layer in ("elevation", "base-elevation"):
         values = (
             elevation.elevation if layer == "elevation" else elevation.base_elevation
@@ -88,13 +122,30 @@ def layer_style(
                 else elevation.base_elevation_range_m
             )
         )
-        return LayerStyle(values, elevation_colormap(clim), clim)
+        return LayerStyle(
+            values, elevation_colormap(clim), title=layer_title(layer), clim=clim
+        )
     if layer == "tectonic-relief":
         values = elevation.tectonic_relief
         extent = max(float(np.max(np.abs(values))), 1.0)
-        return LayerStyle(values, "coolwarm", (-extent, extent))
+        return LayerStyle(
+            values,
+            "coolwarm",
+            title=layer_title(layer),
+            clim=(-extent, extent),
+        )
+    if layer == "volcanism":
+        values = elevation.volcanic_relief
+        return LayerStyle(
+            values,
+            "inferno",
+            title=layer_title(layer),
+            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
+        )
     if layer == "margin-distance":
         values = elevation.margin_distance
         extent = np.max(np.abs(values))
-        return LayerStyle(values, "coolwarm", (-extent, extent))
+        return LayerStyle(
+            values, "coolwarm", title=layer_title(layer), clim=(-extent, extent)
+        )
     raise KeyError(layer)

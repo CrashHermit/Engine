@@ -3,9 +3,8 @@
 import numpy as np
 import pyvista as pv
 
-from src.worldgen.geometry.topology import edge_face_indices
 from src.worldgen.model import GeneratedWorld
-from src.worldgen.render.layers import LAYERS, layer_style
+from src.worldgen.render.layers import LAYERS, layer_style, layer_title
 
 
 def _dual_polydata(world: GeneratedWorld) -> pv.PolyData:
@@ -23,7 +22,7 @@ def _dual_polydata(world: GeneratedWorld) -> pv.PolyData:
 def _dual_edge_lines(world: GeneratedWorld) -> np.ndarray:
     segments: list[np.ndarray] = []
     dual_vertices = world.mesh.dual_vertices
-    incidence = edge_face_indices(world.mesh)
+    incidence = world.mesh.edge_face_indices
     for edge_index in world.geology.boundary_edge_indices:
         faces = incidence[int(edge_index)]
         segments.extend((dual_vertices[faces[0]], dual_vertices[faces[1]]))
@@ -183,7 +182,7 @@ class WorldgenViewer:
                         else None,
                         line_width=5,
                         reset_camera=False,
-                        scalar_bar_args={"title": layer, "vertical": True},
+                        scalar_bar_args={"title": layer_title(layer), "vertical": True},
                     )
                 )
         else:
@@ -219,15 +218,7 @@ class WorldgenViewer:
                     show_edges=self.hex_edges,
                     reset_camera=False,
                     smooth_shading=True,
-                    scalar_bar_args={
-                        "title": "Elevation (m; sea level 0)"
-                        if layer in ("base-elevation", "elevation")
-                        else "Margin distance (% circumference; positive continental)"
-                        if layer == "margin-distance"
-                        else "Crust: 0 oceanic, 1 continental"
-                        if layer == "crust"
-                        else layer,
-                    },
+                    scalar_bar_args={"title": style.title},
                 )
             )
             if vectors is not None:
@@ -240,7 +231,7 @@ class WorldgenViewer:
                         reset_camera=False,
                     )
                 )
-            if layer in ("plates", "intensity", "magma", "velocity"):
+            if layer in ("plates", "velocity"):
                 self.actors.append(
                     self.plotter.add_mesh(
                         self.boundaries,

@@ -1,5 +1,7 @@
 """Subduction trench and volcanic-arc relief propagation."""
 
+from collections.abc import Sequence
+
 import numpy as np
 
 from src.worldgen.elevation.config import SubductionConfig
@@ -16,7 +18,7 @@ def subduction_relief(
     radius_m: float,
     *,
     lengths: np.ndarray,
-    adjacency: list[list[tuple[int, float]]],
+    adjacency: Sequence[Sequence[tuple[int, float]]],
     crust: np.ndarray,
     plate_ids: np.ndarray,
     boundary_edge_indices: np.ndarray,
@@ -73,16 +75,14 @@ def subduction_relief(
             int(boundary_sections.plate_pairs[section, side]) == subducting
         )
         profile = subduction_profile(
-            distances[vertex],
+            -distances[vertex] if is_subducting_side else distances[vertex],
             width,
-            is_subducting_side,
             trench_width_fraction=config.trench_width_fraction,
             arc_offset_fraction=config.arc_offset_fraction,
             arc_width_fraction=config.arc_width_fraction,
             arc_height_multiplier=config.arc_height_multiplier,
+            arc_variation=float(arc_variation[vertex]),
         )
-        if not is_subducting_side:
-            profile *= float(arc_variation[vertex])
         contribution = (
             peak_scale * float(boundary_convergence[boundary_index]) * profile
         )

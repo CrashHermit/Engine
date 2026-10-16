@@ -9,10 +9,16 @@ def poisson_disk_sample(
     min_distance: float,
     *,
     rng: np.random.Generator,
+    weights: np.ndarray | None = None,
 ) -> np.ndarray:
     """Select spaced candidate indices in one randomized greedy pass."""
     selected: list[int] = []
-    for candidate in rng.permutation(len(positions)):
+    if weights is None:
+        candidates = rng.permutation(len(positions))
+    else:
+        priorities = -np.log(rng.random(len(positions))) / weights
+        candidates = np.argsort(priorities)
+    for candidate in candidates:
         candidate_index = int(candidate)
         if not selected:
             selected.append(candidate_index)

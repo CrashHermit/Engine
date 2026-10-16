@@ -40,10 +40,17 @@ class DivergenceConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class TransformConfig:
+    width_percent: float = 0.75
+    height_percent: float = 0.05
+
+
+@dataclass(frozen=True, slots=True)
 class DeformationConfig:
     collision: CollisionConfig = field(default_factory=CollisionConfig)
     subduction: SubductionConfig = field(default_factory=SubductionConfig)
     divergence: DivergenceConfig = field(default_factory=DivergenceConfig)
+    transform: TransformConfig = field(default_factory=TransformConfig)
 
 
 @dataclass(frozen=True, slots=True)

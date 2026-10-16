@@ -66,10 +66,10 @@ def generate_crust(
             fbm(
                 mesh.vertices,
                 seed=noise_seed,
-                octaves=config.octaves,
-                base_frequency=config.base_frequency,
-                lacunarity=config.lacunarity,
-                persistence=config.persistence,
+                octaves=config.field.octaves,
+                base_frequency=config.field.base_frequency,
+                lacunarity=config.field.lacunarity,
+                persistence=config.field.persistence,
             ),
             (0.0, 1.0),
         )

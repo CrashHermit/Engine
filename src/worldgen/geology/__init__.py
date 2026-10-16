@@ -4,11 +4,12 @@ from src.worldgen.geology.config import (
     CrustConfig,
     CrustDensityConfig,
     GeologyConfig,
-    MagmaConfig,
+    HotspotConfig,
     PlateConfig,
 )
+from src.worldgen.field.noise import NoiseConfig
 from src.worldgen.geology.generate import generate_geology
-from src.worldgen.geology.model import CrustResult, GeologyResult
+from src.worldgen.geology.model import CrustResult, GeologyResult, HotspotResult
 
 __all__ = [
     "CrustConfig",
@@ -16,7 +17,9 @@ __all__ = [
     "CrustResult",
     "GeologyConfig",
     "GeologyResult",
-    "MagmaConfig",
+    "NoiseConfig",
     "PlateConfig",
+    "HotspotConfig",
+    "HotspotResult",
     "generate_geology",
 ]
