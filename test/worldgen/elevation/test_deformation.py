@@ -596,7 +596,8 @@ def test_final_land_mask_uses_combined_elevation_and_ranges_cover_relief():
         boundary_divergence=world.geology.boundary_divergence,
         boundary_shear=world.geology.boundary_shear,
         noise_seeds=(1, 2, 3),
-        arc_noise_seed=4,
+        arc_variation=np.ones(len(world.mesh.vertices)),
+        volcano_sites=world.geology.volcanism.sites,
         hotspots=world.geology.hotspots,
     )
     np.testing.assert_array_equal(

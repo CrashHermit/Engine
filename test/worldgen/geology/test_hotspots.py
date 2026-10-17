@@ -238,6 +238,13 @@ def _generate(config):
         crust_rng=np.random.default_rng(16),
         density_noise_seed=17,
         hotspot_rng=np.random.default_rng(18),
+        volcanic_rng=np.random.default_rng(19),
+        subduction_width_percent=2.5,
+        arc_offset_fraction=0.25,
+        arc_width_fraction=0.2,
+        divergence_width_percent=1.0,
+        axial_width_fraction=0.25,
+        arc_variation=np.ones(len(mesh.vertices)),
     )
 
 

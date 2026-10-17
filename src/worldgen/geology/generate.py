@@ -10,6 +10,7 @@ from src.worldgen.geology.crust import generate_crust
 from src.worldgen.geology.hotspots import generate_hotspots
 from src.worldgen.geology.model import GeologyResult
 from src.worldgen.geology.plates import generate_plates
+from src.worldgen.geology.volcanism import generate_volcanism
 
 
 def generate_geology(
@@ -24,6 +25,13 @@ def generate_geology(
     crust_rng: np.random.Generator,
     density_noise_seed: int,
     hotspot_rng: np.random.Generator,
+    volcanic_rng: np.random.Generator,
+    subduction_width_percent: float,
+    arc_offset_fraction: float,
+    arc_width_fraction: float,
+    divergence_width_percent: float,
+    axial_width_fraction: float,
+    arc_variation: np.ndarray,
 ) -> GeologyResult:
     """Generate geology and its boundary metadata using independent streams."""
     plates = generate_plates(
@@ -60,6 +68,24 @@ def generate_geology(
         crust,
         plates.boundary_edge_indices,
     )
+    volcanism = generate_volcanism(
+        mesh,
+        config.volcanism,
+        hotspots=hotspots,
+        crust=crust,
+        plate_ids=plates.plate_ids,
+        boundary_edge_indices=plates.boundary_edge_indices,
+        boundary_sections=sections,
+        boundary_convergence=convergence,
+        boundary_divergence=divergence,
+        rng=volcanic_rng,
+        subduction_width_percent=subduction_width_percent,
+        arc_offset_fraction=arc_offset_fraction,
+        arc_width_fraction=arc_width_fraction,
+        divergence_width_percent=divergence_width_percent,
+        axial_width_fraction=axial_width_fraction,
+        arc_variation=arc_variation,
+    )
     for array in (convergence, divergence, shear):
         array.setflags(write=False)
     return GeologyResult(
@@ -74,4 +100,5 @@ def generate_geology(
         boundary_sections=sections,
         hotspots=hotspots,
         crust=crust,
+        volcanism=volcanism,
     )

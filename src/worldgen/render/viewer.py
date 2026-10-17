@@ -218,9 +218,29 @@ class WorldgenViewer:
                     show_edges=self.hex_edges,
                     reset_camera=False,
                     smooth_shading=True,
-                    scalar_bar_args={"title": style.title},
+                    scalar_bar_args=(
+                        {"title": style.title, "n_labels": 4, "fmt": "%.0f"}
+                        if layer == "volcano-state"
+                        else {"title": style.title, "n_labels": 2, "fmt": "%.0f"}
+                        if layer == "volcanic-areas"
+                        else {"title": style.title}
+                    ),
                 )
             )
+            if layer == "volcano-state" and len(geology.volcanism.sites.cell_indices):
+                cells = geology.volcanism.sites.cell_indices
+                self.actors.append(
+                    self.plotter.add_points(
+                        self.world.mesh.vertices[cells] * 1.002,
+                        scalars=values[cells],
+                        cmap=cmap,
+                        clim=clim,
+                        point_size=9,
+                        render_points_as_spheres=True,
+                        show_scalar_bar=False,
+                        reset_camera=False,
+                    )
+                )
             if vectors is not None:
                 self.actors.append(
                     self.plotter.add_arrows(
@@ -261,10 +281,10 @@ class WorldgenViewer:
             self.widgets[name] = self.plotter.add_checkbox_button_widget(
                 toggle,
                 value=name == self.layer,
-                position=(10, 10 + index * 32),
+                position=(10, 10 + index * 26),
                 size=20,
             )
-            self.plotter.add_text(name, position=(40, 15 + index * 32), font_size=10)
+            self.plotter.add_text(name, position=(40, 15 + index * 26), font_size=10)
         self.widgets["terrain-relief"] = self.plotter.add_checkbox_button_widget(
             self.set_terrain_relief,
             value=self.terrain_relief,

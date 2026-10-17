@@ -15,8 +15,8 @@ from src.worldgen.elevation.model import ElevationResult
 from src.worldgen.geology.boundary_sections import BoundarySections
 from src.worldgen.geology.model import CrustResult, HotspotResult
 from src.worldgen.geometry.mesh import Mesh
-from src.worldgen.field.noise import noise_multiplier
-from src.worldgen.elevation.volcanism import volcanic_relief
+from src.worldgen.geology.model import VolcanoSites
+from src.worldgen.elevation.volcanism import historical_volcanic_relief, volcanic_relief
 
 
 def generate_elevation(
@@ -32,7 +32,8 @@ def generate_elevation(
     boundary_divergence: np.ndarray,
     boundary_shear: np.ndarray,
     noise_seeds: tuple[int, int, int],
-    arc_noise_seed: int,
+    arc_variation: np.ndarray,
+    volcano_sites: VolcanoSites,
     hotspots: HotspotResult,
 ) -> ElevationResult:
     """Generate coastal base, tectonic, and volcanic relief."""
@@ -58,12 +59,6 @@ def generate_elevation(
         ),
     )
 
-    arc_variation = noise_multiplier(
-        mesh.vertices,
-        seed=arc_noise_seed,
-        frequency=deformation.subduction.arc_noise_frequency,
-        strength=deformation.subduction.arc_variation_strength,
-    )
     tectonic = tectonic_relief(
         mesh,
         deformation,
@@ -78,6 +73,11 @@ def generate_elevation(
         arc_variation=arc_variation,
     )
     volcanic = volcanic_relief(mesh, plate_ids, hotspots, radius_m)
+    np.maximum(
+        volcanic,
+        historical_volcanic_relief(mesh, plate_ids, volcano_sites, radius_m),
+        out=volcanic,
+    )
     elevation = base_elevation + tectonic + volcanic
     land_mask = elevation >= 0.0
     for array in (
@@ -98,6 +98,10 @@ def generate_elevation(
         boundary_shear,
         hotspots,
     )
+    historical_bound = (
+        float(np.max(volcano_sites.heights_percent, initial=0.0)) * radius_m / 100.0
+    )
+    elevation_range = (elevation_range[0], elevation_range[1] + historical_bound)
     return ElevationResult(
         base_elevation=base_elevation,
         tectonic_relief=tectonic,

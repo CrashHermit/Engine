@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import numpy as np
 
 from src.worldgen.config import WorldgenConfig
@@ -6,6 +8,7 @@ from src.worldgen.elevation.volcanism import volcanic_relief
 from src.worldgen.geometry.icosphere import generate_icosphere
 from src.worldgen.geometry.mesh import Mesh
 from src.worldgen.geology.model import HotspotResult
+from src.worldgen.field.noise import noise_multiplier
 
 
 def _hotspots(seeds, plates, widths, heights, cell_count):
@@ -124,7 +127,10 @@ def test_emergent_and_submerged_hotspots_are_classified_from_final_height():
         boundary_divergence=world.geology.boundary_divergence,
         boundary_shear=world.geology.boundary_shear,
         noise_seeds=noise_seeds,
-        arc_noise_seed=arc_noise_seed,
+        arc_variation=noise_multiplier(
+            world.mesh.vertices, seed=arc_noise_seed, frequency=6.0, strength=0.6
+        ),
+        volcano_sites=world.geology.volcanism.sites,
         hotspots=hotspots,
     )
 
@@ -133,3 +139,27 @@ def test_emergent_and_submerged_hotspots_are_classified_from_final_height():
     assert terrain.elevation[submerged_seed] < 0.0
     assert not terrain.land_mask[submerged_seed]
     np.testing.assert_array_equal(terrain.land_mask, terrain.elevation >= 0.0)
+
+
+def test_extinct_historical_volcanoes_keep_relief_without_current_activity():
+    from src.worldgen.generate import generate_world
+    from src.worldgen.geology.model import VolcanoSource, VolcanoState
+
+    config = WorldgenConfig(seed=2026, subdivision_frequency=20)
+    volcanic_config = replace(
+        config.geology.volcanism,
+        supplied_site_count=0,
+        historical_extinct_site_count=4,
+    )
+    world = generate_world(
+        replace(config, geology=replace(config.geology, volcanism=volcanic_config))
+    )
+    sites = world.geology.volcanism.sites
+    assert np.all(sites.source_types == VolcanoSource.HISTORICAL)
+    assert np.all(sites.states == VolcanoState.EXTINCT)
+    np.testing.assert_array_equal(
+        world.geology.volcanism.activity, np.zeros(len(world.mesh.vertices))
+    )
+    expected_peaks = sites.heights_percent * world.radius_m / 100.0
+    assert np.all(world.elevation.volcanic_relief[sites.cell_indices] >= expected_peaks)
+    assert np.all(expected_peaks > 0.0)

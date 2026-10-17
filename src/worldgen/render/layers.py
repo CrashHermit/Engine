@@ -6,10 +6,15 @@ import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
 from src.worldgen.model import GeneratedWorld
+from src.worldgen.geology.model import VolcanoState
 
 LAYERS = (
     "plates",
     "volcanic-potential",
+    "hotspot-potential",
+    "volcanic-activity",
+    "volcanic-areas",
+    "volcano-state",
     "velocity",
     "convergence",
     "divergence",
@@ -48,6 +53,12 @@ def layer_title(layer: str) -> str:
         return "Margin distance (% circumference; positive continental)"
     if layer == "crust":
         return "Crust: 0 oceanic, 1 continental"
+    if layer == "volcano-state":
+        return "Volcano sites: 0 none, 1 dormant, 2 erupting, 3 extinct"
+    if layer == "volcanic-activity":
+        return "Volcanic activity (procedural strength)"
+    if layer == "volcanic-potential":
+        return "Source-derived volcanic potential (procedural strength)"
     return layer
 
 
@@ -72,12 +83,46 @@ def layer_style(
     elevation = world.elevation
     if layer == "plates":
         return LayerStyle(geology.plate_ids, "tab20", title=layer_title(layer))
-    if layer == "volcanic-potential":
+    if layer == "hotspot-potential":
         return LayerStyle(
             geology.hotspots.potential,
             "viridis",
             title=layer_title(layer),
             clim=(0, 1),
+        )
+    if layer in ("volcanic-potential", "volcanic-activity"):
+        values = (
+            geology.volcanism.potential
+            if layer == "volcanic-potential"
+            else geology.volcanism.activity
+        )
+        return LayerStyle(
+            values,
+            "inferno",
+            title=layer_title(layer),
+            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
+        )
+    if layer == "volcanic-areas":
+        return LayerStyle(
+            geology.volcanism.volcanic_mask.astype(np.int64),
+            ["lightgray", "orangered"],
+            title="Volcanic area: 0 no, 1 yes",
+            clim=(0, 1),
+        )
+    if layer == "volcano-state":
+        values = np.zeros(len(world.mesh.vertices), dtype=np.int64)
+        sites = geology.volcanism.sites
+        for state, code in (
+            (VolcanoState.DORMANT, 1),
+            (VolcanoState.ERUPTING, 2),
+            (VolcanoState.EXTINCT, 3),
+        ):
+            values[sites.cell_indices[sites.states == state]] = code
+        return LayerStyle(
+            values,
+            ["lightgray", "gold", "orangered", "slategray"],
+            title=layer_title(layer),
+            clim=(0, 3),
         )
     if layer == "velocity":
         vectors = geology.plate_velocity

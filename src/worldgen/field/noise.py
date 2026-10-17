@@ -1,4 +1,4 @@
-"""Seeded OpenSimplex scalar fields."""
+"""Seeded OpenSimplex2S fields sampled through FastNoiseLite's public batch API."""
 
 from dataclasses import dataclass
 
@@ -24,21 +24,24 @@ def fbm(
     lacunarity: float,
     persistence: float,
 ) -> np.ndarray:
-    """Sample OpenSimplex fractal Brownian motion at 3D positions."""
-    from opensimplex.api import OpenSimplex
+    """Sample OpenSimplex2S fBm at paired XYZ positions with isolated seed state."""
+    from pyfastnoiselite.pyfastnoiselite import FastNoiseLite, FractalType, NoiseType
 
-    noise = OpenSimplex(seed)
+    # FastNoiseLite seeds are signed 32-bit; world streams supply signed 64-bit.
+    seed32 = (int(seed) + 2**31) % 2**32 - 2**31
+    noise = FastNoiseLite(seed=seed32)
+    noise.noise_type = NoiseType.NoiseType_OpenSimplex2S
+    noise.fractal_type = FractalType.FractalType_None
+    noise.frequency = 1.0
     values = np.zeros(len(positions), dtype=np.float64)
     amplitude = 1.0
     frequency = base_frequency
     for octave in range(octaves):
         shift = octave * 1123.456
-        for index, position in enumerate(positions):
-            values[index] += amplitude * noise.noise3(
-                float(position[0] * frequency + shift),
-                float(position[1] * frequency + shift),
-                float(position[2] * frequency + shift),
-            )
+        coords = np.asarray(
+            (positions * frequency + shift).T, dtype=np.float32, order="C"
+        )
+        values += amplitude * noise.gen_from_coords(coords).astype(np.float64)
         amplitude *= persistence
         frequency *= lacunarity
     return values

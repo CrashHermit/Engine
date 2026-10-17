@@ -46,7 +46,8 @@ The “hex outlines” checkbox toggles cell edges and retains its setting acros
 layer changes. Outlines are on by default; use `--no-hex-edges` to start with them
 hidden. This changes only the edge overlay, not cell colours, surface geometry,
 or tectonic boundary diagnostic lines.
-Available layers include `plates`, `volcanic-potential`, `velocity`,
+Available layers include `plates`, `hotspot-potential`, `volcanic-potential`,
+`volcanic-activity`, `volcanic-areas`, `volcano-state`, `velocity`,
 `convergence`, `divergence`, `shear`, `crust`, `crust-regions`, `crust-field`,
 `crust-density`, `crust-region-density`, `boundary-sections`,
 `subducting-plate`, `base-elevation`, `tectonic-relief`, `volcanism`, `elevation`,
@@ -67,7 +68,7 @@ higher-resolution crust view:
 uv run python -m src.worldgen --seed 2026 --frequency 40 --layer crust
 ```
 
-Each seed gets an independent continuous OpenSimplex fBm field sampled on the
+Each seed gets an independent continuous OpenSimplex2S fBm field sampled on the
 unit sphere. Its cell priority is spherical angular distance from that seed
 minus `influence` times its noise. Growth advances through the lowest frontier
 barrier; crossing a cell retains the maximum priority encountered along that
@@ -82,6 +83,20 @@ noise-biased priority map, configured by that generator's `flood` settings.
 The retained Dijkstra plate option samples a plate-owned cost field instead.
 Existing random streams retain their roles; plate motion uses child 9,
 volcanic potential uses child 0, and hotspot source sampling uses child 11.
+
+Noise sampling uses `pyfastnoiselite==0.0.7` through its public
+`FastNoiseLite.gen_from_coords` API, with an independent generator per field.
+Coordinates are paired XYZ columns in a contiguous float32 array, not a Cartesian
+grid. Built-in fractal processing is disabled and the native frequency is 1.0:
+`field/noise.py` retains the existing manual octave frequencies, amplitudes, and
+coordinate shifts, accumulating sampled values in float64.
+World seed streams remain signed 64-bit; each field seed wraps modulo 2^32 into
+FastNoiseLite's signed 32-bit range. Seeds separated by 2^32 therefore produce the
+same raw noise field. No module-global generator state is changed.
+This replaces the previous OpenSimplex package entirely. Old seeded worlds change
+because the noise algorithm and coordinate precision differ; production output
+matches the accepted OpenSimplex2S comparison experiment. The `fbm`,
+`normalized_noise`, and `noise_multiplier` APIs and all noise settings are unchanged.
 
 Each plate receives a seeded random tangent direction at its normalized mean
 cell position and an angular speed uniformly sampled between
@@ -334,7 +349,58 @@ This models static volcanic systems, not plume drift or time-evolving island cha
 Use `--layer volcanism` to inspect volcanic uplift alone on the diagnostic globe.
 Use `--layer elevation --terrain-relief --sea-level --no-hex-edges` to see it in
 the final surface. Frequency 80 or higher helps resolve the shield flanks.
-Use `--layer volcanic-potential` to inspect the source-placement field.
+Use `--layer hotspot-potential` to inspect the independent hotspot placement noise.
+`volcanic-potential` now displays the source-derived field described below.
+
+Volcanic metadata lives in `world.geology.volcanism`, configured by
+`config.geology.volcanism` (`VolcanismConfig`). Read-only `hotspot_potential`,
+`subduction_potential`, and `divergence_potential` arrays describe compact hotspot
+footprints, overriding-side arcs, and narrow divergent axes. Arc widths and offsets
+reuse elevation's configured geometry and the same arc-variation samples;
+convergence and divergence retain their raw motion scale. Continental divergent
+potential is varied by the existing hotspot-placement field. Collision and transform
+boundaries do not create volcanic potential by default. The combined `potential`
+uses a maximum envelope as a procedural placement policy, not a physical magma law.
+
+`volcanic_mask` marks `potential >= potential_threshold` (default 0.18), including
+dormant prospective areas. `activity` instead measures current eruption intensity
+around erupting sites; a volcanic area can have zero current activity.
+Both are mesh-sampled arrays, not yet arbitrary-coordinate world evaluators.
+
+`sites` retains unique `cell_indices`, `source_types` (`VolcanoSource`), `states`
+(`VolcanoState`), `supply_strength`, and `eruption_intensity`. A hex locates its
+site through `cell_indices`; overlapping influence does not change site identity.
+The generator samples up to `supplied_site_count=24` spaced potential-qualified
+sites. `supply_persistence_probability=0.75` determines whether supply persists;
+unsupported sites are extinct. Supplied sites erupt with
+`eruption_probability=0.08`, otherwise they are dormant. Dormant sites have positive
+supply but zero eruption intensity; extinct sites have neither. These probabilities
+are artistic snapshot settings, not measured eruption rates or a simulated history.
+Site spacing defaults to a unit-sphere chord distance of 0.12.
+
+Up to `historical_extinct_site_count=8` additional historical sites are placed
+outside the threshold-qualified belts. Their `HISTORICAL` source type identifies
+retained shield geometry: widths 0.35–0.9% of circumference and heights 0.02–0.08%
+of radius. They are extinct with no current activity but retain their uplift.
+`widths_percent` and `heights_percent` are zero for current-belt sites because
+their underlying hotspot, arc, or ridge morphology already exists. Historical
+shields combine with hotspot shields by maximum; no duplicate arc/ridge uplift
+is added. Eruption state does not remove mountains or alter sea level.
+The new snapshot RNG uses child 12, preserving prior stream assignments.
+
+Inspect the site states interactively:
+
+```bash
+uv run python -m src.worldgen --seed 2026 --frequency 40 \
+  --layer volcano-state --no-hex-edges
+```
+
+`volcano-state` marks dormant sites yellow, erupting sites orange-red, and extinct
+sites slate gray. `volcanic-activity` shows eruption footprints;
+`volcanic-areas` shows the prospective boolean mask. `volcanism` remains the
+hotspot-plus-historical shield uplift diagnostic; boundary arcs and ridges remain
+in `tectonic-relief`. These fields describe volcanic systems, not individual
+eruptions evolving over time.
 
 Elevation lives in the top-level `src/worldgen/elevation/` package. `coastal.py`
 contains margin distances and the coastal profile; `profiles.py` contains the

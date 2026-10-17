@@ -64,7 +64,22 @@ class HotspotConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class VolcanismConfig:
+    supplied_site_count: int = 24
+    historical_extinct_site_count: int = 8
+    min_site_distance: float = 0.12
+    eruption_probability: float = 0.08
+    potential_threshold: float = 0.18
+    supply_persistence_probability: float = 0.75
+    min_historical_width_percent: float = 0.35
+    max_historical_width_percent: float = 0.9
+    min_historical_height_percent: float = 0.02
+    max_historical_height_percent: float = 0.08
+
+
+@dataclass(frozen=True, slots=True)
 class GeologyConfig:
     plates: PlateConfig = field(default_factory=PlateConfig)
     crust: CrustConfig = field(default_factory=CrustConfig)
     hotspots: HotspotConfig = field(default_factory=HotspotConfig)
+    volcanism: VolcanismConfig = field(default_factory=VolcanismConfig)
