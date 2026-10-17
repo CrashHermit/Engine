@@ -4,8 +4,6 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.worldgen.utilities.normalize import interpolate_values
-
 
 @dataclass(frozen=True, slots=True)
 class NoiseConfig:
@@ -50,18 +48,19 @@ def fbm(
 def normalized_noise(
     positions: np.ndarray, config: NoiseConfig, *, seed: int
 ) -> np.ndarray:
-    """Return the sampled noise remapped to [0, 1] and marked read-only."""
-    values = interpolate_values(
-        fbm(
-            positions,
-            seed=seed,
-            octaves=config.octaves,
-            base_frequency=config.base_frequency,
-            lacunarity=config.lacunarity,
-            persistence=config.persistence,
-        ),
-        (0.0, 1.0),
+    """Map the fixed octave-amplitude range to [0, 1], independent of samples."""
+    values = fbm(
+        positions,
+        seed=seed,
+        octaves=config.octaves,
+        base_frequency=config.base_frequency,
+        lacunarity=config.lacunarity,
+        persistence=config.persistence,
     )
+    amplitude_bound = sum(
+        abs(config.persistence) ** octave for octave in range(config.octaves)
+    )
+    values = np.clip(0.5 + values / (2.0 * amplitude_bound), 0.0, 1.0)
     values.setflags(write=False)
     return values
 

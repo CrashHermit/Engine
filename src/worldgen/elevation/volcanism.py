@@ -1,62 +1,86 @@
-"""Compact hotspot shield relief on assigned plates."""
+"""Retained spherical volcanic shields with continuous plate-edge tapering."""
 
 import numpy as np
 
+from src.worldgen.elevation.profiles import shield_profile
+from src.worldgen.geology.model import HotspotResult, VolcanoSites
+from src.worldgen.geometry.boundary import BoundaryNetwork, SphericalRegions
 from src.worldgen.geometry.mesh import Mesh
 from src.worldgen.geometry.spherical import angular_distances
-from src.worldgen.geology.model import HotspotResult
-from src.worldgen.elevation.profiles import shield_profile
-from src.worldgen.geology.model import VolcanoSites
+from src.worldgen.utilities.curves import smoothstep
 
 
-def volcanic_relief(
-    mesh: Mesh,
-    plate_ids: np.ndarray,
-    hotspots: HotspotResult,
-    radius_m: float,
-) -> np.ndarray:
-    """Build non-stacking compact shield uplift centered on generated hotspots."""
-    relief = np.zeros(len(mesh.vertices), dtype=np.float64)
-    for seed_index, plate_id, width_percent, height_percent in zip(
-        hotspots.seed_indices,
-        hotspots.plate_ids,
-        hotspots.widths_percent,
-        hotspots.heights_percent,
-    ):
-        width = float(width_percent)
-        if width <= 0.0 or height_percent <= 0.0:
-            continue
-        center = mesh.vertices[int(seed_index)]
-        distances = angular_distances(
-            mesh.vertices, np.broadcast_to(center, mesh.vertices.shape)
-        ) * (100.0 / (2.0 * np.pi))
-        response = np.zeros(len(mesh.vertices), dtype=np.float64)
-        support = (plate_ids == plate_id) & (distances < width)
-        response[support] = shield_profile(distances[support], width)
-        response *= radius_m * float(height_percent) / 100.0
-        np.maximum(relief, response, out=relief)
-    return relief
+class VolcanicField:
+    """Static shield geometry; eruption state never removes an existing landform."""
 
+    def __init__(
+        self,
+        mesh: Mesh,
+        plate_ids: np.ndarray,
+        hotspots: HotspotResult,
+        sites: VolcanoSites,
+        regions: SphericalRegions,
+    ) -> None:
+        historical = sites.heights_percent > 0.0
+        cells = np.concatenate((hotspots.seed_indices, sites.cell_indices[historical]))
+        self.centers = mesh.vertices[cells].copy()
+        self.plates = plate_ids[cells].copy()
+        self.widths_percent = np.concatenate(
+            (hotspots.widths_percent, sites.widths_percent[historical])
+        )
+        self.heights_percent = np.concatenate(
+            (hotspots.heights_percent, sites.heights_percent[historical])
+        )
+        self.regions = regions
+        self.plate_ids = plate_ids
+        self.boundaries = {}
+        self.center_tapers = np.ones(len(cells), dtype=np.float64)
+        for plate in np.unique(self.plates):
+            membership = plate_ids == plate
+            boundary = BoundaryNetwork(mesh, membership)
+            self.boundaries[int(plate)] = boundary
+            source_ids = np.flatnonzero(self.plates == plate)
+            distances, _, _ = boundary.nearest(self.centers[source_ids])
+            self.center_tapers[source_ids] = smoothstep(
+                distances / self.widths_percent[source_ids]
+            )
+        for array in (
+            self.centers,
+            self.plates,
+            self.widths_percent,
+            self.heights_percent,
+            self.center_tapers,
+        ):
+            array.setflags(write=False)
 
-def historical_volcanic_relief(
-    mesh: Mesh,
-    plate_ids: np.ndarray,
-    sites: VolcanoSites,
-    radius_m: float,
-) -> np.ndarray:
-    """Retain historical shields regardless of present-day magma supply."""
-    relief = np.zeros(len(mesh.vertices), dtype=np.float64)
-    for cell, width, height in zip(
-        sites.cell_indices, sites.widths_percent, sites.heights_percent
-    ):
-        if width <= 0.0 or height <= 0.0:
-            continue
-        distances = angular_distances(
-            mesh.vertices, np.broadcast_to(mesh.vertices[cell], mesh.vertices.shape)
-        ) * (100.0 / (2.0 * np.pi))
-        support = (plate_ids == plate_ids[cell]) & (distances < width)
-        response = np.zeros(len(mesh.vertices), dtype=np.float64)
-        response[support] = shield_profile(distances[support], float(width))
-        response *= radius_m * float(height) / 100.0
-        np.maximum(relief, response, out=relief)
-    return relief
+    def sample(self, positions: np.ndarray, radius_m: float) -> np.ndarray:
+        """Sample compact shields, vanishing continuously at their plate edges."""
+        relief = np.zeros(len(positions), dtype=np.float64)
+        if not len(positions) or not len(self.centers):
+            return relief
+        plates = self.plate_ids[self.regions.locate(positions)]
+        for center, plate, width, height, center_taper in zip(
+            self.centers,
+            self.plates,
+            self.widths_percent,
+            self.heights_percent,
+            self.center_tapers,
+        ):
+            if width <= 0.0 or height <= 0.0:
+                continue
+            distances = angular_distances(
+                positions, np.broadcast_to(center, positions.shape)
+            ) * (100.0 / (2.0 * np.pi))
+            support = (plates == plate) & (distances < width)
+            taper = np.minimum(
+                smoothstep(
+                    self.boundaries[int(plate)].nearest(positions[support])[0] / width
+                )
+                / center_taper,
+                1.0,
+            )
+            response = np.zeros(len(positions), dtype=np.float64)
+            response[support] = shield_profile(distances[support], float(width)) * taper
+            response *= radius_m * float(height) / 100.0
+            np.maximum(relief, response, out=relief)
+        return relief

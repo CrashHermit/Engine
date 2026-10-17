@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.worldgen.field.noise import fbm
+from src.worldgen.field.noise import NoiseConfig, fbm, normalized_noise
 
 
 def _sample(positions, seed=123, *, frequency=1.4, octaves=5):
@@ -64,3 +64,14 @@ def test_world_seeds_wrap_consistently_into_signed_32_bit_noise_seeds():
         _sample(positions, seed=-(2**60) + 17),
         _sample(positions, seed=17),
     )
+
+
+def test_normalized_noise_has_fixed_mapping_across_query_batches():
+    points = _positions()
+    config = NoiseConfig()
+    full = normalized_noise(points, config, seed=17)
+    subset = normalized_noise(points[[4, 1, 8]], config, seed=17)
+    single = normalized_noise(points[4:5], config, seed=17)
+    np.testing.assert_array_equal(subset, full[[4, 1, 8]])
+    np.testing.assert_array_equal(single, full[4:5])
+    assert np.all((full >= 0.0) & (full <= 1.0))

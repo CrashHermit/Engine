@@ -10,7 +10,8 @@ from src.worldgen.elevation.config import (
     SubductionConfig,
     TransformConfig,
 )
-from src.worldgen.elevation.generate import generate_elevation
+from src.worldgen.elevation.generate import generate_elevation_field
+from src.worldgen.elevation.field import ElevationField
 from src.worldgen.elevation.model import ElevationResult
 
 __all__ = [
@@ -21,7 +22,8 @@ __all__ = [
     "DivergenceConfig",
     "ElevationConfig",
     "ElevationResult",
+    "ElevationField",
     "SubductionConfig",
     "TransformConfig",
-    "generate_elevation",
+    "generate_elevation_field",
 ]

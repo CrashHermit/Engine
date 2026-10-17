@@ -3,7 +3,7 @@
 import numpy as np
 
 from src.worldgen.config import WorldgenConfig
-from src.worldgen.elevation import generate_elevation
+from src.worldgen.elevation import generate_elevation_field
 from src.worldgen.geometry import Mesh, generate_icosphere
 from src.worldgen.geology import generate_geology
 from src.worldgen.model import GeneratedWorld
@@ -49,25 +49,21 @@ def generate_world(config: WorldgenConfig) -> GeneratedWorld:
         axial_width_fraction=deformation.divergence.axial_width_fraction,
         arc_variation=arc_variation,
     )
-    elevation = generate_elevation(
+    elevation_field = generate_elevation_field(
         mesh,
         config.elevation,
         config.planet.radius_m,
-        crust=geology.crust,
-        plate_ids=geology.plate_ids,
-        boundary_edge_indices=geology.boundary_edge_indices,
-        boundary_sections=geology.boundary_sections,
-        boundary_convergence=geology.boundary_convergence,
-        boundary_divergence=geology.boundary_divergence,
-        boundary_shear=geology.boundary_shear,
+        geology=geology,
+        density_config=config.geology.crust.density,
+        density_noise_seed=_signed_seed(streams[8]),
         noise_seeds=tuple(_signed_seed(stream) for stream in streams[5:8]),
-        hotspots=geology.hotspots,
-        arc_variation=arc_variation,
-        volcano_sites=geology.volcanism.sites,
+        arc_noise_seed=_signed_seed(streams[10]),
     )
+    elevation = elevation_field.sample(mesh.vertices)
     return GeneratedWorld(
         mesh=mesh,
         geology=geology,
         elevation=elevation,
         radius_m=config.planet.radius_m,
+        elevation_field=elevation_field,
     )

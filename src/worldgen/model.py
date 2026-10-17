@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from src.worldgen.elevation.model import ElevationResult
+from src.worldgen.elevation.field import ElevationField
 from src.worldgen.geometry.mesh import Mesh
 from src.worldgen.geology.model import GeologyResult
 
@@ -13,3 +14,4 @@ class GeneratedWorld:
     geology: GeologyResult
     elevation: ElevationResult
     radius_m: float
+    elevation_field: ElevationField

@@ -2,32 +2,19 @@
 
 import numpy as np
 
-from src.worldgen.field.distance import multi_source_distances
+from src.worldgen.geometry.boundary import BoundaryNetwork
 from src.worldgen.field.noise import noise_multiplier
-from src.worldgen.geometry.mesh import Mesh
 from src.worldgen.elevation.config import CoastalWidthConfig, ElevationConfig
 from src.worldgen.utilities.curves import smoothstep
 
 
-def _signed_margin_distances(
-    mesh: Mesh,
+def signed_margin_distances(
+    positions: np.ndarray,
     continental_mask: np.ndarray,
-    crust_boundary_edge_indices: np.ndarray,
+    boundary: BoundaryNetwork,
 ) -> np.ndarray:
-    """Propagate margin distances through each crust class on the mesh graph."""
-    edges = mesh.edges[crust_boundary_edge_indices]
-    source_indices = edges.reshape(-1)
-    source_distances = np.repeat(
-        mesh.edge_lengths_percent[crust_boundary_edge_indices] * 0.5, 2
-    )
-    distances = multi_source_distances(
-        mesh,
-        source_indices,
-        source_distances,
-        mesh.edge_lengths_percent,
-        continental_mask,
-        adjacency=mesh.geographic_adjacency,
-    )
+    """Return signed exact spherical distance to the established crust margin."""
+    distances, _, _ = boundary.nearest(positions)
     return np.where(continental_mask, distances, -distances)
 
 

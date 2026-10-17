@@ -103,20 +103,12 @@ def test_zero_buoyancy_responses_preserve_baseline_profile():
     np.testing.assert_array_equal(base, varied)
 
 
-def test_margin_distances_have_class_signs_and_start_half_edge_lengths() -> None:
+def test_margin_distances_have_class_signs() -> None:
     world = generate_world(WorldgenConfig(seed=3, subdivision_frequency=2))
-    mesh = world.mesh
     mask = world.geology.crust.continental_mask
     terrain = world.elevation
-    lengths = mesh.edge_lengths_percent
-
     assert np.all(terrain.margin_distance[mask] > 0)
     assert np.all(terrain.margin_distance[~mask] < 0)
-    for edge_index in terrain.crust_boundary_edge_indices:
-        left, right = mesh.edges[edge_index]
-        expected = lengths[edge_index] / 2
-        assert terrain.margin_distance[left] <= expected
-        assert terrain.margin_distance[right] <= expected
     assert not terrain.margin_distance.flags.writeable
     assert not terrain.base_elevation.flags.writeable
     assert not terrain.tectonic_relief.flags.writeable

@@ -75,7 +75,8 @@ barrier; crossing a cell retains the maximum priority encountered along that
 growth path. Claimed cells cannot be stolen, and seed cells are protected.
 This is competitive, graph-based flooding, not ordinary Voronoi assignment or
 a globally optimal minimax partition. Every region stays connected to its seed.
-Ownership remains discrete; changing mesh resolution can change the geography.
+Ownership remains discrete; changing the generation mesh can change geography.
+Sampling the retained elevation field more finely does not rerun that growth.
 
 Plate growth, crust growth, and volcanic potential use independent fields.
 Priority flooding remains the default: each plate or crust seed uses its own
@@ -93,10 +94,12 @@ coordinate shifts, accumulating sampled values in float64.
 World seed streams remain signed 64-bit; each field seed wraps modulo 2^32 into
 FastNoiseLite's signed 32-bit range. Seeds separated by 2^32 therefore produce the
 same raw noise field. No module-global generator state is changed.
-This replaces the previous OpenSimplex package entirely. Old seeded worlds change
-because the noise algorithm and coordinate precision differ; production output
-matches the accepted OpenSimplex2S comparison experiment. The `fbm`,
-`normalized_noise`, and `noise_multiplier` APIs and all noise settings are unchanged.
+This replaces the previous OpenSimplex package entirely. Raw fBm sampling retains
+the accepted OpenSimplex2S algorithm and octave settings. `normalized_noise` now
+uses a fixed octave-amplitude bound rather than the extrema of each requested
+batch, so querying a subset or a single point cannot change its value.
+This changes hotspot placement weights and the optional Dijkstra plate cost
+field; default priority-flood plate and crust ownership remain unchanged.
 
 Each plate receives a seeded random tangent direction at its normalized mean
 cell position and an angular speed uniformly sampled between
@@ -183,11 +186,10 @@ Seed counts do not guarantee area percentages or separate continents.
 `GeneratedWorld.elevation` retains read-only `base_elevation`,
 `tectonic_relief`, and final `elevation`
 arrays. Land classification uses final elevation relative to zero.
-Boundary responses propagate within the source plate and crust class.
-Continental collisions combine positive source contributions by maximum, retaining
-the broad uplift and narrow crest. Subduction instead adds a signed nearest-source
-profile: trench on the descending side, offset arc on the overriding side.
-Divergence adds its separate signed response.
+Elevation uses exact finite spherical boundary arcs rather than graph propagation.
+Continental collisions and subduction combine coherent section responses through
+positive/negative envelopes. Motion and side influence blend continuously between
+nearby arc sources. Divergence and transform add separate signed contributions.
 `WorldgenConfig.elevation.deformation` groups four independent process settings:
 `collision`, `subduction`, `divergence`, and `transform`. Collision and subduction each default
 to `width_percent=2.5` (circumference percentage) and `height_percent=0.15`
@@ -238,8 +240,9 @@ normalization. It affects only overriding arcs, not trenches, collisions or
 divergence. A new SeedSequence child 10 preserves all earlier streams.
 Arc crests may remain submerged or emerge according to final elevation relative
 to zero; there is no forced island threshold or sea-level adjustment.
-Nearest active subduction sources supply distance, polarity and motion amplitude,
-so farther arc flanks do not fill in the forearc near the boundary.
+Subduction uses nearest distance within each coherent section and a compact,
+arc-length-weighted blend of source motion. The two signed profiles crossfade
+near the boundary and its endpoints, avoiding discontinuous source-side switches.
 
 
 Divergence is evaluated independently on each side for every crust pairing.
@@ -254,10 +257,10 @@ These are stylized cross-sections, not spreading-rate or mechanical simulations.
 The oceanic axis can remain elevated above the distant basin while lying below
 the ridge flanks. All profiles taper to zero at the configured outer width.
 
-A multi-source graph distance pass chooses the nearest active divergent boundary
-within each plate/crust class, then evaluates its profile and motion amplitude.
-Taking the strongest profile from every edge instead would let distant flanks
-fill the axial valley. Convergent propagation and its crest remain separate.
+Divergence uses exact nearest distance to its retained active boundary sources,
+with compact, arc-length-weighted blending of motion and material response.
+The profile uses that one distance rather than maximizing every edge's flank,
+so distant flanks do not fill the axial valley.
 Narrow axial features require enough mesh resolution to be sampled.
 
 `WorldgenConfig.elevation` composes three `CoastalWidthConfig` settings: `inland`,
@@ -295,11 +298,11 @@ Doubling the radius doubles elevations and implied physical horizontal distances
 without changing unit-sphere noise, ownership, or coastlines. Increasing only
 the elevation percentages increases relief. No physical radius is used for noise
 sampling. These profile settings are artistic choices, not universal physical
-constants. Signed crust-margin distance is a same-class
-multi-source Dijkstra approximation initialized at half of each spherical edge
-length. The shelf break lies at the crust boundary; the coastline is offset
-inland by one shelf width. Increasing mesh resolution samples the intended
-widths more finely but does not change their configured scale.
+constants. Signed crust-margin distance is exact angular distance to the nearest
+finite arc in the extracted continental–oceanic boundary network, positive on
+continental crust and negative on oceanic crust. The shelf break lies at the
+crust boundary; the coastline is offset inland by one local shelf width.
+Sampling at finer resolution resolves the same established geography.
 
 Transform relief combines existing normal and shear boundary motion without a
 discrete transform classification. Closing plus sliding produces restraining
@@ -307,14 +310,15 @@ uplift; opening plus sliding produces a releasing basin. Pure sliding and pure
 normal motion produce no transform contribution. The signed strength is the
 normal component multiplied by the shear fraction of their combined magnitudes;
 it is not normalized against a world maximum.
-The pure `transform_strength` helper computes this coupling for both relief and
-conservative bounds. `transform_relief` owns spatial source propagation.
+The pure `transform_strength` helper computes the coupling. `TectonicField`
+uses normalized source blending without stacking every boundary edge; bounds use
+the retained maximum relative rotation magnitude.
 
 `TransformConfig` defaults to `width_percent=0.75` of circumference per side
 (approximately 300 km at Earth radius) and `height_percent=0.05` of radius per
-unit coupled strength. A compact smooth profile is evaluated from the nearest
-active transform source within each plate/crust class and added to the existing
-tectonic relief. Set either setting to zero to disable it independently.
+unit coupled strength. A compact smooth profile uses nearest active source distance
+and blended signed strength, then adds its response to the other processes.
+Set either setting to zero to disable it independently.
 This is a broad procedural transpression/transtension response, not a fault
 mechanics simulation: it uses the sampled local motion components, does not move
 cells sideways, and does not explicitly reconstruct bends or displacement history.
@@ -338,9 +342,11 @@ does not multiply the sampled height; density affects only the existing base sur
 The independent hotspot RNG uses appended SeedSequence child 11, preserving
 all earlier streams. Set `count=0` to disable hotspots.
 
-`geology/hotspots.py` owns source selection and metadata; `elevation/volcanism.py`
-samples compact, smooth shield profiles at spherical cell centres. Contributions
-are confined to the source plate and combine by maximum rather than stacking.
+`geology/hotspots.py` owns source selection and metadata; `VolcanicField` in
+`elevation/volcanism.py` retains spherical centers and compact shield profiles.
+Shields are confined to their source plate with a continuous taper to zero at
+plate boundaries, rather than an abrupt cutoff. Source peaks are retained.
+Overlapping shields combine by maximum rather than stacking.
 `world.elevation.volcanic_relief` stores uplift in metres; final elevation is
 base elevation plus tectonic relief plus volcanic relief. Seamounts, ocean islands,
 and continental volcanoes emerge from that sum without a forced sea-level rule.
@@ -402,27 +408,52 @@ hotspot-plus-historical shield uplift diagnostic; boundary arcs and ridges remai
 in `tectonic-relief`. These fields describe volcanic systems, not individual
 eruptions evolving over time.
 
-Elevation lives in the top-level `src/worldgen/elevation/` package. `coastal.py`
-contains margin distances and the coastal profile; `profiles.py` contains the
-mathematical cross-sections; `collision.py`, `subduction.py`, `divergence.py`,
-and `transform.py` apply the respective geological responses. `generate.py`
-combines the results; `bounds.py` calculates the conservative elevation ranges.
-The world orchestrator generates geology first, then elevation. Geology owns
-plate/crust structure and boundary motion, not elevation configuration or results.
-Boundary connectivity, density and polarity metadata live in
-`geology/boundary_sections.py`.
-`Mesh` lazily caches edge-to-face incidence, CSR-aligned neighbor edge indices,
-edge lengths as percentages of circumference, and geographic weighted adjacency.
-Cached arrays are read-only and geographic adjacency is an immutable tuple of
-tuples. Coastal distances, hotspot clearance, tectonic relief, boundary metadata,
-and rendering reuse the same mesh data rather than rebuilding it.
-`field/distance.py` owns generic nearest-source propagation and supports
-independent, algorithm-specific edge weights. Only geographic percentage-distance
-consumers use the cached geographic graph; Dijkstra growth costs are not replaced
-by that metric. Distance propagation retains source identity, label barriers,
-width cutoffs and deterministic
-ties. Collision preserves its strongest-source envelope rather than replacing it
-with nearest-source semantics.
+Elevation lives in the flat `src/worldgen/elevation/` package. `generate.py`
+builds an `ElevationField`; `field.py` samples its retained geography and source
+definitions into an `ElevationResult`. `coastal.py` contains the coast profile,
+and `profiles.py` the geological cross-sections. `deformation.py` owns indexed
+tectonic evaluation, with process functions in `collision.py`, `subduction.py`,
+`divergence.py`, and `transform.py`. `bounds.py` derives conservative ranges
+from definitions rather than observed extrema of a requested sample batch.
+
+`geometry/boundary.py` provides the shared geographic representation:
+`SphericalRegions` locates the actual centroid-dual cell containing a point,
+not simply its nearest center; `BoundaryNetwork` retains shared dual vertex IDs,
+side labels, and finite minor great-circle arcs. Spatial indexes accelerate
+ownership, exact nearest-boundary distance, and nearby-source queries.
+The initial network is not smoothed, preserving the flood-generated adjacency.
+Plate IDs remain categorical; elevation is continuously evaluated.
+
+The world orchestrator generates geology, builds `world.elevation_field`, and
+samples it at `world.mesh.vertices` to populate `world.elevation` for the existing
+viewer and gameplay. The field retains width, density and arc-noise definitions,
+plate rotations, geographic indexes and shield sources. Sampling does not select
+new seeds, normalize against requested samples, or modify established boundaries.
+
+```python
+import numpy as np
+from src.worldgen.config import WorldgenConfig
+from src.worldgen.generate import generate_world
+
+world = generate_world(WorldgenConfig(seed=2026, subdivision_frequency=40))
+positions = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])  # Nx3 unit vectors
+samples = world.elevation_field.sample(positions)
+heights_m = samples.elevation
+```
+
+Samples expose read-only `base_elevation`, `tectonic_relief`, `volcanic_relief`,
+`elevation`, signed `margin_distance`, and `land_mask`. The same point returns
+the same values when queried alone, reordered, or alongside a finer sampling mesh.
+Range metadata is independent of the query batch and scales with planet radius.
+Continuous does not imply differentiable: sharp crests, nearest-distance medial
+axes and envelope changes can have slope changes without height jumps.
+The generation mesh still limits established coastline detail; denser sampling
+does not invent smaller islands or regenerate the priority flood.
+
+Geology still owns plate/crust structure, categorical metadata and volcanic-site
+states. Its diagnostics and source placement remain mesh-based. Generic graph
+distance machinery in `field/distance.py` remains for those generation stages;
+it is no longer the elevation sampling path.
 Detailed surface terrain, climate, and erosion are not implemented here.
 
 Save a terrain diagnostic:
