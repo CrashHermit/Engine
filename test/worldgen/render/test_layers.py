@@ -7,6 +7,7 @@ from src.worldgen.elevation.config import ImpactConfig
 from src.worldgen.elevation.impact import ImpactField, generate_impact_field
 from src.worldgen.generate import generate_world
 from src.worldgen.render.layers import LAYERS, elevation_colormap, layer_style
+from src.worldgen.surface import SurfaceResult
 
 
 def test_elevation_layers_anchor_sea_level_and_accept_fixed_range() -> None:
@@ -136,3 +137,88 @@ def test_impact_relief_layer_uses_signed_values_and_query_independent_bounds():
         elevation=empty_field.sample(positions),
     )
     assert layer_style(empty_world, "impact-relief").clim == (-1.0, 1.0)
+
+
+def test_surface_layers_show_distinct_metrics_and_ignore_elevation_override() -> None:
+    world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
+    count = len(world.mesh.vertices)
+    land_height = np.zeros(count)
+    water_depth = np.zeros(count)
+    slope_degrees = np.zeros(count)
+    local_relief = np.zeros(count)
+    roughness = np.zeros(count)
+    water_depth[0] = 4_300.0
+    land_height[1] = 320.0
+    slope_degrees[0] = 12.0
+    slope_degrees[2] = 65.0
+    land_height[2] = 1_800.0
+    local_relief[2] = 2_500.0
+    roughness[2] = 650.0
+    surface = SurfaceResult(
+        land_height=land_height,
+        water_depth=water_depth,
+        slope_degrees=slope_degrees,
+        local_relief=local_relief,
+        roughness=roughness,
+    )
+    diagnostic_world = replace(world, surface=surface)
+    expected = {
+        "land-height": (land_height, "Land height (m)", "YlOrBr", (0.0, 1_800.0)),
+        "water-depth": (
+            water_depth,
+            "Water depth below sea level (m)",
+            "Blues",
+            (0.0, 4_300.0),
+        ),
+        "slope": (slope_degrees, "Surface slope (degrees)", "magma", (0.0, 90.0)),
+        "local-relief": (
+            local_relief,
+            "Local relief (m)",
+            "viridis",
+            (0.0, 2_500.0),
+        ),
+        "roughness": (
+            roughness,
+            "Detrended roughness (m RMS)",
+            "inferno",
+            (0.0, 650.0),
+        ),
+    }
+
+    for name, (values, title, cmap, clim) in expected.items():
+        assert name in LAYERS
+        style = layer_style(diagnostic_world, name, (-10_000.0, 10_000.0))
+        assert style.title == title
+        assert style.cmap == cmap
+        assert style.clim == clim
+        np.testing.assert_array_equal(style.values, values)
+
+    assert layer_style(diagnostic_world, "water-depth").values[0] > 0.0
+    assert layer_style(diagnostic_world, "land-height").values[1] > 0.0
+    assert layer_style(diagnostic_world, "slope").values[2] > 0.0
+    assert layer_style(diagnostic_world, "local-relief").values[2] > 0.0
+    assert layer_style(diagnostic_world, "roughness").values[2] > 0.0
+
+
+def test_surface_layer_ranges_cover_all_zero_and_empty_samples() -> None:
+    world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
+    fields = (
+        "land_height",
+        "water_depth",
+        "slope_degrees",
+        "local_relief",
+        "roughness",
+    )
+    zero_surface = replace(
+        world.surface,
+        **{name: np.zeros(len(world.mesh.vertices)) for name in fields},
+    )
+    empty_surface = replace(world.surface, **{name: np.empty(0) for name in fields})
+
+    for candidate in (
+        replace(world, surface=zero_surface),
+        replace(world, surface=empty_surface),
+    ):
+        for layer in ("land-height", "water-depth", "local-relief", "roughness"):
+            assert layer_style(candidate, layer).clim == (0.0, 1.0)
+        assert layer_style(candidate, "slope").clim == (0.0, 90.0)

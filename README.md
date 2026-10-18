@@ -488,6 +488,16 @@ The first uncached call includes compilation; subsequent calls reuse compiled co
 The full elevation sampler also shares its cell-ownership query with shield
 evaluation. The Python implementation targets 3.13+.
 
+`src/worldgen/surface/` derives nonnegative land height and water depth from the
+full signed elevation (`0 m` is sea level), then measures slope, sampled local
+relief, and detrended roughness around each query point. `SurfaceField` samples
+the continuous elevation at the center and at eight bearings on a great-circle
+ring. Its fixed geographic footprint is `SurfaceConfig.radius_percent`, measured
+as a percentage of circumference; the default `0.05%` is about 20,015 m on the
+default planet and does not change with mesh spacing. Height, relief, and
+roughness are in metres; slope is in degrees. These finite-footprint diagnostics
+do not modify elevation or classify land, fill lakes, calculate aspect, or
+simulate hydrology.
 
 `geometry/boundary.py` provides the shared geographic representation:
 `SphericalRegions` locates the actual centroid-dual cell containing a point,
@@ -497,11 +507,13 @@ ownership, exact nearest-boundary distance, and nearby-source queries.
 The initial network is not smoothed, preserving the flood-generated adjacency.
 Plate IDs remain categorical; elevation is continuously evaluated.
 
-The world orchestrator generates geology, builds `world.elevation_field`, and
-samples it at `world.mesh.vertices` to populate `world.elevation` for the existing
-viewer and gameplay. The field retains width, density and arc-noise definitions,
-plate rotations, geographic indexes and shield sources. Sampling does not select
-new seeds, normalize against requested samples, or modify established boundaries.
+The world orchestrator generates geology, builds `world.elevation_field` and
+`world.surface_field`, then samples their center values at `world.mesh.vertices`
+to populate `world.elevation` and `world.surface`. The surface pass reuses the
+already sampled center elevations and queries only its eight surrounding
+positions. Both retained fields can also be queried away from the generation
+mesh; sampling does not select new seeds, normalize against requested samples,
+or modify established boundaries.
 
 ```python
 import numpy as np
@@ -511,29 +523,41 @@ from src.worldgen.generate import generate_world
 world = generate_world(WorldgenConfig(seed=2026, subdivision_frequency=40))
 positions = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, 1.0]])  # Nx3 unit vectors
 samples = world.elevation_field.sample(positions)
+surface = world.surface_field.sample(positions, center_elevation=samples.elevation)
 heights_m = samples.elevation
+water_depth_m = surface.water_depth
 ```
 
-Samples expose read-only `coastal_elevation`, `tectonic_relief`,
+`ElevationField.sample` returns read-only `coastal_elevation`, `tectonic_relief`,
 `volcanic_relief`, `terrain_variation`, `elevation`, and signed `margin_distance`.
 The same point returns the same values when queried alone, reordered, or alongside
-a finer sampling mesh.
-Range metadata is independent of the query batch and scales with planet radius.
+a finer sampling mesh. Range metadata is independent of the query batch and
+scales with planet radius.
+
+`SurfaceField.sample` returns read-only `land_height`, `water_depth`,
+`slope_degrees`, `local_relief`, and `roughness`. Slope is the fitted local-plane
+angle; local relief is the sampled maximum-minus-minimum including the center;
+roughness is RMS residual after removing that plane. Changing the footprint
+changes these measurements, not the underlying elevation or geology. Surface
+samples are independent of query order and batch size.
+
 Continuous does not imply differentiable: sharp crests, nearest-distance medial
-axes and envelope changes can have slope changes without height jumps.
-The generation mesh still limits established coastline detail; denser sampling
-does not invent smaller islands or regenerate the priority flood.
+axes and envelope changes can have slope changes without height jumps. The
+generation mesh still limits established coastline detail; denser sampling does
+not invent smaller islands or regenerate the priority flood.
 
 Geology still owns plate/crust structure, categorical metadata and volcanic-site
 states. Its diagnostics and source placement remain mesh-based. Generic graph
 distance machinery in `field/distance.py` remains for those generation stages;
 it is no longer the elevation sampling path.
-Detailed surface terrain, climate, and erosion are not implemented here.
 
-Save a terrain diagnostic:
+These surface metrics are diagnostics, not detailed terrain simulation.
+Hydrology, aspect, climate, and erosion are not implemented here.
+
+Inspect a derived surface diagnostic in the viewer:
 
 ```bash
-uv run python -m src.worldgen --layer elevation --off-screen --screenshot /tmp/elevation.png
+uv run python -m src.worldgen --layer slope
 ```
 
 Set the physical planet radius from the CLI:

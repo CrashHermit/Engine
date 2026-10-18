@@ -291,7 +291,11 @@ class WorldgenViewer:
             self.plotter.camera_position = initial_camera
 
     def add_layer_controls(self) -> None:
+        rows = (len(LAYERS) + 1) // 2
         for index, name in enumerate(LAYERS):
+            column, row = divmod(index, rows)
+            position = (10 + 240 * column, 130 + 26 * row)
+            label_position = (40 + 240 * column, 135 + 26 * row)
 
             def toggle(enabled, selected=name):
                 if enabled:
@@ -304,10 +308,10 @@ class WorldgenViewer:
             self.widgets[name] = self.plotter.add_checkbox_button_widget(
                 toggle,
                 value=name == self.layer,
-                position=(10, 10 + index * 26),
+                position=position,
                 size=20,
             )
-            self.plotter.add_text(name, position=(40, 15 + index * 26), font_size=10)
+            self.plotter.add_text(name, position=label_position, font_size=10)
         self.widgets["terrain-relief"] = self.plotter.add_checkbox_button_widget(
             self.set_terrain_relief,
             value=self.terrain_relief,

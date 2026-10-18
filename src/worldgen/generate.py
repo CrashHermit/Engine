@@ -8,6 +8,7 @@ from src.worldgen.geometry import Mesh, generate_icosphere
 from src.worldgen.geology import generate_geology
 from src.worldgen.model import GeneratedWorld
 from src.worldgen.field.noise import noise_multiplier
+from src.worldgen.surface.field import SurfaceField
 
 
 def _signed_seed(sequence: np.random.SeedSequence) -> int:
@@ -62,10 +63,14 @@ def generate_world(config: WorldgenConfig) -> GeneratedWorld:
         variation_noise_seed=_signed_seed(streams[13]),
     )
     elevation = elevation_field.sample(mesh.vertices)
+    surface_field = SurfaceField(config.surface, elevation_field)
+    surface = surface_field.sample(mesh.vertices, center_elevation=elevation.elevation)
     return GeneratedWorld(
         mesh=mesh,
         geology=geology,
         elevation=elevation,
+        surface=surface,
         radius_m=config.planet.radius_m,
         elevation_field=elevation_field,
+        surface_field=surface_field,
     )

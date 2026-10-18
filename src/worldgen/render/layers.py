@@ -33,6 +33,11 @@ LAYERS = (
     "terrain-variation",
     "impact-relief",
     "margin-distance",
+    "land-height",
+    "water-depth",
+    "slope",
+    "local-relief",
+    "roughness",
 )
 
 
@@ -49,6 +54,16 @@ def layer_title(layer: str) -> str:
     """Return the user-facing scalar-bar title, including units where needed."""
     if layer in ("coastal-elevation", "elevation"):
         return "Elevation (m; sea level 0)"
+    if layer == "land-height":
+        return "Land height (m)"
+    if layer == "water-depth":
+        return "Water depth below sea level (m)"
+    if layer == "slope":
+        return "Surface slope (degrees)"
+    if layer == "local-relief":
+        return "Local relief (m)"
+    if layer == "roughness":
+        return "Detrended roughness (m RMS)"
     if layer == "terrain-variation":
         return "Terrain variation (m)"
     if layer == "impact-relief":
@@ -97,6 +112,7 @@ def layer_style(
     geology = world.geology
     crust = geology.crust
     elevation = world.elevation
+    surface = world.surface
     if layer == "plates":
         return LayerStyle(geology.plate_ids, "tab20", title=layer_title(layer))
     if layer == "hotspot-potential":
@@ -185,6 +201,45 @@ def layer_style(
         )
         return LayerStyle(
             values, elevation_colormap(clim), title=layer_title(layer), clim=clim
+        )
+    if layer == "land-height":
+        values = surface.land_height
+        return LayerStyle(
+            values,
+            "YlOrBr",
+            title=layer_title(layer),
+            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
+        )
+    if layer == "water-depth":
+        values = surface.water_depth
+        return LayerStyle(
+            values,
+            "Blues",
+            title=layer_title(layer),
+            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
+        )
+    if layer == "slope":
+        return LayerStyle(
+            surface.slope_degrees,
+            "magma",
+            title=layer_title(layer),
+            clim=(0.0, 90.0),
+        )
+    if layer == "local-relief":
+        values = surface.local_relief
+        return LayerStyle(
+            values,
+            "viridis",
+            title=layer_title(layer),
+            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
+        )
+    if layer == "roughness":
+        values = surface.roughness
+        return LayerStyle(
+            values,
+            "inferno",
+            title=layer_title(layer),
+            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
         )
     if layer == "terrain-variation":
         values = elevation.terrain_variation

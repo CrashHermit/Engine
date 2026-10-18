@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 
 from src.worldgen.geology.config import GeologyConfig
 from src.worldgen.elevation.config import ElevationConfig
+from src.worldgen.surface.config import SurfaceConfig
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,3 +19,4 @@ class WorldgenConfig:
     geology: GeologyConfig = field(default_factory=GeologyConfig)
     elevation: ElevationConfig = field(default_factory=ElevationConfig)
     planet: PlanetConfig = field(default_factory=PlanetConfig)
+    surface: SurfaceConfig = field(default_factory=SurfaceConfig)

@@ -128,3 +128,33 @@ def test_hex_outlines_toggle_and_remain_hidden_across_layer_changes():
         assert viewer.actors[0].GetProperty().GetEdgeVisibility()
     finally:
         viewer.plotter.close()
+
+
+def test_surface_layer_checkbox_updates_scalars_and_retains_camera() -> None:
+    world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
+    viewer = WorldgenViewer(world, off_screen=True, hex_edges=False)
+    viewer.plotter.window_size = (800, 600)
+
+    try:
+        viewer.plotter.reset_camera()
+        viewer.select_layer("slope")
+        viewer.add_layer_controls()
+        camera = viewer.plotter.camera_position
+        slope_widget = viewer.widgets["slope"]
+        roughness_widget = viewer.widgets["roughness"]
+        assert slope_widget.GetRepresentation().GetState() == 1
+        assert roughness_widget.GetRepresentation().GetState() == 0
+
+        roughness_widget.GetRepresentation().SetState(1)
+        roughness_widget.InvokeEvent("StateChangedEvent")
+
+        assert viewer.layer == "roughness"
+        assert slope_widget.GetRepresentation().GetState() == 0
+        assert roughness_widget.GetRepresentation().GetState() == 1
+        assert viewer.plotter.camera_position == camera
+        np.testing.assert_array_equal(
+            viewer.actors[0].mapper.dataset.cell_data["roughness"],
+            world.surface.roughness,
+        )
+    finally:
+        viewer.plotter.close()
