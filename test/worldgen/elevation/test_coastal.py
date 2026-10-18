@@ -5,12 +5,12 @@ import numpy as np
 from src.worldgen.config import PlanetConfig, WorldgenConfig
 from src.worldgen.generate import generate_world
 from src.worldgen.geometry import generate_icosphere
-from src.worldgen.elevation.config import CoastalWidthConfig, ElevationConfig
-from src.worldgen.elevation.coastal import _base_elevation, _sample_width
+from src.worldgen.elevation.config import CoastalConfig, CoastalWidthConfig
+from src.worldgen.elevation.coastal import coastal_profile, _sample_width
 
 
 def test_smooth_coastal_profile_saturates_at_expected_heights() -> None:
-    config = ElevationConfig()
+    config = CoastalConfig()
     distances = np.array(
         [
             config.shelf.base_percent + config.inland.base_percent,
@@ -22,7 +22,7 @@ def test_smooth_coastal_profile_saturates_at_expected_heights() -> None:
     )
     anomaly = np.zeros(5)
     np.testing.assert_allclose(
-        _base_elevation(
+        coastal_profile(
             distances,
             config,
             100.0,
@@ -42,11 +42,11 @@ def test_smooth_coastal_profile_saturates_at_expected_heights() -> None:
 
 
 def test_density_buoyancy_changes_saturated_targets_not_coasts():
-    config = ElevationConfig()
+    config = CoastalConfig()
     distances = np.array([10.0, -10.0, 1.0, 0.0])
     anomaly = np.array([-0.2, 0.2, 0.2, -0.2])
     widths = np.ones(4)
-    result = _base_elevation(
+    result = coastal_profile(
         distances,
         config,
         100.0,
@@ -60,7 +60,7 @@ def test_density_buoyancy_changes_saturated_targets_not_coasts():
     # At the coast and shelf break, profile blending remains fixed.
     assert result[2] == 0.0
     np.testing.assert_allclose(result[3], -config.shelf_depth_percent)
-    opposite = _base_elevation(
+    opposite = coastal_profile(
         distances,
         config,
         100.0,
@@ -75,14 +75,14 @@ def test_density_buoyancy_changes_saturated_targets_not_coasts():
 
 
 def test_zero_buoyancy_responses_preserve_baseline_profile():
-    config = ElevationConfig()
+    config = CoastalConfig()
     from dataclasses import replace
     from src.worldgen.elevation.config import BuoyancyConfig
 
     config = replace(config, buoyancy=BuoyancyConfig(0.0, 0.0))
     distances = np.array([5.0, 0.0, -5.0])
     widths = np.ones(3)
-    base = _base_elevation(
+    base = coastal_profile(
         distances,
         config,
         100.0,
@@ -91,7 +91,7 @@ def test_zero_buoyancy_responses_preserve_baseline_profile():
         shelf_width=widths,
         slope_width=widths,
     )
-    varied = _base_elevation(
+    varied = coastal_profile(
         distances,
         config,
         100.0,
@@ -110,11 +110,12 @@ def test_margin_distances_have_class_signs() -> None:
     assert np.all(terrain.margin_distance[mask] > 0)
     assert np.all(terrain.margin_distance[~mask] < 0)
     assert not terrain.margin_distance.flags.writeable
-    assert not terrain.base_elevation.flags.writeable
+    assert not terrain.coastal_elevation.flags.writeable
     assert not terrain.tectonic_relief.flags.writeable
     assert not terrain.elevation.flags.writeable
     assert not terrain.volcanic_relief.flags.writeable
-    assert not terrain.land_mask.flags.writeable
+    assert not terrain.terrain_variation.flags.writeable
+    assert not terrain.impact_relief.flags.writeable
     assert not terrain.crust_boundary_edge_indices.flags.writeable
 
 
@@ -127,8 +128,16 @@ def test_world_terrain_is_deterministic_and_uses_crust_mask() -> None:
         second.elevation.margin_distance,
     )
     np.testing.assert_array_equal(
-        first.elevation.base_elevation,
-        second.elevation.base_elevation,
+        first.elevation.coastal_elevation,
+        second.elevation.coastal_elevation,
+    )
+    np.testing.assert_array_equal(
+        first.elevation.terrain_variation,
+        second.elevation.terrain_variation,
+    )
+    np.testing.assert_array_equal(
+        first.elevation.impact_relief,
+        second.elevation.impact_relief,
     )
     np.testing.assert_array_equal(
         first.elevation.crust_boundary_edge_indices,
@@ -159,15 +168,35 @@ def test_radius_scales_elevation_without_changing_geography() -> None:
         first.elevation.margin_distance,
         larger.elevation.margin_distance,
     )
-    np.testing.assert_array_equal(first.elevation.land_mask, larger.elevation.land_mask)
     np.testing.assert_allclose(
-        larger.elevation.base_elevation,
-        first.elevation.base_elevation * 2.0,
+        larger.elevation.coastal_elevation,
+        first.elevation.coastal_elevation * 2.0,
     )
     np.testing.assert_allclose(
         larger.elevation.volcanic_relief,
         first.elevation.volcanic_relief * 2.0,
     )
+    np.testing.assert_allclose(
+        larger.elevation.terrain_variation,
+        first.elevation.terrain_variation * 2.0,
+    )
+    np.testing.assert_allclose(
+        larger.elevation.impact_relief,
+        first.elevation.impact_relief * 2.0,
+    )
+
+
+def test_default_reference_world_has_earth_scale_relief() -> None:
+    positions, _ = generate_icosphere(80)
+    ranges = []
+    for seed in (123, 2026, 31415):
+        world = generate_world(WorldgenConfig(seed=seed, subdivision_frequency=40))
+        sampled = world.elevation_field.sample(positions).elevation
+        ranges.append((float(sampled.min()), float(sampled.max())))
+
+    minima, maxima = np.asarray(ranges).T
+    assert np.all((minima > -11_500.0) & (minima < -9_500.0))
+    assert np.all((maxima > 8_500.0) & (maxima < 9_500.0))
 
 
 def test_width_samples_are_stable_when_sampling_more_positions() -> None:

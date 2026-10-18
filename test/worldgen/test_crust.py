@@ -82,8 +82,8 @@ def test_density_configuration_does_not_change_geography_or_terrain() -> None:
         first.geology.crust.region_ids, second.geology.crust.region_ids
     )
     np.testing.assert_allclose(
-        first.elevation.base_elevation,
-        second.elevation.base_elevation,
+        first.elevation.coastal_elevation,
+        second.elevation.coastal_elevation,
     )
     assert not np.array_equal(
         first.geology.crust.effective_density,

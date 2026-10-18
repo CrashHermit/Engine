@@ -1,8 +1,8 @@
 """Continuous signed transform relief profiles."""
 
 import numpy as np
+from numba.extending import register_jitable
 
-from src.worldgen.elevation.config import TransformConfig
 from src.worldgen.elevation.profiles import transform_profile
 
 
@@ -15,21 +15,10 @@ def transform_strength(normal: np.ndarray, shear: np.ndarray) -> np.ndarray:
     return strength
 
 
-def transform_value(
-    distance: np.ndarray, config: TransformConfig, peak: np.ndarray
-) -> np.ndarray:
-    """Evaluate compact signed transform relief at exact boundary distances."""
-    distance = np.asarray(distance, dtype=np.float64)
-    peak = np.asarray(peak, dtype=np.float64)
-    return (
-        np.asarray(
-            [
-                transform_profile(float(value), config.width_percent)
-                if value < config.width_percent
-                else 0.0
-                for value in distance
-            ]
-        )
-        * peak
-        * config.height_percent
-    )
+@register_jitable
+def transform_value(distance, parameters, peak):
+    """Evaluate compact signed relief without temporary arrays."""
+    width, height = parameters
+    if distance >= width:
+        return 0.0
+    return transform_profile(distance, width) * peak * height

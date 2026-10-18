@@ -1,32 +1,26 @@
-"""Continuous trench and overriding-plate arc profile evaluation."""
+"""Scalar trench and overriding-arc evaluation for compiled source reductions."""
 
-import numpy as np
+from numba.extending import register_jitable
 
-from src.worldgen.elevation.config import SubductionConfig
 from src.worldgen.elevation.profiles import subduction_profile
 
 
-def subduction_value(
-    signed_distance: np.ndarray,
-    config: SubductionConfig,
-    peak: np.ndarray,
-    arc_variation: np.ndarray,
-) -> np.ndarray:
-    """Evaluate trench/arc relief from signed finite-arc distances."""
-    values = np.asarray(
-        [
-            subduction_profile(
-                float(distance),
-                config.width_percent,
-                trench_width_fraction=config.trench_width_fraction,
-                arc_offset_fraction=config.arc_offset_fraction,
-                arc_width_fraction=config.arc_width_fraction,
-                arc_height_multiplier=config.arc_height_multiplier,
-                arc_variation=float(variation),
-            )
-            if abs(distance) < config.width_percent
-            else 0.0
-            for distance, variation in zip(signed_distance, arc_variation)
-        ]
+@register_jitable
+def subduction_value(signed_distance, parameters, peak, arc_variation):
+    """Evaluate the existing finite-support trench/arc response."""
+    width, height, trench_width, arc_offset, arc_width, arc_height, trench_depth = (
+        parameters
     )
-    return values * np.asarray(peak) * config.height_percent
+    if abs(signed_distance) >= width:
+        return 0.0
+    profile = subduction_profile(
+        signed_distance,
+        width,
+        trench_width,
+        arc_offset,
+        arc_width,
+        arc_height,
+        arc_variation,
+        trench_depth,
+    )
+    return profile * peak * height

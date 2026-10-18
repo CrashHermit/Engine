@@ -1,4 +1,4 @@
-"""Normalized collision, divergent, and subduction relief profiles."""
+"""Normalized elevation relief profiles and compact source shapes."""
 
 import numpy as np
 
@@ -8,6 +8,24 @@ from src.worldgen.utilities.curves import clamp_unit, smoothstep, smoothstep_sca
 def shield_profile(distance: np.ndarray | float, width: float) -> np.ndarray | float:
     """Return compact shield attenuation for a positive support width."""
     return smoothstep(1.0 - distance / width)
+
+
+def impact_profile(
+    distance: np.ndarray,
+    radius: float,
+    sharpness: float,
+    rim_height_fraction: float,
+    ejecta_width_fraction: float,
+) -> np.ndarray:
+    """Return a normalized compact crater bowl, rim, and ejecta apron."""
+    q = distance / radius
+    t = smoothstep(q)
+    p = sharpness
+    crater = -((1.0 - t) ** p) + rim_height_fraction * t**p
+    ejecta = (
+        rim_height_fraction * (1.0 - smoothstep((q - 1.0) / ejecta_width_fraction)) ** p
+    )
+    return np.where(q <= 1.0, crater, ejecta)
 
 
 def transform_profile(distance: float, width: float) -> float:
@@ -35,7 +53,6 @@ def divergent_profile(
     distance: float,
     width: float,
     continental: bool,
-    *,
     axial_width_fraction: float = 0.25,
     axial_depth_multiplier: float = 0.65,
     shoulder_height_multiplier: float = 0.35,
@@ -58,20 +75,20 @@ def divergent_profile(
 def subduction_profile(
     signed_distance: float,
     width: float,
-    *,
     trench_width_fraction: float = 0.2,
     arc_offset_fraction: float = 0.25,
     arc_width_fraction: float = 0.2,
     arc_height_multiplier: float = 1.5,
     arc_variation: float = 1.0,
+    trench_depth_multiplier: float = 1.0,
 ) -> float:
     """Return continuous relief: negative distance descends, positive overrides.
 
-    The trench floor is shared at zero. Only the offset volcanic arc varies.
+    The trench depth and overriding arc amplitude are independently scaled.
     """
     if width <= 0.0:
         return 0.0
-    trench = -smoothstep_scalar(
+    trench = -trench_depth_multiplier * smoothstep_scalar(
         1.0 - abs(signed_distance) / (width * trench_width_fraction)
     )
     if signed_distance <= 0.0:

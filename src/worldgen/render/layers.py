@@ -26,10 +26,12 @@ LAYERS = (
     "crust-region-density",
     "boundary-sections",
     "subducting-plate",
-    "base-elevation",
+    "coastal-elevation",
+    "elevation",
     "tectonic-relief",
     "volcanism",
-    "elevation",
+    "terrain-variation",
+    "impact-relief",
     "margin-distance",
 )
 
@@ -45,8 +47,12 @@ class LayerStyle:
 
 def layer_title(layer: str) -> str:
     """Return the user-facing scalar-bar title, including units where needed."""
-    if layer in ("base-elevation", "elevation"):
+    if layer in ("coastal-elevation", "elevation"):
         return "Elevation (m; sea level 0)"
+    if layer == "terrain-variation":
+        return "Terrain variation (m)"
+    if layer == "impact-relief":
+        return "Impact relief (m)"
     if layer == "volcanism":
         return "Volcanic uplift (m)"
     if layer == "margin-distance":
@@ -63,12 +69,22 @@ def layer_title(layer: str) -> str:
 
 
 def elevation_colormap(clim: tuple[float, float]) -> LinearSegmentedColormap:
-    """Return a bathymetry-to-land map whose exact sea-level value is pale."""
+    """Return bathymetry and hypsometric tints anchored at sea level."""
     low, high = clim
     zero = (0.0 - low) / (high - low)
     return LinearSegmentedColormap.from_list(
-        "worldgen-elevation",
-        [(0.0, "#174a78"), (zero, "#f4f1dc"), (1.0, "#946b3c")],
+        "worldgen-hypsometric",
+        [
+            (0.0, "#061b3a"),
+            (zero * 0.35, "#0b4f8a"),
+            (zero * 0.78, "#3b9ac2"),
+            (zero, "#f4f1dc"),
+            (zero + (1.0 - zero) * 0.16, "#8fbf6a"),
+            (zero + (1.0 - zero) * 0.42, "#c7b86a"),
+            (zero + (1.0 - zero) * 0.72, "#986b45"),
+            (1.0, "#f2f0e8"),
+        ],
+        N=4096,
     )
 
 
@@ -154,9 +170,9 @@ def layer_style(
             "viridis",
             title=layer_title(layer),
         )
-    if layer in ("elevation", "base-elevation"):
+    if layer in ("elevation", "coastal-elevation"):
         values = (
-            elevation.elevation if layer == "elevation" else elevation.base_elevation
+            elevation.elevation if layer == "elevation" else elevation.coastal_elevation
         )
         clim = (
             elevation_range
@@ -164,11 +180,35 @@ def layer_style(
             else (
                 elevation.elevation_range_m
                 if layer == "elevation"
-                else elevation.base_elevation_range_m
+                else elevation.coastal_elevation_range_m
             )
         )
         return LayerStyle(
             values, elevation_colormap(clim), title=layer_title(layer), clim=clim
+        )
+    if layer == "terrain-variation":
+        values = elevation.terrain_variation
+        extent = max(
+            abs(world.elevation_field.variation.config.amplitude_percent)
+            * (world.radius_m / 100.0),
+            1.0,
+        )
+        return LayerStyle(
+            values,
+            "coolwarm",
+            title=layer_title(layer),
+            clim=(-extent, extent),
+        )
+
+    if layer == "impact-relief":
+        values = elevation.impact_relief
+        lower, upper = world.elevation_field.impacts.bounds(world.radius_m)
+        extent = max(abs(lower), abs(upper), 1.0)
+        return LayerStyle(
+            values,
+            "coolwarm",
+            title=layer_title(layer),
+            clim=(-extent, extent),
         )
     if layer == "tectonic-relief":
         values = elevation.tectonic_relief

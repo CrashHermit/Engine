@@ -53,12 +53,20 @@ class VolcanicField:
         ):
             array.setflags(write=False)
 
-    def sample(self, positions: np.ndarray, radius_m: float) -> np.ndarray:
+    def sample(
+        self,
+        positions: np.ndarray,
+        radius_m: float,
+        *,
+        cell_indices: np.ndarray | None = None,
+    ) -> np.ndarray:
         """Sample compact shields, vanishing continuously at their plate edges."""
         relief = np.zeros(len(positions), dtype=np.float64)
         if not len(positions) or not len(self.centers):
             return relief
-        plates = self.plate_ids[self.regions.locate(positions)]
+        if cell_indices is None:
+            cell_indices = self.regions.locate(positions)
+        plates = self.plate_ids[cell_indices]
         for center, plate, width, height, center_taper in zip(
             self.centers,
             self.plates,

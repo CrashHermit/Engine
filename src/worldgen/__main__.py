@@ -47,6 +47,9 @@ def main() -> None:
     )
     parser.add_argument("--off-screen", action="store_true")
     parser.add_argument("--screenshot")
+    parser.add_argument("--rotation-gif")
+    parser.add_argument("--rotation-frames", type=int, default=120)
+    parser.add_argument("--rotation-fps", type=float, default=24.0)
     args = parser.parse_args()
     config = WorldgenConfig(seed=args.seed, subdivision_frequency=args.frequency)
     config = replace(
@@ -98,7 +101,9 @@ def main() -> None:
         layer=args.layer,
         arrow_scale=args.arrow_scale,
         off_screen=args.off_screen,
-        screenshot=args.screenshot,
+        rotation_gif=args.rotation_gif,
+        rotation_frames=args.rotation_frames,
+        rotation_fps=args.rotation_fps,
         terrain_relief=args.terrain_relief,
         vertical_exaggeration=args.vertical_exaggeration,
         sea_level=args.sea_level,

@@ -209,24 +209,25 @@ class WorldgenViewer:
                     reset_camera=False,
                 )
                 self.actors.append(self.sea_level_actor)
-            self.actors.append(
-                self.plotter.add_mesh(
-                    display_mesh,
-                    scalars=layer,
-                    cmap=cmap,
-                    clim=clim,
-                    show_edges=self.hex_edges,
-                    reset_camera=False,
-                    smooth_shading=True,
-                    scalar_bar_args=(
-                        {"title": style.title, "n_labels": 4, "fmt": "%.0f"}
-                        if layer == "volcano-state"
-                        else {"title": style.title, "n_labels": 2, "fmt": "%.0f"}
-                        if layer == "volcanic-areas"
-                        else {"title": style.title}
-                    ),
-                )
-            )
+            mesh_kwargs = {
+                "scalars": layer,
+                "cmap": cmap,
+                "clim": clim,
+                "show_edges": self.hex_edges,
+                "reset_camera": False,
+                "smooth_shading": True,
+                "scalar_bar_args": (
+                    {"title": style.title, "n_labels": 4, "fmt": "%.0f"}
+                    if layer == "volcano-state"
+                    else {"title": style.title, "n_labels": 2, "fmt": "%.0f"}
+                    if layer == "volcanic-areas"
+                    else {"title": style.title}
+                ),
+            }
+            color_count = getattr(cmap, "N", None)
+            if color_count is not None:
+                mesh_kwargs["n_colors"] = int(color_count)
+            self.actors.append(self.plotter.add_mesh(display_mesh, **mesh_kwargs))
             if layer == "volcano-state" and len(geology.volcanism.sites.cell_indices):
                 cells = geology.volcanism.sites.cell_indices
                 self.actors.append(
@@ -266,6 +267,28 @@ class WorldgenViewer:
                 widget.GetRepresentation().SetState(name == layer)
         self.plotter.render()
         self.plotter.camera_position = camera_position
+
+    def write_rotation_gif(
+        self,
+        path: str,
+        *,
+        frames: int = 120,
+        fps: float = 24.0,
+    ) -> None:
+        """Write a full camera rotation while leaving the viewer open."""
+        initial_camera = self.plotter.camera_position
+        self.plotter.open_gif(path, fps=fps)
+        try:
+            self.plotter.write_frame()
+            step = 360.0 / frames
+            for _ in range(1, frames):
+                self.plotter.camera.Azimuth(step)
+                self.plotter.write_frame()
+        finally:
+            if self.plotter.mwriter is not None:
+                self.plotter.mwriter.close()
+                self.plotter.mwriter = None
+            self.plotter.camera_position = initial_camera
 
     def add_layer_controls(self) -> None:
         for index, name in enumerate(LAYERS):
@@ -329,12 +352,15 @@ def render_geology(
     elevation_range: tuple[float, float] | None = None,
     hex_edges: bool = True,
     screenshot: str | None = None,
+    rotation_gif: str | None = None,
+    rotation_frames: int = 120,
+    rotation_fps: float = 24.0,
 ) -> None:
-    """Render one initial layer and optionally save an offscreen screenshot."""
+    """Render one initial layer, screenshot, or rotation GIF."""
     viewer = WorldgenViewer(
         world,
         arrow_scale=arrow_scale,
-        off_screen=off_screen,
+        off_screen=off_screen or rotation_gif is not None,
         terrain_relief=terrain_relief,
         vertical_exaggeration=vertical_exaggeration,
         sea_level=sea_level,
@@ -343,7 +369,12 @@ def render_geology(
     )
     viewer.select_layer(layer)
     viewer.plotter.reset_camera()
-    if not off_screen:
-        viewer.add_layer_controls()
-    viewer.plotter.show(screenshot=screenshot)
+    if rotation_gif is not None:
+        viewer.write_rotation_gif(
+            rotation_gif, frames=rotation_frames, fps=rotation_fps
+        )
+    else:
+        if not off_screen:
+            viewer.add_layer_controls()
+        viewer.plotter.show(screenshot=screenshot)
     viewer.plotter.close()

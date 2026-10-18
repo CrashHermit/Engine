@@ -26,13 +26,27 @@ This replaces the coarse shell whose facets intersected kilometres of seafloor
 and produced bands at true scale. Toggling water does not regenerate the mesh.
 
 Elevation colour policy is independent of generation settings. Elevation and
-base-elevation use bathymetry colours below zero and land colours above zero,
-with a pale transition anchored at sea level. For comparisons, fix both limits:
+coastal-elevation use deep-to-shallow bathymetry colours below zero, a pale
+sea-level anchor, and hypsometric land colours from green lowlands through
+ochre and brown highlands to pale summits. For comparisons, fix both limits:
 
 ```bash
 uv run python -m src.worldgen --layer elevation --terrain-relief \
   --elevation-min -8000 --elevation-max 8000
 ```
+
+Create an offscreen full-rotation GIF using the same display settings:
+
+```bash
+uv run python -m src.worldgen --seed 2026 --frequency 40 \
+  --layer elevation --terrain-relief --vertical-exaggeration 25 \
+  --no-hex-edges --elevation-min -12000 --elevation-max 10000 \
+  --rotation-gif /tmp/planet-rotation.gif \
+  --rotation-frames 120 --rotation-fps 24
+```
+
+`--rotation-gif` automatically uses offscreen rendering. The generated GIF
+contains the selected layer and does not regenerate the world between frames.
 
 These display limits do not modify heights or sea level. Without an override,
 the viewer uses the configured conservative bounds. `LayerStyle` in
@@ -50,16 +64,21 @@ Available layers include `plates`, `hotspot-potential`, `volcanic-potential`,
 `volcanic-activity`, `volcanic-areas`, `volcano-state`, `velocity`,
 `convergence`, `divergence`, `shear`, `crust`, `crust-regions`, `crust-field`,
 `crust-density`, `crust-region-density`, `boundary-sections`,
-`subducting-plate`, `base-elevation`, `tectonic-relief`, `volcanism`, `elevation`,
-and `margin-distance`. `crust` shows
+`subducting-plate`, `coastal-elevation`, `tectonic-relief`, `volcanism`,
+`impact-relief`, `terrain-variation`, `elevation`, and `margin-distance`. `crust`
 oceanic material in blue and continental material in tan; `crust-regions` shows
 region ownership; density layers show dimensionless effective-density proxies.
 Boundary sections retain geometric/material continuity and a preferred subducting side,
-not discrete interaction categories. `base-elevation` displays the coastal base profile in metres
-with sea level at zero; `margin-distance` is signed distance as a percentage of
- circumference (positive continental, negative oceanic). `--layer` sets the
- initial view. Use `--seed 123` and `--frequency 20` to control generated
- world and mesh resolution. Offscreen screenshots omit controls.
+not discrete interaction categories. `coastal-elevation` displays the continuous
+coastal contribution in metres with sea level at zero; `elevation` adds coastal,
+tectonic, volcanic, impact, and terrain-variation contributions. `impact-relief`
+shows the signed continuous crater bowls and rims. `ElevationConfig.impacts`
+controls source count and radius/depth/sharpness/rim/apron parameters; source locations
+are seeded independently on the sphere rather than tied to mesh cells.
+`margin-distance` is signed distance as a percentage of circumference (positive
+continental, negative oceanic). `--layer` selects the initial view. Use `--seed 123`
+and `--frequency 20` to control the generated world and mesh resolution. Offscreen
+screenshots omit controls.
 
 Plates and crust default to connected, noise-biased priority flooding. Run a
 higher-resolution crust view:
@@ -78,12 +97,13 @@ a globally optimal minimax partition. Every region stays connected to its seed.
 Ownership remains discrete; changing the generation mesh can change geography.
 Sampling the retained elevation field more finely does not rerun that growth.
 
-Plate growth, crust growth, and volcanic potential use independent fields.
-Priority flooding remains the default: each plate or crust seed uses its own
-noise-biased priority map, configured by that generator's `flood` settings.
-The retained Dijkstra plate option samples a plate-owned cost field instead.
-Existing random streams retain their roles; plate motion uses child 9,
-volcanic potential uses child 0, and hotspot source sampling uses child 11.
+Plate growth, crust growth, volcanic potential, and impact sources use independent
+fields. Priority flooding remains the default: each plate or crust seed uses its own
+noise-biased priority map, configured by that generator's `flood` settings. The
+retained Dijkstra plate option samples a plate-owned cost field instead.
+Existing random streams keep their roles: plate motion uses child 9, volcanic
+potential uses child 0, hotspot source sampling uses child 11, and impact placement
+uses appended child 14.
 
 Noise sampling uses `pyfastnoiselite==0.0.7` through its public
 `FastNoiseLite.gen_from_coords` API, with an independent generator per field.
@@ -151,7 +171,7 @@ Boundary diagnostics use an opaque globe to hide rear-facing lines and named
 categorical legends. Worlds with no plate boundaries display “No boundaries”.
 
 Crust also exposes a read-only `density_anomaly`, relative to each cell's crust-type
-baseline rather than absolute density. `config.elevation.buoyancy` is a
+baseline rather than absolute density. `config.elevation.coastal.buoyancy` is a
 `BuoyancyConfig` with `continental_height_percent=0.02` and
 `oceanic_height_percent=0.04`, both percentages of radius per unit relative anomaly.
 Less-dense crust raises the continental interior target or makes the ocean basin
@@ -183,19 +203,22 @@ includes a `crust` result with region IDs, seeds, region types, a continental ma
 and a read-only normalized `shaping_field`. In flood mode that diagnostic samples
 each cell's winning region priority; it is not a shared noise or arrival-time field.
 Seed counts do not guarantee area percentages or separate continents.
-`GeneratedWorld.elevation` retains read-only `base_elevation`,
-`tectonic_relief`, and final `elevation`
-arrays. Land classification uses final elevation relative to zero.
+`GeneratedWorld.elevation` retains read-only `coastal_elevation`,
+`tectonic_relief`, `volcanic_relief`, `terrain_variation`, and final `elevation` arrays.
+Elevation values use zero as their sea-level datum; no land/sea classification
+is returned.
 Elevation uses exact finite spherical boundary arcs rather than graph propagation.
 Continental collisions and subduction combine coherent section responses through
 positive/negative envelopes. Motion and side influence blend continuously between
 nearby arc sources. Divergence and transform add separate signed contributions.
 `WorldgenConfig.elevation.deformation` groups four independent process settings:
-`collision`, `subduction`, `divergence`, and `transform`. Collision and subduction each default
-to `width_percent=2.5` (circumference percentage) and `height_percent=0.15`
-(radius percentage per unit raw interaction strength). Divergence defaults to
-`width_percent=1.0` and `height_percent=0.075`. Width is the reach on each side:
-at Earth radius the default divergence reach is approximately 400 km per side.
+`collision`, `subduction`, `divergence`, and `transform`. Collision defaults to
+`width_percent=2.5` and `height_percent=0.16`; subduction defaults to
+`width_percent=2.5`, `height_percent=0.15`, and `trench_depth_multiplier=2.25`.
+These heights are percentages of radius per unit raw interaction strength.
+Divergence defaults to `width_percent=1.0` and `height_percent=0.075`. Width is
+the reach on each side: at Earth radius the default divergence reach is
+approximately 400 km per side.
 Changing one process's settings no longer changes another process.
 No world-maximum normalization is used. Set a process's width or height to zero
 to disable that process. These are procedural geological profiles, without
@@ -213,6 +236,12 @@ on each uplifting side (0.75% of circumference with the default width).
 boundary, for a combined peak coefficient of three times the broad component.
 The crest has a pointed cross-section rather than the smoothstep's flat summit.
 Setting its height multiplier to zero restores the broad-only profile.
+
+The default collision amplitude and independent trench-depth multiplier are
+tuned for an Earth-scale sampled elevation range. They target comparable
+mountain and trench extremes without deepening the entire ocean basin or
+increasing the overriding volcanic arc by the same factor. They remain
+procedural profiles, not a physical plate-tectonics simulation.
 Trenches and divergent relief are unaffected. Actual sampled heights depend on
 motion strength and cell distance from the boundary; coarse meshes can miss the
 crest entirely. Use frequency 40 or higher to inspect the narrow component.
@@ -221,6 +250,8 @@ Subduction uses `subduction_profile` from `profiles.py`, for both oceanic–ocea
 and oceanic–continental boundaries. It takes signed distance: negative on the
 descending side, positive on the overriding side. `trench_width_fraction=0.2`
 sets the trench reach on each side of a shared floor at distance zero.
+`trench_depth_multiplier=2.25` deepens that floor independently of the overriding
+arc amplitude.
 On the overriding side, a compact smooth arc peaks at `arc_offset_fraction=0.25`
 of that width inland from the boundary, with half-width `arc_width_fraction=0.2`
 and amplitude `arc_height_multiplier=1.5` times the source amplitude.
@@ -263,8 +294,11 @@ The profile uses that one distance rather than maximizing every edge's flank,
 so distant flanks do not fill the axial valley.
 Narrow axial features require enough mesh resolution to be sampled.
 
-`WorldgenConfig.elevation` composes three `CoastalWidthConfig` settings: `inland`,
-`shelf`, and `slope`, with `base_percent` defaults 2.0, 1.25, and 1.25.
+`WorldgenConfig.elevation` composes independent `CoastalConfig` and
+`DeformationConfig` settings as `coastal` and `deformation`. Coastal evaluators
+receive only `CoastalConfig`; tectonic evaluators receive only `DeformationConfig`.
+`WorldgenConfig.elevation.coastal` contains three `CoastalWidthConfig` settings:
+`inland`, `shelf`, and `slope`, with `base_percent` defaults 2.0, 1.25, and 1.25.
 Each base width is a percentage of circumference; they do not sum to 100%.
 Each width independently exposes `variation_strength=0.3` and
 `noise_frequency=1.0`. A single-octave 3D simplex field sampled on unit-sphere
@@ -279,19 +313,25 @@ not interior heights or basin depths. Configure individual fields using
 `dataclasses.replace`, for example:
 
 ```python
-elevation = replace(config.elevation, shelf=replace(
-    config.elevation.shelf, variation_strength=0.6, noise_frequency=1.5
-))
-config = replace(config, elevation=elevation)
+coastal = replace(
+    config.elevation.coastal,
+    shelf=replace(
+        config.elevation.coastal.shelf,
+        variation_strength=0.6,
+        noise_frequency=1.5,
+    ),
+)
+config = replace(config, elevation=replace(config.elevation, coastal=coastal))
 ```
 
 Angular edge distances are converted directly to percentages, with no physical
-radius or tile-count dependency. Elevation magnitudes are percentages of radius:
+radius or tile-count dependency. Coastal elevation magnitudes are percentages of
+radius, configured on `WorldgenConfig.elevation.coastal`:
 `interior_height_percent=0.00942`, `shelf_depth_percent=0.00314`, and
-`basin_depth_percent=0.07063`. Depth parameters are positive and subtracted by
+`basin_depth_percent=0.08063`. Depth parameters are positive and subtracted by
 the profile. `WorldgenConfig.planet` is a `PlanetConfig` with
 `radius_m=6_371_000.0`; these defaults produce approximately +600 m, -200 m,
-and -4500 m. A percentage value of `1.0` means 1%, not a fraction of 1.
+and -5,137 m. A percentage value of `1.0` means 1%, not a fraction of 1.
 Generated elevation and `ElevationResult.elevation_range_m` are in metres;
 the viewer uses that configured range rather than fixed height limits.
 Doubling the radius doubles elevations and implied physical horizontal distances,
@@ -303,6 +343,21 @@ finite arc in the extracted continental–oceanic boundary network, positive on
 continental crust and negative on oceanic crust. The shelf break lies at the
 crust boundary; the coastline is offset inland by one local shelf width.
 Sampling at finer resolution resolves the same established geography.
+
+`WorldgenConfig.elevation.variation` controls a fourth, additive elevation
+component: a global continuous noise field, evaluated at the sampled spherical
+positions. `amplitude_percent=0.0215` bounds its displacement to ±0.0215% of
+planet radius (about ±1,371 m at the default radius). Its independent
+`NoiseConfig` defaults to four octaves, base frequency 4.0, lacunarity 2.0, and
+persistence 0.5. The generator assigns it an appended deterministic seed stream;
+existing geology and elevation streams are unchanged. Set the amplitude to zero
+to produce exactly zero variation without sampling noise.
+
+Final elevation is the sum of coastal elevation, tectonic relief, volcanic relief,
+and terrain variation. The variation is applied globally, not faded near coasts:
+it may therefore move the final sea-level coastline, but it does not change crust
+ownership, extracted boundaries, or the other elevation components. Its amplitude
+is bounded in metres and scales with planet radius.
 
 Transform relief combines existing normal and shear boundary motion without a
 discrete transform classification. Closing plus sliding produces restraining
@@ -347,9 +402,10 @@ all earlier streams. Set `count=0` to disable hotspots.
 Shields are confined to their source plate with a continuous taper to zero at
 plate boundaries, rather than an abrupt cutoff. Source peaks are retained.
 Overlapping shields combine by maximum rather than stacking.
-`world.elevation.volcanic_relief` stores uplift in metres; final elevation is
-base elevation plus tectonic relief plus volcanic relief. Seamounts, ocean islands,
-and continental volcanoes emerge from that sum without a forced sea-level rule.
+`world.elevation.volcanic_relief` stores uplift in metres; final elevation adds
+coastal elevation, tectonic relief, volcanic relief, and terrain variation.
+Seamounts, ocean islands, and continental volcanoes emerge from that sum without
+a forced sea-level rule.
 This models static volcanic systems, not plume drift or time-evolving island chains.
 
 Use `--layer volcanism` to inspect volcanic uplift alone on the diagnostic globe.
@@ -410,11 +466,28 @@ eruptions evolving over time.
 
 Elevation lives in the flat `src/worldgen/elevation/` package. `generate.py`
 builds an `ElevationField`; `field.py` samples its retained geography and source
-definitions into an `ElevationResult`. `coastal.py` contains the coast profile,
-and `profiles.py` the geological cross-sections. `deformation.py` owns indexed
+definitions into an `ElevationResult`. `coastal.py` retains a `CoastalField`
+and evaluates the continent-to-basin profile with `CoastalConfig`.
+`profiles.py` contains geological cross-sections. `deformation.py` owns indexed
 tectonic evaluation, with process functions in `collision.py`, `subduction.py`,
-`divergence.py`, and `transform.py`. `bounds.py` derives conservative ranges
-from definitions rather than observed extrema of a requested sample batch.
+`divergence.py`, and `transform.py`. In `bounds.py`, `coastal_bounds` and
+`tectonic_bounds` derive each contribution's conservative range from its own
+configuration; `elevation_bounds` combines those with the volcanic height bound,
+without measuring extrema of a requested sample batch.
+`TectonicField` retains arc normals and lengths, relative plate rotations,
+across-boundary vectors, material sides and section metadata once. Sampling queries
+the existing spatial index in batches of at most 1,024 positions and evaluates
+their point–arc distances together, rather than invoking NumPy once per position.
+`kernels.py` runs the motion, section blending and profile reductions through
+Numba's cached `njit` path. Scratch arrays are allocated once per batch and reused
+across its positions; scalar process helpers do not construct temporary arrays.
+The geological profiles, finite-arc distances, envelopes and blend rules are
+unchanged. Floating-point reduction order can produce roundoff-sized differences.
+There is no lower-detail approximation or alternate fallback sampling path.
+The first uncached call includes compilation; subsequent calls reuse compiled code.
+The full elevation sampler also shares its cell-ownership query with shield
+evaluation. The Python implementation targets 3.13+.
+
 
 `geometry/boundary.py` provides the shared geographic representation:
 `SphericalRegions` locates the actual centroid-dual cell containing a point,
@@ -441,9 +514,10 @@ samples = world.elevation_field.sample(positions)
 heights_m = samples.elevation
 ```
 
-Samples expose read-only `base_elevation`, `tectonic_relief`, `volcanic_relief`,
-`elevation`, signed `margin_distance`, and `land_mask`. The same point returns
-the same values when queried alone, reordered, or alongside a finer sampling mesh.
+Samples expose read-only `coastal_elevation`, `tectonic_relief`,
+`volcanic_relief`, `terrain_variation`, `elevation`, and signed `margin_distance`.
+The same point returns the same values when queried alone, reordered, or alongside
+a finer sampling mesh.
 Range metadata is independent of the query batch and scales with planet radius.
 Continuous does not imply differentiable: sharp crests, nearest-distance medial
 axes and envelope changes can have slope changes without height jumps.

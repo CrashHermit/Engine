@@ -86,6 +86,10 @@ def test_profile_shapes_preserve_crests_trenches_and_axial_valleys():
     assert subduction_profile(1.0, 4.0) > 0.0
     assert subduction_profile(4.0, 4.0) == 0.0
 
+    normal_trench = subduction_profile(-0.5, 4.0)
+    deep_trench = subduction_profile(-0.5, 4.0, trench_depth_multiplier=4.0)
+    np.testing.assert_allclose(deep_trench, normal_trench * 4.0)
+
     assert divergent_profile(0.0, 4.0, True) < 0.0
     assert divergent_profile(0.0, 4.0, False) > 0.0
     assert divergent_profile(4.0, 4.0, False) == 0.0
@@ -295,3 +299,23 @@ def test_divergent_field_is_continuous_across_active_arc_and_section_end():
     outside = end * np.cos(offset) - tangent * np.sin(offset)
     values = field.sample(np.stack((inside, end, outside)), world.radius_m)
     assert abs(values[0] - values[2]) < max(1.0, abs(values[1]) * 1e-3)
+
+
+def test_sampling_remains_consistent_across_large_query_partitions():
+    world = _world()
+    field = _field(world)
+    points = np.random.default_rng(701).normal(size=(2051, 3))
+    points /= np.linalg.norm(points, axis=1, keepdims=True)
+    whole = field.sample(points, world.radius_m)
+    split = np.concatenate(
+        [
+            field.sample(points[:1023], world.radius_m),
+            field.sample(points[1023:1025], world.radius_m),
+            field.sample(points[1025:2048], world.radius_m),
+            field.sample(points[2048:], world.radius_m),
+        ]
+    )
+    np.testing.assert_array_equal(split, whole)
+    np.testing.assert_array_equal(
+        field.sample(points[::-1].copy(), world.radius_m), whole[::-1]
+    )

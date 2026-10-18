@@ -87,11 +87,16 @@ def test_plate_confined_shield_approaches_zero_continuously_at_boundary():
     assert field.sample(mesh.vertices[seed : seed + 1], 1.0)[0] == 0.0008
 
 
-def test_emergent_and_submerged_hotspots_are_classified_from_final_height():
+def test_hotspot_uplift_can_cross_zero_or_remain_below_it():
     from src.worldgen.generate import generate_world
 
     world = generate_world(WorldgenConfig(seed=71, subdivision_frequency=3))
-    background = world.elevation.base_elevation + world.elevation.tectonic_relief
+    background = (
+        world.elevation.coastal_elevation
+        + world.elevation.tectonic_relief
+        + world.elevation.terrain_variation
+        + world.elevation.impact_relief
+    )
     submerged = np.flatnonzero(background < -0.1)
     emergent = int(submerged[np.argmax(background[submerged])])
     deep = int(submerged[np.argmin(background[submerged])])
@@ -107,10 +112,7 @@ def test_emergent_and_submerged_hotspots_are_classified_from_final_height():
     field = replace(world.elevation_field, volcanoes=volcanic)
     terrain = field.sample(world.mesh.vertices)
     assert terrain.elevation[emergent] > 0.0
-    assert terrain.land_mask[emergent]
     assert terrain.elevation[deep] < 0.0
-    assert not terrain.land_mask[deep]
-    np.testing.assert_array_equal(terrain.land_mask, terrain.elevation >= 0.0)
 
 
 def test_extinct_historical_volcanoes_keep_relief_without_current_activity():

@@ -33,7 +33,7 @@ class PlateConfig:
 
 @dataclass(frozen=True, slots=True)
 class CrustConfig:
-    continental_seeds: int = 18
+    continental_seeds: int = 10
     oceanic_seeds: int = 33
     min_seed_distance: float = 0.1
     irregularity_strength: float = 1.0

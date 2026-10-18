@@ -19,9 +19,11 @@ def test_arbitrary_samples_are_independent_of_batch_order_and_resolution():
     order = np.array([12, 4, 0, 20, 7])
     subset = field.sample(points[order])
     for name in (
-        "base_elevation",
+        "coastal_elevation",
         "tectonic_relief",
         "volcanic_relief",
+        "impact_relief",
+        "terrain_variation",
         "elevation",
         "margin_distance",
     ):
@@ -30,26 +32,28 @@ def test_arbitrary_samples_are_independent_of_batch_order_and_resolution():
         np.testing.assert_array_equal(
             getattr(single, name), getattr(full, name)[order[:1]]
         )
-    np.testing.assert_array_equal(full.land_mask, full.elevation >= 0.0)
-    assert not full.elevation.flags.writeable
+    assert not full.impact_relief.flags.writeable
+    assert not full.terrain_variation.flags.writeable
 
 
 def test_crust_boundary_samples_are_shelf_breaks_not_nearest_cell_values():
     world = _world()
-    boundary = world.elevation_field.crust_boundary
+    boundary = world.elevation_field.coastal.boundary
     points = boundary.starts + boundary.ends
     points /= np.linalg.norm(points, axis=1, keepdims=True)
     values = world.elevation_field.sample(points)
     np.testing.assert_allclose(values.margin_distance, 0.0, atol=1e-10)
     expected = (
-        -world.elevation_field.config.shelf_depth_percent * world.radius_m / 100.0
+        -world.elevation_field.coastal.config.shelf_depth_percent
+        * world.radius_m
+        / 100.0
     )
-    np.testing.assert_allclose(values.base_elevation, expected, atol=1e-7)
+    np.testing.assert_allclose(values.coastal_elevation, expected, atol=1e-7)
 
 
 def test_full_elevation_has_no_height_jump_across_plate_boundaries():
     world = _world()
-    boundary = world.elevation_field.plate_boundary
+    boundary = world.elevation_field.tectonics.boundary
     ids = np.arange(0, len(boundary.starts), max(1, len(boundary.starts) // 30))
     midpoints = boundary.starts[ids] + boundary.ends[ids]
     midpoints /= np.linalg.norm(midpoints, axis=1, keepdims=True)
@@ -73,6 +77,10 @@ def test_radius_scaling_and_empty_queries_work_without_rebuilding_geography():
     original = field.sample(points)
     doubled = replace(field, radius_m=field.radius_m * 2.0).sample(points)
     np.testing.assert_array_equal(doubled.elevation, original.elevation * 2.0)
+    np.testing.assert_array_equal(doubled.impact_relief, original.impact_relief * 2.0)
+    np.testing.assert_array_equal(
+        doubled.terrain_variation, original.terrain_variation * 2.0
+    )
     np.testing.assert_array_equal(doubled.margin_distance, original.margin_distance)
     np.testing.assert_array_equal(
         doubled.elevation_range_m, np.asarray(original.elevation_range_m) * 2.0
@@ -80,5 +88,13 @@ def test_radius_scaling_and_empty_queries_work_without_rebuilding_geography():
     assert original.elevation.min() >= original.elevation_range_m[0]
     assert original.elevation.max() <= original.elevation_range_m[1]
     empty = field.sample(np.empty((0, 3)))
-    assert empty.elevation.shape == (0,)
-    assert empty.land_mask.shape == (0,)
+    for name in (
+        "coastal_elevation",
+        "tectonic_relief",
+        "volcanic_relief",
+        "terrain_variation",
+        "impact_relief",
+        "elevation",
+        "margin_distance",
+    ):
+        assert getattr(empty, name).shape == (0,)

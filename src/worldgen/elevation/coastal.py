@@ -1,11 +1,63 @@
 """Coastal elevation calculations shared by the elevation generator."""
 
+from dataclasses import dataclass
+
 import numpy as np
 
-from src.worldgen.geometry.boundary import BoundaryNetwork
+from src.worldgen.elevation.config import CoastalConfig, CoastalWidthConfig
+from src.worldgen.elevation.model import CoastalResult
 from src.worldgen.field.noise import noise_multiplier
-from src.worldgen.elevation.config import CoastalWidthConfig, ElevationConfig
+from src.worldgen.geology.config import CrustDensityConfig
+from src.worldgen.geometry.boundary import BoundaryNetwork
 from src.worldgen.utilities.curves import smoothstep
+
+
+@dataclass(frozen=True, slots=True)
+class CoastalField:
+    """Continuous coastal contribution over established crust geography."""
+
+    config: CoastalConfig
+    continental_mask: np.ndarray
+    boundary: BoundaryNetwork
+    density_config: CrustDensityConfig
+    density_noise_seed: int
+    width_noise_seeds: tuple[int, int, int]
+
+    def sample(
+        self,
+        positions: np.ndarray,
+        radius_m: float,
+        *,
+        cell_indices: np.ndarray,
+    ) -> CoastalResult:
+        margin = signed_margin_distances(
+            positions, self.continental_mask[cell_indices], self.boundary
+        )
+        density_anomaly = (
+            noise_multiplier(
+                positions,
+                seed=self.density_noise_seed,
+                frequency=self.density_config.noise_frequency,
+                strength=self.density_config.variation_strength,
+            )
+            - 1.0
+        )
+        elevation = coastal_profile(
+            margin,
+            self.config,
+            radius_m,
+            density_anomaly=density_anomaly,
+            inland_width=_sample_width(
+                positions, self.config.inland, noise_seed=self.width_noise_seeds[0]
+            ),
+            shelf_width=_sample_width(
+                positions, self.config.shelf, noise_seed=self.width_noise_seeds[1]
+            ),
+            slope_width=_sample_width(
+                positions, self.config.slope, noise_seed=self.width_noise_seeds[2]
+            ),
+        )
+        return CoastalResult(elevation=elevation, margin_distance=margin)
 
 
 def signed_margin_distances(
@@ -30,9 +82,9 @@ def _sample_width(
     )
 
 
-def _base_elevation(
+def coastal_profile(
     margin_distance: np.ndarray,
-    config: ElevationConfig,
+    config: CoastalConfig,
     radius_m: float,
     *,
     density_anomaly: np.ndarray,

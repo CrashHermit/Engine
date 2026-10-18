@@ -1,54 +1,81 @@
-"""Continuous elevation contributions from retained spherical boundary sources."""
-
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+"""Batched continuous tectonic queries with retained geometry and compiled profiles."""
 
 import numpy as np
 
-from src.worldgen.elevation.collision import collision_value
 from src.worldgen.elevation.config import DeformationConfig
-from src.worldgen.elevation.divergence import divergence_value
+from src.worldgen.elevation.kernels import (
+    TectonicParameters,
+    TectonicSources,
+    evaluate_tectonic_batch,
+)
 from src.worldgen.elevation.sources import boundary_source_rows
-from src.worldgen.elevation.subduction import subduction_value
-from src.worldgen.elevation.transform import transform_strength, transform_value
+from src.worldgen.elevation.transform import transform_strength
 from src.worldgen.field.noise import noise_multiplier
-from src.worldgen.geometry.boundary import arc_distances
+from src.worldgen.geometry.boundary import BoundaryNetwork, arc_distances
 from src.worldgen.geometry.mesh import Mesh
-from src.worldgen.utilities.curves import smoothstep_scalar
+from src.worldgen.geology.model import GeologyResult
 
-if TYPE_CHECKING:
-    from src.worldgen.geometry.boundary import BoundaryNetwork
-    from src.worldgen.geology.model import GeologyResult
 
+_QUERY_BATCH_SIZE = 1024
 _PERCENT_PER_RADIAN = 100.0 / (2.0 * np.pi)
 
 
-def _source_weights(
-    distances: np.ndarray, segment_lengths: np.ndarray, blend_radius: float
-) -> tuple[float, np.ndarray]:
-    """Blend nearby sources by compact distance kernel and arc length."""
-    nearest = float(distances.min())
-    weights = np.asarray(
-        [
-            smoothstep_scalar((nearest + blend_radius - float(distance)) / blend_radius)
-            * float(length)
-            for distance, length in zip(distances, segment_lengths)
-        ]
+def _parameters(config: DeformationConfig) -> tuple[TectonicParameters, float]:
+    """Pack immutable settings once for the compiled evaluator."""
+    collision, subduction = config.collision, config.subduction
+    divergence, transform = config.divergence, config.transform
+    support = (
+        collision.width_percent,
+        subduction.width_percent
+        * max(
+            1.0,
+            subduction.trench_width_fraction,
+            subduction.arc_offset_fraction + subduction.arc_width_fraction,
+        ),
+        divergence.width_percent,
+        transform.width_percent,
     )
-    weights /= float(weights.sum())
-    return nearest, weights
+    blend = tuple(max(0.0, min(0.2 * width, 0.5)) for width in support)
+    parameters = TectonicParameters(
+        tuple(
+            float(value)
+            for value in (
+                collision.width_percent,
+                collision.height_percent,
+                collision.crest_width_fraction,
+                collision.crest_height_multiplier,
+            )
+        ),
+        tuple(
+            float(value)
+            for value in (
+                subduction.width_percent,
+                subduction.height_percent,
+                subduction.trench_width_fraction,
+                subduction.arc_offset_fraction,
+                subduction.arc_width_fraction,
+                subduction.arc_height_multiplier,
+                subduction.trench_depth_multiplier,
+            )
+        ),
+        tuple(
+            float(value)
+            for value in (
+                divergence.width_percent,
+                divergence.height_percent,
+                divergence.axial_width_fraction,
+                divergence.axial_depth_multiplier,
+                divergence.shoulder_height_multiplier,
+            )
+        ),
+        (float(transform.width_percent), float(transform.height_percent)),
+        blend,
+    )
+    return parameters, max(support) + max(blend)
 
 
 class TectonicField:
-    """Indexed tectonic profiles evaluated continuously at arbitrary positions.
-
-    Motion is reevaluated from retained plate rotations at each closest arc point.
-    Collision and subduction combine coherent section profiles by extrema.
-    Divergence uses one nearest coherent source distance with compact, normalized
-    blending; transform uses the same blend for signed source strength. This avoids
-    graph propagation, per-edge stacking, and distant divergent flanks filling axes.
-    """
+    """Indexed source definitions; query batches never regenerate their geography."""
 
     def __init__(
         self,
@@ -59,70 +86,67 @@ class TectonicField:
         boundary: BoundaryNetwork,
         arc_noise_seed: int,
     ) -> None:
-        self.mesh = mesh
-        self.geology = geology
         self.config = config
         self.boundary = boundary
         self.arc_noise_seed = arc_noise_seed
-        self._segment_rows, self._section_ids = boundary_source_rows(boundary, geology)
-        delta_omega = (
+        rows, section_ids = boundary_source_rows(boundary, geology)
+        edges = mesh.edges[boundary.edge_indices]
+        endpoints = mesh.vertices[edges]
+        delta = (
             geology.plate_rotation[boundary.right_labels]
             - geology.plate_rotation[boundary.left_labels]
         )
-        self.max_motion = float(np.linalg.norm(delta_omega, axis=1).max(initial=0.0))
-        edges = mesh.edges[boundary.edge_indices]
-        self._left_continental = geology.crust.continental_mask[edges[:, 0]]
-        self._right_continental = geology.crust.continental_mask[edges[:, 1]]
-        arc_normals = np.cross(boundary.starts, boundary.ends)
-        self._positive_side_is_left = (
-            np.sum(arc_normals * mesh.vertices[edges[:, 0]], axis=1) >= 0.0
-        )
-        self._segment_lengths = (
-            np.arctan2(
-                np.linalg.norm(np.cross(boundary.starts, boundary.ends), axis=1),
-                np.sum(boundary.starts * boundary.ends, axis=1),
-            )
+        self.max_motion = float(np.linalg.norm(delta, axis=1).max(initial=0.0))
+        normals = np.cross(boundary.starts, boundary.ends)
+        normal_lengths = np.linalg.norm(normals, axis=1)
+        positive_side_is_left = np.sum(normals * endpoints[:, 0], axis=1) >= 0.0
+        normals = normals / normal_lengths[:, None]
+        lengths = (
+            np.arctan2(normal_lengths, np.sum(boundary.starts * boundary.ends, axis=1))
             * _PERCENT_PER_RADIAN
         )
-        rows = self._segment_rows
-        self._divergent_sources = geology.boundary_divergence[rows] > 0.0
-        self._transform_sources = (
-            transform_strength(
+        across = endpoints[:, 1] - endpoints[:, 0]
+        self._sources = TectonicSources(
+            delta_rotation=delta,
+            arc_normals=normals,
+            positive_side_is_left=positive_side_is_left,
+            across_vectors=across,
+            lengths=lengths,
+            section_ids=section_ids,
+            left_plates=boundary.left_labels,
+            left_continental=geology.crust.continental_mask[edges[:, 0]],
+            right_continental=geology.crust.continental_mask[edges[:, 1]],
+            descending_plates=geology.boundary_sections.subducting_plate_ids,
+            collision_sections=geology.boundary_sections.continental_sides.all(axis=1),
+            divergent=geology.boundary_divergence[rows] > 0.0,
+            transform=transform_strength(
                 geology.boundary_convergence[rows] - geology.boundary_divergence[rows],
                 geology.boundary_shear[rows],
             )
-            != 0.0
+            != 0.0,
+        )
+        for array in self._sources:
+            array.setflags(write=False)
+        self._parameters, self._query_radius = _parameters(config)
+        self._enabled = any(
+            process.width_percent > 0.0 and process.height_percent != 0.0
+            for process in (
+                config.collision,
+                config.subduction,
+                config.divergence,
+                config.transform,
+            )
         )
 
     def sample(self, points: np.ndarray, radius_m: float) -> np.ndarray:
+        """Evaluate exact finite-arc geometry in bounded batches, then compiled reductions."""
         points = np.asarray(points, dtype=np.float64)
         shape = points.shape[:-1]
         flat = points.reshape((-1, 3))
-        if len(flat) == 0:
-            return np.empty(shape, dtype=np.float64)
-        cfg = self.config
-        subduction_support = cfg.subduction.width_percent * max(
-            1.0,
-            cfg.subduction.trench_width_fraction,
-            cfg.subduction.arc_offset_fraction + cfg.subduction.arc_width_fraction,
-        )
-        support_widths = (
-            cfg.collision.width_percent,
-            subduction_support,
-            cfg.divergence.width_percent,
-            cfg.transform.width_percent,
-        )
-        max_width = max(support_widths)
         result = np.zeros(len(flat), dtype=np.float64)
-        if max_width <= 0.0 or len(self.boundary.edge_indices) == 0:
+        if not len(flat) or not len(self.boundary.edge_indices) or not self._enabled:
             return result.reshape(shape)
-        blend_radii = tuple(max(0.0, min(0.2 * width, 0.5)) for width in support_widths)
-        max_blend_radius = max(blend_radii)
-        candidate_sets = self.boundary.candidates(flat, max_width + max_blend_radius)
-        rotations = self.geology.plate_rotation
-        sections = self.geology.boundary_sections
-        peak_scale = radius_m / 100.0
-        subduction = cfg.subduction
+        subduction = self.config.subduction
         if subduction.width_percent > 0.0 and subduction.height_percent != 0.0:
             arc_variation = noise_multiplier(
                 flat,
@@ -132,185 +156,35 @@ class TectonicField:
             )
         else:
             arc_variation = np.ones(len(flat), dtype=np.float64)
-
-        for point_id, candidate_ids in enumerate(candidate_sets):
-            if not len(candidate_ids):
+        for start in range(0, len(flat), _QUERY_BATCH_SIZE):
+            end = min(start + _QUERY_BATCH_SIZE, len(flat))
+            batch = flat[start:end]
+            candidates = self.boundary.candidates(batch, self._query_radius)
+            counts = np.fromiter(
+                (len(ids) for ids in candidates), dtype=np.int64, count=len(batch)
+            )
+            offsets = np.empty(len(batch) + 1, dtype=np.int64)
+            offsets[0] = 0
+            np.cumsum(counts, out=offsets[1:])
+            if offsets[-1] == 0:
                 continue
-            segment_ids = candidate_ids
-            query = flat[point_id]
+            segments = np.concatenate(candidates)
+            point_ids = np.repeat(np.arange(len(batch)), counts)
             distances, closest = arc_distances(
-                np.broadcast_to(query, (len(segment_ids), 3)),
-                self.boundary.starts[segment_ids],
-                self.boundary.ends[segment_ids],
+                batch[point_ids],
+                self.boundary.starts[segments],
+                self.boundary.ends[segments],
             )
-            section_ids = self._section_ids[segment_ids]
-            left_plate = self.boundary.left_labels[segment_ids]
-            right_plate = self.boundary.right_labels[segment_ids]
-            delta_omega = rotations[right_plate] - rotations[left_plate]
-            arc_normals = np.cross(
-                self.boundary.starts[segment_ids], self.boundary.ends[segment_ids]
+            evaluate_tectonic_batch(
+                batch,
+                offsets,
+                segments,
+                distances,
+                closest,
+                arc_variation[start:end],
+                self._sources,
+                self._parameters,
+                radius_m / 100.0,
+                result[start:end],
             )
-            arc_normals /= np.linalg.norm(arc_normals, axis=1, keepdims=True)
-            signed_side = (
-                np.arcsin(np.clip(arc_normals @ query, -1.0, 1.0)) * _PERCENT_PER_RADIAN
-            )
-            positive_side_is_left = self._positive_side_is_left[segment_ids]
-            signed_side = np.where(positive_side_is_left, signed_side, -signed_side)
-
-            edge_ends = self.mesh.vertices[
-                self.mesh.edges[self.boundary.edge_indices[segment_ids]]
-            ]
-            across = edge_ends[:, 1] - edge_ends[:, 0]
-            across -= np.sum(across * closest, axis=1, keepdims=True) * closest
-            across /= np.linalg.norm(across, axis=1, keepdims=True)
-            along = np.cross(closest, across)
-            relative_velocity = np.cross(delta_omega, closest)
-            opening = np.sum(relative_velocity * across, axis=1)
-            convergence = np.maximum(-opening, 0.0)
-            divergence = np.maximum(opening, 0.0)
-            shear = np.abs(np.sum(relative_velocity * along, axis=1))
-            positive = 0.0
-            negative = 0.0
-            divergent_relief = 0.0
-            transform_relief = 0.0
-
-            if (
-                cfg.collision.width_percent > 0.0
-                and cfg.collision.height_percent != 0.0
-            ):
-                for section_id in np.unique(section_ids):
-                    if not sections.continental_sides[section_id].all():
-                        continue
-                    ids = np.flatnonzero(section_ids == section_id)
-                    nearest, weights = _source_weights(
-                        distances[ids],
-                        self._segment_lengths[segment_ids[ids]],
-                        blend_radii[0],
-                    )
-                    strength = float(np.dot(weights, convergence[ids]))
-                    value = float(
-                        collision_value(
-                            np.asarray([nearest]),
-                            cfg.collision,
-                            np.asarray([peak_scale * strength]),
-                        )[0]
-                    )
-                    positive = max(positive, value)
-
-            if (
-                cfg.subduction.width_percent > 0.0
-                and cfg.subduction.height_percent != 0.0
-            ):
-                for section_id in np.unique(section_ids):
-                    descending = int(sections.subducting_plate_ids[section_id])
-                    if descending < 0:
-                        continue
-                    ids = np.flatnonzero(section_ids == section_id)
-                    nearest, weights = _source_weights(
-                        distances[ids],
-                        self._segment_lengths[segment_ids[ids]],
-                        blend_radii[1],
-                    )
-                    strength = float(np.dot(weights, convergence[ids]))
-                    if strength <= 0.0:
-                        continue
-                    transition = min(0.1 * subduction.width_percent, 0.15)
-                    left_weights = np.asarray(
-                        [
-                            smoothstep_scalar(
-                                0.5 + float(signed_side[index]) / (2.0 * transition)
-                            )
-                            for index in ids
-                        ]
-                    )
-                    descending_is_left = left_plate[ids] == descending
-                    descending_weights = np.where(
-                        descending_is_left, left_weights, 1.0 - left_weights
-                    )
-                    descending_weight = float(np.dot(weights, descending_weights))
-                    value_positive = float(
-                        subduction_value(
-                            np.asarray([nearest]),
-                            subduction,
-                            np.asarray([peak_scale * strength]),
-                            np.asarray([arc_variation[point_id]]),
-                        )[0]
-                    )
-                    value_negative = float(
-                        subduction_value(
-                            np.asarray([-nearest]),
-                            subduction,
-                            np.asarray([peak_scale * strength]),
-                            np.asarray([arc_variation[point_id]]),
-                        )[0]
-                    )
-                    value = (
-                        descending_weight * value_negative
-                        + (1.0 - descending_weight) * value_positive
-                    )
-                    positive = max(positive, value)
-                    negative = min(negative, value)
-
-            if (
-                cfg.divergence.width_percent > 0.0
-                and cfg.divergence.height_percent != 0.0
-            ):
-                source_ids = np.flatnonzero(self._divergent_sources[segment_ids])
-                if len(source_ids):
-                    nearest, weights = _source_weights(
-                        distances[source_ids],
-                        self._segment_lengths[segment_ids[source_ids]],
-                        blend_radii[2],
-                    )
-                    transition = min(0.1 * cfg.divergence.width_percent, 0.15)
-                    left_weights = np.asarray(
-                        [
-                            smoothstep_scalar(
-                                0.5 + float(signed_side[index]) / (2.0 * transition)
-                            )
-                            for index in source_ids
-                        ]
-                    )
-                    source_scale = peak_scale * divergence[source_ids] * weights
-                    profile_distances = np.full(len(source_ids), nearest)
-                    left_values = divergence_value(
-                        profile_distances,
-                        cfg.divergence,
-                        source_scale * left_weights,
-                        self._left_continental[segment_ids[source_ids]],
-                    )
-                    right_values = divergence_value(
-                        profile_distances,
-                        cfg.divergence,
-                        source_scale * (1.0 - left_weights),
-                        self._right_continental[segment_ids[source_ids]],
-                    )
-                    divergent_relief = float((left_values + right_values).sum())
-
-            if (
-                cfg.transform.width_percent > 0.0
-                and cfg.transform.height_percent != 0.0
-            ):
-                source_ids = np.flatnonzero(self._transform_sources[segment_ids])
-                if len(source_ids):
-                    nearest, weights = _source_weights(
-                        distances[source_ids],
-                        self._segment_lengths[segment_ids[source_ids]],
-                        blend_radii[3],
-                    )
-                    strength = float(
-                        np.dot(
-                            weights,
-                            transform_strength(-opening[source_ids], shear[source_ids]),
-                        )
-                    )
-                    transform_relief = float(
-                        transform_value(
-                            np.asarray([nearest]),
-                            cfg.transform,
-                            np.asarray([peak_scale * strength]),
-                        )[0]
-                    )
-
-            result[point_id] = positive + negative + divergent_relief + transform_relief
         return result.reshape(shape)

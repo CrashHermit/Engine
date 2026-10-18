@@ -1,7 +1,9 @@
 import numpy as np
+from PIL import Image
 
 from src.worldgen.config import PlanetConfig, WorldgenConfig
 from src.worldgen.generate import generate_world
+from src.worldgen.render.layers import layer_style
 from src.worldgen.render.viewer import WorldgenViewer
 
 
@@ -68,6 +70,45 @@ def test_sea_surface_facets_stay_within_shallow_water_depth_at_true_scale():
         assert facet_depths.max() < 200.0
     finally:
         viewer.plotter.close()
+
+
+def test_elevation_actor_preserves_hypsometric_lookup_resolution() -> None:
+    world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
+    clim = (-12_000.0, 8_000.0)
+    viewer = WorldgenViewer(world, off_screen=True, elevation_range=clim)
+
+    try:
+        viewer.select_layer("elevation")
+        actor = viewer.actors[0]
+        lookup_table = actor.mapper.lookup_table
+        style = layer_style(world, "elevation", clim)
+        zero_fraction = (0.0 - clim[0]) / (clim[1] - clim[0])
+        zero_index = round(zero_fraction * (lookup_table.GetNumberOfTableValues() - 1))
+
+        assert lookup_table.GetNumberOfTableValues() == style.cmap.N
+        np.testing.assert_allclose(
+            lookup_table.GetTableValue(zero_index)[:3],
+            np.array([244, 241, 220]) / 255,
+            atol=0.01,
+        )
+    finally:
+        viewer.plotter.close()
+
+
+def test_rotation_gif_writes_requested_frames(tmp_path) -> None:
+    world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
+    path = tmp_path / "rotation.gif"
+    viewer = WorldgenViewer(world, off_screen=True)
+
+    try:
+        viewer.select_layer("elevation")
+        viewer.write_rotation_gif(str(path), frames=4, fps=8)
+    finally:
+        viewer.plotter.close()
+
+    with Image.open(path) as image:
+        assert image.n_frames == 4
+        assert image.size == (1024, 768)
 
 
 def test_hex_outlines_toggle_and_remain_hidden_across_layer_changes():

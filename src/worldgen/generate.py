@@ -17,7 +17,7 @@ def _signed_seed(sequence: np.random.SeedSequence) -> int:
 
 def generate_world(config: WorldgenConfig) -> GeneratedWorld:
     """Generate a seeded spherical mesh, geology, and elevation fields."""
-    streams = np.random.SeedSequence(config.seed).spawn(13)
+    streams = np.random.SeedSequence(config.seed).spawn(15)
     potential_noise, plate_sampling, crust_noise, crust_sampling, plate_growth = (
         streams[:5]
     )
@@ -58,6 +58,8 @@ def generate_world(config: WorldgenConfig) -> GeneratedWorld:
         density_noise_seed=_signed_seed(streams[8]),
         noise_seeds=tuple(_signed_seed(stream) for stream in streams[5:8]),
         arc_noise_seed=_signed_seed(streams[10]),
+        impact_rng=np.random.default_rng(streams[14]),
+        variation_noise_seed=_signed_seed(streams[13]),
     )
     elevation = elevation_field.sample(mesh.vertices)
     return GeneratedWorld(
