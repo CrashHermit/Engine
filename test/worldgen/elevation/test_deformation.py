@@ -9,13 +9,16 @@ from src.worldgen.elevation.config import (
     DivergenceConfig,
     SubductionConfig,
     TransformConfig,
+    ShearConfig,
 )
 from src.worldgen.elevation.deformation import TectonicField
 from src.worldgen.elevation.profiles import (
     collision_profile,
     divergent_profile,
+    shear_profile,
     subduction_profile,
 )
+from src.worldgen.elevation.shear import shear_strength
 from src.worldgen.elevation.transform import transform_strength
 from src.worldgen.generate import generate_world
 from src.worldgen.geometry.boundary import BoundaryNetwork
@@ -45,6 +48,7 @@ def _only_divergence():
         subduction=SubductionConfig(height_percent=0.0),
         divergence=DivergenceConfig(),
         transform=TransformConfig(height_percent=0.0),
+        shear=ShearConfig(height_percent=0.0),
     )
 
 
@@ -54,6 +58,7 @@ def _only_collision():
         subduction=SubductionConfig(height_percent=0.0),
         divergence=DivergenceConfig(height_percent=0.0),
         transform=TransformConfig(height_percent=0.0),
+        shear=ShearConfig(height_percent=0.0),
     )
 
 
@@ -63,6 +68,7 @@ def _only_subduction():
         subduction=SubductionConfig(),
         divergence=DivergenceConfig(height_percent=0.0),
         transform=TransformConfig(height_percent=0.0),
+        shear=ShearConfig(height_percent=0.0),
     )
 
 
@@ -72,6 +78,27 @@ def _only_transform():
         subduction=SubductionConfig(height_percent=0.0),
         divergence=DivergenceConfig(height_percent=0.0),
         transform=TransformConfig(),
+        shear=ShearConfig(height_percent=0.0),
+    )
+
+
+def _only_shear():
+    return DeformationConfig(
+        collision=CollisionConfig(height_percent=0.0),
+        subduction=SubductionConfig(height_percent=0.0),
+        divergence=DivergenceConfig(height_percent=0.0),
+        transform=TransformConfig(height_percent=0.0),
+        shear=ShearConfig(),
+    )
+
+
+def _transform_and_shear():
+    return DeformationConfig(
+        collision=CollisionConfig(height_percent=0.0),
+        subduction=SubductionConfig(height_percent=0.0),
+        divergence=DivergenceConfig(height_percent=0.0),
+        transform=TransformConfig(),
+        shear=ShearConfig(),
     )
 
 
@@ -93,6 +120,48 @@ def test_profile_shapes_preserve_crests_trenches_and_axial_valleys():
     assert divergent_profile(0.0, 4.0, True) < 0.0
     assert divergent_profile(0.0, 4.0, False) > 0.0
     assert divergent_profile(4.0, 4.0, False) == 0.0
+
+    assert shear_profile(0.0, 4.0) == 1.0
+    assert shear_profile(4.0, 4.0) == 0.0
+
+
+def test_pure_shear_field_produces_fault_zone_relief():
+    world = _world()
+    field = _field(world, _only_shear())
+    midpoint = field.boundary.starts + field.boundary.ends
+    midpoint /= np.linalg.norm(midpoint, axis=1, keepdims=True)
+
+    relief = field.sample(midpoint, world.radius_m)
+
+    assert np.all(relief >= 0.0)
+    assert relief.max() > 0.0
+
+
+def test_oblique_and_pure_shear_relief_adds_without_reclassification():
+    world = _world()
+    geology = world.geology
+    normal = geology.boundary_convergence - geology.boundary_divergence
+    mixed_ids = np.flatnonzero(
+        (transform_strength(normal, geology.boundary_shear) != 0.0)
+        & (shear_strength(normal, geology.boundary_shear) > 0.0)
+    )
+    assert len(mixed_ids)
+
+    edge = int(mixed_ids[0])
+    boundary_field = _field(world)
+    field_point = (
+        boundary_field.boundary.starts[edge] + boundary_field.boundary.ends[edge]
+    )
+    field_point /= np.linalg.norm(field_point)
+    combined = _field(world, _transform_and_shear()).sample(
+        field_point[None, :], world.radius_m
+    )[0]
+    oblique = _field(world, _only_transform()).sample(
+        field_point[None, :], world.radius_m
+    )[0]
+    pure = _field(world, _only_shear()).sample(field_point[None, :], world.radius_m)[0]
+
+    np.testing.assert_allclose(combined, oblique + pure)
 
 
 def test_field_is_batch_permutation_invariant_and_handles_empty_batches():

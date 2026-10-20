@@ -49,11 +49,20 @@ class TransformConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class ShearConfig:
+    """Narrow fault-zone relief from the pure-shear component."""
+
+    width_percent: float = 0.75
+    height_percent: float = 0.025
+
+
+@dataclass(frozen=True, slots=True)
 class DeformationConfig:
     collision: CollisionConfig = field(default_factory=CollisionConfig)
     subduction: SubductionConfig = field(default_factory=SubductionConfig)
     divergence: DivergenceConfig = field(default_factory=DivergenceConfig)
     transform: TransformConfig = field(default_factory=TransformConfig)
+    shear: ShearConfig = field(default_factory=ShearConfig)
 
 
 @dataclass(frozen=True, slots=True)

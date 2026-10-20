@@ -10,6 +10,7 @@ from src.worldgen.elevation.kernels import (
 )
 from src.worldgen.elevation.sources import boundary_source_rows
 from src.worldgen.elevation.transform import transform_strength
+from src.worldgen.elevation.shear import shear_strength
 from src.worldgen.field.noise import noise_multiplier
 from src.worldgen.geometry.boundary import BoundaryNetwork, arc_distances
 from src.worldgen.geometry.mesh import Mesh
@@ -23,7 +24,11 @@ _PERCENT_PER_RADIAN = 100.0 / (2.0 * np.pi)
 def _parameters(config: DeformationConfig) -> tuple[TectonicParameters, float]:
     """Pack immutable settings once for the compiled evaluator."""
     collision, subduction = config.collision, config.subduction
-    divergence, transform = config.divergence, config.transform
+    divergence, transform, shear = (
+        config.divergence,
+        config.transform,
+        config.shear,
+    )
     support = (
         collision.width_percent,
         subduction.width_percent
@@ -34,6 +39,7 @@ def _parameters(config: DeformationConfig) -> tuple[TectonicParameters, float]:
         ),
         divergence.width_percent,
         transform.width_percent,
+        shear.width_percent,
     )
     blend = tuple(max(0.0, min(0.2 * width, 0.5)) for width in support)
     parameters = TectonicParameters(
@@ -69,6 +75,7 @@ def _parameters(config: DeformationConfig) -> tuple[TectonicParameters, float]:
             )
         ),
         (float(transform.width_percent), float(transform.height_percent)),
+        (float(shear.width_percent), float(shear.height_percent)),
         blend,
     )
     return parameters, max(support) + max(blend)
@@ -106,6 +113,12 @@ class TectonicField:
             * _PERCENT_PER_RADIAN
         )
         across = endpoints[:, 1] - endpoints[:, 0]
+        normal_motion = (
+            geology.boundary_convergence[rows] - geology.boundary_divergence[rows]
+        )
+        boundary_shear = geology.boundary_shear[rows]
+        oblique_transform = transform_strength(normal_motion, boundary_shear)
+        pure_shear = shear_strength(normal_motion, boundary_shear)
         self._sources = TectonicSources(
             delta_rotation=delta,
             arc_normals=normals,
@@ -119,11 +132,8 @@ class TectonicField:
             descending_plates=geology.boundary_sections.subducting_plate_ids,
             collision_sections=geology.boundary_sections.continental_sides.all(axis=1),
             divergent=geology.boundary_divergence[rows] > 0.0,
-            transform=transform_strength(
-                geology.boundary_convergence[rows] - geology.boundary_divergence[rows],
-                geology.boundary_shear[rows],
-            )
-            != 0.0,
+            transform=oblique_transform != 0.0,
+            shear=pure_shear,
         )
         for array in self._sources:
             array.setflags(write=False)
@@ -135,6 +145,7 @@ class TectonicField:
                 config.subduction,
                 config.divergence,
                 config.transform,
+                config.shear,
             )
         )
 

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Domain warp comparison</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172a36;
+      --muted: #526673;
+      --paper: #f3f6f7;
+      --card: #fff;
+      --line: #d5e0e4;
+      --accent: #145a70;
+      --accent-soft: #e4f1f3;
+      --error: #8f2424;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-synthesis: none;
+      text-rendering: optimizeLegibility;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--paper); line-height: 1.5; }
+    a { color: var(--accent); }
+    .shell { width: min(1120px, 100%); margin: 0 auto; padding: 1.1rem clamp(.8rem, 3vw, 2rem) 3rem; }
+    .back { display: inline-block; margin: .1rem 0 1.25rem; font-size: .94rem; font-weight: 650; text-underline-offset: .18em; }
+    header { margin-bottom: 1.25rem; }
+    h1 { margin: 0; font-size: clamp(1.75rem, 5vw, 2.65rem); line-height: 1.13; letter-spacing: -.035em; }
+    .lede { max-width: 72ch; margin: .65rem 0 0; color: var(--muted); }
+    .controls, .summary, .notes { background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+    .controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1rem; padding: 1rem; margin: 1rem 0; }
+    label { display: grid; gap: .3rem; font-weight: 700; font-size: .92rem; }
+    select { width: 100%; min-width: 0; border: 1px solid #9eb2bb; border-radius: 8px; background: white; color: var(--ink); padding: .65rem .75rem; font: inherit; }
+    .status { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: .9rem; }
+    .status.error { color: var(--error); font-weight: 700; }
+    .summary { padding: 1rem; margin: 0 0 1rem; }
+    .summary h2, .notes h2 { margin: 0 0 .45rem; font-size: 1.08rem; }
+    .parameters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: .35rem .8rem; margin: .6rem 0 0; }
+    .parameters div { display: flex; justify-content: space-between; gap: .5rem; border-bottom: 1px solid #edf1f2; padding: .24rem 0; font-size: .9rem; }
+    .parameters dt { color: var(--muted); }
+    .parameters dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 650; text-align: right; }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+    .case-card { min-width: 0; overflow: hidden; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
+    .case-card.baseline { grid-column: 1 / -1; border-color: #82aab4; box-shadow: inset 0 3px 0 var(--accent); }
+    .card-head { padding: .9rem 1rem .5rem; }
+    .card-head h2 { margin: 0; font-size: 1.1rem; line-height: 1.25; }
+    .kind { color: var(--muted); font-size: .82rem; margin-top: .22rem; }
+    .image-link { display: block; margin: .4rem .75rem .2rem; border-radius: 8px; overflow: hidden; background: #e9eff1; }
+    .image-link:focus-visible { outline: 3px solid #167b94; outline-offset: 3px; }
+    .case-image { display: block; width: 100%; height: auto; min-height: 100px; object-fit: contain; }
+    .image-hint { margin: 0 .9rem .5rem; color: var(--muted); font-size: .78rem; }
+    .metrics { padding: .25rem 1rem .9rem; }
+    .metrics h3 { margin: .3rem 0 .2rem; font-size: .85rem; }
+    .metrics dl { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .18rem .6rem; margin: 0; font-size: .82rem; }
+    .metrics dt { color: var(--muted); min-width: 0; }
+    .metrics dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; font-weight: 650; }
+    details { border-top: 1px solid #edf1f2; padding: .65rem 1rem .8rem; }
+    summary { cursor: pointer; color: var(--accent); font-size: .86rem; font-weight: 700; }
+    .diagnostics { margin-top: .5rem; }
+    .notes { margin-top: 1rem; padding: 1rem; }
+    .notes ul { margin: .45rem 0 0; padding-left: 1.25rem; }
+    .notes li + li { margin-top: .32rem; }
+    .fine { color: var(--muted); font-size: .84rem; }
+    @media (max-width: 650px) {
+      .shell { padding-top: .75rem; }
+      .controls { grid-template-columns: 1fr; }
+      .status { grid-column: auto; }
+      .cards { grid-template-columns: minmax(0, 1fr); }
+      .image-link { margin-inline: .55rem; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <a class="back" href="index.html">← Back to experiments</a>
+    <header>
+      <h1>Domain warp: displacement vs. sequential shear</h1>
+      <p class="lede">Compare the existing simultaneous displacement warp with sequential additive noise shears on the same generated worlds. Choose a world seed and map layer; all five methods stay together for a direct comparison.</p>
+    </header>
+
+    <section class="controls" aria-label="Comparison controls">
+      <label for="seed-select">World seed
+        <select id="seed-select" disabled aria-describedby="status"><option>Loading worlds…</option></select>
+      </label>
+      <label for="layer-select">Map layer
+        <select id="layer-select" disabled>
+          <option value="plates">Plates</option>
+          <option value="crust">Crust</option>
+          <option value="slice">Cube slice (query XY, z = 0)</option>
+        </select>
+      </label>
+      <p class="status" id="status" role="status" aria-live="polite">Loading comparison manifest…</p>
+    </section>
+
+    <section class="summary" aria-labelledby="settings-heading">
+      <h2 id="settings-heading">Shared world and noise settings</h2>
+      <p class="fine">Within each selected world, methods use the same seed clouds, labels, and noise settings. Each map uses the frequency and sample count reported below. Each globe image shows two fixed views of the same sphere.</p>
+      <dl class="parameters" id="parameters" aria-label="Shared settings"></dl>
+      <p class="fine">Equal amplitude is a parameter match, not a guarantee of equal output distortion. Tan continental and blue oceanic colors indicate labels, not elevation or a land mask.</p>
+    </section>
+
+    <section class="cards" id="cards" aria-label="Warp methods" aria-live="polite"></section>
+
+    <section class="notes" aria-labelledby="interpretation-heading">
+      <h2 id="interpretation-heading">How to interpret this comparison</h2>
+      <ul>
+        <li>Both warp methods are full 3D fields sampled on the unit sphere; the cube slice shows original query coordinates at z = 0.</li>
+        <li>No-fold volume regions can still produce disconnected patches on the sphere.</li>
+        <li>Sequential additive shears are invertible and volume-preserving in ideal arithmetic.</li>
+        <li>Whole-warp finite-difference determinants become unreliable under strong stretching: they can report negative values even for invertible shears. They are resolution-dependent estimates, not a folding test. Additive shears have determinant 1 algebraically; the reverse-operation round trip checks numerical reversibility.</li>
+        <li>Diagnostics describe the plate warp. Patch counts use sampled mesh adjacency; tiny unresolved features can change with resolution.</li>
+        <li>This is an experiment only; production behavior is unchanged.</li>
+      </ul>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      "use strict";
+      const ORDER = ["plain", "displacement-broad", "shear-broad", "displacement-strong", "shear-strong"];
+      const LABELS = {
+        plain: ["Baseline · no warp", "Unwarped reference"],
+        "displacement-broad": ["Broad displacement", "Simultaneous displacement · broad"],
+        "shear-broad": ["Broad sequential shear", "Sequential additive shear · broad"],
+        "displacement-strong": ["Strong displacement", "Simultaneous displacement · strong"],
+        "shear-strong": ["Strong sequential shear", "Sequential additive shear · strong"]
+      };
+      const seedSelect = document.getElementById("seed-select");
+      const layerSelect = document.getElementById("layer-select");
+      const status = document.getElementById("status");
+      const cards = document.getElementById("cards");
+      const parameters = document.getElementById("parameters");
+      let worlds = [];
+
+      function number(value, digits = 4) {
+        return typeof value === "number" && Number.isFinite(value) ? value.toLocaleString(undefined, { maximumFractionDigits: digits }) : "—";
+      }
+      function metricRow(dl, label, value) {
+        const dt = document.createElement("dt");
+        const dd = document.createElement("dd");
+        dt.textContent = label;
+        dd.textContent = value;
+        dl.append(dt, dd);
+      }
+      function renderParameters(manifest) {
+        const entries = [
+          ["World frequency", manifest.frequency], ["Cells", manifest.cell_count],
+          ["Plate seeds", manifest.plate_seed_count], ["Crust seeds", manifest.crust_seed_count],
+          ["Continental seeds", manifest.continental_seed_count],
+          ["Noise octaves", manifest.settings.noise_octaves], ["Noise frequency", manifest.settings.frequency],
+          ["Noise lacunarity", manifest.settings.noise_lacunarity], ["Noise persistence", manifest.settings.noise_persistence],
+          ["Warp iterations", manifest.settings.warp_iterations], ["Warp lacunarity", manifest.settings.warp_lacunarity],
+          ["Warp gain", manifest.settings.warp_gain]
+        ];
+        parameters.replaceChildren();
+        for (const [label, value] of entries) {
+          const wrap = document.createElement("div"), dt = document.createElement("dt"), dd = document.createElement("dd");
+          dt.textContent = label;
+          dd.textContent = typeof value === "number" ? number(value, 6) : "—";
+          wrap.append(dt, dd); parameters.append(wrap);
+        }
+      }
+      function renderDiagnostics(caseData) {
+        const details = document.createElement("details"), summary = document.createElement("summary"), dl = document.createElement("dl");
+        summary.textContent = "Diagnostics and limitations";
+        dl.className = "metrics diagnostics";
+        if (caseData.id.startsWith("shear")) metricRow(dl, "Algebraic shear determinant", "1");
+        metricRow(dl, "Samples", number(caseData.diagnostics.sample_count, 0));
+        metricRow(dl, "Finite-difference step", number(caseData.diagnostics.finite_difference_step, 8));
+        metricRow(dl, "Estimated minimum determinant", number(caseData.diagnostics.min_determinant, 8));
+        metricRow(dl, "Estimated maximum determinant", number(caseData.diagnostics.max_determinant, 8));
+        metricRow(dl, "Estimated negative fraction", number(caseData.diagnostics.negative_determinant_fraction, 8));
+        const error = caseData.diagnostics.roundtrip_max_error;
+        metricRow(dl, "Maximum round-trip error", error === null ? "Not reported" : error.toExponential(3));
+        details.append(summary, dl);
+        return details;
+      }
+      function render() {
+        const world = worlds.find(item => String(item.seed) === seedSelect.value);
+        if (!world) return;
+        const casesById = new Map(world.cases.map(item => [item.id, item]));
+        cards.replaceChildren();
+        for (const id of ORDER) {
+          const data = casesById.get(id);
+          if (!data) continue;
+          const card = document.createElement("article");
+          card.className = "case-card" + (id === "plain" ? " baseline" : "");
+          const head = document.createElement("div"); head.className = "card-head";
+          const title = document.createElement("h2"); title.textContent = LABELS[id][0];
+          const kind = document.createElement("div"); kind.className = "kind";
+          kind.textContent = LABELS[id][1] + " · amplitude " + number(data.amplitude, 3);
+          head.append(title, kind);
+          const imagePath = data.images[layerSelect.value];
+          const link = document.createElement("a"); link.className = "image-link"; link.href = imagePath; link.target = "_blank"; link.rel = "noopener"; link.setAttribute("aria-label", "Open full-resolution " + layerSelect.options[layerSelect.selectedIndex].text.toLowerCase() + " image for " + LABELS[id][0] + " in seed " + world.seed);
+          const image = document.createElement("img"); image.className = "case-image"; image.src = imagePath; image.alt = LABELS[id][0] + " — " + layerSelect.options[layerSelect.selectedIndex].text + " map, world seed " + world.seed; image.loading = id === "plain" || id === "displacement-broad" ? "eager" : "lazy"; image.decoding = "async";
+          link.append(image);
+          const hint = document.createElement("p"); hint.className = "image-hint"; hint.textContent = "Select image to open full resolution";
+          const metricSection = document.createElement("section"); metricSection.className = "metrics";
+          const metricTitle = document.createElement("h3"); metricTitle.textContent = "Region and coverage metrics";
+          const dl = document.createElement("dl");
+          metricRow(dl, "Plate regions", number(data.metrics.plate_regions, 0));
+          metricRow(dl, "Plate regions with multiple patches", number(data.metrics.plate_regions_with_multiple_patches, 0));
+          metricRow(dl, "Crust regions", number(data.metrics.crust_regions, 0));
+          metricRow(dl, "Crust regions with multiple patches", number(data.metrics.crust_regions_with_multiple_patches, 0));
+          metricRow(dl, "Continental cell fraction", number(data.metrics.continental_cell_fraction, 6));
+          metricSection.append(metricTitle, dl);
+          card.append(head, link, hint, metricSection, renderDiagnostics(data));
+          cards.append(card);
+        }
+        status.textContent = "Showing " + cards.children.length + " methods for seed " + world.seed + ".";
+        status.classList.remove("error");
+      }
+      seedSelect.addEventListener("change", render);
+      layerSelect.addEventListener("change", render);
+      fetch("shear-warp-results.json", { cache: "no-cache" })
+        .then(response => {
+          if (!response.ok) throw new Error("HTTP " + response.status + " " + response.statusText);
+          return response.json();
+        })
+        .then(manifest => {
+          if (!manifest || !Array.isArray(manifest.worlds) || !manifest.worlds.length || !manifest.settings) throw new Error("Manifest is missing required world or settings data.");
+          worlds = manifest.worlds;
+          renderParameters(manifest);
+          seedSelect.replaceChildren();
+          for (const world of worlds) {
+            const option = document.createElement("option"); option.value = String(world.seed); option.textContent = "Seed " + world.seed; seedSelect.append(option);
+          }
+          seedSelect.value = "2026";
+          seedSelect.disabled = false;
+          layerSelect.disabled = false;
+          render();
+        })
+        .catch(error => {
+          status.textContent = "Could not load shear-warp-results.json: " + error.message;
+          status.classList.add("error");
+          seedSelect.replaceChildren();
+          const option = document.createElement("option"); option.textContent = "Manifest unavailable"; seedSelect.append(option);
+        });
+    })();
+  </script>
+</body>
+</html>

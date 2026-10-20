@@ -6,10 +6,12 @@ from src.worldgen.geology.config import (
     GeologyConfig,
     HotspotConfig,
     PlateConfig,
+    PlateMotionConfig,
     VolcanismConfig,
 )
 from src.worldgen.field.noise import NoiseConfig
 from src.worldgen.geology.generate import generate_geology
+from src.worldgen.geology.motion import build_plate_motion_field
 from src.worldgen.geology.model import (
     CrustResult,
     GeologyResult,
@@ -28,6 +30,7 @@ __all__ = [
     "GeologyResult",
     "NoiseConfig",
     "PlateConfig",
+    "PlateMotionConfig",
     "HotspotConfig",
     "HotspotResult",
     "VolcanismConfig",
@@ -36,4 +39,5 @@ __all__ = [
     "VolcanoSource",
     "VolcanoState",
     "generate_geology",
+    "build_plate_motion_field",
 ]

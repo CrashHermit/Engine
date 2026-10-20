@@ -9,6 +9,7 @@ from numba.extending import register_jitable
 from src.worldgen.elevation.collision import collision_value
 from src.worldgen.elevation.divergence import divergence_value
 from src.worldgen.elevation.subduction import subduction_value
+from src.worldgen.elevation.shear import shear_component, shear_value
 from src.worldgen.elevation.transform import transform_value
 from src.worldgen.elevation.profiles import (
     collision_profile,
@@ -16,6 +17,7 @@ from src.worldgen.elevation.profiles import (
     divergent_response,
     subduction_profile,
     transform_profile,
+    shear_profile,
 )
 from src.worldgen.utilities.curves import clamp_unit, smoothstep_scalar
 
@@ -28,6 +30,7 @@ for _function in (
     divergent_profile,
     subduction_profile,
     transform_profile,
+    shear_profile,
 ):
     register_jitable(_function)
 
@@ -46,6 +49,7 @@ class TectonicSources(NamedTuple):
     collision_sections: np.ndarray
     divergent: np.ndarray
     transform: np.ndarray
+    shear: np.ndarray
 
 
 class TectonicParameters(NamedTuple):
@@ -53,7 +57,8 @@ class TectonicParameters(NamedTuple):
     subduction: tuple[float, float, float, float, float, float, float]
     divergence: tuple[float, float, float, float, float]
     transform: tuple[float, float]
-    blend_radii: tuple[float, float, float, float]
+    shear: tuple[float, float]
+    blend_radii: tuple[float, float, float, float, float]
 
 
 @register_jitable
@@ -100,11 +105,13 @@ def evaluate_tectonic_batch(
     subduction = parameters.subduction
     divergence = parameters.divergence
     transform = parameters.transform
+    shear_response = parameters.shear
     blend = parameters.blend_radii
     collision_enabled = collision[0] > 0.0 and collision[1] != 0.0
     subduction_enabled = subduction[0] > 0.0 and subduction[1] != 0.0
     divergence_enabled = divergence[0] > 0.0 and divergence[1] != 0.0
     transform_enabled = transform[0] > 0.0 and transform[1] != 0.0
+    shear_enabled = shear_response[0] > 0.0 and shear_response[1] != 0.0
     percent_per_radian = 100.0 / (2.0 * np.pi)
     subduction_transition = 2.0 * min(0.1 * subduction[0], 0.15)
     divergence_transition = 2.0 * min(0.1 * divergence[0], 0.15)
@@ -117,6 +124,7 @@ def evaluate_tectonic_batch(
         touched_count = 0
         nearest_divergence = np.inf
         nearest_transform = np.inf
+        nearest_shear = np.inf
         # Query-dependent frames and motion, with all static vectors retained.
         for pair in range(start, end):
             local = pair - start
@@ -138,6 +146,8 @@ def evaluate_tectonic_batch(
                 nearest_divergence = min(nearest_divergence, distance)
             if sources.transform[segment]:
                 nearest_transform = min(nearest_transform, distance)
+            if sources.shear[segment]:
+                nearest_shear = min(nearest_shear, distance)
             qx, qy, qz = closest[pair]
             ax, ay, az = sources.across_vectors[segment]
             projection = ax * qx + ay * qy + az * qz
@@ -164,6 +174,8 @@ def evaluate_tectonic_batch(
         divergence_sum = 0.0
         transform_mass = 0.0
         transform_sum = 0.0
+        shear_mass_value = 0.0
+        shear_sum = 0.0
         continental_profile = 0.0
         oceanic_profile = 0.0
         if divergence_enabled and nearest_divergence != np.inf:
@@ -223,6 +235,10 @@ def evaluate_tectonic_batch(
                 weight = _weight(distance, nearest_transform, blend[3], length)
                 transform_mass += weight
                 transform_sum += weight * _strength(-opening[local], shear[local])
+            if shear_enabled and sources.shear[segment]:
+                weight = _weight(distance, nearest_shear, blend[4], length)
+                shear_mass_value += weight
+                shear_sum += weight * shear_component(-opening[local], shear[local])
 
         positive = 0.0
         negative = 0.0
@@ -261,4 +277,11 @@ def evaluate_tectonic_batch(
                 transform,
                 peak_scale * (transform_sum / transform_mass),
             )
-        result[point] = positive + negative + divergent_relief + transformed
+        sheared = 0.0
+        if shear_mass_value > 0.0:
+            sheared = shear_value(
+                nearest_shear,
+                shear_response,
+                peak_scale * (shear_sum / shear_mass_value),
+            )
+        result[point] = positive + negative + divergent_relief + transformed + sheared

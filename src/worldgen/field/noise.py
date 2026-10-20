@@ -1,4 +1,4 @@
-"""Seeded OpenSimplex2S fields sampled through FastNoiseLite's public batch API."""
+"""Seeded OpenSimplex2S fields sampled at paired Cartesian XYZ coordinates."""
 
 from dataclasses import dataclass
 
@@ -22,7 +22,11 @@ def fbm(
     lacunarity: float,
     persistence: float,
 ) -> np.ndarray:
-    """Sample OpenSimplex2S fBm at paired XYZ positions with isolated seed state."""
+    """Sample OpenSimplex2S fBm at paired Cartesian XYZ positions.
+
+    Coordinates are passed through unchanged; the caller owns the coordinate
+    frame. World generation uses normalized centered coordinates in ``[-1, 1]³``.
+    """
     from pyfastnoiselite.pyfastnoiselite import FastNoiseLite, FractalType, NoiseType
 
     # FastNoiseLite seeds are signed 32-bit; world streams supply signed 64-bit.
@@ -63,6 +67,26 @@ def normalized_noise(
     values = np.clip(0.5 + values / (2.0 * amplitude_bound), 0.0, 1.0)
     values.setflags(write=False)
     return values
+
+
+def sample_vector_noise(
+    positions: np.ndarray,
+    config: NoiseConfig,
+    *,
+    seeds: tuple[int, int, int],
+) -> np.ndarray:
+    """Sample three independent signed noise channels at paired XYZ positions.
+
+    Return an ``(N, 3)`` float64 array, with each channel mapped to ``[-1, 1]``.
+    Coordinates are passed through unchanged; this function does not project or
+    normalize them.
+    """
+    channels = (
+        normalized_noise(positions, config, seed=seed) * 2.0 - 1.0 for seed in seeds
+    )
+    if len(positions) == 0:
+        return np.empty((0, 3), dtype=np.float64)
+    return np.column_stack(tuple(channels))
 
 
 def noise_multiplier(

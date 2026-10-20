@@ -32,6 +32,12 @@ class PlateConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class PlateMotionConfig:
+    min_angular_speed: float = 0.0
+    max_angular_speed: float = 1.0
+
+
+@dataclass(frozen=True, slots=True)
 class CrustConfig:
     continental_seeds: int = 10
     oceanic_seeds: int = 33

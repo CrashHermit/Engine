@@ -40,6 +40,7 @@ def tectonic_bounds(
     collision = config.collision
     subduction = config.subduction
     divergence = config.divergence
+    shear = config.shear
     scale = radius_m / 100.0
     collision_bound = abs(collision.height_percent) * scale * max_motion
     subduction_bound = abs(subduction.height_percent) * scale * max_motion
@@ -52,11 +53,13 @@ def tectonic_bounds(
     divergence_bound = abs(divergence.height_percent) * scale * max_motion
     # |normal|*shear/(|normal|+shear) <= (|normal|+shear)/4 <= max_motion/2.
     transform_bound = abs(config.transform.height_percent) * scale * max_motion / 2.0
+    shear_bound = abs(shear.height_percent) * scale * max_motion
     lower_relief = (
         trench_bound
         + arc_bound
         + divergence_bound * max(1.0, abs(divergence.axial_depth_multiplier))
         + transform_bound
+        + shear_bound
     )
     upper_relief = (
         max(
@@ -66,6 +69,7 @@ def tectonic_bounds(
         + arc_bound
         + divergence_bound * max(1.0, abs(divergence.shoulder_height_multiplier))
         + transform_bound
+        + shear_bound
     )
     return -lower_relief, upper_relief
 

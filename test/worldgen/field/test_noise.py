@@ -1,6 +1,11 @@
 import numpy as np
 
-from src.worldgen.field.noise import NoiseConfig, fbm, normalized_noise
+from src.worldgen.field.noise import (
+    NoiseConfig,
+    fbm,
+    normalized_noise,
+    sample_vector_noise,
+)
 
 
 def _sample(positions, seed=123, *, frequency=1.4, octaves=5):
@@ -75,3 +80,36 @@ def test_normalized_noise_has_fixed_mapping_across_query_batches():
     np.testing.assert_array_equal(subset, full[[4, 1, 8]])
     np.testing.assert_array_equal(single, full[4:5])
     assert np.all((full >= 0.0) & (full <= 1.0))
+
+
+def test_vector_noise_has_independent_signed_channels_and_batch_invariance():
+    positions = _positions()
+    config = NoiseConfig(octaves=3, base_frequency=1.2)
+    seeds = (18, 44, 78)
+
+    before = np.random.get_state()
+    full = sample_vector_noise(positions, config, seeds=seeds)
+    repeated = sample_vector_noise(positions, config, seeds=seeds)
+    other = sample_vector_noise(positions, config, seeds=(19, 45, 79))
+    after = np.random.get_state()
+
+    expected = np.column_stack(
+        [normalized_noise(positions, config, seed=seed) * 2.0 - 1.0 for seed in seeds]
+    )
+    np.testing.assert_array_equal(full, expected)
+    np.testing.assert_array_equal(full, repeated)
+    assert full.shape == (len(positions), 3)
+    assert full.dtype == np.float64
+    assert np.all((full >= -1.0) & (full <= 1.0))
+    assert not np.array_equal(full, other)
+    np.testing.assert_array_equal(
+        sample_vector_noise(positions[[7, 0, 3]], config, seeds=seeds),
+        full[[7, 0, 3]],
+    )
+    assert sample_vector_noise(np.empty((0, 3)), config, seeds=seeds).shape == (
+        0,
+        3,
+    )
+    assert before[0] == after[0]
+    np.testing.assert_array_equal(before[1], after[1])
+    assert before[2:] == after[2:]

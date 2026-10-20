@@ -121,16 +121,69 @@ batch, so querying a subset or a single point cannot change its value.
 This changes hotspot placement weights and the optional Dijkstra plate cost
 field; default priority-flood plate and crust ownership remain unchanged.
 
-Each plate receives a seeded random tangent direction at its normalized mean
-cell position and an angular speed uniformly sampled between
-`PlateConfig.min_angular_speed=0.05` and `max_angular_speed=0.20`.
-The Euler rotation is the cross product of that center and its selected tangent
-velocity, with no added center-axis spin. `motion_scale` multiplies all rotations.
-CLI controls are `--plate-min-speed`, `--plate-max-speed`, and
-`--plate-motion-scale`. Cell velocities and boundary interactions use the same
-rotations without normalization. Arrow size remains a separate `--arrow-scale`
-display setting. These are procedural units, not physical force or metres per
-second.
+## Composable 3D field tools
+
+`field/seeds.py` creates centered Cartesian seed positions uniformly in
+`[-1, 1]³`. `field/noise.py` samples independent signed channels at paired
+Cartesian XYZ coordinates. `field/warp.py` composes axis-aligned scalar shears
+through an injected callback. Each update depends only on the other two
+coordinate columns, so `sample` has an explicit reverse-order `inverse`; neither
+method clamps coordinates or projects them onto a sphere.
+`field/noise_warp.py` composes this generic transform with independent noise
+channels. `field/voronoi.py` returns only the nearest seed's region ID at
+arbitrary XYZ coordinates in one array operation. `field/regions.py`
+composes these tools as `Voronoi(Warp(p))`.
+`WarpedVoronoiField` exposes the composition and `build_warped_voronoi_field`
+constructs it from seed, noise, and shear settings.
+
+`geometry/voronoi.py` builds analytic distances to genuine clipped faces of a
+3D Voronoi partition. `field/boundary.py` composes those faces with the
+partition's existing warp and seed cloud. `VoronoiBoundaryField.sample` returns
+stable region-pair columns with an independent compact influence per face;
+overlapping values remain separate at junctions. Influence is 1 on a face and
+tapers to 0 at the configured width in warped Cartesian coordinates.
+`field/falloff.py` supplies the reusable cubic taper. This is a standalone
+volumetric primitive; the existing spherical geology and elevation pipeline
+still uses its mesh-based boundary representation.
+
+The unit sphere is the surface `||p|| = 1` inside the centered coordinate cube.
+Hex-center queries use the existing unit-sphere coordinates directly. Region
+ownership is categorical; boundary distances and influence are evaluated
+separately from the analytic faces, not inferred from ownership samples.
+
+`field/motion.py` defines `RegionRotationField`, a geology-independent sampler
+for rigid rotations indexed by arbitrary region IDs. `sample(positions)` looks
+up each point's warped Voronoi owner; `sample_regions(positions, region_ids)`
+evaluates explicitly selected regions at the original, unwarped positions.
+Both use `v(x) = omega × x`, with no speed cap.
+
+`geology/motion.py` keeps only plate-specific parameter generation and
+`build_plate_motion_field`, which constructs a `RegionRotationField`.
+`PlateMotionConfig` samples nonnegative angular-speed magnitudes from `[0, 1]`
+by default. These are generation bounds, not runtime caps; configurations may
+use values above one. Each original seed defines the oriented rotation axis
+from the origin, with positive direction following the right-hand rule. A seed
+exactly at the origin raises `ValueError` because it cannot define a rotation
+axis.
+
+`field/boundary_vector.py` composes `VoronoiBoundaryField` with any callable
+that evaluates vectors for explicit region IDs. Its sparse records contain the
+query index, adjacent region pair, boundary influence, and both raw vectors;
+all active pairs remain separate at junctions. It evaluates each unique
+query/region pair once at the original query coordinates. It does not blend
+vectors or classify the interaction, and it remains separate from the
+mesh-based `generate_geology` pipeline.
+
+The existing mesh-based `generate_geology` path retains its separate plate
+rotation: each plate receives a seeded random tangent direction at its
+normalized mean cell position and an angular speed uniformly sampled between
+`PlateConfig.min_angular_speed=0.05` and `max_angular_speed=0.20`. Its Euler
+rotation is the cross product of that center and selected tangent velocity;
+`motion_scale` multiplies all rotations. CLI controls are `--plate-min-speed`,
+`--plate-max-speed`, and `--plate-motion-scale`. Cell velocities and boundary
+interactions use those rotations without normalization. Arrow size remains a
+separate `--arrow-scale` display setting. These are procedural units, not
+physical force or metres per second.
 
 
 `PlateConfig.flood` and `CrustConfig.flood` each contain a `PriorityFloodConfig`:
@@ -210,11 +263,12 @@ is returned.
 Elevation uses exact finite spherical boundary arcs rather than graph propagation.
 Continental collisions and subduction combine coherent section responses through
 positive/negative envelopes. Motion and side influence blend continuously between
-nearby arc sources. Divergence and transform add separate signed contributions.
-`WorldgenConfig.elevation.deformation` groups four independent process settings:
-`collision`, `subduction`, `divergence`, and `transform`. Collision defaults to
-`width_percent=2.5` and `height_percent=0.16`; subduction defaults to
-`width_percent=2.5`, `height_percent=0.15`, and `trench_depth_multiplier=2.25`.
+nearby arc sources. Divergence, transform, and pure shear add separate signed or
+positive contributions.
+`WorldgenConfig.elevation.deformation` groups five independent process settings:
+`collision`, `subduction`, `divergence`, `transform`, and `shear`. Collision
+defaults to `width_percent=2.5` and `height_percent=0.16`; subduction defaults
+to `width_percent=2.5`, `height_percent=0.15`, and `trench_depth_multiplier=2.25`.
 These heights are percentages of radius per unit raw interaction strength.
 Divergence defaults to `width_percent=1.0` and `height_percent=0.075`. Width is
 the reach on each side: at Earth radius the default divergence reach is
@@ -225,9 +279,10 @@ to disable that process. These are procedural geological profiles, without
 erosion or volcanic simulation.
 Profile settings live with their process: crest controls under
 `config.elevation.deformation.collision`, trench/arc controls under
-`config.elevation.deformation.subduction`, and ridge/rift controls under
-`config.elevation.deformation.divergence`. Transform controls live under
-`config.elevation.deformation.transform`. There is no duplicate elevation config
+`config.elevation.deformation.subduction`, ridge/rift controls under
+`config.elevation.deformation.divergence`, oblique transform controls under
+`config.elevation.deformation.transform`, and pure fault-zone controls under
+`config.elevation.deformation.shear`. There is no duplicate elevation config
 under geology and no retained terrain configuration alias.
 Continental collision uplift adds a narrower, squared-taper crest on its broad base.
 `crest_width_fraction=0.3` confines it to the inner 30% of the propagation width
@@ -359,24 +414,26 @@ it may therefore move the final sea-level coastline, but it does not change crus
 ownership, extracted boundaries, or the other elevation components. Its amplitude
 is bounded in metres and scales with planet radius.
 
-Transform relief combines existing normal and shear boundary motion without a
-discrete transform classification. Closing plus sliding produces restraining
-uplift; opening plus sliding produces a releasing basin. Pure sliding and pure
-normal motion produce no transform contribution. The signed strength is the
-normal component multiplied by the shear fraction of their combined magnitudes;
-it is not normalized against a world maximum.
-The pure `transform_strength` helper computes the coupling. `TectonicField`
-uses normalized source blending without stacking every boundary edge; bounds use
-the retained maximum relative rotation magnitude.
+Transform relief combines normal and shear motion at oblique boundaries without
+a discrete transform classification. Closing plus sliding produces restraining
+uplift; opening plus sliding produces a releasing basin. The signed strength is
+the normal component multiplied by the shear fraction of their combined
+magnitudes.
+The `transform_strength` helper computes that signed oblique component.
+`shear_strength` computes the remaining pure-shear component, so the two
+components partition the local shear magnitude. A pure sliding boundary
+therefore receives the shear profile even though it has no transform relief.
 
 `TransformConfig` defaults to `width_percent=0.75` of circumference per side
 (approximately 300 km at Earth radius) and `height_percent=0.05` of radius per
-unit coupled strength. A compact smooth profile uses nearest active source distance
-and blended signed strength, then adds its response to the other processes.
-Set either setting to zero to disable it independently.
-This is a broad procedural transpression/transtension response, not a fault
-mechanics simulation: it uses the sampled local motion components, does not move
-cells sideways, and does not explicitly reconstruct bends or displacement history.
+unit coupled strength. `ShearConfig` defaults to `width_percent=0.75` and
+`height_percent=0.025`. The shear response is a narrower fault-zone profile
+with lower default amplitude than collision or divergent relief. Both use
+nearest active source distance and blended local strength.
+These are procedural transpression, transtension, and fault-zone profiles, not
+fault mechanics simulations: they use sampled local motion components, do not
+move cells sideways, and do not explicitly reconstruct bends or displacement
+history.
 
 Intraplate volcanism uses `config.geology.hotspots` (`HotspotConfig`).
 It samples 12 spaced interior cell centres by default, outside a plate-boundary
@@ -470,8 +527,8 @@ definitions into an `ElevationResult`. `coastal.py` retains a `CoastalField`
 and evaluates the continent-to-basin profile with `CoastalConfig`.
 `profiles.py` contains geological cross-sections. `deformation.py` owns indexed
 tectonic evaluation, with process functions in `collision.py`, `subduction.py`,
-`divergence.py`, and `transform.py`. In `bounds.py`, `coastal_bounds` and
-`tectonic_bounds` derive each contribution's conservative range from its own
+`divergence.py`, `transform.py`, and `shear.py`. In `bounds.py`,
+`tectonic_bounds` derives each contribution's conservative range from its own
 configuration; `elevation_bounds` combines those with the volcanic height bound,
 without measuring extrema of a requested sample batch.
 `TectonicField` retains arc normals and lengths, relative plate rotations,

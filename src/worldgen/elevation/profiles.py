@@ -35,6 +35,13 @@ def transform_profile(distance: float, width: float) -> float:
     return smoothstep_scalar(1.0 - distance / width)
 
 
+def shear_profile(distance: float, width: float) -> float:
+    """Return compact smoothstep attenuation across a pure-shear fault zone."""
+    if width <= 0.0:
+        return 0.0
+    return smoothstep_scalar(1.0 - distance / width)
+
+
 def collision_profile(
     distance: float, width: float, crest_width_fraction: float
 ) -> tuple[float, float]:

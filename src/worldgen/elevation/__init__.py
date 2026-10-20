@@ -10,6 +10,7 @@ from src.worldgen.elevation.config import (
     ElevationConfig,
     ImpactConfig,
     SubductionConfig,
+    ShearConfig,
     TerrainVariationConfig,
 )
 from src.worldgen.elevation.generate import generate_elevation_field
@@ -28,6 +29,7 @@ __all__ = [
     "ElevationResult",
     "ElevationField",
     "SubductionConfig",
+    "ShearConfig",
     "TerrainVariationConfig",
     "generate_elevation_field",
 ]
