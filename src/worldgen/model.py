@@ -1,13 +1,13 @@
-"""Results produced by the world-generation pipeline."""
+"""Sampled world artifact produced by the continuous field engine."""
 
 from dataclasses import dataclass
 
 from src.worldgen.elevation.model import ElevationResult
-from src.worldgen.elevation.field import ElevationField
 from src.worldgen.geometry.mesh import Mesh
 from src.worldgen.geology.model import GeologyResult
 from src.worldgen.surface.field import SurfaceField
 from src.worldgen.surface.model import SurfaceResult
+from src.worldgen.world import WorldField
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,5 +17,5 @@ class GeneratedWorld:
     elevation: ElevationResult
     surface: SurfaceResult
     radius_m: float
-    elevation_field: ElevationField
+    field: WorldField
     surface_field: SurfaceField

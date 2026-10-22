@@ -1,31 +1,14 @@
 import copy
 
 import numpy as np
-import pytest
 
 from src.worldgen.field.noise import NoiseConfig
-from src.worldgen.field.regions import (
-    WarpedVoronoiField,
-    build_warped_voronoi_field,
-)
+from src.worldgen.field.regions import build_warped_voronoi_field
 from src.worldgen.field.voronoi import VoronoiField3D
-from src.worldgen.field.warp import ShearWarpConfig, ShearWarpField
+from src.worldgen.field.warp import ShearWarpConfig
 from src.worldgen.geometry.icosphere import generate_icosphere
 from src.worldgen.geology.config import PlateMotionConfig
 from src.worldgen.geology.motion import build_plate_motion_field, generate_plate_motion
-
-
-def _identity_warp() -> ShearWarpField:
-    return ShearWarpField(
-        config=ShearWarpConfig(iterations=0),
-        shear=lambda plane, iteration, axis, frequency: np.zeros(len(plane)),
-    )
-
-
-def _manual_regions(seeds: np.ndarray, warp: ShearWarpField | None = None):
-    return WarpedVoronoiField(
-        warp=warp or _identity_warp(), voronoi=VoronoiField3D(seeds)
-    )
 
 
 def _assert_global_rng_unchanged(before: tuple, after: tuple) -> None:
@@ -58,7 +41,10 @@ def test_generated_rotation_magnitudes_follow_configured_interval_and_rng() -> N
     magnitudes = np.linalg.norm(lower, axis=1)
     assert np.all(magnitudes >= 0.0)
     assert np.all(magnitudes <= 0.5)
-    np.testing.assert_allclose(np.cross(seeds, lower), np.zeros_like(lower), atol=1e-15)
+    moved_seeds = generate_plate_motion(
+        seeds + 4.0, PlateMotionConfig(0.0, 0.5), rng=np.random.default_rng(817)
+    )
+    np.testing.assert_array_equal(lower, moved_seeds)
     assert not lower.flags.writeable
     _assert_global_rng_unchanged(global_state, np.random.get_state())
 
@@ -82,22 +68,24 @@ def test_generated_motion_allows_zero_and_above_one_magnitudes() -> None:
     )
 
     np.testing.assert_array_equal(stationary, np.zeros((2, 3)))
-    np.testing.assert_allclose(unit, [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0]])
+    np.testing.assert_allclose(np.linalg.norm(unit, axis=1), 1.0)
     np.testing.assert_allclose(np.linalg.norm(above_default, axis=1), 2.0)
 
 
 def test_motion_is_not_clipped_and_scales_linearly_with_query_distance() -> None:
-    regions = _manual_regions(np.array([[0.0, 0.0, 1.0], [0.0, 0.0, -1.0]]))
+    partition = VoronoiField3D(np.array([[0.0, 0.0, 1.0], [0.0, 0.0, -1.0]]))
     motion = build_plate_motion_field(
-        regions,
+        partition,
         PlateMotionConfig(min_angular_speed=1.0, max_angular_speed=1.0),
         rng=np.random.default_rng(5),
     )
-    positions = np.array([[1.0, 1.0, 1.0], [0.5, 0.5, 0.5]])
+    axis = motion.angular_velocity[0]
+    perpendicular = np.cross(axis, [1.0, 0.0, 0.0])
+    perpendicular *= 3.0 / np.linalg.norm(perpendicular)
+    positions = np.array([perpendicular, perpendicular * 0.5])
 
-    velocities = motion.sample(positions)
+    velocities = motion.sample_regions(positions, np.array([0, 0]))
 
-    np.testing.assert_allclose(velocities[0], [-1.0, 1.0, 0.0])
     assert np.linalg.norm(velocities[0]) > 1.0
     np.testing.assert_allclose(velocities[1], velocities[0] * 0.5)
 
@@ -111,7 +99,9 @@ def test_continuous_motion_is_batch_and_resolution_independent() -> None:
         noise_seed=2026,
     )
     motion_rng = np.random.default_rng(2027)
-    motion = build_plate_motion_field(regions, PlateMotionConfig(), rng=motion_rng)
+    motion = build_plate_motion_field(
+        regions.voronoi, PlateMotionConfig(), rng=motion_rng
+    )
     motion_rng_state = copy.deepcopy(motion_rng.bit_generator.state)
     global_state = np.random.get_state()
     cube_points = np.random.default_rng(91).uniform(-1.0, 1.0, size=(41, 3))
@@ -131,12 +121,3 @@ def test_continuous_motion_is_batch_and_resolution_independent() -> None:
     np.testing.assert_array_equal(origin_velocity, [[0.0, 0.0, 0.0]])
     assert motion_rng.bit_generator.state == motion_rng_state
     _assert_global_rng_unchanged(global_state, np.random.get_state())
-
-
-def test_build_motion_rejects_origin_seed_without_fallback() -> None:
-    regions = _manual_regions(np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]]))
-
-    with pytest.raises(ValueError, match=r"^Rotation axes must be nonzero\.$"):
-        build_plate_motion_field(
-            regions, PlateMotionConfig(), rng=np.random.default_rng(11)
-        )

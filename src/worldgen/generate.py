@@ -1,76 +1,82 @@
-"""Top-level orchestration for world generation."""
+"""Build the mesh-independent world fields and sampled world artifact."""
+
+from functools import partial
 
 import numpy as np
 
 from src.worldgen.config import WorldgenConfig
-from src.worldgen.elevation import generate_elevation_field
-from src.worldgen.geometry import Mesh, generate_icosphere
-from src.worldgen.geology import generate_geology
+from src.worldgen.elevation.generate import generate_elevation_field
+from src.worldgen.elevation.variation import TerrainVariationField
+from src.worldgen.field.regions import build_warped_voronoi_field
+from src.worldgen.geometry.icosphere import generate_icosphere
+from src.worldgen.geometry.mesh import Mesh
+from src.worldgen.geology.generate import generate_geology_field
 from src.worldgen.model import GeneratedWorld
-from src.worldgen.field.noise import noise_multiplier
 from src.worldgen.surface.field import SurfaceField
+from src.worldgen.world import WorldField
 
 
-def _signed_seed(sequence: np.random.SeedSequence) -> int:
-    value = int(sequence.generate_state(1, dtype=np.uint64)[0])
-    return value if value < 2**63 else value - 2**64
+def generate_world_field(config: WorldgenConfig) -> WorldField:
+    """Build continuous fields independently of mesh, subdivision and radius."""
+    streams = np.random.SeedSequence(config.seed).spawn(6)
+    regions = build_warped_voronoi_field(
+        config.geology.plates.plate_count,
+        rng=np.random.default_rng(streams[0]),
+        noise_seed=config.seed + 3000,
+        noise_config=config.warp_noise,
+        warp_config=config.warp,
+    )
+    noise_rng = np.random.default_rng(streams[4])
+    noise_seeds = tuple(
+        int(value)
+        for value in noise_rng.integers(-(2**31), 2**31, size=4, dtype=np.int64)
+    )
+    variation_seed = int(
+        np.random.default_rng(streams[5]).integers(-(2**31), 2**31, dtype=np.int64)
+    )
+    geology = generate_geology_field(
+        config.geology,
+        regions=regions,
+        crust_rng=np.random.default_rng(streams[1]),
+        motion_rng=np.random.default_rng(streams[2]),
+        polarity_rng=np.random.default_rng(streams[3]),
+        density_noise_seed=noise_seeds[3],
+    )
+    source_elevation = generate_elevation_field(
+        config.elevation,
+        geology=geology,
+        noise_seeds=noise_seeds[:3],
+    )
+    variation = TerrainVariationField(config.elevation.variation, variation_seed)
+    return WorldField(
+        geology=geology,
+        source_elevation=source_elevation,
+        variation=variation,
+        warp=regions.warp,
+    )
 
 
 def generate_world(config: WorldgenConfig) -> GeneratedWorld:
-    """Generate a seeded spherical mesh, geology, and elevation fields."""
-    streams = np.random.SeedSequence(config.seed).spawn(15)
-    potential_noise, plate_sampling, crust_noise, crust_sampling, plate_growth = (
-        streams[:5]
+    """Sample the continuous world fields at the configured icosphere centers."""
+    field = generate_world_field(config)
+    mesh = Mesh(*generate_icosphere(config.subdivision_frequency))
+    sample = field.sample_world(mesh.vertices)
+    radius_m = config.planet.radius_m
+    center_elevation_m = sample.elevation.elevation * radius_m
+    center_elevation_m.setflags(write=False)
+    surface_field = SurfaceField(
+        config.surface,
+        partial(field.sample_elevation_meters, radius_m=radius_m),
+        radius_m,
+        partial(field.sample_elevation_meters_with_gradient, radius_m=radius_m),
     )
-    vertices, faces = generate_icosphere(config.subdivision_frequency)
-    mesh = Mesh(vertices, faces)
-    deformation = config.elevation.deformation
-    arc_variation = noise_multiplier(
-        mesh.vertices,
-        seed=_signed_seed(streams[10]),
-        frequency=deformation.subduction.arc_noise_frequency,
-        strength=deformation.subduction.arc_variation_strength,
-    )
-    geology = generate_geology(
-        mesh,
-        config.geology,
-        potential_noise_seed=_signed_seed(potential_noise),
-        plate_seed_rng=np.random.default_rng(plate_sampling),
-        plate_motion_rng=np.random.default_rng(streams[9]),
-        plate_noise_seed=_signed_seed(plate_growth),
-        crust_noise_seed=_signed_seed(crust_noise),
-        crust_rng=np.random.default_rng(crust_sampling),
-        density_noise_seed=_signed_seed(streams[8]),
-        hotspot_rng=np.random.default_rng(streams[11]),
-        volcanic_rng=np.random.default_rng(streams[12]),
-        subduction_width_percent=deformation.subduction.width_percent,
-        arc_offset_fraction=deformation.subduction.arc_offset_fraction,
-        arc_width_fraction=deformation.subduction.arc_width_fraction,
-        divergence_width_percent=deformation.divergence.width_percent,
-        axial_width_fraction=deformation.divergence.axial_width_fraction,
-        arc_variation=arc_variation,
-    )
-    elevation_field = generate_elevation_field(
-        mesh,
-        config.elevation,
-        config.planet.radius_m,
-        geology=geology,
-        density_config=config.geology.crust.density,
-        density_noise_seed=_signed_seed(streams[8]),
-        noise_seeds=tuple(_signed_seed(stream) for stream in streams[5:8]),
-        arc_noise_seed=_signed_seed(streams[10]),
-        impact_rng=np.random.default_rng(streams[14]),
-        variation_noise_seed=_signed_seed(streams[13]),
-    )
-    elevation = elevation_field.sample(mesh.vertices)
-    surface_field = SurfaceField(config.surface, elevation_field)
-    surface = surface_field.sample(mesh.vertices, center_elevation=elevation.elevation)
+    surface = surface_field.sample(mesh.vertices, center_elevation=center_elevation_m)
     return GeneratedWorld(
         mesh=mesh,
-        geology=geology,
-        elevation=elevation,
+        geology=sample.geology,
+        elevation=sample.elevation,
         surface=surface,
-        radius_m=config.planet.radius_m,
-        elevation_field=elevation_field,
+        radius_m=radius_m,
+        field=field,
         surface_field=surface_field,
     )

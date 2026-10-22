@@ -16,7 +16,7 @@ dependencies = [
     "textual-canvas>=1.1.0",
     "langgraph-checkpoint-sqlite>=3.1.0",
     "miniaudio>=1.71",
-    "pyfastnoiselite==0.0.7",
+    "pyfastnoiselite @ git+https://github.com/CrashHermit/PyFastNoiseLite.git@efc5d451034912a2642c8801cffd177eb59f6e85",
     "scipy>=1.14.0",
     "numpy>=2.4.6",
     "scipy-stubs",

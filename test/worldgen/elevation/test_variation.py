@@ -28,6 +28,51 @@ def test_amplitude_controls_bounded_signed_displacement():
     np.testing.assert_array_equal(disabled, np.zeros(len(positions)))
 
 
+def test_fraction_sampling_is_volumetric_immutable_and_query_independent():
+    positions = np.random.default_rng(411).uniform(-1.6, 1.6, size=(257, 3))
+    assert np.any(np.linalg.norm(positions, axis=1) != 1.0)
+
+    config = TerrainVariationConfig(amplitude_percent=0.4)
+    field = TerrainVariationField(config, noise_seed=17)
+    values = field.sample_fraction(positions)
+
+    assert np.all(np.isfinite(values))
+    assert np.min(values) < 0.0 < np.max(values)
+    assert np.max(np.abs(values)) <= config.amplitude_percent / 100.0
+    assert not values.flags.writeable
+    np.testing.assert_array_equal(field.sample_fraction(positions), values)
+    np.testing.assert_array_equal(
+        np.concatenate(
+            (
+                field.sample_fraction(positions[:71]),
+                field.sample_fraction(positions[71:193]),
+                field.sample_fraction(positions[193:]),
+            )
+        ),
+        values,
+    )
+    permutation = np.random.default_rng(29).permutation(len(positions))
+    np.testing.assert_array_equal(
+        field.sample_fraction(positions[permutation]), values[permutation]
+    )
+
+    doubled = replace(
+        field,
+        config=replace(config, amplitude_percent=0.8),
+    ).sample_fraction(positions)
+    np.testing.assert_array_equal(doubled, 2.0 * values)
+
+    disabled = replace(
+        field,
+        config=replace(config, amplitude_percent=0.0),
+    ).sample_fraction(positions)
+    empty = field.sample_fraction(np.empty((0, 3)))
+    for zeros in (disabled, empty):
+        assert zeros.dtype == np.float64
+        assert not zeros.flags.writeable
+        np.testing.assert_array_equal(zeros, np.zeros(len(zeros)))
+
+
 def test_variation_is_continuous_across_spherical_coordinate_seams():
     field = TerrainVariationField(TerrainVariationConfig(), noise_seed=17)
     positions = np.array(
@@ -43,74 +88,3 @@ def test_variation_is_continuous_across_spherical_coordinate_seams():
 
     assert abs(values[0] - values[1]) < 0.01
     assert abs(values[2] - values[3]) < 0.01
-
-
-def test_variation_controls_preserve_geology_and_other_elevation_components():
-    from src.worldgen.config import WorldgenConfig
-    from src.worldgen.generate import generate_world
-
-    config = WorldgenConfig(seed=2026, subdivision_frequency=5)
-    zero_config = replace(
-        config,
-        elevation=replace(
-            config.elevation,
-            variation=replace(config.elevation.variation, amplitude_percent=0.0),
-        ),
-    )
-    variation_config = replace(config.elevation.variation, amplitude_percent=0.003)
-    varied_config = replace(
-        config,
-        elevation=replace(config.elevation, variation=variation_config),
-    )
-    zero = generate_world(zero_config)
-    varied = generate_world(varied_config)
-
-    np.testing.assert_array_equal(zero.geology.plate_ids, varied.geology.plate_ids)
-    np.testing.assert_array_equal(
-        zero.geology.crust.region_ids, varied.geology.crust.region_ids
-    )
-    np.testing.assert_array_equal(
-        zero.geology.crust.continental_mask,
-        varied.geology.crust.continental_mask,
-    )
-    np.testing.assert_array_equal(
-        zero.geology.boundary_edge_indices,
-        varied.geology.boundary_edge_indices,
-    )
-    for name in (
-        "coastal_elevation",
-        "tectonic_relief",
-        "volcanic_relief",
-        "impact_relief",
-        "margin_distance",
-        "coastal_elevation_range_m",
-    ):
-        np.testing.assert_array_equal(
-            getattr(zero.elevation, name), getattr(varied.elevation, name)
-        )
-
-    amplitude_m = variation_config.amplitude_percent * zero.radius_m / 100.0
-    np.testing.assert_allclose(
-        varied.elevation.elevation - zero.elevation.elevation,
-        varied.elevation.terrain_variation,
-        rtol=0.0,
-        atol=1e-10,
-    )
-    assert np.max(np.abs(varied.elevation.terrain_variation)) <= amplitude_m
-    mask = varied.geology.crust.continental_mask
-    assert np.ptp(varied.elevation.terrain_variation[mask]) > 0.0
-    assert np.ptp(varied.elevation.terrain_variation[~mask]) > 0.0
-    variation_fraction = variation_config.amplitude_percent / 100.0
-    np.testing.assert_array_equal(
-        varied.elevation_field.elevation_range_fraction,
-        (
-            zero.elevation_field.elevation_range_fraction[0] - variation_fraction,
-            zero.elevation_field.elevation_range_fraction[1] + variation_fraction,
-        ),
-    )
-    np.testing.assert_array_equal(
-        varied.elevation_field.coastal_elevation_range_fraction,
-        zero.elevation_field.coastal_elevation_range_fraction,
-    )
-    assert varied.elevation.elevation.min() >= varied.elevation.elevation_range_m[0]
-    assert varied.elevation.elevation.max() <= varied.elevation.elevation_range_m[1]

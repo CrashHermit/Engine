@@ -1,91 +1,69 @@
-"""Configuration for geology generation stages."""
+"""Configuration for continuous geological fields."""
 
 from dataclasses import dataclass, field
-from typing import Literal
 
-from src.worldgen.field.noise import NoiseConfig
-from src.worldgen.field.priority import PriorityFloodConfig
-
-
-GrowthMethod = Literal["priority-flood", "dijkstra"]
-
-
-@dataclass(frozen=True, slots=True)
-class CrustDensityConfig:
-    continental_base: float = 1.0
-    oceanic_base: float = 2.0
-    variation_strength: float = 0.2
-    noise_frequency: float = 1.0
-
-
-@dataclass(frozen=True, slots=True)
-class PlateConfig:
-    plate_count: int = 15
-    min_seed_distance: float = 0.1
-    irregularity_strength: float = 1.0
-    min_angular_speed: float = 0.05
-    max_angular_speed: float = 0.20
-    motion_scale: float = 1.0
-    growth_method: GrowthMethod = "priority-flood"
-    flood: PriorityFloodConfig = field(default_factory=PriorityFloodConfig)
-    field: NoiseConfig = field(default_factory=NoiseConfig)
+from src.worldgen.field.boundary_motion import BoundaryMotionConfig
 
 
 @dataclass(frozen=True, slots=True)
 class PlateMotionConfig:
+    """Angular-speed range for independent, isotropic Euler rotations."""
+
     min_angular_speed: float = 0.0
     max_angular_speed: float = 1.0
 
 
 @dataclass(frozen=True, slots=True)
-class CrustConfig:
-    continental_seeds: int = 10
-    oceanic_seeds: int = 33
-    min_seed_distance: float = 0.1
-    irregularity_strength: float = 1.0
-    growth_method: GrowthMethod = "priority-flood"
-    flood: PriorityFloodConfig = field(default_factory=PriorityFloodConfig)
-    density: CrustDensityConfig = field(default_factory=CrustDensityConfig)
-    field: NoiseConfig = field(
-        default_factory=lambda: NoiseConfig(
-            octaves=3,
-            base_frequency=1.0,
-            lacunarity=2.0,
-            persistence=0.35,
-        )
-    )
+class PlateConfig:
+    """Continuous tectonic partition and plate-motion settings."""
+
+    plate_count: int = 32
+    # Percentage of the unit reference length; the planet maps one unit to radius.
+    transition_half_width_percent: float = 12.0
+    motion: PlateMotionConfig = field(default_factory=PlateMotionConfig)
 
 
 @dataclass(frozen=True, slots=True)
-class HotspotConfig:
-    count: int = 12
-    min_seed_distance: float = 0.3
-    boundary_clearance_percent: float = 1.25
-    potential: NoiseConfig = field(default_factory=NoiseConfig)
-    potential_bias: float = 4.0
-    min_width_percent: float = 0.5
-    max_width_percent: float = 1.0
-    min_height_percent: float = 0.03
-    max_height_percent: float = 0.1
+class CrustPartitionConfig:
+    """Independent continuous crust partition seed counts and transition width."""
+
+    continental_seeds: int = 6
+    oceanic_seeds: int = 18
+    # Material blend spans remain dimensionless; this is a spatial overlap width.
+    transition_half_width_percent: float = 12.0
 
 
 @dataclass(frozen=True, slots=True)
-class VolcanismConfig:
-    supplied_site_count: int = 24
-    historical_extinct_site_count: int = 8
-    min_site_distance: float = 0.12
-    eruption_probability: float = 0.08
-    potential_threshold: float = 0.18
-    supply_persistence_probability: float = 0.75
-    min_historical_width_percent: float = 0.35
-    max_historical_width_percent: float = 0.9
-    min_historical_height_percent: float = 0.02
-    max_historical_height_percent: float = 0.08
+class MaterialBlendConfig:
+    """Continental influence interval that blends geological profile families."""
+
+    midpoint: float = 0.5
+    transition_width: float = 0.2
+
+
+@dataclass(frozen=True, slots=True)
+class PolarityConfig:
+    """Relative scale and persistent tie bias for overriding-side preference."""
+
+    preference_scale: float = 0.2
+    seeded_bias: float = 0.25
+
+
+@dataclass(frozen=True, slots=True)
+class CrustDensityConfig:
+    """Relative procedural density-anomaly settings."""
+
+    variation_strength: float = 0.2
+    noise_frequency: float = 1.0
 
 
 @dataclass(frozen=True, slots=True)
 class GeologyConfig:
+    """Configuration for independent plate and crust fields."""
+
+    boundary_motion: BoundaryMotionConfig = field(default_factory=BoundaryMotionConfig)
     plates: PlateConfig = field(default_factory=PlateConfig)
-    crust: CrustConfig = field(default_factory=CrustConfig)
-    hotspots: HotspotConfig = field(default_factory=HotspotConfig)
-    volcanism: VolcanismConfig = field(default_factory=VolcanismConfig)
+    crust: CrustPartitionConfig = field(default_factory=CrustPartitionConfig)
+    material_blend: MaterialBlendConfig = field(default_factory=MaterialBlendConfig)
+    polarity: PolarityConfig = field(default_factory=PolarityConfig)
+    density: CrustDensityConfig = field(default_factory=CrustDensityConfig)

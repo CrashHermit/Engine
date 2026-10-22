@@ -5,6 +5,9 @@ from dataclasses import dataclass
 import numpy as np
 
 
+from src.worldgen.field.differential import ScalarSample, VectorSample
+
+
 @dataclass(frozen=True, slots=True)
 class NoiseConfig:
     octaves: int = 5
@@ -47,6 +50,93 @@ def fbm(
         amplitude *= persistence
         frequency *= lacunarity
     return values
+
+
+def fbm_with_gradient(
+    positions: np.ndarray,
+    *,
+    seed: int,
+    octaves: int,
+    base_frequency: float,
+    lacunarity: float,
+    persistence: float,
+) -> ScalarSample:
+    """Sample fBm and its Cartesian XYZ gradient at paired positions."""
+    from pyfastnoiselite.pyfastnoiselite import FastNoiseLite, FractalType, NoiseType
+
+    seed32 = (int(seed) + 2**31) % 2**32 - 2**31
+    noise = FastNoiseLite(seed=seed32)
+    noise.noise_type = NoiseType.NoiseType_OpenSimplex2S
+    noise.fractal_type = FractalType.FractalType_None
+    noise.frequency = 1.0
+    values = np.zeros(len(positions), dtype=np.float64)
+    gradients = np.zeros((len(positions), 3), dtype=np.float64)
+    amplitude = 1.0
+    frequency = base_frequency
+    for octave in range(octaves):
+        shift = octave * 1123.456
+        coords = np.asarray(
+            (positions * frequency + shift).T, dtype=np.float32, order="C"
+        )
+        octave_values, octave_gradients = (
+            noise.gen_open_simplex2s_with_gradient_from_coords(coords)
+        )
+        values += amplitude * octave_values.astype(np.float64)
+        gradients += amplitude * frequency * octave_gradients.astype(np.float64)
+        amplitude *= persistence
+        frequency *= lacunarity
+    values.setflags(write=False)
+    gradients.setflags(write=False)
+    return ScalarSample(values, gradients)
+
+
+def normalized_noise_with_gradient(
+    positions: np.ndarray, config: NoiseConfig, *, seed: int
+) -> ScalarSample:
+    """Return fixed-range [0, 1] noise and its analytic XYZ gradient."""
+    sample = fbm_with_gradient(
+        positions,
+        seed=seed,
+        octaves=config.octaves,
+        base_frequency=config.base_frequency,
+        lacunarity=config.lacunarity,
+        persistence=config.persistence,
+    )
+    amplitude_bound = sum(
+        abs(config.persistence) ** octave for octave in range(config.octaves)
+    )
+    unclipped = 0.5 + sample.values / (2.0 * amplitude_bound)
+    values = np.clip(unclipped, 0.0, 1.0)
+    gradients = sample.gradients / (2.0 * amplitude_bound)
+    gradients[(unclipped <= 0.0) | (unclipped >= 1.0)] = 0.0
+    return ScalarSample(values, gradients)
+
+
+def sample_vector_noise_with_jacobian(
+    positions: np.ndarray, config: NoiseConfig, *, seeds: tuple[int, int, int]
+) -> VectorSample:
+    """Return signed independent noise channels and their Cartesian Jacobians."""
+    channels = [
+        normalized_noise_with_gradient(positions, config, seed=seed) for seed in seeds
+    ]
+    values = np.column_stack([2.0 * channel.values - 1.0 for channel in channels])
+    jacobians = np.stack([2.0 * channel.gradients for channel in channels], axis=1)
+    return VectorSample(values, jacobians)
+
+
+def noise_multiplier_with_gradient(
+    positions: np.ndarray, *, seed: int, frequency: float, strength: float
+) -> ScalarSample:
+    """Return a seeded noise multiplier and its analytic XYZ gradient."""
+    sample = fbm_with_gradient(
+        positions,
+        seed=seed,
+        octaves=1,
+        base_frequency=frequency,
+        lacunarity=2.0,
+        persistence=0.5,
+    )
+    return ScalarSample(1.0 + strength * sample.values, strength * sample.gradients)
 
 
 def normalized_noise(

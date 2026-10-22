@@ -1,43 +1,39 @@
-"""Procedural geology generation."""
+"""Continuous geological field generation."""
 
 from src.worldgen.geology.config import (
-    CrustConfig,
     CrustDensityConfig,
+    CrustPartitionConfig,
     GeologyConfig,
-    HotspotConfig,
+    MaterialBlendConfig,
     PlateConfig,
     PlateMotionConfig,
-    VolcanismConfig,
+    PolarityConfig,
 )
-from src.worldgen.field.noise import NoiseConfig
-from src.worldgen.geology.generate import generate_geology
-from src.worldgen.geology.motion import build_plate_motion_field
+from src.worldgen.field.boundary_motion import BoundaryMotionGradientSample
+from src.worldgen.geology.field import GeologyField
+from src.worldgen.geology.generate import generate_geology_field
 from src.worldgen.geology.model import (
-    CrustResult,
+    GeologyGradientSample,
     GeologyResult,
-    HotspotResult,
-    VolcanoSites,
-    VolcanoSource,
-    VolcanoState,
-    VolcanismResult,
+    GeologySample,
 )
+from src.worldgen.geology.tectonic_context import TectonicContextGradientSample
+from src.worldgen.geology.motion import build_plate_motion_field
 
 __all__ = [
-    "CrustConfig",
     "CrustDensityConfig",
-    "CrustResult",
+    "CrustPartitionConfig",
     "GeologyConfig",
+    "GeologyField",
+    "BoundaryMotionGradientSample",
     "GeologyResult",
-    "NoiseConfig",
+    "GeologySample",
+    "GeologyGradientSample",
+    "MaterialBlendConfig",
     "PlateConfig",
     "PlateMotionConfig",
-    "HotspotConfig",
-    "HotspotResult",
-    "VolcanismConfig",
-    "VolcanismResult",
-    "VolcanoSites",
-    "VolcanoSource",
-    "VolcanoState",
-    "generate_geology",
+    "TectonicContextGradientSample",
+    "PolarityConfig",
     "build_plate_motion_field",
+    "generate_geology_field",
 ]

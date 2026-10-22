@@ -2,28 +2,36 @@ from dataclasses import replace
 
 import numpy as np
 
-from src.worldgen.config import PlanetConfig, WorldgenConfig
-from src.worldgen.elevation.config import ImpactConfig
-from src.worldgen.elevation.impact import ImpactField, generate_impact_field
+from src.worldgen.config import WorldgenConfig
 from src.worldgen.generate import generate_world
-from src.worldgen.render.layers import LAYERS, elevation_colormap, layer_style
+from src.worldgen.render.layers import elevation_colormap, layer_style
 from src.worldgen.surface import SurfaceResult
+from src.worldgen.world import WorldSample
 
 
-def test_elevation_layers_anchor_sea_level_and_accept_fixed_range() -> None:
+def _sample(world):
+    return WorldSample(geology=world.geology, elevation=world.elevation)
+
+
+def test_public_layers_and_meter_elevation_styles():
     world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
-    default = layer_style(world, "elevation")
-    coastal = layer_style(world, "coastal-elevation")
+    sample = _sample(world)
 
-    for style in (default, coastal):
-        zero_fraction = (0.0 - style.clim[0]) / (style.clim[1] - style.clim[0])
-        np.testing.assert_allclose(
-            style.cmap(zero_fraction)[:3],
-            np.array([244, 241, 220]) / 255,
-            atol=0.01,
-        )
-
-    fixed = layer_style(world, "elevation", (-12_000.0, 8_000.0))
+    default = layer_style(sample, "elevation", radius_m=world.radius_m)
+    coastal = layer_style(sample, "coastal-elevation", radius_m=world.radius_m)
+    elevation_m = sample.elevation.elevation * world.radius_m
+    coastal_m = sample.elevation.coastal_elevation * world.radius_m
+    for style, values in ((default, elevation_m), (coastal, coastal_m)):
+        assert style.values.dtype == np.float64
+        assert np.isfinite(style.values).all()
+        assert style.clim[0] <= min(0.0, values.min())
+        assert style.clim[1] >= max(0.0, values.max())
+    fixed = layer_style(
+        sample,
+        "elevation",
+        radius_m=world.radius_m,
+        elevation_range=(-12_000.0, 8_000.0),
+    )
     assert fixed.clim == (-12_000.0, 8_000.0)
     fixed_map = elevation_colormap(fixed.clim)
     np.testing.assert_allclose(
@@ -31,115 +39,79 @@ def test_elevation_layers_anchor_sea_level_and_accept_fixed_range() -> None:
     )
 
 
-def test_elevation_colormap_has_bathymetry_and_hypsometric_steps() -> None:
+def test_elevation_colormap_has_bathymetry_and_hypsometric_steps():
     cmap = elevation_colormap((-12_000.0, 8_000.0))
-
     deep_ocean = np.asarray(cmap(0.1)[:3])
     shallow_ocean = np.asarray(cmap(0.45)[:3])
     lowland = np.asarray(cmap(0.66)[:3])
     highland = np.asarray(cmap(0.88)[:3])
     summit = np.asarray(cmap(0.99)[:3])
-
     assert deep_ocean[2] > deep_ocean[0]
     assert shallow_ocean[1] > shallow_ocean[0]
     assert lowland[1] > lowland[0]
     assert highland[0] > highland[2]
     assert np.all(summit > 0.8)
+    assert cmap.N >= 256
 
 
-def test_terrain_variation_layer_uses_configured_symmetric_range() -> None:
-    variation = replace(WorldgenConfig().elevation.variation, amplitude_percent=0.01)
-    config = WorldgenConfig(
-        seed=17,
-        subdivision_frequency=2,
-        elevation=replace(WorldgenConfig().elevation, variation=variation),
-        planet=PlanetConfig(radius_m=1_000_000.0),
+def test_one_sided_elevation_colormaps_crop_to_land_and_ocean_ranges():
+    land = elevation_colormap((100.0, 1_000.0))
+    full_land = elevation_colormap((0.0, 1_000.0))
+    ocean = elevation_colormap((-1_000.0, -100.0))
+    full_ocean = elevation_colormap((-1_000.0, 0.0))
+
+    np.testing.assert_allclose(land(0.0), full_land(0.1), atol=1e-3)
+    np.testing.assert_allclose(land(1.0), full_land(1.0), atol=1e-3)
+    np.testing.assert_allclose(ocean(0.0), full_ocean(0.0), atol=1e-3)
+    np.testing.assert_allclose(ocean(1.0), full_ocean(0.9), atol=1e-3)
+    assert np.isfinite(land(np.linspace(0.0, 1.0, 257))).all()
+    assert np.isfinite(ocean(np.linspace(0.0, 1.0, 257))).all()
+
+
+def test_variation_and_tectonic_styles_are_signed_meter_channels():
+    config = WorldgenConfig(seed=17, subdivision_frequency=2)
+    config = replace(
+        config,
+        elevation=replace(
+            config.elevation,
+            variation=replace(config.elevation.variation, amplitude_percent=0.01),
+        ),
     )
     world = generate_world(config)
-    style = layer_style(world, "terrain-variation", (-12_000.0, 8_000.0))
-
-    assert "terrain-variation" in LAYERS
-    assert "elevation" in LAYERS
-    assert style.title == "Terrain variation (m)"
-    assert style.cmap == "coolwarm"
-    assert style.clim == (-100.0, 100.0)
-    np.testing.assert_array_equal(style.values, world.elevation.terrain_variation)
-    assert np.max(np.abs(style.values)) <= 100.0
-    disabled_variation = replace(variation, amplitude_percent=0.0)
-    disabled_world = generate_world(
-        replace(
-            config,
-            elevation=replace(config.elevation, variation=disabled_variation),
+    sample = _sample(world)
+    for layer, fraction_name in (
+        ("terrain-variation", "terrain_variation"),
+        ("tectonic-relief", "tectonic_relief"),
+        ("convergent-relief", "convergent_relief"),
+        ("divergent-relief", "divergent_relief"),
+        ("transform-relief", "transform_relief"),
+        ("shear-relief", "shear_relief"),
+        ("volcanic-relief", "volcanic_relief"),
+    ):
+        style = layer_style(sample, layer, radius_m=world.radius_m)
+        np.testing.assert_array_equal(
+            style.values, getattr(sample.elevation, fraction_name) * world.radius_m
         )
-    )
-    disabled_style = layer_style(disabled_world, "terrain-variation")
-    assert disabled_style.clim == (-1.0, 1.0)
-    assert np.count_nonzero(disabled_style.values) == 0
+        assert style.cmap == "coolwarm"
+        assert style.clim[0] < 0.0 < style.clim[1]
 
 
-def test_impact_relief_layer_uses_signed_values_and_query_independent_bounds():
-    elevation = replace(
-        WorldgenConfig().elevation,
-        impacts=ImpactConfig(count=0),
+def test_categorical_styles_use_named_sampled_region_ids():
+    world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
+    sample = _sample(world)
+    for layer in ("plates", "crust", "crust-regions"):
+        style = layer_style(sample, layer, radius_m=world.radius_m)
+        assert style.categorical
+        assert len(style.values) == len(world.mesh.vertices)
+    np.testing.assert_array_equal(
+        layer_style(sample, "crust-regions", radius_m=world.radius_m).values,
+        world.geology.crust_region_ids,
     )
-    world = generate_world(
-        WorldgenConfig(
-            seed=17,
-            subdivision_frequency=2,
-            planet=PlanetConfig(radius_m=1_000_000.0),
-            elevation=elevation,
-        )
-    )
-    config = ImpactConfig(count=1)
-    radius_percent = 1.0
-    theta = radius_percent * 2.0 * np.pi / 100.0
-    positions = np.array(
-        [
-            [1.0, 0.0, 0.0],
-            [np.cos(theta), np.sin(theta), 0.0],
-            [-1.0, 0.0, 0.0],
-        ]
-    )
-    impacts = ImpactField(
-        config=config,
-        centers=np.array([[1.0, 0.0, 0.0]]),
-        radii_percent=np.array([radius_percent]),
-        depths_percent=np.array([0.01]),
-        sharpnesses=np.array([1.0]),
-    )
-    field = replace(world.elevation_field, impacts=impacts)
-    sampled_world = replace(
-        world,
-        elevation_field=field,
-        elevation=field.sample(positions),
-    )
-    style = layer_style(sampled_world, "impact-relief")
-
-    assert "impact-relief" in LAYERS
-    assert style.title == "Impact relief (m)"
-    assert style.cmap == "coolwarm"
-    assert style.clim == (-100.0, 100.0)
-    np.testing.assert_allclose(style.values, [-100.0, 25.0, 0.0], atol=1e-8)
-
-    subset_world = replace(
-        sampled_world,
-        elevation=field.sample(positions[:1]),
-    )
-    assert layer_style(subset_world, "impact-relief").clim == style.clim
-
-    empty_impacts = generate_impact_field(
-        ImpactConfig(count=0), rng=np.random.default_rng(1)
-    )
-    empty_field = replace(field, impacts=empty_impacts)
-    empty_world = replace(
-        sampled_world,
-        elevation_field=empty_field,
-        elevation=empty_field.sample(positions),
-    )
-    assert layer_style(empty_world, "impact-relief").clim == (-1.0, 1.0)
+    for layer in ("continental-weight", "max-plate-weight"):
+        assert layer_style(sample, layer, radius_m=world.radius_m).clim == (0.0, 1.0)
 
 
-def test_surface_layers_show_distinct_metrics_and_ignore_elevation_override() -> None:
+def test_surface_layer_styles_use_surface_measurements_and_fixed_units():
     world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
     count = len(world.mesh.vertices)
     land_height = np.zeros(count)
@@ -149,9 +121,7 @@ def test_surface_layers_show_distinct_metrics_and_ignore_elevation_override() ->
     roughness = np.zeros(count)
     water_depth[0] = 4_300.0
     land_height[1] = 320.0
-    slope_degrees[0] = 12.0
     slope_degrees[2] = 65.0
-    land_height[2] = 1_800.0
     local_relief[2] = 2_500.0
     roughness[2] = 650.0
     surface = SurfaceResult(
@@ -161,9 +131,8 @@ def test_surface_layers_show_distinct_metrics_and_ignore_elevation_override() ->
         local_relief=local_relief,
         roughness=roughness,
     )
-    diagnostic_world = replace(world, surface=surface)
     expected = {
-        "land-height": (land_height, "Land height (m)", "YlOrBr", (0.0, 1_800.0)),
+        "land-height": (land_height, "Land height (m)", "YlOrBr", (0.0, 320.0)),
         "water-depth": (
             water_depth,
             "Water depth below sea level (m)",
@@ -171,12 +140,7 @@ def test_surface_layers_show_distinct_metrics_and_ignore_elevation_override() ->
             (0.0, 4_300.0),
         ),
         "slope": (slope_degrees, "Surface slope (degrees)", "magma", (0.0, 90.0)),
-        "local-relief": (
-            local_relief,
-            "Local relief (m)",
-            "viridis",
-            (0.0, 2_500.0),
-        ),
+        "local-relief": (local_relief, "Local relief (m)", "viridis", (0.0, 2_500.0)),
         "roughness": (
             roughness,
             "Detrended roughness (m RMS)",
@@ -184,41 +148,14 @@ def test_surface_layers_show_distinct_metrics_and_ignore_elevation_override() ->
             (0.0, 650.0),
         ),
     }
-
     for name, (values, title, cmap, clim) in expected.items():
-        assert name in LAYERS
-        style = layer_style(diagnostic_world, name, (-10_000.0, 10_000.0))
+        style = layer_style(
+            _sample(world), name, radius_m=world.radius_m, surface=surface
+        )
         assert style.title == title
         assert style.cmap == cmap
         assert style.clim == clim
         np.testing.assert_array_equal(style.values, values)
-
-    assert layer_style(diagnostic_world, "water-depth").values[0] > 0.0
-    assert layer_style(diagnostic_world, "land-height").values[1] > 0.0
-    assert layer_style(diagnostic_world, "slope").values[2] > 0.0
-    assert layer_style(diagnostic_world, "local-relief").values[2] > 0.0
-    assert layer_style(diagnostic_world, "roughness").values[2] > 0.0
-
-
-def test_surface_layer_ranges_cover_all_zero_and_empty_samples() -> None:
-    world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
-    fields = (
-        "land_height",
-        "water_depth",
-        "slope_degrees",
-        "local_relief",
-        "roughness",
-    )
-    zero_surface = replace(
-        world.surface,
-        **{name: np.zeros(len(world.mesh.vertices)) for name in fields},
-    )
-    empty_surface = replace(world.surface, **{name: np.empty(0) for name in fields})
-
-    for candidate in (
-        replace(world, surface=zero_surface),
-        replace(world, surface=empty_surface),
-    ):
-        for layer in ("land-height", "water-depth", "local-relief", "roughness"):
-            assert layer_style(candidate, layer).clim == (0.0, 1.0)
-        assert layer_style(candidate, "slope").clim == (0.0, 90.0)
+    assert layer_style(
+        _sample(world), "slope", radius_m=world.radius_m, surface=surface
+    ).clim == (0.0, 90.0)

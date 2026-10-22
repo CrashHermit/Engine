@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Crust material and continuous elevation</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172a36;
+      --muted: #526673;
+      --paper: #f3f6f7;
+      --card: #fff;
+      --line: #d5e0e4;
+      --accent: #145a70;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--paper); line-height: 1.5; }
+    main { width: min(1080px, 100%); margin: auto; padding: 1rem clamp(.75rem, 3vw, 2rem) 3rem; }
+    h1 { font-size: clamp(1.65rem, 5vw, 2.5rem); line-height: 1.15; }
+    h2 { font-size: 1.15rem; margin-top: 0; }
+    .muted { color: var(--muted); }
+    .panel, .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1rem; margin: 1rem 0; }
+    .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 1rem; }
+    label { display: grid; gap: .3rem; font-weight: 650; }
+    select { width: 100%; padding: .65rem; font: inherit; }
+    .images { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 1rem; }
+    figure { margin: 0; }
+    img { display: block; width: 100%; height: auto; border-radius: 8px; background: #fff; }
+    figcaption { margin-top: .5rem; color: var(--muted); }
+    .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: .75rem; }
+    .fact { border-left: 3px solid var(--accent); padding: .25rem .75rem; }
+    code { overflow-wrap: anywhere; }
+    [hidden] { display: none !important; }
+    @media (max-width: 600px) {
+      main { padding-top: .75rem; }
+      .panel, .card { padding: .8rem; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <a href="index.html">← Back to worldgen experiments</a>
+    <header>
+      <h1>Crust material and continuous elevation</h1>
+      <p class="muted">The crust partition gives discrete regions; continuous regional memberships shape the coastal profile. Tectonic response and independent 3D terrain variation add to the sampled elevation. All elevation percentages are relative to the selected planet radius; the globe is only a sampling surface.</p>
+    </header>
+
+    <section class="panel" aria-label="Example controls">
+      <div class="controls">
+        <label for="seed">World seed<select id="seed" disabled></select></label>
+        <label for="layer">Field example<select id="layer" disabled></select></label>
+      </div>
+      <p id="description" class="muted" aria-live="polite">Loading gallery data…</p>
+      <p id="range" class="muted"></p>
+      <p id="settings" class="muted"></p>
+      <p id="status" class="muted" role="status">Loading crust examples…</p>
+    </section>
+
+    <section class="images" aria-label="Rendered field examples">
+      <article class="card">
+        <figure>
+          <img id="field-image" alt="Selected crust field globe" loading="eager">
+          <figcaption id="field-caption"></figcaption>
+        </figure>
+      </article>
+      <article class="card" id="opposite-card" hidden>
+        <figure>
+          <img id="opposite-image" alt="Composed elevation from the opposite globe view" loading="lazy">
+          <figcaption id="opposite-caption">Composed elevation, opposite view.</figcaption>
+        </figure>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>How to read these fields</h2>
+      <div class="facts">
+        <p class="fact"><strong>Crust labels</strong><br>Discrete continental/oceanic identity, shown at hex samples.</p>
+        <p class="fact"><strong>Continental influence</strong><br>A continuous scalar from 0 to 1. Oceanic influence is <code>1 − continental</code>.</p>
+        <p class="fact"><strong>Subduction preference</strong><br>A separate seed-derived vector field. The image shows its magnitude, not a boundary category.</p>
+        <p class="fact"><strong>Coastline</strong><br>The coastal contribution's nominal sea level is anchored at the configured continental influence. Tectonic relief and final world-space noise can move the total elevation's zero crossings.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const seedSelect = document.getElementById("seed");
+      const layerSelect = document.getElementById("layer");
+      const description = document.getElementById("description");
+      const settings = document.getElementById("settings");
+      const rangeText = document.getElementById("range");
+      const status = document.getElementById("status");
+      const fieldImage = document.getElementById("field-image");
+      const fieldCaption = document.getElementById("field-caption");
+      const oppositeCard = document.getElementById("opposite-card");
+      const oppositeImage = document.getElementById("opposite-image");
+
+      function render(data) {
+        const world = data.worlds.find((item) => String(item.seed) === seedSelect.value);
+        const layer = data.layers.find((item) => item.id === layerSelect.value);
+        if (!world || !layer) return;
+        const image = world.images[layer.id];
+        fieldImage.src = image;
+        fieldImage.alt = `${layer.title}, seed ${world.seed}`;
+        fieldCaption.textContent = `${layer.title} · seed ${world.seed}`;
+        description.textContent = layer.description;
+        const oppositeKey = layer.id === "elevation-no-variation"
+          ? "elevation-no-variation-opposite"
+          : layer.id === "elevation" ? "elevation-opposite" : null;
+        const opposite = oppositeKey ? world.images[oppositeKey] : null;
+        const oppositeCaption = document.getElementById("opposite-caption");
+        oppositeCard.hidden = !opposite;
+        if (opposite) {
+          oppositeImage.src = opposite;
+          oppositeCaption.textContent = layer.id === "elevation-no-variation"
+            ? "Composed elevation without general terrain variation, opposite view."
+            : "Composed elevation with terrain variation, opposite view.";
+        }
+        const [low, high] = world.elevation_range_m;
+        rangeText.textContent = `Shared elevation color range: ${low.toFixed(1)} m to ${high.toFixed(1)} m`;
+        status.textContent = `Seed ${world.seed} · ${data.frequency} hex frequency · ${data.field_frequency} field frequency`;
+      }
+
+      fetch("crust-material-results.json", { cache: "no-cache" })
+        .then((response) => {
+          if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+          return response.json();
+        })
+        .then((data) => {
+          for (const seed of data.seeds) {
+            const option = document.createElement("option");
+            option.value = String(seed);
+            option.textContent = String(seed);
+            seedSelect.append(option);
+          }
+          for (const layer of data.layers) {
+            const option = document.createElement("option");
+            option.value = layer.id;
+            option.textContent = layer.title;
+            layerSelect.append(option);
+          }
+          const coast = data.coastal_profile;
+          const formatPercent = (value) => Number(value.toPrecision(4));
+          settings.textContent = `Planet radius ${data.radius_m} m · exaggeration ${data.vertical_exaggeration}× · final world-space terrain variation ±${formatPercent(data.terrain_variation_percent)}% of radius · shelf/basin depth ${formatPercent(coast.shelf_depth_percent)}% / ${formatPercent(coast.basin_depth_percent)}% of radius`;
+          seedSelect.disabled = false;
+          layerSelect.disabled = false;
+          seedSelect.addEventListener("change", () => render(data));
+          layerSelect.addEventListener("change", () => render(data));
+          layerSelect.value = "elevation";
+          render(data);
+        })
+        .catch((error) => {
+          status.textContent = `Could not load crust-material-results.json: ${error.message}`;
+        });
+    })();
+  </script>
+</body>
+</html>

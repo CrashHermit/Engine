@@ -1,100 +1,70 @@
+import numpy as np
 from dataclasses import replace
 
-import numpy as np
-
 from src.worldgen.config import WorldgenConfig
-from src.worldgen.generate import generate_world
+from src.worldgen.generate import generate_world_field
 
 
-def _world():
-    return generate_world(WorldgenConfig(seed=2026, subdivision_frequency=5))
-
-
-def test_arbitrary_samples_are_independent_of_batch_order_and_resolution():
-    world = _world()
-    field = world.elevation_field
+def test_source_elevation_is_batch_and_order_independent():
+    field = generate_world_field(WorldgenConfig(seed=2026)).source_elevation
     points = np.random.default_rng(13).normal(size=(21, 3))
-    points /= np.linalg.norm(points, axis=1, keepdims=True)
-    full = field.sample(points)
+    full = field.sample_source(points)
     order = np.array([12, 4, 0, 20, 7])
-    subset = field.sample(points[order])
-    for name in (
-        "coastal_elevation",
-        "tectonic_relief",
-        "volcanic_relief",
-        "impact_relief",
-        "terrain_variation",
-        "elevation",
-        "margin_distance",
-    ):
+    subset = field.sample_source(points[order])
+
+    for name in full.__dataclass_fields__:
         np.testing.assert_array_equal(getattr(subset, name), getattr(full, name)[order])
-        single = field.sample(points[order[:1]])
-        np.testing.assert_array_equal(
-            getattr(single, name), getattr(full, name)[order[:1]]
-        )
-    assert not full.impact_relief.flags.writeable
-    assert not full.terrain_variation.flags.writeable
+        assert getattr(full, name).dtype == np.float64
+        assert not getattr(full, name).flags.writeable
+    np.testing.assert_array_equal(field.sample_total_source(points), full.total)
 
 
-def test_crust_boundary_samples_are_shelf_breaks_not_nearest_cell_values():
-    world = _world()
-    boundary = world.elevation_field.coastal.boundary
-    points = boundary.starts + boundary.ends
-    points /= np.linalg.norm(points, axis=1, keepdims=True)
-    values = world.elevation_field.sample(points)
-    np.testing.assert_allclose(values.margin_distance, 0.0, atol=1e-10)
-    expected = (
-        -world.elevation_field.coastal.config.shelf_depth_percent
-        * world.radius_m
-        / 100.0
+def test_ridge_detail_changes_collision_without_changing_other_responses():
+    config = WorldgenConfig(seed=123)
+    plain_config = replace(
+        config,
+        elevation=replace(
+            config.elevation,
+            ridge_detail=replace(config.elevation.ridge_detail, blend=0.0),
+        ),
     )
-    np.testing.assert_allclose(values.coastal_elevation, expected, atol=1e-7)
-
-
-def test_full_elevation_has_no_height_jump_across_plate_boundaries():
-    world = _world()
-    boundary = world.elevation_field.tectonics.boundary
-    ids = np.arange(0, len(boundary.starts), max(1, len(boundary.starts) // 30))
-    midpoints = boundary.starts[ids] + boundary.ends[ids]
-    midpoints /= np.linalg.norm(midpoints, axis=1, keepdims=True)
-    across = np.cross(boundary.starts[ids], boundary.ends[ids])
-    across /= np.linalg.norm(across, axis=1, keepdims=True)
-    left = midpoints + across * 1e-8
-    right = midpoints - across * 1e-8
-    left /= np.linalg.norm(left, axis=1, keepdims=True)
-    right /= np.linalg.norm(right, axis=1, keepdims=True)
-    difference = np.abs(
-        world.elevation_field.sample(left).elevation
-        - world.elevation_field.sample(right).elevation
-    )
-    assert np.all(difference < 1.0)
-
-
-def test_radius_scaling_and_empty_queries_work_without_rebuilding_geography():
-    world = _world()
-    field = world.elevation_field
-    points = np.array([[1.0, 0.0, 0.0], [0.0, 0.0, -1.0]])
-    original = field.sample(points)
-    doubled = replace(field, radius_m=field.radius_m * 2.0).sample(points)
-    np.testing.assert_array_equal(doubled.elevation, original.elevation * 2.0)
-    np.testing.assert_array_equal(doubled.impact_relief, original.impact_relief * 2.0)
-    np.testing.assert_array_equal(
-        doubled.terrain_variation, original.terrain_variation * 2.0
-    )
-    np.testing.assert_array_equal(doubled.margin_distance, original.margin_distance)
-    np.testing.assert_array_equal(
-        doubled.elevation_range_m, np.asarray(original.elevation_range_m) * 2.0
-    )
-    assert original.elevation.min() >= original.elevation_range_m[0]
-    assert original.elevation.max() <= original.elevation_range_m[1]
-    empty = field.sample(np.empty((0, 3)))
+    detailed = generate_world_field(config)
+    plain = generate_world_field(plain_config)
+    points = np.random.default_rng(2026).uniform(-1.4, 1.4, size=(1307, 3))
+    a = detailed.sample_world(points)
+    b = plain.sample_world(points)
+    assert np.any(a.elevation.convergent_relief != b.elevation.convergent_relief)
     for name in (
         "coastal_elevation",
-        "tectonic_relief",
-        "volcanic_relief",
+        "divergent_relief",
+        "transform_relief",
+        "shear_relief",
         "terrain_variation",
-        "impact_relief",
-        "elevation",
-        "margin_distance",
     ):
-        assert getattr(empty, name).shape == (0,)
+        np.testing.assert_array_equal(
+            getattr(a.elevation, name), getattr(b.elevation, name)
+        )
+    for name in ("convergence", "divergence", "shear"):
+        np.testing.assert_array_equal(
+            getattr(a.geology, name), getattr(b.geology, name)
+        )
+    np.testing.assert_allclose(
+        detailed.convergent_relief.sample(points),
+        a.elevation.convergent_relief,
+        atol=1e-15,
+    )
+
+
+def test_source_elevation_empty_queries_are_typed_readonly():
+    field = generate_world_field(WorldgenConfig(seed=17)).source_elevation
+    empty = field.sample_source(np.empty((0, 3), dtype=np.float64))
+    total = field.sample_total_source(np.empty((0, 3), dtype=np.float64))
+
+    for name in empty.__dataclass_fields__:
+        values = getattr(empty, name)
+        assert values.shape == (0,)
+        assert values.dtype == np.float64
+        assert not values.flags.writeable
+    assert total.shape == (0,)
+    assert total.dtype == np.float64
+    assert not total.flags.writeable

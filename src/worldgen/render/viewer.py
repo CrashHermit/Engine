@@ -1,294 +1,256 @@
-"""PyVista diagnostics for generated geology and terrain fields."""
+"""PyVista viewer for sampled continuous world fields."""
 
 import numpy as np
 import pyvista as pv
 
+from src.worldgen.geometry.icosphere import generate_icosphere
 from src.worldgen.model import GeneratedWorld
-from src.worldgen.render.layers import LAYERS, layer_style, layer_title
-
-
-def _dual_polydata(world: GeneratedWorld) -> pv.PolyData:
-    mesh = world.mesh
-    counts = [len(face) for face in mesh.dual_faces]
-    cells = np.empty(sum(count + 1 for count in counts), dtype=np.int64)
-    offset = 0
-    for face in mesh.dual_faces:
-        cells[offset] = len(face)
-        cells[offset + 1 : offset + 1 + len(face)] = face
-        offset += 1 + len(face)
-    return pv.PolyData(mesh.dual_vertices, cells)
-
-
-def _dual_edge_lines(world: GeneratedWorld) -> np.ndarray:
-    segments: list[np.ndarray] = []
-    dual_vertices = world.mesh.dual_vertices
-    incidence = world.mesh.edge_face_indices
-    for edge_index in world.geology.boundary_edge_indices:
-        faces = incidence[int(edge_index)]
-        segments.extend((dual_vertices[faces[0]], dual_vertices[faces[1]]))
-    if not segments:
-        return np.empty((0, 3), dtype=np.float64)
-    return np.asarray(segments)
+from src.worldgen.render.layers import LAYERS, common_elevation_range, layer_style
+from src.worldgen.world import WorldSample
 
 
 class WorldgenViewer:
-    """One generated world with mutually exclusive, clickable display layers."""
+    """Display hex samples or a dense continuous field without regenerating it."""
 
     def __init__(
         self,
         world: GeneratedWorld,
         *,
-        arrow_scale: float = 0.08,
+        field_frequency: int = 80,
         off_screen: bool = False,
         terrain_relief: bool = False,
         vertical_exaggeration: float = 1.0,
         sea_level: bool = False,
         elevation_range: tuple[float, float] | None = None,
         hex_edges: bool = True,
+        continuous_field: bool = True,
     ) -> None:
         self.world = world
-        self.arrow_scale = arrow_scale
-        self.terrain_relief = terrain_relief
+        self.field_frequency = field_frequency
+        self.off_screen = off_screen
+        self.terrain_relief = terrain_relief or sea_level
         self.vertical_exaggeration = vertical_exaggeration
         self.sea_level = sea_level
         self.elevation_range = elevation_range
         self.hex_edges = hex_edges
-        self.plotter = pv.Plotter(off_screen=off_screen)
-        self.polydata = _dual_polydata(world)
-        self.terrain_polydata = self.polydata.copy(deep=True)
-        self._flat_points = self.polydata.points.copy()
-        self._relief_points = self._terrain_points(vertical_exaggeration)
-        self.terrain_polydata.points = (
-            self._relief_points if terrain_relief else self._flat_points
+        self.continuous_field = continuous_field
+        vertices, faces = generate_icosphere(field_frequency)
+        self._dense_directions = vertices
+        self._dense_faces = faces
+        self._dense_sample: WorldSample = world.field.sample_world(vertices)
+        self.elevation_range = elevation_range or common_elevation_range(
+            WorldSample(world.geology, world.elevation),
+            radius_m=world.radius_m,
+            other_sample=self._dense_sample,
         )
-        points = _dual_edge_lines(world)
-        segments = np.arange(len(points), dtype=np.int64).reshape(-1, 2)
-        connectivity = np.column_stack(
-            (np.full(len(segments), 2, dtype=np.int64), segments)
-        ).ravel()
-        self.boundaries = pv.PolyData(points, lines=connectivity)
+        self.plotter = pv.Plotter(off_screen=off_screen)
+        self.polydata = self._hex_polydata()
+        self.dense_polydata = self._dense_polydata()
         self.actors = []
         self.widgets = {}
-        self.layer = None
-        self.sea_level_actor = None
+        self.layer: str | None = None
         self._sea_level_mesh: pv.PolyData | None = None
+        self._sea_level_actor = None
+        self.annotation = None
 
-    def _terrain_points(self, exaggeration: float) -> np.ndarray:
+    def _hex_polydata(self) -> pv.PolyData:
         mesh = self.world.mesh
-        face_elevation = self.world.elevation.elevation[mesh.faces].mean(axis=1)
-        radius = 1.0 + face_elevation / self.world.radius_m * exaggeration
-        return mesh.dual_vertices * radius[:, np.newaxis]
+        counts = [len(face) for face in mesh.dual_faces]
+        cells = np.empty(sum(count + 1 for count in counts), dtype=np.int64)
+        offset = 0
+        for face in mesh.dual_faces:
+            cells[offset] = len(face)
+            cells[offset + 1 : offset + 1 + len(face)] = face
+            offset += 1 + len(face)
+        poly = pv.PolyData(mesh.dual_vertices, cells)
+        poly.points = self._dual_points()
+        return poly
 
-    def _refresh_terrain_points(self) -> None:
-        self._relief_points = self._terrain_points(self.vertical_exaggeration)
-        self.terrain_polydata.points = (
-            self._relief_points if self.terrain_relief else self._flat_points
+    def _dual_points(self) -> np.ndarray:
+        mesh = self.world.mesh
+        fraction = self.world.elevation.elevation[mesh.faces].mean(axis=1)
+        radius = 1.0 + fraction * self.vertical_exaggeration
+        return (
+            mesh.dual_vertices * radius[:, None]
+            if self.terrain_relief
+            else mesh.dual_vertices.copy()
         )
+
+    def _dense_polydata(self) -> pv.PolyData:
+        cells = np.column_stack(
+            (np.full(len(self._dense_faces), 3), self._dense_faces)
+        ).ravel()
+        poly = pv.PolyData(self._dense_directions.copy(), cells)
+        poly.points = self._dense_points()
+        return poly
+
+    def _dense_points(self) -> np.ndarray:
+        fraction = self._dense_sample.elevation.elevation
+        radius = (
+            1.0 + fraction * self.vertical_exaggeration
+            if self.terrain_relief
+            else np.ones(len(fraction))
+        )
+        return self._dense_directions * radius[:, None]
+
+    def _update_geometry(self) -> None:
+        self.polydata.points = self._dual_points()
+        self.dense_polydata.points = self._dense_points()
         if self.layer is not None:
             self.select_layer(self.layer)
+        self._update_annotation()
+
+    def _update_annotation(self) -> None:
+        text = f"Radius {self.world.radius_m:,.0f} m · exaggeration {self.vertical_exaggeration:g}×"
+        if self.annotation is not None:
+            self.plotter.remove_actor(self.annotation, reset_camera=False, render=False)
+        self.annotation = self.plotter.add_text(
+            text, position="upper_right", font_size=10
+        )
 
     def set_terrain_relief(self, enabled: bool) -> None:
-        """Enable radial displacement on the final elevation layer only."""
         self.terrain_relief = enabled
-        self._refresh_terrain_points()
+        relief_widget = self.widgets.get("terrain-relief")
+        if relief_widget is not None:
+            relief_widget.GetRepresentation().SetState(enabled)
+        if not enabled and self.sea_level:
+            self.sea_level = False
+            water_widget = self.widgets.get("water")
+            if water_widget is not None:
+                water_widget.GetRepresentation().SetState(0)
+        self._update_geometry()
 
     def set_vertical_exaggeration(self, exaggeration: float) -> None:
-        """Set the radial relief multiplier without modifying generated data."""
         self.vertical_exaggeration = exaggeration
-        self._refresh_terrain_points()
+        self._update_geometry()
 
     def set_sea_level(self, enabled: bool) -> None:
-        """Show or hide the unit-radius sea-level shell on displaced terrain."""
         self.sea_level = enabled
-        if self.layer is not None:
+        water_widget = self.widgets.get("water")
+        if water_widget is not None:
+            water_widget.GetRepresentation().SetState(enabled)
+        if enabled and not self.terrain_relief:
+            self.terrain_relief = True
+            relief_widget = self.widgets.get("terrain-relief")
+            if relief_widget is not None:
+                relief_widget.GetRepresentation().SetState(1)
+            self._update_geometry()
+        elif self.layer is not None:
             self.select_layer(self.layer)
 
     def set_hex_edges(self, enabled: bool) -> None:
-        """Show or hide cell outlines while preserving the selected layer."""
         self.hex_edges = enabled
         if self.layer is not None:
             self.select_layer(self.layer)
 
+    def set_continuous_field(self, enabled: bool) -> None:
+        self.continuous_field = enabled
+        if self.layer is not None:
+            self.select_layer(self.layer)
+
+    def _hex_only(self, layer: str) -> bool:
+        return layer in (
+            "plates",
+            "crust",
+            "crust-regions",
+            "land-height",
+            "water-depth",
+            "slope",
+            "local-relief",
+            "roughness",
+        )
+
     def select_layer(self, layer: str) -> None:
-        """Replace display actors without regenerating data or resetting camera."""
-        camera_position = self.plotter.camera_position
+        if layer not in LAYERS:
+            raise KeyError(layer)
+        camera = self.plotter.camera_position
         for actor in self.actors:
             self.plotter.remove_actor(actor, reset_camera=False, render=False)
         self.actors.clear()
-        geology = self.world.geology
-        crust = geology.crust
-        interactions = {
-            "convergence": geology.boundary_convergence,
-            "divergence": geology.boundary_divergence,
-            "shear": geology.boundary_shear,
-        }
-        if layer in interactions:
-            if len(geology.boundary_edge_indices) == 0:
-                self.actors.append(
-                    self.plotter.add_mesh(
-                        self.polydata,
-                        color="lightgray",
-                        opacity=1.0,
-                        reset_camera=False,
-                    )
-                )
-                self.plotter.add_text("No boundaries", position="upper_left")
-            else:
-                self.actors.append(
-                    self.plotter.add_mesh(
-                        self.polydata,
-                        color="lightgray",
-                        reset_camera=False,
-                    )
-                )
-                values = interactions[layer]
-                self.boundaries.cell_data[layer] = values
-                self.actors.append(
-                    self.plotter.add_mesh(
-                        self.boundaries,
-                        scalars=layer,
-                        cmap="inferno",
-                        clim=(0, max(value.max() for value in interactions.values())),
-                        line_width=5,
-                        reset_camera=False,
-                    )
-                )
-        elif layer in ("boundary-sections", "subducting-plate"):
-            sections = geology.boundary_sections
-            self.actors.append(
-                self.plotter.add_mesh(
-                    self.polydata, color="lightgray", reset_camera=False
-                )
-            )
-            if len(sections.edge_section_ids) == 0:
-                self.actors.append(
-                    self.plotter.add_text("No boundaries", position="upper_left")
-                )
-            else:
-                values = (
-                    sections.edge_section_ids
-                    if layer == "boundary-sections"
-                    else sections.subducting_plate_ids[sections.edge_section_ids]
-                )
-                self.boundaries.cell_data[layer] = values
-                self.actors.append(
-                    self.plotter.add_mesh(
-                        self.boundaries,
-                        scalars=layer,
-                        cmap="tab20",
-                        categories=True,
-                        annotations={-1: "Not subducting"}
-                        if layer == "subducting-plate"
-                        else None,
-                        line_width=5,
-                        reset_camera=False,
-                        scalar_bar_args={"title": layer_title(layer), "vertical": True},
-                    )
-                )
+        hex_display = not self.continuous_field or self._hex_only(layer)
+        sample = (
+            WorldSample(self.world.geology, self.world.elevation)
+            if hex_display
+            else self._dense_sample
+        )
+        surface = self.world.surface if hex_display else None
+        style = layer_style(
+            sample,
+            layer,
+            radius_m=self.world.radius_m,
+            elevation_range=self.elevation_range,
+            surface=surface,
+        )
+        mesh = self.polydata if hex_display else self.dense_polydata
+        # PolyData cell values are one per sampled hex; dense triangles use vertex values.
+        if hex_display:
+            mesh.cell_data[layer] = style.values
+            scalar_mode = "cell"
         else:
-            style = layer_style(self.world, layer, self.elevation_range)
-            values, cmap, clim = style.values, style.cmap, style.clim
-            vectors = style.vectors
-            terrain_layer = layer == "elevation"
-            display_mesh = (
-                self.terrain_polydata
-                if terrain_layer and self.terrain_relief
-                else self.polydata
+            mesh.point_data[layer] = style.values
+            scalar_mode = "point"
+        if layer == "elevation" and self.terrain_relief and self.sea_level:
+            if self._sea_level_mesh is None:
+                self._sea_level_mesh = pv.Sphere(
+                    radius=1.0, theta_resolution=512, phi_resolution=512
+                )
+            self._sea_level_actor = self.plotter.add_mesh(
+                self._sea_level_mesh,
+                color="royalblue",
+                opacity=0.35,
+                show_edges=False,
+                reset_camera=False,
             )
-            display_mesh.cell_data[layer] = values
-            if terrain_layer and self.terrain_relief and self.sea_level:
-                if self._sea_level_mesh is None:
-                    self._sea_level_mesh = pv.Sphere(
-                        radius=1.0, theta_resolution=512, phi_resolution=512
-                    )
-                self.sea_level_actor = self.plotter.add_mesh(
-                    self._sea_level_mesh,
-                    color="royalblue",
-                    opacity=0.35,
-                    show_edges=False,
-                    reset_camera=False,
-                )
-                self.actors.append(self.sea_level_actor)
-            mesh_kwargs = {
-                "scalars": layer,
-                "cmap": cmap,
-                "clim": clim,
-                "show_edges": self.hex_edges,
-                "reset_camera": False,
-                "smooth_shading": True,
-                "scalar_bar_args": (
-                    {"title": style.title, "n_labels": 4, "fmt": "%.0f"}
-                    if layer == "volcano-state"
-                    else {"title": style.title, "n_labels": 2, "fmt": "%.0f"}
-                    if layer == "volcanic-areas"
-                    else {"title": style.title}
-                ),
-            }
-            color_count = getattr(cmap, "N", None)
-            if color_count is not None:
-                mesh_kwargs["n_colors"] = int(color_count)
-            self.actors.append(self.plotter.add_mesh(display_mesh, **mesh_kwargs))
-            if layer == "volcano-state" and len(geology.volcanism.sites.cell_indices):
-                cells = geology.volcanism.sites.cell_indices
-                self.actors.append(
-                    self.plotter.add_points(
-                        self.world.mesh.vertices[cells] * 1.002,
-                        scalars=values[cells],
-                        cmap=cmap,
-                        clim=clim,
-                        point_size=9,
-                        render_points_as_spheres=True,
-                        show_scalar_bar=False,
-                        reset_camera=False,
-                    )
-                )
-            if vectors is not None:
-                self.actors.append(
-                    self.plotter.add_arrows(
-                        self.world.mesh.vertices,
-                        vectors,
-                        mag=self.arrow_scale,
-                        color="white",
-                        reset_camera=False,
-                    )
-                )
-            if layer in ("plates", "velocity"):
-                self.actors.append(
-                    self.plotter.add_mesh(
-                        self.boundaries,
-                        color="black",
-                        line_width=4,
-                        reset_camera=False,
-                    )
-                )
+            self.actors.append(self._sea_level_actor)
+        cmap = style.cmap
+        kwargs = dict(
+            scalars=layer,
+            preference=scalar_mode,
+            cmap=cmap,
+            clim=style.clim,
+            show_edges=hex_display and self.hex_edges,
+            reset_camera=False,
+            smooth_shading=True,
+            scalar_bar_args={"title": style.title},
+        )
+        if style.categorical:
+            kwargs["categories"] = True
+            if style.annotations:
+                kwargs["annotations"] = style.annotations
+        count = getattr(cmap, "N", None)
+        if count is not None:
+            kwargs["n_colors"] = int(count)
+        self.actors.append(self.plotter.add_mesh(mesh, **kwargs))
         self.layer = layer
+        self._update_annotation()
         for name, widget in self.widgets.items():
             if name in LAYERS:
                 widget.GetRepresentation().SetState(name == layer)
         self.plotter.render()
-        self.plotter.camera_position = camera_position
+        self.plotter.camera_position = camera
+
+    def prepare_camera(self) -> None:
+        self.plotter.camera.parallel_projection = True
+        self.plotter.reset_camera()
+        self.plotter.camera.parallel_scale *= 1.08
 
     def write_rotation_gif(
-        self,
-        path: str,
-        *,
-        frames: int = 120,
-        fps: float = 24.0,
+        self, path: str, *, frames: int = 120, fps: float = 24.0
     ) -> None:
-        """Write a full camera rotation while leaving the viewer open."""
         initial_camera = self.plotter.camera_position
+        parallel_scale = self.plotter.camera.parallel_scale
         self.plotter.open_gif(path, fps=fps)
         try:
             self.plotter.write_frame()
-            step = 360.0 / frames
             for _ in range(1, frames):
-                self.plotter.camera.Azimuth(step)
+                self.plotter.camera.Azimuth(360.0 / frames)
                 self.plotter.write_frame()
         finally:
             if self.plotter.mwriter is not None:
                 self.plotter.mwriter.close()
                 self.plotter.mwriter = None
             self.plotter.camera_position = initial_camera
+            self.plotter.camera.parallel_scale = parallel_scale
 
     def add_layer_controls(self) -> None:
         rows = (len(LAYERS) + 1) // 2
@@ -300,39 +262,37 @@ class WorldgenViewer:
             def toggle(enabled, selected=name):
                 if enabled:
                     self.select_layer(selected)
-                else:
+                elif selected in self.widgets:
                     self.widgets[selected].GetRepresentation().SetState(
                         self.layer == selected
                     )
 
             self.widgets[name] = self.plotter.add_checkbox_button_widget(
-                toggle,
-                value=name == self.layer,
-                position=position,
-                size=20,
+                toggle, value=name == self.layer, position=position, size=20
             )
             self.plotter.add_text(name, position=label_position, font_size=10)
-        self.widgets["terrain-relief"] = self.plotter.add_checkbox_button_widget(
-            self.set_terrain_relief,
-            value=self.terrain_relief,
-            position=(220, 10),
-            size=20,
-        )
-        self.plotter.add_text("terrain relief", position=(250, 15), font_size=10)
-        self.widgets["sea-level"] = self.plotter.add_checkbox_button_widget(
-            self.set_sea_level,
-            value=self.sea_level,
-            position=(220, 42),
-            size=20,
-        )
-        self.plotter.add_text("sea level", position=(250, 47), font_size=10)
-        self.widgets["hex-edges"] = self.plotter.add_checkbox_button_widget(
-            self.set_hex_edges,
-            value=self.hex_edges,
-            position=(450, 10),
-            size=20,
-        )
-        self.plotter.add_text("hex outlines", position=(480, 15), font_size=10)
+        for key, callback, value, label, x in (
+            (
+                "terrain-relief",
+                self.set_terrain_relief,
+                self.terrain_relief,
+                "terrain relief",
+                220,
+            ),
+            ("water", self.set_sea_level, self.sea_level, "water", 450),
+            ("hex-edges", self.set_hex_edges, self.hex_edges, "hex outlines", 680),
+            (
+                "continuous-field",
+                self.set_continuous_field,
+                self.continuous_field,
+                "continuous field",
+                910,
+            ),
+        ):
+            self.widgets[key] = self.plotter.add_checkbox_button_widget(
+                callback, value=value, position=(x, 10), size=20
+            )
+            self.plotter.add_text(label, position=(x + 30, 15), font_size=10)
         self.plotter.add_slider_widget(
             self.set_vertical_exaggeration,
             rng=(1.0, 100.0),
@@ -344,35 +304,36 @@ class WorldgenViewer:
         )
 
 
-def render_geology(
+def render_world(
     world: GeneratedWorld,
     *,
-    layer: str = "plates",
-    arrow_scale: float = 0.08,
+    layer: str = "elevation",
     off_screen: bool = False,
     terrain_relief: bool = False,
     vertical_exaggeration: float = 1.0,
     sea_level: bool = False,
     elevation_range: tuple[float, float] | None = None,
     hex_edges: bool = True,
+    field_frequency: int = 80,
+    continuous_field: bool = True,
     screenshot: str | None = None,
     rotation_gif: str | None = None,
     rotation_frames: int = 120,
     rotation_fps: float = 24.0,
 ) -> None:
-    """Render one initial layer, screenshot, or rotation GIF."""
     viewer = WorldgenViewer(
         world,
-        arrow_scale=arrow_scale,
+        field_frequency=field_frequency,
         off_screen=off_screen or rotation_gif is not None,
         terrain_relief=terrain_relief,
         vertical_exaggeration=vertical_exaggeration,
         sea_level=sea_level,
         elevation_range=elevation_range,
         hex_edges=hex_edges,
+        continuous_field=continuous_field,
     )
     viewer.select_layer(layer)
-    viewer.plotter.reset_camera()
+    viewer.prepare_camera()
     if rotation_gif is not None:
         viewer.write_rotation_gif(
             rotation_gif, frames=rotation_frames, fps=rotation_fps

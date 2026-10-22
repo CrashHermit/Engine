@@ -1,38 +1,35 @@
-"""Explicit scalar and style selection for worldgen render layers."""
+"""Explicit scalar and style selection for continuous world samples."""
 
 from dataclasses import dataclass
 
 import numpy as np
 from matplotlib.colors import LinearSegmentedColormap
 
-from src.worldgen.model import GeneratedWorld
-from src.worldgen.geology.model import VolcanoState
+from src.worldgen.surface.model import SurfaceResult
+from src.worldgen.world import WorldSample
 
 LAYERS = (
     "plates",
-    "volcanic-potential",
-    "hotspot-potential",
-    "volcanic-activity",
-    "volcanic-areas",
-    "volcano-state",
-    "velocity",
+    "crust",
+    "crust-regions",
+    "continental-weight",
+    "subduction-preference-strength",
+    "max-plate-weight",
+    "region-overlap",
     "convergence",
     "divergence",
     "shear",
-    "crust",
-    "crust-regions",
-    "crust-field",
-    "crust-density",
-    "crust-region-density",
-    "boundary-sections",
-    "subducting-plate",
     "coastal-elevation",
-    "elevation",
+    "convergent-relief",
+    "divergent-relief",
     "tectonic-relief",
-    "volcanism",
+    "transform-relief",
+    "volcanic-relief",
+    "volcanic-potential",
+    "volcanic-strength",
+    "shear-relief",
     "terrain-variation",
-    "impact-relief",
-    "margin-distance",
+    "elevation",
     "land-height",
     "water-depth",
     "slope",
@@ -41,19 +38,30 @@ LAYERS = (
 )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class LayerStyle:
     values: np.ndarray
     cmap: object
     title: str
     clim: tuple[float, float] | None = None
-    vectors: np.ndarray | None = None
+    categorical: bool = False
+    annotations: dict[int, str] | None = None
 
 
 def layer_title(layer: str) -> str:
-    """Return the user-facing scalar-bar title, including units where needed."""
     if layer in ("coastal-elevation", "elevation"):
         return "Elevation (m; sea level 0)"
+    if layer in (
+        "convergent-relief",
+        "divergent-relief",
+        "tectonic-relief",
+        "transform-relief",
+        "volcanic-relief",
+        "terrain-variation",
+    ):
+        return layer.replace("-", " ").title() + " (m)"
+    if layer in ("volcanic-potential", "volcanic-strength"):
+        return layer.replace("-", " ").title()
     if layer == "land-height":
         return "Land height (m)"
     if layer == "water-depth":
@@ -64,228 +72,206 @@ def layer_title(layer: str) -> str:
         return "Local relief (m)"
     if layer == "roughness":
         return "Detrended roughness (m RMS)"
-    if layer == "terrain-variation":
-        return "Terrain variation (m)"
-    if layer == "impact-relief":
-        return "Impact relief (m)"
-    if layer == "volcanism":
-        return "Volcanic uplift (m)"
-    if layer == "margin-distance":
-        return "Margin distance (% circumference; positive continental)"
     if layer == "crust":
         return "Crust: 0 oceanic, 1 continental"
-    if layer == "volcano-state":
-        return "Volcano sites: 0 none, 1 dormant, 2 erupting, 3 extinct"
-    if layer == "volcanic-activity":
-        return "Volcanic activity (procedural strength)"
-    if layer == "volcanic-potential":
-        return "Source-derived volcanic potential (procedural strength)"
-    return layer
+    return layer.replace("-", " ").title()
 
 
-def elevation_colormap(clim: tuple[float, float]) -> LinearSegmentedColormap:
-    """Return bathymetry and hypsometric tints anchored at sea level."""
-    low, high = clim
-    zero = (0.0 - low) / (high - low)
+_OCEAN_STOPS = (
+    (0.0, "#061b3a"),
+    (0.35, "#0b4f8a"),
+    (0.78, "#3b9ac2"),
+    (1.0, "#f4f1dc"),
+)
+_LAND_STOPS = (
+    (0.0, "#f4f1dc"),
+    (0.16, "#8fbf6a"),
+    (0.42, "#c7b86a"),
+    (0.72, "#986b45"),
+    (1.0, "#f2f0e8"),
+)
+
+
+def _cropped_colormap(
+    name: str,
+    stops: tuple[tuple[float, str], ...],
+    start: float,
+    end: float,
+) -> LinearSegmentedColormap:
+    base = LinearSegmentedColormap.from_list(name, stops, N=4096)
+    positions = [start]
+    positions.extend(position for position, _ in stops if start < position < end)
+    positions.append(end)
     return LinearSegmentedColormap.from_list(
-        "worldgen-hypsometric",
+        name,
         [
-            (0.0, "#061b3a"),
-            (zero * 0.35, "#0b4f8a"),
-            (zero * 0.78, "#3b9ac2"),
-            (zero, "#f4f1dc"),
-            (zero + (1.0 - zero) * 0.16, "#8fbf6a"),
-            (zero + (1.0 - zero) * 0.42, "#c7b86a"),
-            (zero + (1.0 - zero) * 0.72, "#986b45"),
-            (1.0, "#f2f0e8"),
+            ((position - start) / (end - start), base(position))
+            for position in positions
         ],
         N=4096,
     )
 
 
+def elevation_colormap(clim: tuple[float, float]) -> LinearSegmentedColormap:
+    """Return a sea-level-anchored palette, cropped for one-sided ranges."""
+    low, high = clim
+    if low >= 0.0:
+        return _cropped_colormap(
+            "worldgen-hypsometric-land", _LAND_STOPS, low / high, 1.0
+        )
+    if high <= 0.0:
+        return _cropped_colormap(
+            "worldgen-hypsometric-ocean", _OCEAN_STOPS, 0.0, (high - low) / -low
+        )
+
+    zero = (0.0 - low) / (high - low)
+    return LinearSegmentedColormap.from_list(
+        "worldgen-hypsometric",
+        [
+            (0.0, _OCEAN_STOPS[0][1]),
+            (zero * 0.35, _OCEAN_STOPS[1][1]),
+            (zero * 0.78, _OCEAN_STOPS[2][1]),
+            (zero, _LAND_STOPS[0][1]),
+            (zero + (1.0 - zero) * 0.16, _LAND_STOPS[1][1]),
+            (zero + (1.0 - zero) * 0.42, _LAND_STOPS[2][1]),
+            (zero + (1.0 - zero) * 0.72, _LAND_STOPS[3][1]),
+            (1.0, _LAND_STOPS[4][1]),
+        ],
+        N=4096,
+    )
+
+
+def common_elevation_range(
+    sample: WorldSample,
+    *,
+    radius_m: float,
+    other_sample: WorldSample | None = None,
+) -> tuple[float, float]:
+    samples = (sample,) if other_sample is None else (sample, other_sample)
+    values = (
+        np.concatenate(
+            [
+                channel
+                for item in samples
+                for channel in (
+                    item.elevation.elevation,
+                    item.elevation.coastal_elevation,
+                )
+            ]
+        )
+        * radius_m
+    )
+    low = min(float(np.min(values, initial=0.0)), 0.0)
+    high = max(float(np.max(values, initial=0.0)), 0.0)
+    return (-1e-12, 1e-12) if low == high else (low, high)
+
+
 def layer_style(
-    world: GeneratedWorld,
+    sample: WorldSample,
     layer: str,
+    *,
+    radius_m: float,
     elevation_range: tuple[float, float] | None = None,
+    surface: SurfaceResult | None = None,
 ) -> LayerStyle:
-    """Select values and rendering style for a scalar layer."""
-    geology = world.geology
-    crust = geology.crust
-    elevation = world.elevation
-    surface = world.surface
+    geology, elevation = sample.geology, sample.elevation
     if layer == "plates":
-        return LayerStyle(geology.plate_ids, "tab20", title=layer_title(layer))
-    if layer == "hotspot-potential":
         return LayerStyle(
-            geology.hotspots.potential,
-            "viridis",
-            title=layer_title(layer),
-            clim=(0, 1),
-        )
-    if layer in ("volcanic-potential", "volcanic-activity"):
-        values = (
-            geology.volcanism.potential
-            if layer == "volcanic-potential"
-            else geology.volcanism.activity
-        )
-        return LayerStyle(
-            values,
-            "inferno",
-            title=layer_title(layer),
-            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
-        )
-    if layer == "volcanic-areas":
-        return LayerStyle(
-            geology.volcanism.volcanic_mask.astype(np.int64),
-            ["lightgray", "orangered"],
-            title="Volcanic area: 0 no, 1 yes",
-            clim=(0, 1),
-        )
-    if layer == "volcano-state":
-        values = np.zeros(len(world.mesh.vertices), dtype=np.int64)
-        sites = geology.volcanism.sites
-        for state, code in (
-            (VolcanoState.DORMANT, 1),
-            (VolcanoState.ERUPTING, 2),
-            (VolcanoState.EXTINCT, 3),
-        ):
-            values[sites.cell_indices[sites.states == state]] = code
-        return LayerStyle(
-            values,
-            ["lightgray", "gold", "orangered", "slategray"],
-            title=layer_title(layer),
-            clim=(0, 3),
-        )
-    if layer == "velocity":
-        vectors = geology.plate_velocity
-        return LayerStyle(
-            np.linalg.norm(vectors, axis=1),
-            "viridis",
-            title=layer_title(layer),
-            clim=(0, 1),
-            vectors=vectors,
+            geology.plate_ids, "tab20", layer_title(layer), categorical=True
         )
     if layer == "crust":
         return LayerStyle(
-            crust.continental_mask.astype(np.int64),
+            geology.continental_mask.astype(np.int64),
             ["royalblue", "tan"],
-            title=layer_title(layer),
-            clim=(0, 1),
+            layer_title(layer),
+            (0, 1),
+            True,
+            {0: "oceanic", 1: "continental"},
         )
     if layer == "crust-regions":
-        return LayerStyle(crust.region_ids, "tab20", title=layer_title(layer))
-    if layer == "crust-field":
         return LayerStyle(
-            crust.shaping_field, "viridis", title=layer_title(layer), clim=(0, 1)
+            geology.crust_region_ids, "tab20", layer_title(layer), categorical=True
         )
-    if layer == "crust-density":
-        return LayerStyle(crust.effective_density, "viridis", title=layer_title(layer))
-    if layer == "crust-region-density":
-        return LayerStyle(
-            crust.region_effective_density[crust.region_ids],
-            "viridis",
-            title=layer_title(layer),
-        )
-    if layer in ("elevation", "coastal-elevation"):
+    if layer in ("continental-weight", "max-plate-weight"):
         values = (
-            elevation.elevation if layer == "elevation" else elevation.coastal_elevation
+            geology.continental_weight
+            if layer == "continental-weight"
+            else geology.max_plate_weight
         )
-        clim = (
-            elevation_range
-            if elevation_range is not None
-            else (
-                elevation.elevation_range_m
-                if layer == "elevation"
-                else elevation.coastal_elevation_range_m
-            )
-        )
+        return LayerStyle(values, "viridis", layer_title(layer), (0.0, 1.0))
+    if layer in (
+        "subduction-preference-strength",
+        "region-overlap",
+        "convergence",
+        "divergence",
+        "shear",
+    ):
+        values = getattr(geology, layer.replace("-", "_"))
         return LayerStyle(
-            values, elevation_colormap(clim), title=layer_title(layer), clim=clim
+            values,
+            "inferno",
+            layer_title(layer),
+            (0.0, max(float(np.max(values, initial=0.0)), 1.0)),
         )
+    if layer in ("volcanic-potential", "volcanic-strength"):
+        values = getattr(elevation, layer.replace("-", "_"))
+        return LayerStyle(values, "inferno", layer_title(layer), (0.0, 1.0))
+    if layer in ("coastal-elevation", "elevation"):
+        values = (
+            getattr(
+                elevation,
+                "coastal_elevation" if layer == "coastal-elevation" else "elevation",
+            )
+            * radius_m
+        )
+        clim = elevation_range or common_elevation_range(sample, radius_m=radius_m)
+        return LayerStyle(values, elevation_colormap(clim), layer_title(layer), clim)
+    if layer in (
+        "convergent-relief",
+        "divergent-relief",
+        "tectonic-relief",
+        "transform-relief",
+        "volcanic-relief",
+        "shear-relief",
+        "terrain-variation",
+    ):
+        values = getattr(elevation, layer.replace("-", "_")) * radius_m
+        extent = max(float(np.max(np.abs(values), initial=0.0)), 1.0)
+        return LayerStyle(values, "coolwarm", layer_title(layer), (-extent, extent))
     if layer == "land-height":
         values = surface.land_height
         return LayerStyle(
             values,
             "YlOrBr",
-            title=layer_title(layer),
-            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
+            layer_title(layer),
+            (0.0, max(float(np.max(values, initial=0.0)), 1.0)),
         )
     if layer == "water-depth":
         values = surface.water_depth
         return LayerStyle(
             values,
             "Blues",
-            title=layer_title(layer),
-            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
+            layer_title(layer),
+            (0.0, max(float(np.max(values, initial=0.0)), 1.0)),
         )
     if layer == "slope":
         return LayerStyle(
-            surface.slope_degrees,
-            "magma",
-            title=layer_title(layer),
-            clim=(0.0, 90.0),
+            surface.slope_degrees, "magma", layer_title(layer), (0.0, 90.0)
         )
     if layer == "local-relief":
         values = surface.local_relief
         return LayerStyle(
             values,
             "viridis",
-            title=layer_title(layer),
-            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
+            layer_title(layer),
+            (0.0, max(float(np.max(values, initial=0.0)), 1.0)),
         )
     if layer == "roughness":
         values = surface.roughness
         return LayerStyle(
             values,
             "inferno",
-            title=layer_title(layer),
-            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
-        )
-    if layer == "terrain-variation":
-        values = elevation.terrain_variation
-        extent = max(
-            abs(world.elevation_field.variation.config.amplitude_percent)
-            * (world.radius_m / 100.0),
-            1.0,
-        )
-        return LayerStyle(
-            values,
-            "coolwarm",
-            title=layer_title(layer),
-            clim=(-extent, extent),
-        )
-
-    if layer == "impact-relief":
-        values = elevation.impact_relief
-        lower, upper = world.elevation_field.impacts.bounds(world.radius_m)
-        extent = max(abs(lower), abs(upper), 1.0)
-        return LayerStyle(
-            values,
-            "coolwarm",
-            title=layer_title(layer),
-            clim=(-extent, extent),
-        )
-    if layer == "tectonic-relief":
-        values = elevation.tectonic_relief
-        extent = max(float(np.max(np.abs(values))), 1.0)
-        return LayerStyle(
-            values,
-            "coolwarm",
-            title=layer_title(layer),
-            clim=(-extent, extent),
-        )
-    if layer == "volcanism":
-        values = elevation.volcanic_relief
-        return LayerStyle(
-            values,
-            "inferno",
-            title=layer_title(layer),
-            clim=(0.0, max(float(np.max(values, initial=0.0)), 1.0)),
-        )
-    if layer == "margin-distance":
-        values = elevation.margin_distance
-        extent = np.max(np.abs(values))
-        return LayerStyle(
-            values, "coolwarm", title=layer_title(layer), clim=(-extent, extent)
+            layer_title(layer),
+            (0.0, max(float(np.max(values, initial=0.0)), 1.0)),
         )
     raise KeyError(layer)

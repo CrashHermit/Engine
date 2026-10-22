@@ -4,390 +4,51 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>Motion spaces: warp motion or warp relief?</title>
+  <title>Regional source fields and scalar warp composition</title>
   <style>
-    :root {
-      color-scheme: light;
-      --ink: #172a36;
-      --muted: #526673;
-      --paper: #f3f6f7;
-      --card: #fff;
-      --line: #d5e0e4;
-      --accent: #145a70;
-      --error: #8f2424;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-synthesis: none;
-      text-rendering: optimizeLegibility;
-    }
-    * { box-sizing: border-box; }
-    body { margin: 0; color: var(--ink); background: var(--paper); line-height: 1.5; }
-    a { color: var(--accent); }
-    .shell { width: min(1320px, 100%); margin: 0 auto; padding: 1rem clamp(.75rem, 3vw, 2rem) 3rem; }
-    .back { display: inline-block; margin: .1rem 0 1.1rem; font-weight: 650; text-underline-offset: .18em; }
-    h1 { margin: 0; font-size: clamp(1.65rem, 5vw, 2.6rem); line-height: 1.13; letter-spacing: -.035em; }
-    h2 { margin: 0 0 .45rem; font-size: 1.2rem; }
-    h3 { margin: .35rem 0; font-size: 1rem; }
-    .lede { max-width: 82ch; margin: .65rem 0 0; color: var(--muted); }
-    .panel, .case-card { min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
-    .controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1rem; padding: 1rem; margin: 1rem 0; }
-    label { display: grid; gap: .3rem; font-weight: 700; font-size: .92rem; }
-    select { width: 100%; min-width: 0; border: 1px solid #9eb2bb; border-radius: 8px; background: white; color: var(--ink); padding: .65rem .75rem; font: inherit; }
-    .status { grid-column: 1 / -1; margin: 0; color: var(--muted); font-size: .9rem; }
-    .status.error { color: var(--error); font-weight: 700; }
-    .summary, .notes, .diagnostics { padding: 1rem; margin: 1rem 0; }
-    .fine { color: var(--muted); font-size: .88rem; }
-    .settings { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 235px), 1fr)); gap: .35rem .8rem; margin: .6rem 0 0; }
-    .settings div { display: flex; justify-content: space-between; gap: .5rem; border-bottom: 1px solid #edf1f2; padding: .24rem 0; font-size: .88rem; }
-    .settings dt { color: var(--muted); }
-    .settings dd { margin: 0; font-variant-numeric: tabular-nums; font-weight: 650; text-align: right; }
-    .shared-image { margin: .8rem 0 0; }
-    .shared-image[hidden] { display: none; }
-    .cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .9rem; align-items: start; }
-    .case-card { overflow: hidden; }
-    .card-head { padding: .9rem 1rem .3rem; }
-    .card-head h2 { margin: 0; font-size: 1.08rem; line-height: 1.25; }
-    .kind { color: var(--muted); font-size: .83rem; margin-top: .22rem; }
-    .description { margin: .35rem 0 0; color: var(--muted); font-size: .87rem; }
-    .image-link { display: block; margin: .5rem .65rem .2rem; border-radius: 8px; overflow: hidden; background: #e9eff1; }
-    .image-link:focus-visible { outline: 3px solid #167b94; outline-offset: 3px; }
-    .case-image { display: block; width: 100%; height: auto; object-fit: contain; }
-    .image-hint { margin: 0 .8rem .5rem; color: var(--muted); font-size: .78rem; }
-    .notes ul { margin: .45rem 0 0; padding-left: 1.25rem; }
-    .notes li + li { margin-top: .32rem; }
-    .table-wrap { overflow-x: auto; margin-top: .55rem; }
-    .table-wrap table { width: 100%; min-width: 620px; border-collapse: collapse; font-size: .84rem; font-variant-numeric: tabular-nums; }
-    .table-wrap th, .table-wrap td { padding: .38rem .45rem; border-bottom: 1px solid var(--line); text-align: right; }
-    .table-wrap th:first-child, .table-wrap td:first-child { text-align: left; }
-    .table-wrap th { background: #f7f9fa; color: var(--muted); }
-    .warning { padding: .65rem .8rem; border-left: 4px solid #a86400; background: #fff6df; color: #513500; border-radius: 4px; }
-    details { margin-top: .8rem; }
-    summary { cursor: pointer; color: var(--accent); font-weight: 700; }
-    code { overflow-wrap: anywhere; }
-    @media (max-width: 650px) {
-      .shell { padding-top: .7rem; }
-      .controls { grid-template-columns: minmax(0, 1fr); }
-      .status { grid-column: auto; }
-      .cards { grid-template-columns: minmax(0, 1fr); }
-      .image-link { margin-inline: .5rem; }
-      .metric-table { font-size: .79rem; }
-    }
+    :root { color-scheme: light; --ink:#172a36; --muted:#526673; --paper:#f3f6f7; --card:#fff; --line:#d5e0e4; --accent:#145a70; font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    * { box-sizing:border-box; } body { margin:0; color:var(--ink); background:var(--paper); line-height:1.5; }
+    .shell { width:min(1320px,100%); margin:auto; padding:1rem clamp(.75rem,3vw,2rem) 3rem; }
+    h1 { font-size:clamp(1.6rem,5vw,2.5rem); line-height:1.15; } h2 { font-size:1.15rem; }
+    .panel,.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:1rem; margin:1rem 0; }
+    .controls,.cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr)); gap:1rem; }
+    label { display:grid; gap:.3rem; font-weight:650; } select { padding:.6rem; font:inherit; }
+    .muted { color:var(--muted); } .image { display:block; width:100%; height:auto; border-radius:8px; }
+    .metrics { border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums; } .metrics td,.metrics th { text-align:right; padding:.35rem; border-bottom:1px solid var(--line); } .metrics td:first-child,.metrics th:first-child { text-align:left; }
+    @media(max-width:600px) { .controls { grid-template-columns:1fr; } }
   </style>
 </head>
-<body>
-  <main class="shell">
-    <a class="back" href="index.html">← Back to experiments</a>
-    <header>
-      <h1>Motion spaces: warp motion or warp relief?</h1>
-      <p class="lede">A matched diagnostic compares three ways to combine a continuous warped Voronoi partition, Euler-pole rotations, boundary orientation and additive relief. The same seeds, rotations, source-space face supports and relief profiles are used in every case.</p>
-    </header>
-
-    <section class="panel controls" aria-label="Comparison controls">
-      <label for="seed-select">World seed
-        <select id="seed-select" disabled aria-describedby="status"><option>Loading worlds…</option></select>
-      </label>
-      <label for="layer-select">Field view
-        <select id="layer-select" disabled>
-          <option value="ownership">Ownership</option>
-          <option value="vectors">Boundary vectors</option>
-          <option value="opening">Signed opening</option>
-          <option value="sliding">Sliding magnitude</option>
-          <option value="elevation" selected>Diagnostic elevation</option>
-          <option value="globe">Globe relief</option>
-        </select>
-      </label>
-      <p class="status" id="status" role="status" aria-live="polite">Loading comparison manifest…</p>
-    </section>
-
-    <section class="panel summary" aria-labelledby="settings-heading">
-      <h2 id="settings-heading">Shared settings and units</h2>
-      <p class="fine">The influence width and relief are dimensionless Cartesian diagnostics. Elevation colors use one range shared across every seed, slice and sphere. Globe displacement is visual exaggeration, not meters.</p>
-      <dl class="settings" id="settings" aria-label="Shared parameters"></dl>
-      <section class="shared-image" id="ownership-panel" hidden aria-labelledby="ownership-heading">
-        <h3 id="ownership-heading">Common warped region ownership</h3>
-        <p class="fine">The categorical ownership map is shared by all three motion interpretations. Black lines show neighboring sampled owners only; they are not used as boundary geometry.</p>
-        <a class="image-link" id="ownership-link" href="#" target="_blank" rel="noopener"><img class="case-image" id="ownership-image" alt=""></a>
-        <p class="image-hint">Select the image to open full resolution.</p>
-      </section>
-    </section>
-
-    <section class="cards" id="cards" aria-label="Three motion-space interpretations" aria-live="polite"></section>
-
-    <section class="panel diagnostics" aria-labelledby="metrics-heading">
-      <h2 id="metrics-heading">Per-case field metrics</h2>
-      <p class="fine">Min, max and RMS are reported separately for the flat z = 0 slice and the unit-sphere samples. These are numerical values, not visual color estimates.</p>
-      <div class="table-wrap" id="case-metrics"></div>
-      <details>
-        <summary>Pairwise field differences</summary>
-        <p class="fine">RMS and maximum absolute differences between the actual sampled arrays, reported independently for slice and sphere.</p>
-        <div class="table-wrap" id="pair-metrics"></div>
-      </details>
-      <details>
-        <summary>Finite-difference step sensitivity</summary>
-        <div id="sensitivity-warning"></div>
-        <div class="table-wrap" id="sensitivity-metrics"></div>
-      </details>
-    </section>
-
-    <section class="panel notes" aria-labelledby="interpretation-heading">
-      <h2 id="interpretation-heading">How to read the three cases</h2>
-      <ul>
-        <li><strong>A · World-space rigid motion:</strong> each region uses its Euler-pole velocity at the queried world coordinate. The source face normal is pushed into the world frame by the warp Jacobian.</li>
-        <li><strong>B · Warped source motion:</strong> rigid source-space velocities are transported through the inverse warp Jacobian; the boundary normal is transformed independently. This creates a continuous procedural world-space motion approximation, not rigid plates away from the boundary.</li>
-        <li><strong>C · Warped source relief:</strong> motion and each pair's profile are evaluated in source coordinates, then the scalar relief is sampled at the warped coordinate. Its vector panel is deliberately an unwarped source-space reference, not the same z = 0 sheet as A/B.</li>
-        <li>Opening is signed per pair: negative means convergence; positive means separation. Sliding is the magnitude parallel to that pair's normal. B and C preserve each pair's opening sign, but their magnitudes and sliding differ; summing overlapping pairs can still change the aggregate sign.</li>
-        <li>The normal is the oriented extension of a clipped source Voronoi face into its compact influence band. Near clipped face edges it is not necessarily the direction to the closest point on that face. Supports may overlap; every active pair contributes independently.</li>
-        <li>The shared support width is measured in source Cartesian coordinates. It does not imply fixed physical width on the displayed observation sphere. All interactions are computed in Cartesian 3D; the sphere is only a visualization surface, and transported vectors are not generally tangent to it.</li>
-        <li>The relief recipe is intentionally uniform-continental and dimensionless: compression uses the existing broad/crest collision profile (65%/35%, crest fraction 0.2), opening uses the existing continental divergence profile, and sliding adds 15% of the existing shear profile. It is not the full geology/elevation pipeline, and profiles are not retuned per case.</li>
-        <li>Warp Jacobians are approximated by central differences of individual scalar shears. The noise sampler uses float32 coordinates, so step-size sensitivity is reported; sensitive results are exploratory and do not justify adopting a motion model by appearance alone.</li>
-        <li>This temporary comparison does not change production generation, production derivatives, or production defaults.</li>
-      </ul>
-    </section>
-  </main>
-
-  <script>
-    (() => {
-      "use strict";
-      const CASE_ORDER = ["world-rigid", "transported-motion", "warped-relief"];
-      const CASE_INFO = {
-        "world-rigid": ["A · World-space rigid motion", "Rigid Euler-pole velocities evaluated at the world query point."],
-        "transported-motion": ["B · Warped source motion", "Source velocities transported with the inverse warp Jacobian."],
-        "warped-relief": ["C · Warped source relief", "Per-pair motion and relief are evaluated before scalar relief is carried through the warp."]
-      };
-      const FIELD_NAMES = ["opening", "sliding", "elevation"];
-      const FIELD_LABELS = { opening: "Opening", sliding: "Sliding", elevation: "Relief" };
-      const seedSelect = document.getElementById("seed-select");
-      const layerSelect = document.getElementById("layer-select");
-      const status = document.getElementById("status");
-      const settings = document.getElementById("settings");
-      const cards = document.getElementById("cards");
-      const ownershipPanel = document.getElementById("ownership-panel");
-      const ownershipImage = document.getElementById("ownership-image");
-      const ownershipLink = document.getElementById("ownership-link");
-      const caseMetrics = document.getElementById("case-metrics");
-      const pairMetrics = document.getElementById("pair-metrics");
-      const sensitivityMetrics = document.getElementById("sensitivity-metrics");
-      const sensitivityWarning = document.getElementById("sensitivity-warning");
-      ownershipImage.addEventListener("error", () => {
-        status.textContent = `Could not load image: ${ownershipImage.src}`;
-        status.classList.add("error");
-      }, { once: true });
-      let manifest = null;
-
-      function format(value, digits = 5) {
-        if (value === null) return "—";
-        if (typeof value !== "number" || !Number.isFinite(value)) return "—";
-        return value.toLocaleString(undefined, { maximumFractionDigits: digits });
-      }
-      function addSetting(label, value) {
-        const wrap = document.createElement("div");
-        const dt = document.createElement("dt");
-        const dd = document.createElement("dd");
-        dt.textContent = label;
-        dd.textContent = value;
-        wrap.append(dt, dd);
-        settings.append(wrap);
-      }
-      function renderSettings(data) {
-        const s = data.settings;
-        settings.replaceChildren();
-        addSetting("Worlds in experiment", s.seeds.length);
-        addSetting("Region seeds", s.seed_count);
-        addSetting("Sphere samples", s.cell_count);
-        addSetting("Warp iterations / amplitude", `${s.shear_warp.iterations} / ${format(s.shear_warp.amplitude, 3)}`);
-        addSetting("Warp lacunarity / gain", `${format(s.shear_warp.lacunarity, 3)} / ${format(s.shear_warp.gain, 3)}`);
-        addSetting("Noise octaves / frequency", `${s.noise.octaves} / ${format(s.noise.base_frequency, 3)}`);
-        addSetting("Noise lacunarity / persistence", `${format(s.noise.lacunarity, 3)} / ${format(s.noise.persistence, 3)}`);
-        addSetting("Source-space support width", format(s.boundary_support_width_source, 4));
-        addSetting("Relief collision weights", `${format(s.profile_recipe.collision_broad_weight, 2)} / ${format(s.profile_recipe.collision_crest_weight, 2)}`);
-        addSetting("Relief shear weight", format(s.profile_recipe.shear_relief_weight, 2));
-        addSetting("Opening shared range", `${format(s.scalar_color_limits.opening[0], 4)} to ${format(s.scalar_color_limits.opening[1], 4)}`);
-        addSetting("Sliding shared range", `${format(s.scalar_color_limits.sliding[0], 4)} to ${format(s.scalar_color_limits.sliding[1], 4)}`);
-        addSetting("Relief shared range", `${format(s.scalar_color_limits.elevation[0], 4)} to ${format(s.scalar_color_limits.elevation[1], 4)}`);
-        addSetting("Shared quiver scale", format(s.velocity_quiver_scale, 5));
-        addSetting("Globe radial factor", format(s.globe_radial_factor, 6));
-      }
-      function makeTable(headers, rows) {
-        const table = document.createElement("table");
-        const thead = document.createElement("thead");
-        const headRow = document.createElement("tr");
-        for (const label of headers) {
-          const th = document.createElement("th");
-          th.scope = "col";
-          th.textContent = label;
-          headRow.append(th);
-        }
-        thead.append(headRow);
-        const tbody = document.createElement("tbody");
-        for (const values of rows) {
-          const row = document.createElement("tr");
-          for (const value of values) {
-            const cell = document.createElement("td");
-            cell.textContent = String(value);
-            row.append(cell);
-          }
-          tbody.append(row);
-        }
-        table.append(thead, tbody);
-        return table;
-      }
-      function imageLink(path, alt) {
-        if (!path) return null;
-        const link = document.createElement("a");
-        link.className = "image-link";
-        link.href = path;
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.setAttribute("aria-label", `Open full resolution: ${alt}`);
-        const image = document.createElement("img");
-        image.className = "case-image";
-        image.src = path;
-        image.alt = alt;
-        image.loading = "eager";
-        image.decoding = "async";
-        image.addEventListener("error", () => {
-          status.textContent = `Could not load image: ${path}`;
-          status.classList.add("error");
-        }, { once: true });
-        link.append(image);
-        return link;
-      }
-      function renderCases(world) {
-        const layer = layerSelect.value;
-        ownershipPanel.hidden = layer !== "ownership";
-        if (layer === "ownership") {
-          ownershipImage.src = world.ownership_image;
-          ownershipImage.alt = `Common warped Voronoi ownership, seed ${world.seed}`;
-          ownershipLink.href = world.ownership_image;
-        }
-        cards.replaceChildren();
-        for (const caseId of CASE_ORDER) {
-          const item = world.cases.find(value => value.id === caseId);
-          if (!item) throw new Error(`Missing case ${caseId} in seed ${world.seed}.`);
-          const card = document.createElement("article");
-          card.className = "case-card";
-          const head = document.createElement("div");
-          head.className = "card-head";
-          const title = document.createElement("h2");
-          title.textContent = CASE_INFO[caseId][0];
-          const kind = document.createElement("div");
-          kind.className = "kind";
-          kind.textContent = item.vector_frame === "source-reference" ? "Source-frame reference panel" : "World-frame vector panel";
-          const description = document.createElement("p");
-          description.className = "description";
-          description.textContent = CASE_INFO[caseId][1];
-          head.append(title, kind, description);
-          card.append(head);
-          if (layer !== "ownership") {
-            const path = item.images[layer];
-            if (path) {
-              const alt = `${item.title}, ${layer} field, world seed ${world.seed}`;
-              card.append(imageLink(path, alt));
-              const hint = document.createElement("p");
-              hint.className = "image-hint";
-              hint.textContent = "Select image to open full resolution.";
-              card.append(hint);
-            } else {
-              const message = document.createElement("p");
-              message.className = "image-hint warning";
-              message.textContent = manifest.globe_render_error || "No globe render was produced.";
-              card.append(message);
-            }
-          }
-          cards.append(card);
-        }
-      }
-      function renderMetricTables(world) {
-        const rows = [];
-        for (const item of world.cases) {
-          for (const surface of ["slice", "sphere"]) {
-            for (const field of FIELD_NAMES) {
-              const metric = item.metrics[surface][field];
-              rows.push([item.title, surface, FIELD_LABELS[field], format(metric.min), format(metric.max), format(metric.rms)]);
-            }
-          }
-        }
-        caseMetrics.replaceChildren(makeTable(["Case", "Surface", "Field", "Min", "Max", "RMS"], rows));
-        const pairRows = [];
-        for (const comparison of world.comparisons) {
-          const label = comparison.cases.map(id => CASE_INFO[id][0]).join(" vs ");
-          for (const surface of ["slice", "sphere"]) {
-            for (const field of FIELD_NAMES) {
-              const metric = comparison[surface][field];
-              pairRows.push([label, surface, FIELD_LABELS[field], format(metric.rms_difference), format(metric.max_abs_difference)]);
-            }
-          }
-        }
-        pairMetrics.replaceChildren(makeTable(["Cases", "Surface", "Field", "RMS difference", "Max absolute difference"], pairRows));
-      }
-      function renderSensitivity(world) {
-        const report = world.derivative_sensitivity;
-        sensitivityWarning.replaceChildren();
-        if (report.warning) {
-          const warning = document.createElement("p");
-          warning.className = "warning";
-          warning.textContent = `Derivative-sensitive; appearance is exploratory. ${report.warning}`;
-          sensitivityWarning.append(warning);
-        } else {
-          const note = document.createElement("p");
-          note.className = "fine";
-          note.textContent = "No A/B relative RMS threshold was crossed in this probe.";
-          sensitivityWarning.append(note);
-        }
-        const rows = [];
-        for (const caseId of CASE_ORDER) {
-          for (const field of FIELD_NAMES) {
-            for (const step of ["0.002", "0.0005"]) {
-              const metric = report.metrics[caseId][field][step];
-              rows.push([CASE_INFO[caseId][0], FIELD_LABELS[field], step, format(metric.rms_difference), format(metric.max_abs_difference), format(metric.relative_rms_difference)]);
-            }
-          }
-        }
-        sensitivityMetrics.replaceChildren(makeTable(["Case", "Field", "Step", "RMS difference", "Max absolute difference", "Relative RMS"], rows));
-      }
-      function render() {
-        if (!manifest) return;
-        const world = manifest.worlds.find(item => String(item.seed) === seedSelect.value);
-        if (!world) throw new Error(`No world for selected seed ${seedSelect.value}.`);
-        renderCases(world);
-        renderMetricTables(world);
-        renderSensitivity(world);
-        status.textContent = `Seed ${world.seed}: showing all three matched cases. ${world.derivative_sensitivity.warning ? "Derivative-sensitive; appearance is exploratory." : ""}`;
-        status.classList.remove("error");
-      }
-      seedSelect.addEventListener("change", render);
-      layerSelect.addEventListener("change", render);
-      fetch("motion-space-results.json", { cache: "no-cache" })
-        .then(response => {
-          if (!response.ok) throw new Error(`HTTP ${response.status} ${response.statusText}`);
-          return response.json();
-        })
-        .then(data => {
-          if (!data || !Array.isArray(data.worlds) || !data.worlds.length || !data.settings) {
-            throw new Error("Manifest is missing required world or settings data.");
-          }
-          manifest = data;
-          renderSettings(data);
-          seedSelect.replaceChildren();
-          for (const world of manifest.worlds) {
-            const option = document.createElement("option");
-            option.value = String(world.seed);
-            option.textContent = `Seed ${world.seed}`;
-            seedSelect.append(option);
-          }
-          seedSelect.value = manifest.worlds.some(world => String(world.seed) === "2026") ? "2026" : String(manifest.worlds[0].seed);
-          seedSelect.disabled = false;
-          layerSelect.disabled = false;
-          render();
-        })
-        .catch(error => {
-          status.textContent = `Could not load motion-space-results.json: ${error.message}`;
-          status.classList.add("error");
-          seedSelect.replaceChildren();
-          const option = document.createElement("option");
-          option.textContent = "Manifest unavailable";
-          seedSelect.append(option);
-        });
-    })();
-  </script>
-</body>
-</html>
+<body><main class="shell">
+  <a href="index.html">← Back to experiments</a>
+  <header><h1>Regional source fields and scalar warp composition</h1>
+    <p class="muted">This diagnostic compares a volumetric, algebraic region-overlap field in source coordinates with that same scalar field composed through the shear warp. Euler rotations, seed-bisector normals, pair motion, and relief are evaluated in Cartesian source space. The warped result is sampled as <code>G_source(W(p))</code>; vectors and normals are not transported.</p>
+  </header>
+  <section class="panel controls"><label>World seed<select id="seed"></select></label><label>Field view<select id="field"><option value="elevation">Diagnostic elevation</option><option value="opening">Opening</option><option value="sliding">Sliding</option><option value="convergence">Convergence</option><option value="divergence">Divergence</option><option value="shear">Shear</option><option value="region_overlap">Region overlap</option></select></label></section>
+  <section class="panel"><h2>Shared settings</h2><dl id="settings"></dl><p class="muted">Regional membership uses normalized products of smooth pairwise bisector transitions. Sparse pair influence is <code>4 w_i w_j</code>, including every positive candidate pair without a physical-adjacency filter. Pair signed coordinates and normals refer to ordered seed bisectors. Elevation is dimensionless diagnostic relief, not a complete geology pipeline or physical height.</p></section>
+  <section id="ownership" class="panel"></section><section id="cards" class="cards"></section>
+  <section class="panel"><h2>Field metrics</h2><div id="metrics"></div></section><p id="status" class="muted">Loading comparison data…</p>
+</main><script>
+(() => {
+  const seeds=document.getElementById("seed"), field=document.getElementById("field"), cards=document.getElementById("cards"), status=document.getElementById("status");
+  let data;
+  const fmt=x=>typeof x==="number"?x.toPrecision(5):"—";
+  function render(){
+    const world=data.worlds.find(w=>String(w.seed)===seeds.value); if(!world)return;
+    document.getElementById("ownership").innerHTML=`<h2>Source-field categorical ownership · seed ${world.seed}</h2><img class="image" src="${world.ownership_image}" alt="Categorical source-region ownership">`;
+    cards.replaceChildren();
+    for(const item of world.cases){
+      const card=document.createElement("article"); card.className="card";
+      const imageName=field.value;
+      card.innerHTML=`<h2>${item.title}</h2><p class="muted">${item.description}</p><a href="${item.images[imageName]}"><img class="image" src="${item.images[imageName]}" alt="${item.title}: ${field.options[field.selectedIndex].text}"></a><p><a href="${item.images.globe}">Open scalar relief globe</a></p>`;
+      cards.append(card);
+    }
+    const metrics=document.getElementById("metrics");
+    metrics.innerHTML=`<table class="metrics"><thead><tr><th>Case / metric</th><th>Min</th><th>Max</th><th>RMS</th></tr></thead><tbody>${world.cases.map(c=>`<tr><td>${c.title}</td><td>${fmt(c.metrics[field.value].min)}</td><td>${fmt(c.metrics[field.value].max)}</td><td>${fmt(c.metrics[field.value].rms)}</td></tr>`).join("")}</tbody></table>`;
+  }
+  fetch("motion-space-results.json",{cache:"no-cache"}).then(r=>{if(!r.ok)throw Error(`${r.status} ${r.statusText}`);return r.json();}).then(result=>{
+    data=result; for(const world of data.worlds){const option=document.createElement("option");option.value=world.seed;option.textContent=world.seed;seeds.append(option);}
+    for(const [key,value] of Object.entries(data.settings)){if(key==="field_limits"||key==="seeds")continue;const dt=document.createElement("dt"),dd=document.createElement("dd");dt.textContent=key.replaceAll("_"," ");dd.textContent=typeof value==="object"?JSON.stringify(value):String(value);document.getElementById("settings").append(dt,dd);}
+    seeds.addEventListener("change",render);field.addEventListener("change",render);render();status.textContent="Loaded source-field and scalar-warp comparison.";
+  }).catch(error=>{status.textContent=`Could not load motion-space-results.json: ${error.message}`;});
+})();
+</script></body></html>

@@ -7,7 +7,7 @@ import numpy as np
 
 @dataclass(frozen=True, slots=True)
 class SurfaceResult:
-    """Nonnegative heights and finite-footprint terrain measurements."""
+    """Nonnegative heights, analytic point slope, and finite-footprint shape."""
 
     land_height: np.ndarray
     water_depth: np.ndarray

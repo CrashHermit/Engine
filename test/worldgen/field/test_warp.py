@@ -133,4 +133,44 @@ def test_shear_identity_cases_return_owned_writable_float64_copies():
             assert empty_result.shape == (0, 3)
             assert empty_result.dtype == np.float64
             assert empty_result.flags.owndata and empty_result.flags.writeable
+            for transform in (
+                field.sample_with_jacobian,
+                field.inverse_with_jacobian,
+            ):
+                result = transform(positions)
+                np.testing.assert_array_equal(result.values, positions)
+                np.testing.assert_array_equal(
+                    result.jacobians, np.broadcast_to(np.eye(3), (2, 3, 3))
+                )
+                empty_result = transform(empty)
+                assert empty_result.values.shape == (0, 3)
+                assert empty_result.jacobians.shape == (0, 3, 3)
+
             assert not np.shares_memory(empty_result, empty)
+
+
+def test_noise_warp_jacobians_match_finite_difference_and_inverse():
+    points = np.random.default_rng(16).normal(size=(4, 3)) * 0.2
+    warp = build_noise_shear_warp(
+        NoiseConfig(octaves=2, base_frequency=0.7),
+        ShearWarpConfig(iterations=2, amplitude=0.13),
+        seed=87,
+    )
+    forward = warp.sample_with_jacobian(points)
+    inverse = warp.inverse_with_jacobian(forward.values)
+    epsilon = 5e-3
+    for axis in range(3):
+        displacement = np.eye(3)[axis] * epsilon
+        finite = (
+            warp.sample(points + displacement) - warp.sample(points - displacement)
+        ) / (2.0 * epsilon)
+        np.testing.assert_allclose(
+            forward.jacobians[:, :, axis], finite, atol=5e-3, rtol=2e-2
+        )
+    np.testing.assert_allclose(inverse.values, points, atol=1e-12)
+    np.testing.assert_allclose(
+        inverse.jacobians @ forward.jacobians,
+        np.broadcast_to(np.eye(3), (4, 3, 3)),
+        atol=1e-10,
+    )
+    np.testing.assert_allclose(np.linalg.det(forward.jacobians), 1.0, atol=1e-10)

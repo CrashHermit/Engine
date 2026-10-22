@@ -7,13 +7,14 @@ import numpy as np
 
 @dataclass(frozen=True, slots=True)
 class VoronoiSample:
-    """Categorical nearest-seed ownership at query positions."""
+    """Categorical ownership and squared seed distances at query positions."""
 
     owner_seed_id: np.ndarray
+    distances_squared: np.ndarray
 
 
 def sample_voronoi(positions: np.ndarray, seeds: np.ndarray) -> VoronoiSample:
-    """Find the nearest seed for each paired ``(N, 3)`` XYZ query.
+    """Find the nearest seed and squared distances for paired ``(N, 3)`` XYZ queries.
 
     Positions and seeds must use the same Cartesian coordinate frame. The
     sampler imposes no ``[0, 1]`` bounds; world generation uses centered
@@ -24,12 +25,21 @@ def sample_voronoi(positions: np.ndarray, seeds: np.ndarray) -> VoronoiSample:
     """
     query_points = np.asarray(positions, dtype=np.float64)
     seed_points = np.asarray(seeds, dtype=np.float64)
-    differences = query_points[:, None, :] - seed_points[None, :, :]
-    distances_squared = np.sum(differences**2, axis=2)
+    distances_squared = np.zeros(
+        (len(query_points), len(seed_points)), dtype=np.float64
+    )
+    for axis in range(3):
+        differences = query_points[:, axis, None] - seed_points[None, :, axis]
+        differences *= differences
+        distances_squared += differences
     owner_seed_id = np.argmin(distances_squared, axis=1)
 
     owner_seed_id.setflags(write=False)
-    return VoronoiSample(owner_seed_id=owner_seed_id)
+    distances_squared.setflags(write=False)
+    return VoronoiSample(
+        owner_seed_id=owner_seed_id,
+        distances_squared=distances_squared,
+    )
 
 
 @dataclass(frozen=True, slots=True)

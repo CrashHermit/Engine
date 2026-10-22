@@ -1,82 +1,63 @@
-"""Build elevation definitions once; gameplay meshes sample them independently."""
+"""Compose source-space elevation consumers from shared geological fields."""
 
-import numpy as np
-
-from src.worldgen.elevation.bounds import elevation_bounds
-from src.worldgen.elevation.coastal import CoastalField
 from src.worldgen.elevation.config import ElevationConfig
-from src.worldgen.elevation.deformation import TectonicField
-from src.worldgen.elevation.field import ElevationField
-from src.worldgen.elevation.impact import generate_impact_field
+from src.worldgen.elevation.field import SourceElevationField
+from src.worldgen.elevation.source_coastal import SourceCoastalField
+from src.worldgen.elevation.tectonic_response import TectonicResponseSampler
+from src.worldgen.field.boundary_response import BoundaryResponseField
+from src.worldgen.geology.field import GeologyField
+from src.worldgen.elevation.ridge_detail import RidgeDetailField
 from src.worldgen.elevation.volcanism import VolcanicField
-from src.worldgen.elevation.variation import TerrainVariationField
-from src.worldgen.geology.config import CrustDensityConfig
-from src.worldgen.geology.model import GeologyResult
-from src.worldgen.geometry.boundary import BoundaryNetwork, SphericalRegions
-from src.worldgen.geometry.mesh import Mesh
 
 
 def generate_elevation_field(
-    mesh: Mesh,
     config: ElevationConfig,
-    radius_m: float,
     *,
-    geology: GeologyResult,
-    density_config: CrustDensityConfig,
-    density_noise_seed: int,
+    geology: GeologyField,
     noise_seeds: tuple[int, int, int],
-    arc_noise_seed: int,
-    variation_noise_seed: int,
-    impact_rng: np.random.Generator,
-) -> ElevationField:
-    """Retain established geography, spatial indexes, noise seeds, and profiles."""
-    regions = SphericalRegions(mesh)
-    crust_boundary = BoundaryNetwork(mesh, geology.crust.continental_mask)
-    plate_boundary = BoundaryNetwork(
-        mesh, geology.plate_ids, geology.boundary_edge_indices
-    )
-    coastal = CoastalField(
+) -> SourceElevationField:
+    """Compose coastal, volcanic and tectonic tools over shared geology."""
+    coastal = SourceCoastalField(
+        sample_continental_weight=lambda positions: (
+            geology.material.sample(positions).continental_weight
+        ),
+        sample_density_anomaly=geology.sample_density_anomaly,
+        span_noise_seeds=noise_seeds,
         config=config.coastal,
-        continental_mask=geology.crust.continental_mask,
-        boundary=crust_boundary,
-        density_config=density_config,
-        density_noise_seed=density_noise_seed,
-        width_noise_seeds=noise_seeds,
+        sample_continental_weight_with_gradient=geology.sample_continental_weight_with_gradient,
+        sample_density_anomaly_with_gradient=geology.sample_density_anomaly_with_gradient,
     )
-    tectonics = TectonicField(
-        mesh,
-        geology,
-        config.deformation,
-        boundary=plate_boundary,
-        arc_noise_seed=arc_noise_seed,
+    volcanic = VolcanicField(geology, noise_seeds[0] ^ 0x2468AC, config.volcanism)
+    sampler = TectonicResponseSampler(
+        geology.context.sample_pairs,
+        config.tectonic,
+        RidgeDetailField(noise_seeds[0] ^ 0x13579B, config.ridge_detail),
+        sample_context_with_gradient=geology.context.sample_pairs_with_gradient,
     )
-    volcanoes = VolcanicField(
-        mesh, geology.plate_ids, geology.hotspots, geology.volcanism.sites, regions
-    )
-    variation = TerrainVariationField(
-        config=config.variation, noise_seed=variation_noise_seed
-    )
-    impacts = generate_impact_field(config.impacts, rng=impact_rng)
-    max_shield_height = max(
-        float(np.max(geology.hotspots.heights_percent, initial=0.0)),
-        float(np.max(geology.volcanism.sites.heights_percent, initial=0.0)),
-    )
-    total_range, coastal_range = elevation_bounds(
-        config,
-        1.0,
-        density_variation=density_config.variation_strength,
-        max_motion=tectonics.max_motion,
-        max_shield_height_percent=max_shield_height,
-        impact_range=impacts.bounds(1.0),
-    )
-    return ElevationField(
-        radius_m=radius_m,
-        regions=regions,
+    return SourceElevationField(
+        geology=geology,
         coastal=coastal,
-        tectonics=tectonics,
-        volcanoes=volcanoes,
-        impacts=impacts,
-        variation=variation,
-        elevation_range_fraction=total_range,
-        coastal_elevation_range_fraction=coastal_range,
+        sampler=sampler,
+        tectonic=BoundaryResponseField(
+            geology.motion, sampler, sampler.sample_with_gradient
+        ),
+        convergent=BoundaryResponseField(
+            geology.motion,
+            sampler.sample_convergent,
+            sampler.sample_convergent_with_gradient,
+        ),
+        divergent=BoundaryResponseField(
+            geology.motion,
+            sampler.sample_divergent,
+            sampler.sample_divergent_with_gradient,
+        ),
+        transform=BoundaryResponseField(
+            geology.motion,
+            sampler.sample_transform,
+            sampler.sample_transform_with_gradient,
+        ),
+        shear=BoundaryResponseField(
+            geology.motion, sampler.sample_shear, sampler.sample_shear_with_gradient
+        ),
+        volcanism=volcanic,
     )

@@ -1,8 +1,16 @@
 import numpy as np
 
 from src.worldgen.field.noise import (
+    fbm_with_gradient,
+    noise_multiplier_with_gradient,
+    normalized_noise_with_gradient,
+    sample_vector_noise_with_jacobian,
+)
+
+from src.worldgen.field.noise import (
     NoiseConfig,
     fbm,
+    noise_multiplier,
     normalized_noise,
     sample_vector_noise,
 )
@@ -113,3 +121,81 @@ def test_vector_noise_has_independent_signed_channels_and_batch_invariance():
     assert before[0] == after[0]
     np.testing.assert_array_equal(before[1], after[1])
     assert before[2:] == after[2:]
+
+
+def test_analytic_noise_gradients_match_diagnostic_finite_differences():
+    points = _positions()[:5]
+    config = NoiseConfig(octaves=3, base_frequency=1.1)
+    sample = normalized_noise_with_gradient(points, config, seed=72)
+    # Resolve float32 octave offsets while keeping the noise locally linear.
+    epsilon = 3e-3
+    finite = np.column_stack(
+        [
+            (
+                normalized_noise(points + np.eye(3)[axis] * epsilon, config, seed=72)
+                - normalized_noise(points - np.eye(3)[axis] * epsilon, config, seed=72)
+            )
+            / (2.0 * epsilon)
+            for axis in range(3)
+        ]
+    )
+    assert np.linalg.norm(sample.gradients - finite) < 0.015 * np.linalg.norm(
+        sample.gradients
+    )
+    raw = fbm_with_gradient(
+        points,
+        seed=72,
+        octaves=3,
+        base_frequency=1.1,
+        lacunarity=config.lacunarity,
+        persistence=config.persistence,
+    )
+    raw_finite = 2 * sum(config.persistence**i for i in range(config.octaves)) * finite
+    assert np.linalg.norm(raw.gradients - raw_finite) < 0.015 * np.linalg.norm(
+        raw.gradients
+    )
+    vector = sample_vector_noise_with_jacobian(points, config, seeds=(1, 2, 3))
+    vector_finite = np.stack(
+        [
+            (
+                sample_vector_noise(
+                    points + np.eye(3)[axis] * epsilon, config, seeds=(1, 2, 3)
+                )
+                - sample_vector_noise(
+                    points - np.eye(3)[axis] * epsilon, config, seeds=(1, 2, 3)
+                )
+            )
+            / (2 * epsilon)
+            for axis in range(3)
+        ],
+        axis=2,
+    )
+    assert np.linalg.norm(vector.jacobians - vector_finite) < 0.025 * np.linalg.norm(
+        vector.jacobians
+    )
+    multiplier = noise_multiplier_with_gradient(
+        points, seed=72, frequency=0.8, strength=0.4
+    )
+    multiplier_finite = np.column_stack(
+        [
+            (
+                noise_multiplier(
+                    points + np.eye(3)[axis] * epsilon,
+                    seed=72,
+                    frequency=0.8,
+                    strength=0.4,
+                )
+                - noise_multiplier(
+                    points - np.eye(3)[axis] * epsilon,
+                    seed=72,
+                    frequency=0.8,
+                    strength=0.4,
+                )
+            )
+            / (2 * epsilon)
+            for axis in range(3)
+        ]
+    )
+    np.testing.assert_allclose(
+        multiplier.gradients, multiplier_finite, rtol=2e-3, atol=2e-5
+    )

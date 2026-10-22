@@ -6,13 +6,12 @@ from numba.extending import register_jitable
 from src.worldgen.elevation.profiles import transform_profile
 
 
-def transform_strength(normal: np.ndarray, shear: np.ndarray) -> np.ndarray:
-    """Return signed normal/shear motion strength, with zero for a zero denominator."""
-    denominator = np.abs(normal) + shear
-    valid = denominator != 0.0
-    strength = np.zeros_like(denominator, dtype=np.float64)
-    strength[valid] = normal[valid] * shear[valid] / denominator[valid]
-    return strength
+def transform_strength(
+    normal: np.ndarray, shear: np.ndarray, *, smoothing: float
+) -> np.ndarray:
+    """Return signed normal/shear response with a smoothed normal magnitude."""
+    denominator = np.sqrt(normal * normal + smoothing * smoothing) + shear
+    return normal * shear / denominator
 
 
 @register_jitable

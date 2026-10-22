@@ -1,75 +1,82 @@
 import numpy as np
 
 from src.worldgen.config import WorldgenConfig
-from src.worldgen.generate import generate_world
+from src.worldgen.generate import generate_world_field
 
 
-def test_world_generation_is_seeded_and_complete() -> None:
-    config = WorldgenConfig(seed=123, subdivision_frequency=3)
-    first = generate_world(config)
-    second = generate_world(config)
-    other = generate_world(WorldgenConfig(seed=124, subdivision_frequency=3))
-
-    np.testing.assert_array_equal(first.mesh.vertices, second.mesh.vertices)
-    np.testing.assert_array_equal(first.mesh.faces, second.mesh.faces)
-    np.testing.assert_array_equal(
-        first.geology.hotspots.potential, second.geology.hotspots.potential
+def test_continuous_geology_field_is_seeded_and_samples_arbitrary_positions():
+    config = WorldgenConfig(seed=123)
+    positions = np.array(
+        [[0.0, 0.0, 0.0], [1.7, 0.2, -0.4], [-0.3, 1.2, 0.8]],
+        dtype=np.float64,
     )
-    np.testing.assert_array_equal(first.geology.plate_ids, second.geology.plate_ids)
-    assert not np.array_equal(
-        first.geology.hotspots.potential, other.geology.hotspots.potential
-    )
-    assert len(np.unique(first.geology.plate_ids)) == config.geology.plates.plate_count
-    assert np.all(first.geology.plate_ids >= 0)
-    assert np.all(first.geology.plate_ids < config.geology.plates.plate_count)
-    assert not first.geology.hotspots.potential.flags.writeable
+    first = generate_world_field(config)
+    second = generate_world_field(config)
+    other = generate_world_field(WorldgenConfig(seed=124))
+
+    sample = first.geology.sample_source(positions).result
+    repeated = second.geology.sample_source(positions).result
+    different = other.geology.sample_source(positions).result
+    for name in sample.__dataclass_fields__:
+        np.testing.assert_array_equal(getattr(sample, name), getattr(repeated, name))
+    assert not np.array_equal(sample.plate_ids, different.plate_ids)
+    assert sample.plate_ids.dtype == np.int64
+    assert sample.crust_region_ids.dtype == np.int64
+    assert sample.continental_mask.dtype == bool
+    for name in sample.__dataclass_fields__:
+        assert not getattr(sample, name).flags.writeable
 
 
-def test_default_priority_flood_regions_are_connected_and_seed_owned():
-    config = WorldgenConfig(seed=123, subdivision_frequency=3)
-    world = generate_world(config)
-    geology = world.geology
-    plate_count = config.geology.plates.plate_count
-    np.testing.assert_array_equal(
-        geology.plate_ids[geology.seed_indices], np.arange(plate_count)
-    )
-
-    neighbors = [[] for _ in range(len(world.mesh.vertices))]
-    for left, right in world.mesh.edges:
-        neighbors[int(left)].append(int(right))
-        neighbors[int(right)].append(int(left))
-    for plate in range(plate_count):
-        cells = np.flatnonzero(geology.plate_ids == plate)
-        visited = {int(cells[0])}
-        stack = [int(cells[0])]
-        while stack:
-            current = stack.pop()
-            for neighbor in neighbors[current]:
-                if geology.plate_ids[neighbor] == plate and neighbor not in visited:
-                    visited.add(neighbor)
-                    stack.append(neighbor)
-        assert visited == set(cells)
-
-
-def test_plate_velocity_is_tangent_and_boundaries_are_exact() -> None:
-    world = generate_world(WorldgenConfig(seed=123, subdivision_frequency=3))
-    mesh = world.mesh
-    geology = world.geology
-
-    plate_dot = np.sum(geology.plate_velocity * mesh.vertices, axis=1)
-    assert np.allclose(plate_dot, 0.0)
-    expected_boundaries = np.flatnonzero(
-        geology.plate_ids[mesh.edges[:, 0]] != geology.plate_ids[mesh.edges[:, 1]]
-    )
-    np.testing.assert_array_equal(geology.boundary_edge_indices, expected_boundaries)
-
-
-def test_generation_does_not_change_global_numpy_random_state() -> None:
+def test_field_generation_preserves_global_numpy_random_state():
     np.random.seed(77)
     before = np.random.get_state()
-    generate_world(WorldgenConfig(seed=123, subdivision_frequency=3))
+    field = generate_world_field(WorldgenConfig(seed=123))
+    field.geology.sample_source(np.array([[0.0, 0.0, 0.0]]))
     after = np.random.get_state()
 
     assert before[0] == after[0]
     np.testing.assert_array_equal(before[1], after[1])
     assert before[2:] == after[2:]
+
+
+def test_geology_material_density_and_pair_gradients_match_finite_differences():
+    field = generate_world_field(WorldgenConfig(seed=321))
+    point = np.array([[0.03, 0.08, -0.02]], dtype=np.float64)
+    analytic = field.geology.sample_source_with_gradient(point)
+    step = 1e-5
+    for axis in range(3):
+        offset = np.zeros_like(point)
+        offset[0, axis] = step
+        positive = field.geology.sample_source(point + offset)
+        negative = field.geology.sample_source(point - offset)
+        material_derivative = (
+            positive.result.continental_weight[0]
+            - negative.result.continental_weight[0]
+        ) / (2.0 * step)
+        np.testing.assert_allclose(
+            analytic.continental_weight_gradients[0, axis],
+            material_derivative,
+            rtol=2e-4,
+            atol=2e-6,
+        )
+
+    density = field.geology.sample_density_anomaly_with_gradient(point)
+    step = (
+        2e-3  # Resolve float32 coordinates; the four-point stencil cancels curvature.
+    )
+    for axis in range(3):
+        offset = np.zeros_like(point)
+        offset[0, axis] = step
+        positive = field.geology.sample_density_anomaly(point + offset)[0]
+        negative = field.geology.sample_density_anomaly(point - offset)[0]
+        outer_positive = field.geology.sample_density_anomaly(point + 2 * offset)[0]
+        outer_negative = field.geology.sample_density_anomaly(point - 2 * offset)[0]
+        numerical = (8 * (positive - negative) - (outer_positive - outer_negative)) / (
+            12 * step
+        )
+        np.testing.assert_allclose(
+            density.gradients[0, axis],
+            numerical,
+            rtol=2e-4,
+            atol=2e-6,
+        )

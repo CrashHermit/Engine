@@ -22,6 +22,10 @@ def test_euclidean_ownership_and_lowest_index_ties():
     sample = sample_voronoi(positions, seeds)
 
     np.testing.assert_array_equal(sample.owner_seed_id, [0, 0, 0])
+    np.testing.assert_allclose(
+        sample.distances_squared,
+        [[0.0625, 0.5625, 1.0625], [0.25, 0.25, 1.25], [0.5, 0.5, 0.5]],
+    )
 
 
 def test_integer_coordinate_arrays_select_nearest_seed():
@@ -31,12 +35,13 @@ def test_integer_coordinate_arrays_select_nearest_seed():
     sample = sample_voronoi(positions, seeds)
 
     np.testing.assert_array_equal(sample.owner_seed_id, [0, 1])
+    np.testing.assert_array_equal(sample.distances_squared, [[1.0, 4.0], [4.0, 1.0]])
 
 
 def test_bisector_crossing_changes_owner():
-    seeds = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
+    seeds = np.array([[0.0, 0, 0], [1.0, 0, 0]])
     epsilon = 1e-4
-    positions = np.array([[0.5 - epsilon, 0.0, 0.0], [0.5 + epsilon, 0.0, 0.0]])
+    positions = np.array([[0.5 - epsilon, 0, 0], [0.5 + epsilon, 0, 0]])
 
     sample = sample_voronoi(positions, seeds)
 
@@ -52,19 +57,26 @@ def test_coincident_seeds_choose_lowest_index_owner():
 
 
 def test_two_seed_and_empty_query_results_have_typed_read_only_arrays():
-    seeds = np.array([[0.0, 0.0, 0.0], [2.0, 0.0, 0.0]])
-    result = sample_voronoi(np.array([[1.5, 0.0, 0.0]]), seeds)
+    seeds = np.array([[0.0, 0, 0], [2.0, 0, 0]])
+    result = sample_voronoi(np.array([[1.5, 0, 0]]), seeds)
+
     np.testing.assert_array_equal(result.owner_seed_id, [1])
+    assert result.distances_squared.shape == (1, 2)
+    assert result.distances_squared.dtype == np.float64
+    assert not result.distances_squared.flags.writeable
 
     empty = sample_voronoi(np.empty((0, 3)), seeds)
     assert empty.owner_seed_id.shape == (0,)
     assert empty.owner_seed_id.dtype == np.int64
+    assert empty.distances_squared.shape == (0, 2)
+    assert empty.distances_squared.dtype == np.float64
     assert not empty.owner_seed_id.flags.writeable
+    assert not empty.distances_squared.flags.writeable
     assert not result.owner_seed_id.flags.writeable
 
 
 def test_field_owns_immutable_seed_copy_without_changing_source_array():
-    source_seeds = np.array([[0.0, 0.0, 0.0], [1.0, 0.0, 0.0]])
+    source_seeds = np.array([[0.0, 0, 0], [1.0, 0, 0]])
     original = source_seeds.copy()
     field = VoronoiField3D(source_seeds)
     source_seeds[:] = 50.0
