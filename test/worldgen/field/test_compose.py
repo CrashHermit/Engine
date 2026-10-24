@@ -1,12 +1,18 @@
 import numpy as np
 
 from src.worldgen.field.compose import (
+    PushforwardVectorField,
+    ReparameterizedVectorField,
     SumScalarField,
     WarpedNormalField,
     WarpedScalarField,
     WarpedVectorField,
 )
-from src.worldgen.field.differential import ScalarSample, VectorSample
+from src.worldgen.field.differential import (
+    ScalarSample,
+    VectorHessianSample,
+    VectorSample,
+)
 
 
 def _shear(points):
@@ -72,3 +78,55 @@ def test_vector_and_normal_transport_preserves_tangency_under_shear():
     np.testing.assert_allclose(
         np.einsum("ni,ni->n", vectors.sample(points), normals.sample(points)), 0.0
     )
+
+
+def test_pushforward_and_reparameterized_vectors_keep_distinct_semantics():
+    points = np.array([[0.2, -0.4, 0.5]])
+    matrix = np.array([[1.0, 0.7, 0.0], [0.0, 1.0, 0.2], [0.0, 0.0, 1.0]])
+    source_matrix = np.diag([2.0, 3.0, 4.0])
+
+    def transform_with_jacobian(query):
+        return VectorSample(
+            query @ matrix.T, np.broadcast_to(matrix, (len(query), 3, 3))
+        )
+
+    def transform_with_hessian(query):
+        first = transform_with_jacobian(query)
+        return VectorHessianSample(
+            first.values, first.jacobians, np.zeros((len(query), 3, 3, 3))
+        )
+
+    def source_with_jacobian(query):
+        return VectorSample(
+            query @ source_matrix.T,
+            np.broadcast_to(source_matrix, (len(query), 3, 3)),
+        )
+
+    pushed = PushforwardVectorField(
+        transform_with_jacobian,
+        lambda query: query @ source_matrix.T,
+        transform_with_hessian,
+        source_with_jacobian,
+    )
+    reparameterized = ReparameterizedVectorField(
+        lambda query: query @ matrix.T,
+        lambda query: query @ source_matrix.T,
+        transform_with_jacobian,
+        source_with_jacobian,
+    )
+    pushed_sample = pushed.sample_with_jacobian(points)
+    reparameterized_sample = reparameterized.sample_with_jacobian(points)
+    np.testing.assert_allclose(
+        pushed_sample.values, points @ source_matrix.T @ matrix.T
+    )
+    np.testing.assert_allclose(
+        reparameterized_sample.values, points @ matrix.T @ source_matrix.T
+    )
+    np.testing.assert_allclose(
+        pushed_sample.jacobians, np.broadcast_to(matrix @ source_matrix, (1, 3, 3))
+    )
+    np.testing.assert_allclose(
+        reparameterized_sample.jacobians,
+        np.broadcast_to(source_matrix @ matrix, (1, 3, 3)),
+    )
+    assert not np.array_equal(pushed_sample.values, reparameterized_sample.values)

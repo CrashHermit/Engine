@@ -25,9 +25,9 @@ LAYERS = (
     "tectonic-relief",
     "transform-relief",
     "volcanic-relief",
-    "volcanic-potential",
     "volcanic-strength",
     "shear-relief",
+    "impact-relief",
     "terrain-variation",
     "elevation",
     "land-height",
@@ -35,6 +35,11 @@ LAYERS = (
     "slope",
     "local-relief",
     "roughness",
+    "axial-coordinate",
+    "circulation-strength",
+    "wind-speed",
+    "wind-vectors",
+    "temperature",
 )
 
 
@@ -49,6 +54,16 @@ class LayerStyle:
 
 
 def layer_title(layer: str) -> str:
+    if layer == "axial-coordinate":
+        return "Axial coordinate (sin latitude on unit sphere)"
+    if layer == "circulation-strength":
+        return "Zonal circulation (-1 westward, +1 eastward)"
+    if layer == "wind-speed":
+        return "Prevailing wind speed (m/s)"
+    if layer == "wind-vectors":
+        return "Prevailing wind (arrows; west/east bands)"
+    if layer == "temperature":
+        return "Latitude temperature baseline (°C)"
     if layer in ("coastal-elevation", "elevation"):
         return "Elevation (m; sea level 0)"
     if layer in (
@@ -57,11 +72,10 @@ def layer_title(layer: str) -> str:
         "tectonic-relief",
         "transform-relief",
         "volcanic-relief",
+        "impact-relief",
         "terrain-variation",
     ):
         return layer.replace("-", " ").title() + " (m)"
-    if layer in ("volcanic-potential", "volcanic-strength"):
-        return layer.replace("-", " ").title()
     if layer == "land-height":
         return "Land height (m)"
     if layer == "water-depth":
@@ -175,6 +189,30 @@ def layer_style(
     surface: SurfaceResult | None = None,
 ) -> LayerStyle:
     geology, elevation = sample.geology, sample.elevation
+    if layer == "temperature":
+        return LayerStyle(sample.climate.temperature_c, "coolwarm", layer_title(layer))
+    if layer == "axial-coordinate":
+        return LayerStyle(
+            sample.climate.circulation.axial_coordinate,
+            "coolwarm",
+            layer_title(layer),
+            (-1.0, 1.0),
+        )
+    if layer in ("circulation-strength", "wind-vectors"):
+        return LayerStyle(
+            sample.climate.circulation.band_strength,
+            "coolwarm",
+            layer_title(layer),
+            (-1.0, 1.0),
+        )
+    if layer == "wind-speed":
+        values = np.linalg.norm(sample.climate.circulation.wind_vectors_m_s, axis=1)
+        return LayerStyle(
+            values,
+            "viridis",
+            layer_title(layer),
+            (0.0, max(float(np.max(values, initial=0.0)), 1.0)),
+        )
     if layer == "plates":
         return LayerStyle(
             geology.plate_ids, "tab20", layer_title(layer), categorical=True
@@ -213,8 +251,8 @@ def layer_style(
             layer_title(layer),
             (0.0, max(float(np.max(values, initial=0.0)), 1.0)),
         )
-    if layer in ("volcanic-potential", "volcanic-strength"):
-        values = getattr(elevation, layer.replace("-", "_"))
+    if layer == "volcanic-strength":
+        values = elevation.volcanic_strength
         return LayerStyle(values, "inferno", layer_title(layer), (0.0, 1.0))
     if layer in ("coastal-elevation", "elevation"):
         values = (
@@ -232,6 +270,7 @@ def layer_style(
         "tectonic-relief",
         "transform-relief",
         "volcanic-relief",
+        "impact-relief",
         "shear-relief",
         "terrain-variation",
     ):

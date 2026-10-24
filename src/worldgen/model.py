@@ -2,7 +2,8 @@
 
 from dataclasses import dataclass
 
-from src.worldgen.elevation.model import ElevationResult
+from src.worldgen.climate.model import ClimateSample
+from src.worldgen.relief.model import ElevationResult
 from src.worldgen.geometry.mesh import Mesh
 from src.worldgen.geology.model import GeologyResult
 from src.worldgen.surface.field import SurfaceField
@@ -19,3 +20,4 @@ class GeneratedWorld:
     radius_m: float
     field: WorldField
     surface_field: SurfaceField
+    climate: ClimateSample

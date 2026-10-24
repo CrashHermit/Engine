@@ -5,8 +5,8 @@ import numpy as np
 from src.worldgen.config import WorldgenConfig
 from src.worldgen.generate import generate_world
 from src.worldgen.field.differential import ScalarSample
-from src.worldgen.surface import SurfaceConfig, SurfaceField
-from src.worldgen.surface.field import _neighborhood_metrics
+from src.worldgen.surface.config import SurfaceConfig
+from src.worldgen.surface.field import SurfaceField, _neighborhood_metrics
 
 
 def _constant_height(height_m: float):
@@ -85,15 +85,17 @@ def test_point_slope_and_normals_are_analytic_while_relief_uses_footprint():
         evaluator(points), np.broadcast_to([0.0, 0.0, height_scale], points.shape)
     )
     measured = []
-    for radius_percent in (0.05, 1.0):
+    for footprint_circumference_percent in (0.05, 1.0):
         field = SurfaceField(
-            SurfaceConfig(radius_percent=radius_percent),
+            SurfaceConfig(
+                footprint_circumference_percent=footprint_circumference_percent
+            ),
             evaluator,
             radius_m,
             differential,
         )
         result = field.sample(positions)
-        angular_radius = radius_percent * 2.0 * np.pi / 100.0
+        angular_radius = footprint_circumference_percent * 2.0 * np.pi / 100.0
         expected_slope = np.degrees(
             np.arctan2(abs(height_scale), radius_m + base_height)
         )
@@ -186,7 +188,10 @@ def test_surface_footprint_does_not_change_world_field_samples():
     config = WorldgenConfig(seed=2026, subdivision_frequency=5)
     narrow = generate_world(config)
     broad = generate_world(
-        replace(config, surface=replace(config.surface, radius_percent=0.1))
+        replace(
+            config,
+            surface=replace(config.surface, footprint_circumference_percent=0.1),
+        )
     )
     for name in narrow.geology.__dataclass_fields__:
         np.testing.assert_array_equal(

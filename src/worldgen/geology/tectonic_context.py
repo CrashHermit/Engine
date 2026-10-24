@@ -5,16 +5,23 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from src.worldgen.field.boundary_motion import BoundaryMotionSample
-from src.worldgen.geology.config import MaterialBlendConfig, PolarityConfig
+from src.worldgen.field.differential import VectorSample
+
+from src.worldgen.field.boundary_motion import (
+    BoundaryMotionSample,
+    BoundaryMotionGradientSample,
+)
 from src.worldgen.geology.crust_influence import (
+    MaterialBlendConfig,
     CrustInfluenceSample,
     continental_response_weight,
+    continental_response_derivative,
 )
-from src.worldgen.field.boundary_motion import BoundaryMotionGradientSample
-
-
-from src.worldgen.geology.subduction_preference import overriding_weights
+from src.worldgen.geology.subduction_preference import (
+    PolarityConfig,
+    overriding_weights,
+    overriding_weight_derivative,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,9 +74,7 @@ class TectonicContextField:
     sample_material_gradient: (
         Callable[[np.ndarray], tuple[CrustInfluenceSample, np.ndarray]] | None
     ) = None
-    sample_preference_jacobian: (
-        Callable[[np.ndarray], tuple[np.ndarray, np.ndarray]] | None
-    ) = None
+    sample_preference_jacobian: Callable[[np.ndarray], VectorSample] | None = None
 
     def __post_init__(self) -> None:
         pair_signs = np.array(self.pair_signs, dtype=np.float64, copy=True)
@@ -184,9 +189,9 @@ class TectonicContextField:
         if material_sample is None:
             material_sample, material_gradient = self.sample_material_gradient(points)
         if self.directed and preference_vectors is None:
-            preference_vectors, preference_jacobian = self.sample_preference_jacobian(
-                points
-            )
+            preference_sample = self.sample_preference_jacobian(points)
+            preference_vectors = preference_sample.values
+            preference_jacobian = preference_sample.jacobians
         preference = preference_vectors
         preference_jacobians = preference_jacobian
         indices = pair_motion.query_indices
@@ -195,32 +200,31 @@ class TectonicContextField:
             if len(indices)
             else (np.empty(0, dtype=np.int64), np.empty(0, dtype=np.int64))
         )
-        continental_x = (
-            material_sample.continental_weight[indices] - self.blend.midpoint
-        ) / self.blend.transition_width + 0.5
-        clipped = np.clip(continental_x, 0.0, 1.0)
         continental_gradient = (
-            6.0 * clipped * (1.0 - clipped) / self.blend.transition_width
-        )[:, None] * material_gradient[indices]
+            continental_response_derivative(
+                material_sample.continental_weight[indices], self.blend
+            )[:, None]
+            * material_gradient[indices]
+        )
         if self.directed:
             preference_dot = np.einsum(
                 "ni,ni->n", preference[indices], pair_motion.normals
             )
             preference_gradient = np.einsum(
                 "ni,nij->nj", pair_motion.normals, preference_jacobians[indices]
-            )
+            ) + np.einsum("ni,nij->nj", preference[indices], motion.normal_jacobians)
         else:
             preference_dot = np.zeros(len(indices), dtype=np.float64)
             preference_gradient = np.zeros((len(indices), 3), dtype=np.float64)
-        preference_scale = self.polarity.preference_scale
-        scores = (
-            preference_dot / preference_scale
-            + self.polarity.seeded_bias * self.pair_signs[a, b]
+        override_gradient = (
+            overriding_weight_derivative(
+                preference_dot,
+                self.pair_signs[a, b],
+                directed=self.directed,
+                config=self.polarity,
+            )[:, None]
+            * preference_gradient
         )
-        parameter = np.clip((scores + 1.0) * 0.5, 0.0, 1.0)
-        override_gradient = (3.0 * parameter * (1.0 - parameter) / preference_scale)[
-            :, None
-        ] * preference_gradient
         sample = self.sample_pairs(
             points,
             pair_motion,

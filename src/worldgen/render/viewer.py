@@ -3,6 +3,7 @@
 import numpy as np
 import pyvista as pv
 
+from src.worldgen.config import WorldgenConfig
 from src.worldgen.geometry.icosphere import generate_icosphere
 from src.worldgen.model import GeneratedWorld
 from src.worldgen.render.layers import LAYERS, common_elevation_range, layer_style
@@ -10,7 +11,7 @@ from src.worldgen.world import WorldSample
 
 
 class WorldgenViewer:
-    """Display hex samples or a dense continuous field without regenerating it."""
+    """Display and replace sampled continuous worlds without resetting the view."""
 
     def __init__(
         self,
@@ -24,7 +25,11 @@ class WorldgenViewer:
         elevation_range: tuple[float, float] | None = None,
         hex_edges: bool = True,
         continuous_field: bool = True,
+        plotter: pv.BasePlotter | None = None,
     ) -> None:
+        self.plotter = (
+            plotter if plotter is not None else pv.Plotter(off_screen=off_screen)
+        )
         self.world = world
         self.field_frequency = field_frequency
         self.off_screen = off_screen
@@ -32,6 +37,7 @@ class WorldgenViewer:
         self.vertical_exaggeration = vertical_exaggeration
         self.sea_level = sea_level
         self.elevation_range = elevation_range
+        self._fixed_elevation_range = elevation_range
         self.hex_edges = hex_edges
         self.continuous_field = continuous_field
         vertices, faces = generate_icosphere(field_frequency)
@@ -39,19 +45,33 @@ class WorldgenViewer:
         self._dense_faces = faces
         self._dense_sample: WorldSample = world.field.sample_world(vertices)
         self.elevation_range = elevation_range or common_elevation_range(
-            WorldSample(world.geology, world.elevation),
+            WorldSample(world.geology, world.elevation, world.climate),
             radius_m=world.radius_m,
             other_sample=self._dense_sample,
         )
-        self.plotter = pv.Plotter(off_screen=off_screen)
         self.polydata = self._hex_polydata()
         self.dense_polydata = self._dense_polydata()
         self.actors = []
-        self.widgets = {}
         self.layer: str | None = None
+        self._scalar_bar_title: str | None = None
         self._sea_level_mesh: pv.PolyData | None = None
         self._sea_level_actor = None
         self.annotation = None
+
+    def replace_world(self, world: GeneratedWorld) -> None:
+        """Resample the display and refresh the selected layer, retaining the camera."""
+        dense_sample = world.field.sample_world(self._dense_directions)
+        self.world = world
+        self._dense_sample = dense_sample
+        self.elevation_range = self._fixed_elevation_range or common_elevation_range(
+            WorldSample(world.geology, world.elevation, world.climate),
+            radius_m=world.radius_m,
+            other_sample=dense_sample,
+        )
+        self.polydata = self._hex_polydata()
+        self.dense_polydata = self._dense_polydata()
+        if self.layer is not None:
+            self.select_layer(self.layer)
 
     def _hex_polydata(self) -> pv.PolyData:
         mesh = self.world.mesh
@@ -110,14 +130,8 @@ class WorldgenViewer:
 
     def set_terrain_relief(self, enabled: bool) -> None:
         self.terrain_relief = enabled
-        relief_widget = self.widgets.get("terrain-relief")
-        if relief_widget is not None:
-            relief_widget.GetRepresentation().SetState(enabled)
         if not enabled and self.sea_level:
             self.sea_level = False
-            water_widget = self.widgets.get("water")
-            if water_widget is not None:
-                water_widget.GetRepresentation().SetState(0)
         self._update_geometry()
 
     def set_vertical_exaggeration(self, exaggeration: float) -> None:
@@ -126,14 +140,8 @@ class WorldgenViewer:
 
     def set_sea_level(self, enabled: bool) -> None:
         self.sea_level = enabled
-        water_widget = self.widgets.get("water")
-        if water_widget is not None:
-            water_widget.GetRepresentation().SetState(enabled)
         if enabled and not self.terrain_relief:
             self.terrain_relief = True
-            relief_widget = self.widgets.get("terrain-relief")
-            if relief_widget is not None:
-                relief_widget.GetRepresentation().SetState(1)
             self._update_geometry()
         elif self.layer is not None:
             self.select_layer(self.layer)
@@ -164,12 +172,14 @@ class WorldgenViewer:
         if layer not in LAYERS:
             raise KeyError(layer)
         camera = self.plotter.camera_position
+        if self._scalar_bar_title is not None:
+            self.plotter.remove_scalar_bar(self._scalar_bar_title, render=False)
         for actor in self.actors:
             self.plotter.remove_actor(actor, reset_camera=False, render=False)
         self.actors.clear()
         hex_display = not self.continuous_field or self._hex_only(layer)
         sample = (
-            WorldSample(self.world.geology, self.world.elevation)
+            WorldSample(self.world.geology, self.world.elevation, self.world.climate)
             if hex_display
             else self._dense_sample
         )
@@ -211,7 +221,18 @@ class WorldgenViewer:
             show_edges=hex_display and self.hex_edges,
             reset_camera=False,
             smooth_shading=True,
-            scalar_bar_args={"title": style.title},
+            scalar_bar_args={
+                "title": style.title,
+                "n_labels": 3,
+                "title_font_size": 14,
+                "label_font_size": 11,
+                "unconstrained_font_size": True,
+                "fmt": "%.3g",
+                "position_x": 0.125,
+                "position_y": 0.04,
+                "width": 0.75,
+                "height": 0.04,
+            },
         )
         if style.categorical:
             kwargs["categories"] = True
@@ -221,13 +242,39 @@ class WorldgenViewer:
         if count is not None:
             kwargs["n_colors"] = int(count)
         self.actors.append(self.plotter.add_mesh(mesh, **kwargs))
+        if layer == "wind-vectors":
+            self._add_wind_arrows(sample, hex_display=hex_display)
+        self._scalar_bar_title = style.title
         self.layer = layer
         self._update_annotation()
-        for name, widget in self.widgets.items():
-            if name in LAYERS:
-                widget.GetRepresentation().SetState(name == layer)
-        self.plotter.render()
         self.plotter.camera_position = camera
+        self.plotter.render()
+
+    def _add_wind_arrows(self, sample: WorldSample, *, hex_display: bool) -> None:
+        """Decimate glyphs for display without changing the sampled wind field."""
+        directions = self.world.mesh.vertices if hex_display else self._dense_directions
+        indices = np.linspace(
+            0, len(directions) - 1, min(400, len(directions)), dtype=np.int64
+        )
+        radius = (
+            1.0 + sample.elevation.elevation[indices] * self.vertical_exaggeration
+            if self.terrain_relief
+            else np.ones(len(indices))
+        )
+        centers = directions[indices] * (radius[:, None] + 0.008)
+        vectors = sample.climate.circulation.wind_vectors_m_s[indices]
+        display_speed = max(
+            float(np.max(np.linalg.norm(vectors, axis=1), initial=0.0)), 1.0
+        )
+        self.actors.append(
+            self.plotter.add_arrows(
+                centers,
+                vectors,
+                mag=0.1 / display_speed,
+                color="black",
+                reset_camera=False,
+            )
+        )
 
     def prepare_camera(self) -> None:
         self.plotter.camera.parallel_projection = True
@@ -252,57 +299,6 @@ class WorldgenViewer:
             self.plotter.camera_position = initial_camera
             self.plotter.camera.parallel_scale = parallel_scale
 
-    def add_layer_controls(self) -> None:
-        rows = (len(LAYERS) + 1) // 2
-        for index, name in enumerate(LAYERS):
-            column, row = divmod(index, rows)
-            position = (10 + 240 * column, 130 + 26 * row)
-            label_position = (40 + 240 * column, 135 + 26 * row)
-
-            def toggle(enabled, selected=name):
-                if enabled:
-                    self.select_layer(selected)
-                elif selected in self.widgets:
-                    self.widgets[selected].GetRepresentation().SetState(
-                        self.layer == selected
-                    )
-
-            self.widgets[name] = self.plotter.add_checkbox_button_widget(
-                toggle, value=name == self.layer, position=position, size=20
-            )
-            self.plotter.add_text(name, position=label_position, font_size=10)
-        for key, callback, value, label, x in (
-            (
-                "terrain-relief",
-                self.set_terrain_relief,
-                self.terrain_relief,
-                "terrain relief",
-                220,
-            ),
-            ("water", self.set_sea_level, self.sea_level, "water", 450),
-            ("hex-edges", self.set_hex_edges, self.hex_edges, "hex outlines", 680),
-            (
-                "continuous-field",
-                self.set_continuous_field,
-                self.continuous_field,
-                "continuous field",
-                910,
-            ),
-        ):
-            self.widgets[key] = self.plotter.add_checkbox_button_widget(
-                callback, value=value, position=(x, 10), size=20
-            )
-            self.plotter.add_text(label, position=(x + 30, 15), font_size=10)
-        self.plotter.add_slider_widget(
-            self.set_vertical_exaggeration,
-            rng=(1.0, 100.0),
-            value=self.vertical_exaggeration,
-            title="Vertical exaggeration",
-            pointa=(0.22, 0.12),
-            pointb=(0.42, 0.12),
-            style="modern",
-        )
-
 
 def render_world(
     world: GeneratedWorld,
@@ -320,7 +316,26 @@ def render_world(
     rotation_gif: str | None = None,
     rotation_frames: int = 120,
     rotation_fps: float = 24.0,
+    rebuild_config: WorldgenConfig | None = None,
 ) -> None:
+    if not off_screen and rotation_gif is None:
+        from src.worldgen.render.window import show_world_window
+
+        show_world_window(
+            world=world,
+            layer=layer,
+            terrain_relief=terrain_relief,
+            vertical_exaggeration=vertical_exaggeration,
+            sea_level=sea_level,
+            elevation_range=elevation_range,
+            hex_edges=hex_edges,
+            field_frequency=field_frequency,
+            continuous_field=continuous_field,
+            screenshot=screenshot,
+            rebuild_config=rebuild_config,
+        )
+        return
+
     viewer = WorldgenViewer(
         world,
         field_frequency=field_frequency,
@@ -339,7 +354,5 @@ def render_world(
             rotation_gif, frames=rotation_frames, fps=rotation_fps
         )
     else:
-        if not off_screen:
-            viewer.add_layer_controls()
         viewer.plotter.show(screenshot=screenshot)
     viewer.plotter.close()

@@ -15,6 +15,34 @@ from src.worldgen.geology.tectonic_context import (
 
 
 @dataclass(frozen=True, slots=True)
+class SourceReliefInputs:
+    """Dense material weights and sparse, source-parameterized response inputs."""
+
+    continental_weight: np.ndarray
+    query_indices: np.ndarray
+    context: TectonicContextSample
+
+    def __post_init__(self) -> None:
+        self.continental_weight.setflags(write=False)
+        self.query_indices.setflags(write=False)
+
+
+@dataclass(frozen=True, slots=True)
+class SourceReliefGradientInputs:
+    """Response inputs with gradients relative to source XYZ coordinates."""
+
+    continental_weight: np.ndarray
+    continental_weight_gradients: np.ndarray
+    query_indices: np.ndarray
+    context: TectonicContextGradientSample
+
+    def __post_init__(self) -> None:
+        self.continental_weight.setflags(write=False)
+        self.continental_weight_gradients.setflags(write=False)
+        self.query_indices.setflags(write=False)
+
+
+@dataclass(frozen=True, slots=True)
 class GeologyResult:
     """Dense discrete ownership and continuous geology channels."""
 
@@ -32,11 +60,17 @@ class GeologyResult:
 
 @dataclass(frozen=True, slots=True)
 class GeologySample:
-    """Dense geology plus sparse pair data for same-query elevation responses."""
+    """Dense geology plus sparse pair data for same-query relief responses."""
 
     result: GeologyResult
     motion: BoundaryMotionSample
     context: TectonicContextSample
+
+    def to_relief_inputs(self) -> SourceReliefInputs:
+        """Project shared arrays without copying or reinterpreting geology."""
+        return SourceReliefInputs(
+            self.result.continental_weight, self.motion.query_indices, self.context
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,3 +82,12 @@ class GeologyGradientSample:
 
     def __post_init__(self) -> None:
         self.continental_weight_gradients.setflags(write=False)
+
+    def to_relief_inputs(self) -> SourceReliefGradientInputs:
+        """Project shared source-coordinate values and gradients without copies."""
+        return SourceReliefGradientInputs(
+            self.sample.result.continental_weight,
+            self.continental_weight_gradients,
+            self.sample.motion.query_indices,
+            self.context,
+        )

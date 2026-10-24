@@ -1,7 +1,11 @@
 import numpy as np
 import pytest
 
-from src.worldgen.geometry.rotation import rotation_vectors, rotational_velocity
+from src.worldgen.geometry.rotation import (
+    rotation_vectors,
+    rotational_velocity,
+    rotational_velocity_jacobian,
+)
 
 
 def test_rotation_vectors_normalize_axes_and_preserve_signed_speed() -> None:
@@ -72,3 +76,23 @@ def test_rotation_primitives_handle_empty_batches() -> None:
         0,
         3,
     )
+
+
+def test_rotational_velocity_jacobian_broadcasts_and_matches_cross_product():
+    rotations = np.array([[0.0, 0.0, 2.0], [1.0, -2.0, 3.0]])
+    jacobians = rotational_velocity_jacobian(rotations)
+    positions = np.array(
+        [
+            [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0]],
+            [[0.0, 0.0, 1.0], [2.0, -1.0, 0.5]],
+        ]
+    )
+    velocities = np.einsum("nij,nkj->nki", jacobians, positions)
+
+    np.testing.assert_array_equal(velocities, np.cross(rotations[:, None], positions))
+
+    np.testing.assert_array_equal(
+        jacobians[0],
+        [[0.0, -2.0, 0.0], [2.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+    )
+    assert rotational_velocity_jacobian(np.array([0.0, 0.0, 1.0])).shape == (3, 3)

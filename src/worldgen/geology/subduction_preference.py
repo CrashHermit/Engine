@@ -4,13 +4,21 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from src.worldgen.field.differential import VectorSample
 from src.worldgen.field.region_influence import (
     RegionInfluenceField,
     RegionInfluenceSample,
 )
-from src.worldgen.geology.config import PolarityConfig
 from src.worldgen.geology.crust_field import CrustField
 from src.worldgen.utilities.curves import smoothstep
+
+
+@dataclass(frozen=True, slots=True)
+class PolarityConfig:
+    """Relative scale and persistent tie bias for overriding-side preference."""
+
+    preference_scale: float = 0.2
+    seeded_bias: float = 0.25
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,7 +50,7 @@ class SubductionPreferenceField:
         positions: np.ndarray,
         sample: RegionInfluenceSample | None = None,
         gradients: np.ndarray | None = None,
-    ) -> tuple[np.ndarray, np.ndarray]:
+    ) -> VectorSample:
         points = np.asarray(positions, dtype=np.float64)
         if sample is None or gradients is None:
             sample, gradients = self.regions.sample_with_gradient(points)
@@ -63,9 +71,7 @@ class SubductionPreferenceField:
             points,
             np.sum(gradients * signs[None, :, None], axis=1),
         )
-        values.setflags(write=False)
-        jacobians.setflags(write=False)
-        return values, jacobians
+        return VectorSample(values, jacobians)
 
 
 def overriding_weights(
@@ -84,3 +90,21 @@ def overriding_weights(
     weights = smoothstep(parameter)
     weights.setflags(write=False)
     return weights
+
+
+def overriding_weight_derivative(
+    preference: np.ndarray,
+    seeded_sign: np.ndarray,
+    *,
+    directed: bool,
+    config: PolarityConfig = PolarityConfig(),
+) -> np.ndarray:
+    """Return derivative of overriding weight by preference vector dot."""
+    if not directed:
+        result = np.zeros_like(preference, dtype=np.float64)
+    else:
+        scores = preference / config.preference_scale + config.seeded_bias * seeded_sign
+        parameter = np.clip((scores + 1.0) * 0.5, 0.0, 1.0)
+        result = 3.0 * parameter * (1.0 - parameter) / config.preference_scale
+    result.setflags(write=False)
+    return result

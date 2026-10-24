@@ -1,10 +1,8 @@
 import numpy as np
 
-from src.worldgen.elevation.profiles import (
-    collision_profile,
-    divergent_profile,
-    shear_profile,
-)
+from src.worldgen.relief.collision import collision_profile
+from src.worldgen.relief.divergence import divergent_profile
+from src.worldgen.relief.fault import fault_profile
 from src.worldgen.field.boundary_motion import BoundaryMotionField
 from src.worldgen.field.boundary_response import BoundaryResponseField
 from src.worldgen.field.boundary_vector import BoundaryVectorField
@@ -38,9 +36,10 @@ def _composition():
                 strict=True,
             )
         ):
-            broad, crest = collision_profile(float(distance), 0.5, 0.2)
-            divergent = divergent_profile(float(distance), 0.5, continental=True)
-            shear_shape = shear_profile(float(distance), 0.5)
+            unsigned_distance = abs(float(distance))
+            broad, crest = collision_profile(unsigned_distance, 0.5, 0.2)
+            divergent = divergent_profile(unsigned_distance, 0.5, continental=True)
+            shear_shape = fault_profile(unsigned_distance, 0.5)
             result[index] = influence * (
                 convergence * (0.65 * broad + 0.35 * crest)
                 + divergence * divergent
@@ -53,9 +52,11 @@ def _composition():
 
 def test_profile_response_decays_smoothly_to_zero_at_overlap_support():
     _, source = _composition()
-    points = np.array([[0.0, 1, 0], [0.25, 1, 0], [0.5, 1, 0]])
+    points = np.array(
+        [[0.0, 1, 0], [-0.25, 1, 0], [0.25, 1, 0], [-0.5, 1, 0], [0.5, 1, 0]]
+    )
     values = source.sample(points)
-    assert values[0] > values[1] > values[2] == 0.0
+    assert values[0] > values[1] == values[2] > values[3] == values[4] == 0.0
     step = 1e-5
     join_points = np.array([[0.5 - step, 1, 0], [0.5, 1, 0], [0.5 + step, 1, 0]])
     slopes = np.diff(source.sample(join_points)) / step

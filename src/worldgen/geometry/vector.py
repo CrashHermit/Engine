@@ -5,6 +5,36 @@ import numpy as np
 from src.worldgen.utilities.smooth import smooth_magnitude
 
 
+def regularized_normalize(
+    vectors: np.ndarray, smoothing: float, *, multiplier: np.ndarray | float = 1.0
+) -> np.ndarray:
+    """Normalize vectors with a smooth denominator and optional numerator scale."""
+    values = np.asarray(vectors, dtype=np.float64)
+    denominator = np.sqrt(np.einsum("ij,ij->i", values, values) + smoothing * smoothing)
+    result = multiplier * values / denominator[:, None]
+    result.setflags(write=False)
+    return result
+
+
+def regularized_normalize_with_jacobian(
+    vectors: np.ndarray, smoothing: float
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return normalized vectors and derivatives with respect to input vectors."""
+    values = np.asarray(vectors, dtype=np.float64)
+    squared = np.einsum("ij,ij->i", values, values)
+    denominator = np.sqrt(squared + smoothing * smoothing)
+    inverse = 1.0 / denominator
+    normalized = values * inverse[:, None]
+    identity = np.broadcast_to(np.eye(3), (len(values), 3, 3))
+    jacobian = (
+        identity * inverse[:, None, None]
+        - values[:, :, None] * values[:, None, :] * inverse[:, None, None] ** 3
+    )
+    normalized.setflags(write=False)
+    jacobian.setflags(write=False)
+    return normalized, jacobian
+
+
 def relative_motion_components(
     first: np.ndarray,
     second: np.ndarray,

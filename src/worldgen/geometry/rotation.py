@@ -20,3 +20,16 @@ def rotational_velocity(
     positions = np.asarray(positions, dtype=np.float64)
     angular_velocity = np.asarray(angular_velocity, dtype=np.float64)
     return np.cross(angular_velocity, positions)
+
+
+def rotational_velocity_jacobian(angular_velocity: np.ndarray) -> np.ndarray:
+    """Return the Cartesian Jacobian of cross(angular_velocity, position)."""
+    angular_velocity = np.asarray(angular_velocity, dtype=np.float64)
+    jacobians = np.zeros(angular_velocity.shape[:-1] + (3, 3), dtype=np.float64)
+    jacobians[..., 0, 1] = -angular_velocity[..., 2]
+    jacobians[..., 0, 2] = angular_velocity[..., 1]
+    jacobians[..., 1, 0] = angular_velocity[..., 2]
+    jacobians[..., 1, 2] = -angular_velocity[..., 0]
+    jacobians[..., 2, 0] = -angular_velocity[..., 1]
+    jacobians[..., 2, 1] = angular_velocity[..., 0]
+    return jacobians

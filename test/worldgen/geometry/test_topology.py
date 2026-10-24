@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.worldgen.geometry import Mesh
+from src.worldgen.geometry.mesh import Mesh
 from src.worldgen.geometry.spherical import angular_distances
 
 

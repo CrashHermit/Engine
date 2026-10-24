@@ -174,3 +174,70 @@ def test_noise_warp_jacobians_match_finite_difference_and_inverse():
         atol=1e-10,
     )
     np.testing.assert_allclose(np.linalg.det(forward.jacobians), 1.0, atol=1e-10)
+
+
+def test_shear_forward_and_inverse_hessians_match_diagnostic_differences():
+    def shear_with_hessian(plane_positions, iteration, axis, frequency_multiplier):
+        x, y = plane_positions.T
+        offsets = 0.2 * x**2 + 0.3 * x * y - 0.1 * y**2
+        gradients = np.column_stack((0.4 * x + 0.3 * y, 0.3 * x - 0.2 * y))
+        hessians = np.broadcast_to(
+            [[0.4, 0.3], [0.3, -0.2]], (len(plane_positions), 2, 2)
+        ).copy()
+        return offsets, gradients, hessians
+
+    def shear_with_gradient(plane_positions, iteration, axis, frequency_multiplier):
+        offsets, gradients, _ = shear_with_hessian(
+            plane_positions, iteration, axis, frequency_multiplier
+        )
+        return offsets, gradients
+
+    warp = ShearWarpField(
+        ShearWarpConfig(iterations=2, amplitude=0.08, gain=0.7),
+        lambda points, iteration, axis, frequency_multiplier: shear_with_hessian(
+            points, iteration, axis, frequency_multiplier
+        )[0],
+        shear_with_gradient,
+        shear_with_hessian,
+    )
+    points = np.array([[0.13, -0.21, 0.07], [-0.3, 0.11, 0.2]])
+    epsilon = 2e-4
+    for transform, jacobian_method, hessian_method in (
+        (warp.sample, warp.sample_with_jacobian, warp.sample_with_hessian),
+        (warp.inverse, warp.inverse_with_jacobian, warp.inverse_with_hessian),
+    ):
+        sample = hessian_method(points)
+        jacobian_finite = np.stack(
+            [
+                (
+                    transform(points + np.eye(3)[axis] * epsilon)
+                    - transform(points - np.eye(3)[axis] * epsilon)
+                )
+                / (2 * epsilon)
+                for axis in range(3)
+            ],
+            axis=2,
+        )
+        hessian_finite = np.stack(
+            [
+                (
+                    jacobian_method(points + np.eye(3)[axis] * epsilon).jacobians
+                    - jacobian_method(points - np.eye(3)[axis] * epsilon).jacobians
+                )
+                / (2 * epsilon)
+                for axis in range(3)
+            ],
+            axis=3,
+        )
+        np.testing.assert_allclose(sample.jacobians, jacobian_finite, atol=2e-7)
+        np.testing.assert_allclose(sample.hessians, hessian_finite, atol=3e-6)
+        assert np.linalg.norm(sample.hessians) > 0
+
+    forward = warp.sample_with_hessian(points)
+    inverse = warp.inverse_with_hessian(forward.values)
+    np.testing.assert_allclose(inverse.values, points, atol=1e-12)
+    np.testing.assert_allclose(
+        np.einsum("nij,njk->nik", inverse.jacobians, forward.jacobians),
+        np.broadcast_to(np.eye(3), forward.jacobians.shape),
+        atol=1e-12,
+    )

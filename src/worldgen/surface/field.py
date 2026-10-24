@@ -75,7 +75,9 @@ class SurfaceField:
         local_relief = np.empty(count, dtype=np.float64)
         roughness = np.empty(count, dtype=np.float64)
 
-        angular_radius = self.config.radius_percent * (2.0 * np.pi / 100.0)
+        angular_radius = self.config.footprint_circumference_percent * (
+            2.0 * np.pi / 100.0
+        )
         distance_m = self.radius_m * angular_radius
         supplied_center = (
             None

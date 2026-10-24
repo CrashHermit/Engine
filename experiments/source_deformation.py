@@ -18,11 +18,9 @@ from experiments.motion_space_compare import (
     _render_ownership,
     _regular_xy_points,
 )
-from src.worldgen.elevation.profiles import (
-    collision_profile,
-    divergent_profile,
-    shear_profile,
-)
+from src.worldgen.relief.collision import collision_profile
+from src.worldgen.relief.divergence import divergent_profile
+from src.worldgen.relief.fault import fault_profile
 from src.worldgen.field.region_influence import (
     RegionInfluenceConfig,
     RegionInfluenceField,
@@ -37,8 +35,7 @@ from src.worldgen.field.motion import RegionRotationField
 from src.worldgen.field.noise import NoiseConfig
 from src.worldgen.field.regions import build_warped_voronoi_field
 from src.worldgen.field.warp import ShearWarpConfig
-from src.worldgen.geology.config import PlateMotionConfig
-from src.worldgen.geology.motion import generate_plate_motion
+from src.worldgen.geology.motion import PlateMotionConfig, generate_plate_motion
 from src.worldgen.geometry.icosphere import generate_icosphere
 
 SEEDS = (123, 2026, 31415)
@@ -101,7 +98,7 @@ def _build(seed: int):
             distance = abs(float(plane_distance))
             broad, crest = collision_profile(distance, PROFILE_WIDTH, 0.2)
             divergent = divergent_profile(distance, PROFILE_WIDTH, continental=True)
-            shear_shape = shear_profile(distance, PROFILE_WIDTH)
+            shear_shape = fault_profile(distance, PROFILE_WIDTH)
             result[i] = sample.influence[i] * (
                 convergence * (0.65 * broad + 0.35 * crest)
                 + divergence * divergent

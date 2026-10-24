@@ -3,11 +3,100 @@
 from dataclasses import dataclass
 
 import numpy as np
+from numba import njit, prange
+from numba.extending import register_jitable
 
 from src.worldgen.field.region_influence import (
     RegionInfluenceField,
     RegionInfluenceSample,
 )
+
+
+@register_jitable(inline="always")
+def _overlap_arrays(
+    weights: np.ndarray,
+    distances_squared: np.ndarray,
+    region_pairs: np.ndarray,
+    inverse_pair_separations: np.ndarray,
+    pair_normals: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Extract active ordered region pairs into exact-size output arrays."""
+    query_count = weights.shape[0]
+    pair_count = len(region_pairs)
+    offsets = np.empty(query_count + 1, dtype=np.int64)
+    offsets[0] = 0
+    for query_index in prange(query_count):
+        count = 0
+        for pair_index in range(pair_count):
+            region_a = region_pairs[pair_index, 0]
+            region_b = region_pairs[pair_index, 1]
+            if (
+                4.0 * weights[query_index, region_a] * weights[query_index, region_b]
+                > 0.0
+            ):
+                count += 1
+        offsets[query_index + 1] = count
+
+    for query_index in range(query_count):
+        offsets[query_index + 1] += offsets[query_index]
+    record_count = offsets[query_count]
+
+    query_indices = np.empty(record_count, dtype=np.int64)
+    active_pairs = np.empty((record_count, 2), dtype=np.int64)
+    influence = np.empty(record_count, dtype=np.float64)
+    plane_distance = np.empty(record_count, dtype=np.float64)
+    normals = np.empty((record_count, 3), dtype=np.float64)
+    for query_index in prange(query_count):
+        record_index = offsets[query_index]
+        for pair_index in range(pair_count):
+            region_a = region_pairs[pair_index, 0]
+            region_b = region_pairs[pair_index, 1]
+            pair_influence = (
+                4.0 * weights[query_index, region_a] * weights[query_index, region_b]
+            )
+            if pair_influence > 0.0:
+                query_indices[record_index] = query_index
+                active_pairs[record_index, 0] = region_a
+                active_pairs[record_index, 1] = region_b
+                influence[record_index] = pair_influence
+                plane_distance[record_index] = (
+                    distances_squared[query_index, region_a]
+                    - distances_squared[query_index, region_b]
+                ) * (0.5 * inverse_pair_separations[pair_index])
+                for axis in range(3):
+                    normals[record_index, axis] = pair_normals[pair_index, axis]
+                record_index += 1
+    return query_indices, active_pairs, influence, plane_distance, normals
+
+
+@njit(cache=True)
+def _overlap_arrays_serial(
+    weights: np.ndarray,
+    distances_squared: np.ndarray,
+    region_pairs: np.ndarray,
+    inverse_separations: np.ndarray,
+    normals: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    return _overlap_arrays(
+        weights, distances_squared, region_pairs, inverse_separations, normals
+    )
+
+
+@njit(cache=True, parallel=True)
+def _overlap_arrays_parallel(
+    weights: np.ndarray,
+    distances_squared: np.ndarray,
+    region_pairs: np.ndarray,
+    inverse_separations: np.ndarray,
+    normals: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    return _overlap_arrays(
+        weights, distances_squared, region_pairs, inverse_separations, normals
+    )
+
+
+# Counting and filling each launch workers, so keep small queries sequential.
+_PARALLEL_PAIR_WORK = 32_768
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,50 +122,26 @@ class RegionOverlapField:
 
     def sample_from_regions(self, sample: RegionInfluenceSample) -> RegionOverlapSample:
         """Derive sparse pair contributions from an existing membership sample."""
-        weights = sample.weights
-        distances_squared = sample.voronoi.distances_squared
-        query_parts: list[np.ndarray] = []
-        pair_index_parts: list[np.ndarray] = []
-        influence_parts: list[np.ndarray] = []
-        distance_parts: list[np.ndarray] = []
-
-        for pair_index, ((region_a, region_b), inverse_separation) in enumerate(
-            zip(
-                self.regions.region_pairs,
-                self.regions.inverse_pair_separations,
-                strict=True,
-            )
+        query_count = len(sample.weights)
+        kernel = _overlap_arrays_serial
+        if (
+            query_count >= 64
+            and query_count * len(self.regions.region_pairs) >= _PARALLEL_PAIR_WORK
         ):
-            pair_influence = 4.0 * weights[:, region_a] * weights[:, region_b]
-            active = np.flatnonzero(pair_influence > 0.0)
-            if len(active) == 0:
-                continue
-            plane_distance = (
-                distances_squared[:, region_a] - distances_squared[:, region_b]
-            ) * (0.5 * inverse_separation)
-            query_parts.append(active)
-            pair_index_parts.append(np.full(len(active), pair_index, dtype=np.int64))
-            influence_parts.append(pair_influence[active])
-            distance_parts.append(plane_distance[active])
-
-        if not query_parts:
-            query_indices = np.empty(0, dtype=np.int64)
-            region_pairs = np.empty((0, 2), dtype=np.int64)
-            influence = np.empty(0, dtype=np.float64)
-            plane_distance = np.empty(0, dtype=np.float64)
-            normals = np.empty((0, 3), dtype=np.float64)
-        else:
-            query_indices = np.concatenate(query_parts)
-            pair_indices = np.concatenate(pair_index_parts)
-            influence = np.concatenate(influence_parts)
-            plane_distance = np.concatenate(distance_parts)
-            order = np.lexsort((pair_indices, query_indices))
-            query_indices = query_indices[order]
-            pair_indices = pair_indices[order]
-            influence = influence[order]
-            plane_distance = plane_distance[order]
-            region_pairs = self.regions.region_pairs[pair_indices]
-            normals = self.regions.pair_normals[pair_indices]
+            kernel = _overlap_arrays_parallel
+        (
+            query_indices,
+            region_pairs,
+            influence,
+            plane_distance,
+            normals,
+        ) = kernel(
+            sample.weights,
+            sample.voronoi.distances_squared,
+            self.regions.region_pairs,
+            self.regions.inverse_pair_separations,
+            self.regions.pair_normals,
+        )
 
         for values in (
             query_indices,

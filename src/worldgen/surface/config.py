@@ -7,4 +7,4 @@ from dataclasses import dataclass
 class SurfaceConfig:
     """Fixed measurement footprint as a percentage of planetary circumference."""
 
-    radius_percent: float = 0.05
+    footprint_circumference_percent: float = 0.05

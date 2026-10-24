@@ -2,8 +2,11 @@ import numpy as np
 
 from src.worldgen.field.noise import (
     fbm_with_gradient,
+    fbm_with_hessian,
     noise_multiplier_with_gradient,
+    noise_multiplier_with_hessian,
     normalized_noise_with_gradient,
+    normalized_noise_with_hessian,
     sample_vector_noise_with_jacobian,
 )
 
@@ -199,3 +202,66 @@ def test_analytic_noise_gradients_match_diagnostic_finite_differences():
     np.testing.assert_allclose(
         multiplier.gradients, multiplier_finite, rtol=2e-3, atol=2e-5
     )
+
+
+def test_noise_hessians_match_diagnostic_gradient_differences():
+    points = _positions()[:4]
+    config = NoiseConfig(octaves=3, base_frequency=1.1)
+    epsilon = 3e-3
+    sample = normalized_noise_with_hessian(points, config, seed=72)
+    finite = np.stack(
+        [
+            (
+                normalized_noise_with_gradient(
+                    points + np.eye(3)[axis] * epsilon, config, seed=72
+                ).gradients
+                - normalized_noise_with_gradient(
+                    points - np.eye(3)[axis] * epsilon, config, seed=72
+                ).gradients
+            )
+            / (2 * epsilon)
+            for axis in range(3)
+        ],
+        axis=2,
+    )
+    # Large float32 octave offsets make small cross-partials cancellation-sensitive.
+    assert np.linalg.norm(sample.hessians - finite) < 0.02 * np.linalg.norm(
+        sample.hessians
+    )
+    raw = fbm_with_hessian(
+        points,
+        seed=72,
+        octaves=3,
+        base_frequency=1.1,
+        lacunarity=config.lacunarity,
+        persistence=config.persistence,
+    )
+    amplitude_bound = sum(config.persistence**i for i in range(config.octaves))
+    np.testing.assert_allclose(
+        raw.hessians / (2 * amplitude_bound),
+        sample.hessians,
+        rtol=1e-12,
+        atol=1e-12,
+    )
+    multiplier = noise_multiplier_with_hessian(
+        points, seed=72, frequency=0.8, strength=0.4
+    )
+    multiplier_gradient = noise_multiplier_with_gradient(
+        points, seed=72, frequency=0.8, strength=0.4
+    )
+    np.testing.assert_allclose(
+        multiplier.values,
+        1
+        + 0.4
+        * fbm(
+            points,
+            seed=72,
+            octaves=1,
+            base_frequency=0.8,
+            lacunarity=2.0,
+            persistence=0.5,
+        ),
+    )
+    assert multiplier.hessians.shape == (len(points), 3, 3)
+    np.testing.assert_allclose(multiplier.gradients, multiplier_gradient.gradients)
+    assert not sample.hessians.flags.writeable

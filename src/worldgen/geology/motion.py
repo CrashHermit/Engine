@@ -1,12 +1,21 @@
 """Continuous rigid region motion with geometry-independent Euler axes."""
 
+from dataclasses import dataclass
+
 import numpy as np
 
 from src.worldgen.field.motion import RegionRotationField
 from src.worldgen.field.voronoi import VoronoiField3D
 from src.worldgen.field.seeds import generate_direction_seeds
 from src.worldgen.geometry.rotation import rotation_vectors
-from src.worldgen.geology.config import PlateMotionConfig
+
+
+@dataclass(frozen=True, slots=True)
+class PlateMotionConfig:
+    """Angular-speed range for independent, isotropic Euler rotations."""
+
+    min_angular_speed: float = 0.0
+    max_angular_speed: float = 1.0
 
 
 def generate_plate_motion(

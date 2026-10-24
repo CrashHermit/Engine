@@ -27,13 +27,15 @@ class BoundaryVectorSample:
 
 @dataclass(frozen=True, slots=True)
 class BoundaryVectorJacobianSample:
-    """Paired vectors and their source Jacobians (pair, side, output, input)."""
+    """Paired vectors/normals and their source Jacobians."""
 
     sample: BoundaryVectorSample
     jacobians: np.ndarray
+    normal_jacobians: np.ndarray
 
     def __post_init__(self) -> None:
         self.jacobians.setflags(write=False)
+        self.normal_jacobians.setflags(write=False)
 
 
 def _unique_region_requests(
@@ -131,4 +133,8 @@ class BoundaryVectorField:
             )
             vectors = sample.values[inverse].reshape((-1, 2, 3))
             jacobians = sample.jacobians[inverse].reshape((-1, 2, 3, 3))
-        return BoundaryVectorJacobianSample(_vector_sample(overlap, vectors), jacobians)
+        return BoundaryVectorJacobianSample(
+            _vector_sample(overlap, vectors),
+            jacobians,
+            np.zeros((len(vectors), 3, 3), dtype=np.float64),
+        )

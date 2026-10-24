@@ -8,12 +8,16 @@ import numpy as np
 from src.worldgen.field.differential import (
     ScalarGradientSampler,
     ScalarSample,
+    VectorHessianSampler,
     VectorJacobianSampler,
+    VectorSample,
 )
 from src.worldgen.geometry.differential import (
     pullback_covectors,
     pullback_normals,
     pullback_vectors,
+    pushforward_vector_jacobians,
+    pushforward_vectors,
 )
 
 type CoordinateTransform = Callable[[np.ndarray], np.ndarray]
@@ -109,3 +113,59 @@ class WarpedNormalField:
         return pullback_normals(
             self.sample_source(transformed.values), transformed.jacobians
         )
+
+
+@dataclass(frozen=True, slots=True)
+class PushforwardVectorField:
+    """Push vector components forward while keeping source query coordinates."""
+
+    transform_with_jacobian: VectorJacobianSampler
+    sample_source: VectorSampler
+    transform_with_hessian: VectorHessianSampler
+    sample_source_with_jacobian: VectorJacobianSampler
+
+    def sample(self, positions: np.ndarray) -> np.ndarray:
+        query_points = np.asarray(positions, dtype=np.float64)
+        transformed = self.transform_with_jacobian(query_points)
+        return pushforward_vectors(
+            self.sample_source(query_points), transformed.jacobians
+        )
+
+    def sample_with_jacobian(self, positions: np.ndarray) -> VectorSample:
+        query_points = np.asarray(positions, dtype=np.float64)
+        transformed = self.transform_with_hessian(query_points)
+        source = self.sample_source_with_jacobian(query_points)
+        jacobians = pushforward_vector_jacobians(
+            source.values,
+            source.jacobians,
+            transformed.jacobians,
+            transformed.hessians,
+        )
+        return VectorSample(
+            pushforward_vectors(source.values, transformed.jacobians), jacobians
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class ReparameterizedVectorField:
+    """Compose vector coordinates without transporting vector components."""
+
+    transform: CoordinateTransform
+    sample_source: VectorSampler
+    transform_with_jacobian: VectorJacobianSampler
+    sample_source_with_jacobian: VectorJacobianSampler
+
+    def sample(self, positions: np.ndarray) -> np.ndarray:
+        return self.sample_source(
+            self.transform(np.asarray(positions, dtype=np.float64))
+        )
+
+    def sample_with_jacobian(self, positions: np.ndarray) -> VectorSample:
+        transformed = self.transform_with_jacobian(
+            np.asarray(positions, dtype=np.float64)
+        )
+        source = self.sample_source_with_jacobian(transformed.values)
+        jacobians = np.einsum(
+            "...ab,...bc->...ac", source.jacobians, transformed.jacobians
+        )
+        return VectorSample(source.values, jacobians)

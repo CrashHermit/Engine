@@ -5,6 +5,7 @@ import numpy as np
 from src.worldgen.config import WorldgenConfig
 from src.worldgen.generate import generate_world_field
 from src.worldgen.geometry.differential import (
+    pullback_covectors,
     pushforward_normals,
     pushforward_vectors,
 )
@@ -37,8 +38,15 @@ def test_world_sampling_uses_source_warp_and_original_world_variation_coordinate
 
     sample = field.sample_world(positions)
     source = field.warp.sample(positions)
-    source_elevation = field.source_elevation.sample_total_source(source)
+    source_relief = field.source_relief.sample_total_source(source)
     variation = field.variation.sample_fraction(positions)
+    shared = field.elevation.sample_components(
+        positions,
+        source_positions=source,
+        relief_inputs=field.geology.sample_source(source).to_relief_inputs(),
+    )
+    _assert_arrays_equal(shared, sample.elevation)
+    _assert_arrays_equal(field.elevation.sample_components(positions), sample.elevation)
 
     np.testing.assert_array_equal(positions, untouched)
     np.testing.assert_allclose(
@@ -46,7 +54,10 @@ def test_world_sampling_uses_source_warp_and_original_world_variation_coordinate
     )
     np.testing.assert_allclose(
         sample.elevation.elevation,
-        source_elevation + variation,
+        source_relief
+        + field.volcanism.sample(positions).relief
+        + field.impact_relief.sample(positions)
+        + variation,
         rtol=1e-13,
         atol=1e-13,
     )
@@ -60,9 +71,9 @@ def test_zero_variation_preserves_geology_and_source_relief_without_gating():
     disabled = generate_world_field(
         replace(
             config,
-            elevation=replace(
-                config.elevation,
-                variation=replace(config.elevation.variation, amplitude_percent=0.0),
+            relief=replace(
+                config.relief,
+                variation=replace(config.relief.variation, amplitude_percent=0.0),
             ),
         )
     )
@@ -124,26 +135,52 @@ def test_world_queries_are_partition_order_empty_and_immutable():
     for result, reordered_result in (
         (whole.geology, reordered.geology),
         (whole.elevation, reordered.elevation),
+        (whole.climate.circulation, reordered.climate.circulation),
     ):
         for name in result.__dataclass_fields__:
             value = getattr(result, name)
             np.testing.assert_array_equal(value[order], getattr(reordered_result, name))
             assert not value.flags.writeable
-    for result in (empty.geology, empty.elevation):
+    np.testing.assert_array_equal(
+        whole.climate.temperature_c[order], reordered.climate.temperature_c
+    )
+    assert not whole.climate.temperature_c.flags.writeable
+    for result, reference in (
+        (empty.geology, whole.geology),
+        (empty.elevation, whole.elevation),
+        (empty.climate.circulation, whole.climate.circulation),
+    ):
         for name in result.__dataclass_fields__:
             value = getattr(result, name)
-            assert value.shape == (0,)
+            assert value.shape == getattr(reference, name)[:0].shape
             assert value.dtype in (
                 np.dtype(np.float64),
                 np.dtype(np.int64),
                 np.dtype(bool),
             )
             assert not value.flags.writeable
+    assert empty.climate.temperature_c.shape == (0,)
+    assert empty.climate.temperature_c.dtype == np.float64
+    assert not empty.climate.temperature_c.flags.writeable
     np.testing.assert_allclose(
         np.concatenate((split.elevation.elevation, remainder.elevation.elevation)),
         whole.elevation.elevation,
         rtol=1e-13,
         atol=1e-13,
+    )
+    for name in whole.climate.circulation.__dataclass_fields__:
+        np.testing.assert_array_equal(
+            np.concatenate(
+                (
+                    getattr(split.climate.circulation, name),
+                    getattr(remainder.climate.circulation, name),
+                )
+            ),
+            getattr(whole.climate.circulation, name),
+        )
+    np.testing.assert_array_equal(
+        np.concatenate((split.climate.temperature_c, remainder.climate.temperature_c)),
+        whole.climate.temperature_c,
     )
 
 
@@ -164,6 +201,7 @@ def test_seeded_world_field_is_reproducible_and_does_not_use_global_rng():
     assert before[2:] == after[2:]
     _assert_arrays_equal(sample.geology, repeated_sample.geology)
     _assert_arrays_equal(sample.elevation, repeated_sample.elevation)
+    _assert_arrays_equal(sample.climate, repeated_sample.climate)
     np.testing.assert_array_equal(
         first.geology.regions.voronoi.seeds,
         repeat.geology.regions.voronoi.seeds,
@@ -177,6 +215,71 @@ def test_seeded_world_field_is_reproducible_and_does_not_use_global_rng():
     )
 
 
+def test_planet_axis_and_wind_settings_do_not_change_geology_or_elevation():
+    config = WorldgenConfig(seed=2026)
+    points = _positions()
+    original = generate_world_field(config).sample_world(points)
+    tilted = generate_world_field(
+        replace(
+            config,
+            planet=replace(
+                config.planet,
+                rotation_axis=(0.0, 2.0, 2.0),
+                radius_m=config.planet.radius_m * 2.0,
+            ),
+            climate=replace(
+                config.climate,
+                circulation=replace(config.climate.circulation, base_speed_m_s=20.0),
+            ),
+        )
+    ).sample_world(points)
+    _assert_arrays_equal(original.geology, tilted.geology)
+    _assert_arrays_equal(original.elevation, tilted.elevation)
+    assert np.any(
+        original.climate.circulation.band_strength
+        != tilted.climate.circulation.band_strength
+    )
+    assert np.any(
+        original.climate.circulation.wind_vectors_m_s
+        != tilted.climate.circulation.wind_vectors_m_s
+    )
+    assert np.any(original.climate.temperature_c != tilted.climate.temperature_c)
+
+
+def test_temperature_settings_do_not_change_circulation_or_geological_fields():
+    config = WorldgenConfig(seed=2026)
+    points = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [0.0, 0.0, -1.0],
+            [0.0, 0.0, 0.5],
+            [0.0, 0.0, 0.0],
+        ]
+    )
+    original = generate_world_field(config).sample_world(points)
+    changed = generate_world_field(
+        replace(
+            config,
+            climate=replace(
+                config.climate,
+                temperature=replace(
+                    config.climate.temperature,
+                    equator_temperature_c=40.0,
+                    pole_temperature_c=0.0,
+                ),
+            ),
+        )
+    ).sample_world(points)
+    np.testing.assert_array_equal(
+        original.climate.temperature_c, [30, -20, -20, 17.5, 30]
+    )
+    np.testing.assert_array_equal(changed.climate.temperature_c, [40, 0, 0, 30, 40])
+    _assert_arrays_equal(original.geology, changed.geology)
+    _assert_arrays_equal(original.elevation, changed.elevation)
+    _assert_arrays_equal(original.climate.circulation, changed.climate.circulation)
+
+
 def test_world_elevation_gradient_matches_xyz_queries_and_radius_scaling():
     config = WorldgenConfig(seed=2026)
     # Keep noise well resolved for the full-chain diagnostic. Multi-octave
@@ -184,21 +287,41 @@ def test_world_elevation_gradient_matches_xyz_queries_and_radius_scaling():
     config = replace(
         config,
         warp_noise=replace(config.warp_noise, octaves=1),
-        elevation=replace(
-            config.elevation,
+        relief=replace(
+            config.relief,
             ridge_detail=replace(
-                config.elevation.ridge_detail,
-                noise=replace(config.elevation.ridge_detail.noise, octaves=1),
+                config.relief.ridge_detail,
+                noise=replace(config.relief.ridge_detail.noise, octaves=1),
             ),
             variation=replace(
-                config.elevation.variation,
-                noise=replace(config.elevation.variation.noise, octaves=1),
+                config.relief.variation,
+                noise=replace(config.relief.variation.noise, octaves=1),
             ),
         ),
     )
     field = generate_world_field(config)
     points = np.random.default_rng(31).uniform(-0.8, 0.8, (12, 3))
     sample = field.elevation.sample_with_gradient(points)
+    transformed = field.warp.sample_with_jacobian(points)
+    source = field.source_relief.sample_total_source_with_gradient(transformed.values)
+    expected_source_gradient = pullback_covectors(
+        source.gradients, transformed.jacobians
+    )
+    expected_gradient = expected_source_gradient
+    expected_gradient = (
+        expected_gradient
+        + field.volcanism.sample_with_gradient(points).relief.gradients
+    )
+    expected_gradient = (
+        expected_gradient + field.impact_relief.sample_with_gradient(points).gradients
+    )
+    expected_gradient = (
+        expected_gradient
+        + field.variation.sample_fraction_with_gradient(points).gradients
+    )
+    np.testing.assert_allclose(
+        sample.gradients, expected_gradient, rtol=1e-12, atol=1e-12
+    )
     step = 3e-4
     numerical = np.column_stack(
         [
@@ -251,7 +374,7 @@ def test_world_region_vectors_and_pair_normals_round_trip_without_region_inputs(
     field = generate_world_field(WorldgenConfig(seed=2026))
     points = np.random.default_rng(441).uniform(-0.9, 0.9, (64, 3))
     transformed = field.warp.sample_with_jacobian(points)
-    source = field.geology.motion.vectors.sample(transformed.values)
+    source = field.geology.motion.vectors.source.sample(transformed.values)
     world = field.sample_boundary_vectors(points)
     matrices = transformed.jacobians[world.query_indices]
     np.testing.assert_array_equal(world.region_pairs, source.region_pairs)
@@ -278,3 +401,58 @@ def test_world_region_vectors_and_pair_normals_round_trip_without_region_inputs(
     empty = field.sample_boundary_vectors(np.empty((0, 3)))
     assert empty.vectors.shape == (0, 2, 3)
     assert empty.normals.shape == (0, 3)
+
+
+def test_impacts_are_world_space_additive_relief_with_independent_gradients():
+    config = WorldgenConfig(seed=123)
+    config = replace(
+        config,
+        relief=replace(config.relief, impacts=replace(config.relief.impacts, count=1)),
+    )
+    active = generate_world_field(config)
+    absent = generate_world_field(
+        replace(
+            config,
+            relief=replace(
+                config.relief, impacts=replace(config.relief.impacts, count=0)
+            ),
+        )
+    )
+    direction = active.impact_relief.directions[0]
+    tangent = np.cross(direction, np.array([1.0, 0.0, 0.0]))
+    tangent /= np.linalg.norm(tangent)
+    radius = active.impact_relief.radii[0]
+    points = direction + np.array([0.0, 0.3, 0.9, 1.2])[:, None] * radius * tangent
+    full = active.sample_world(points)
+    bare = absent.sample_world(points)
+    _assert_arrays_equal(full.geology, bare.geology)
+    for name in full.elevation.__dataclass_fields__:
+        if name not in ("impact_relief", "elevation"):
+            np.testing.assert_array_equal(
+                getattr(full.elevation, name), getattr(bare.elevation, name)
+            )
+    contribution = full.elevation.elevation - bare.elevation.elevation
+    assert contribution[0] < 0.0
+    assert contribution[2] > 0.0
+    assert contribution[3] == 0.0
+    np.testing.assert_allclose(contribution, full.elevation.impact_relief, atol=1e-15)
+    derivative = active.elevation.sample_with_gradient(points)
+    base_derivative = absent.elevation.sample_with_gradient(points)
+    np.testing.assert_allclose(derivative.values, full.elevation.elevation, atol=1e-15)
+    step = 1e-6
+    numerical = np.column_stack(
+        [
+            (
+                active.impact_relief.sample(points + step * np.eye(3)[axis])
+                - active.impact_relief.sample(points - step * np.eye(3)[axis])
+            )
+            / (2 * step)
+            for axis in range(3)
+        ]
+    )
+    np.testing.assert_allclose(
+        derivative.gradients - base_derivative.gradients,
+        numerical,
+        rtol=1e-6,
+        atol=1e-9,
+    )

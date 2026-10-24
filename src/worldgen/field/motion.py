@@ -1,12 +1,42 @@
-"""Continuous rigid-rotation sampling for seed-indexed regions."""
+"""Continuous Cartesian rigid-rotation fields."""
 
 from dataclasses import dataclass
 
 import numpy as np
 
-from src.worldgen.field.voronoi import VoronoiField3D
-from src.worldgen.geometry.rotation import rotational_velocity
 from src.worldgen.field.differential import VectorSample
+from src.worldgen.field.voronoi import VoronoiField3D
+from src.worldgen.geometry.rotation import (
+    rotational_velocity,
+    rotational_velocity_jacobian,
+)
+
+
+@dataclass(frozen=True, slots=True)
+class RotationField:
+    """Evaluate one global rigid rotation in Cartesian coordinates."""
+
+    angular_velocity: np.ndarray
+
+    def __post_init__(self) -> None:
+        angular_velocity = np.array(self.angular_velocity, dtype=np.float64, copy=True)
+        angular_velocity.setflags(write=False)
+        object.__setattr__(self, "angular_velocity", angular_velocity)
+
+    def sample(self, positions: np.ndarray) -> np.ndarray:
+        """Return angular velocity crossed with each Cartesian position."""
+        values = rotational_velocity(positions, self.angular_velocity)
+        values.setflags(write=False)
+        return values
+
+    def sample_with_jacobian(self, positions: np.ndarray) -> VectorSample:
+        """Return rotation velocities and their exact Cartesian Jacobian."""
+        values = self.sample(positions)
+        jacobians = np.broadcast_to(
+            rotational_velocity_jacobian(self.angular_velocity),
+            (len(values), 3, 3),
+        )
+        return VectorSample(values, jacobians)
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,11 +81,5 @@ class RegionRotationField:
         ids = np.asarray(region_ids, dtype=np.int64)
         omegas = self.angular_velocity[ids]
         values = np.cross(omegas, points)
-        jacobians = np.zeros((len(points), 3, 3), dtype=np.float64)
-        jacobians[:, 0, 1] = -omegas[:, 2]
-        jacobians[:, 0, 2] = omegas[:, 1]
-        jacobians[:, 1, 0] = omegas[:, 2]
-        jacobians[:, 1, 2] = -omegas[:, 0]
-        jacobians[:, 2, 0] = -omegas[:, 1]
-        jacobians[:, 2, 1] = omegas[:, 0]
+        jacobians = rotational_velocity_jacobian(omegas)
         return VectorSample(values, jacobians)

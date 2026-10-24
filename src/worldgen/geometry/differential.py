@@ -52,3 +52,66 @@ def pushforward_normals(normals: np.ndarray, jacobians: np.ndarray) -> np.ndarra
     values = values / np.linalg.norm(values, axis=-1, keepdims=True)
     values.setflags(write=False)
     return values
+
+
+def pushforward_vector_jacobians(
+    vectors: np.ndarray,
+    vector_jacobians: np.ndarray,
+    map_jacobians: np.ndarray,
+    map_hessians: np.ndarray,
+) -> np.ndarray:
+    """Differentiate K v, including variation of coordinate Jacobian K."""
+    leading_rank = max(
+        vectors.ndim - 1,
+        vector_jacobians.ndim - 2,
+        map_jacobians.ndim - 2,
+        map_hessians.ndim - 3,
+    )
+    vectors = _broadcast_pair_axis(vectors, leading_rank, 1)
+    vector_jacobians = _broadcast_pair_axis(vector_jacobians, leading_rank, 2)
+    map_jacobians = _broadcast_pair_axis(map_jacobians, leading_rank, 2)
+    map_hessians = _broadcast_pair_axis(map_hessians, leading_rank, 3)
+    values = np.einsum("...ab,...bk->...ak", map_jacobians, vector_jacobians)
+    values += np.einsum("...abk,...b->...ak", map_hessians, vectors)
+    values.setflags(write=False)
+    return values
+
+
+def pushforward_normal_jacobians(
+    normals: np.ndarray,
+    normal_jacobians: np.ndarray,
+    map_jacobians: np.ndarray,
+    map_hessians: np.ndarray,
+) -> np.ndarray:
+    """Differentiate normalized K^-T n with analytic map and source derivatives."""
+    leading_rank = max(
+        normals.ndim - 1,
+        normal_jacobians.ndim - 2,
+        map_jacobians.ndim - 2,
+        map_hessians.ndim - 3,
+    )
+    normals = _broadcast_pair_axis(normals, leading_rank, 1)
+    normal_jacobians = _broadcast_pair_axis(normal_jacobians, leading_rank, 2)
+    map_jacobians = _broadcast_pair_axis(map_jacobians, leading_rank, 2)
+    map_hessians = _broadcast_pair_axis(map_hessians, leading_rank, 3)
+    raw = pushforward_covectors(normals, map_jacobians)
+    raw_length = np.linalg.norm(raw, axis=-1, keepdims=True)
+    unit = raw / raw_length
+    map_term = np.einsum("...aik,...a->...ik", map_hessians, raw)
+    raw_jacobians = np.linalg.solve(
+        np.swapaxes(map_jacobians, -1, -2), normal_jacobians - map_term
+    )
+    projector = np.eye(3) - unit[..., :, None] * unit[..., None, :]
+    values = np.einsum(
+        "...ij,...jk->...ik",
+        projector / raw_length[..., None],
+        raw_jacobians,
+    )
+    values.setflags(write=False)
+    return values
+
+
+def _broadcast_pair_axis(values: np.ndarray, leading_rank: int, trailing_rank: int):
+    while values.ndim - trailing_rank < leading_rank:
+        values = np.expand_dims(values, axis=values.ndim - trailing_rank)
+    return values

@@ -1,3 +1,6 @@
+from dataclasses import fields
+
+from numba import get_num_threads, set_num_threads
 import numpy as np
 
 from src.worldgen.field.region_influence import (
@@ -38,14 +41,36 @@ def test_pair_overlap_uses_compact_membership_product_and_seed_bisector():
         assert not values.flags.writeable
 
 
-def test_junction_keeps_each_overlapping_pair_in_lexicographic_order():
+def test_junction_preserves_every_pair_in_query_then_pair_order():
     seeds = np.array([[-1.0, 0, 0], [1.0, 0, 0], [0.0, 2.0, 0]])
-    sample = _overlap(seeds).sample(np.array([[0.0, 0.75, 0.0]]))
+    positions = np.array(
+        [[0.0, 0.75, 0.0], [-1.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.75, 0.0]]
+    )
+    sample = _overlap(seeds).sample(positions)
 
-    np.testing.assert_array_equal(sample.query_indices, [0, 0, 0])
-    np.testing.assert_array_equal(sample.region_pairs, [[0, 1], [0, 2], [1, 2]])
-    np.testing.assert_allclose(sample.influence, np.full(3, 4 / 9))
-    np.testing.assert_allclose(np.sum(sample.influence), 4 / 3)
+    np.testing.assert_array_equal(sample.query_indices, [0, 0, 0, 2, 3, 3, 3])
+    np.testing.assert_array_equal(
+        sample.region_pairs,
+        [[0, 1], [0, 2], [1, 2], [0, 1], [0, 1], [0, 2], [1, 2]],
+    )
+    np.testing.assert_allclose(
+        sample.influence,
+        [4 / 9, 4 / 9, 4 / 9, 1.0, 4 / 9, 4 / 9, 4 / 9],
+    )
+    inverse_root_five = 1.0 / np.sqrt(5.0)
+    np.testing.assert_allclose(
+        sample.normals,
+        [
+            [1.0, 0.0, 0.0],
+            [inverse_root_five, 2.0 * inverse_root_five, 0.0],
+            [-inverse_root_five, 2.0 * inverse_root_five, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [inverse_root_five, 2.0 * inverse_root_five, 0.0],
+            [-inverse_root_five, 2.0 * inverse_root_five, 0.0],
+        ],
+    )
+    np.testing.assert_array_equal(sample.plane_distance, np.zeros(7))
 
 
 def test_all_pair_overlaps_are_kept_including_nonadjacent_regions():
@@ -59,15 +84,21 @@ def test_all_pair_overlaps_are_kept_including_nonadjacent_regions():
 
 def test_single_region_and_empty_query_return_typed_immutable_empties():
     single = _overlap(np.array([[0.0, 0.0, 0.0]])).sample(np.zeros((1, 3)))
-    empty = _overlap(np.array([[-1.0, 0, 0], [1.0, 0, 0]])).sample(np.empty((0, 3)))
+    field = _overlap(np.array([[-1.0, 0, 0], [1.0, 0, 0]]))
+    empty = field.sample(np.empty((0, 3)))
+    inactive = field.sample(np.array([[-1.0, 0, 0], [1.0, 0, 0]]))
 
-    for sample in (single, empty):
+    for sample in (single, empty, inactive):
         assert sample.query_indices.shape == (0,)
         assert sample.query_indices.dtype == np.int64
         assert sample.region_pairs.shape == (0, 2)
+        assert sample.region_pairs.dtype == np.int64
         assert sample.influence.shape == (0,)
+        assert sample.influence.dtype == np.float64
         assert sample.plane_distance.shape == (0,)
+        assert sample.plane_distance.dtype == np.float64
         assert sample.normals.shape == (0, 3)
+        assert sample.normals.dtype == np.float64
         for values in (
             sample.query_indices,
             sample.region_pairs,
@@ -84,3 +115,40 @@ def test_repeated_queries_keep_separate_sparse_indices():
 
     np.testing.assert_array_equal(sample.query_indices, [0, 1])
     np.testing.assert_allclose(sample.influence, [1.0, 1.0])
+
+
+def test_parallel_overlaps_preserve_records_and_order_across_query_chunks():
+    rng = np.random.default_rng(7311)
+    field = _overlap(rng.uniform(-1.0, 1.0, (40, 3)), 0.3)
+    positions = rng.uniform(-1.5, 1.5, (514, 3))[::2]
+    positions.setflags(write=False)
+    before = positions.copy()
+    chunks = [
+        (start, field.sample(positions[start : start + 17]))
+        for start in range(0, len(positions), 17)
+    ]
+    expected = {
+        item.name: np.concatenate(
+            [
+                part.query_indices + start
+                if item.name == "query_indices"
+                else getattr(part, item.name)
+                for start, part in chunks
+            ]
+        )
+        for item in fields(chunks[0][1])
+    }
+
+    original_threads = get_num_threads()
+    try:
+        for thread_count in (1, min(4, original_threads)):
+            set_num_threads(thread_count)
+            for _ in range(2):
+                sample = field.sample(positions)
+                for item in fields(sample):
+                    values = getattr(sample, item.name)
+                    np.testing.assert_array_equal(values, expected[item.name])
+                    assert not values.flags.writeable
+    finally:
+        set_num_threads(original_threads)
+    np.testing.assert_array_equal(positions, before)

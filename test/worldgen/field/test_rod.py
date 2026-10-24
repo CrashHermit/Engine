@@ -1,4 +1,8 @@
 import numpy as np
+import pytest
+from numba import get_num_threads, set_num_threads
+
+from src.worldgen.field.differential import ScalarSample
 
 from src.worldgen.field.rod import RodScalarField, rod_relief
 
@@ -198,3 +202,112 @@ def test_rod_definition_arrays_are_owned_and_read_only() -> None:
             pass
         else:
             raise AssertionError("rod definitions must be immutable")
+
+
+@pytest.mark.parametrize("power", [0.0, 1.0, 2.0, 2.5])
+def test_rod_gradients_include_all_spatial_modifiers_and_profile_powers(power):
+    def modifier(points, slope):
+        values = (
+            1.0
+            + slope[0] * points[:, 0]
+            + slope[1] * points[:, 1]
+            + slope[2] * points[:, 2]
+        )
+        return ScalarSample(values, np.broadcast_to(slope, points.shape))
+
+    width_slope = np.array([0.1, -0.04, 0.03])
+    length_slope = np.array([-0.02, 0.06, 0.04])
+    height_slope = np.array([0.03, 0.02, -0.05])
+    field = RodScalarField(
+        directions=np.array([[0.0, 0.0, 1.0], [0.0, 1.0, 0.0], [1.0, 1.0, 1.0]]),
+        widths=np.array([0.4, 0.3, 0.5]),
+        lengths=np.array([1.0, 1.6, 2.0]),
+        heights=np.array([0.8, -0.4, 1.3]),
+        taper_fraction=0.2,
+        profile_power=power,
+        sample_width_multiplier=lambda p: modifier(p, width_slope).values,
+        sample_length_multiplier=lambda p: modifier(p, length_slope).values,
+        sample_height_multiplier=lambda p: modifier(p, height_slope).values,
+        sample_width_multiplier_gradient=lambda p: modifier(p, width_slope),
+        sample_length_multiplier_gradient=lambda p: modifier(p, length_slope),
+        sample_height_multiplier_gradient=lambda p: modifier(p, height_slope),
+    )
+    points = np.array(
+        [
+            [0.0, 0.0, 0.0],
+            [0.05, 0.06, 0.1],
+            [0.1, 0.1, 0.9],
+            [-0.2, 0.1, 0.4],
+            [-0.3, -0.2, -0.4],
+            [0.6, 0.6, 0.6],
+            [2.0, 1.0, 2.0],
+        ]
+    )
+    sampled = field.sample_with_gradient(points)
+    np.testing.assert_array_equal(sampled.values, field.sample(points))
+    steps = np.full((len(points), 1), 1e-6)
+    # The one-sided C1 gate has O(h) central-difference error at its origin join.
+    steps[0] = 1e-10
+    numerical = np.column_stack(
+        [
+            (
+                field.sample(points + np.eye(3)[axis] * steps)
+                - field.sample(points - np.eye(3)[axis] * steps)
+            )
+            / (2.0 * steps[:, 0])
+            for axis in range(3)
+        ]
+    )
+    np.testing.assert_allclose(sampled.gradients, numerical, rtol=2e-5, atol=2e-8)
+    np.testing.assert_array_equal(sampled.gradients[0], np.zeros(3))
+
+
+def test_parallel_rods_preserve_values_gradients_and_query_order():
+    rng = np.random.default_rng(7316)
+    field = RodScalarField(
+        directions=rng.uniform(-1.0, 1.0, (48, 3)),
+        widths=rng.uniform(0.1, 0.6, 48),
+        lengths=rng.uniform(0.8, 2.0, 48),
+        heights=rng.uniform(-1.0, 2.0, 48),
+    )
+    positions = rng.uniform(-1.2, 1.2, (1030, 3))[::2]
+    positions.setflags(write=False)
+    before = positions.copy()
+    parts = [
+        field.sample_with_gradient(positions[start : start + 17])
+        for start in range(0, len(positions), 17)
+    ]
+    expected_values = np.concatenate([part.values for part in parts])
+    expected_gradients = np.concatenate([part.gradients for part in parts])
+    original_threads = get_num_threads()
+    try:
+        for count in sorted({1, min(4, original_threads)}):
+            set_num_threads(count)
+            for _ in range(2):
+                values = field.sample(positions)
+                sample = field.sample_with_gradient(positions)
+                np.testing.assert_array_equal(values, expected_values)
+                np.testing.assert_array_equal(sample.values, expected_values)
+                np.testing.assert_array_equal(sample.gradients, expected_gradients)
+                assert not values.flags.writeable
+                assert not sample.values.flags.writeable
+                assert not sample.gradients.flags.writeable
+    finally:
+        set_num_threads(original_threads)
+    permutation = rng.permutation(len(positions))
+    reordered = field.sample_with_gradient(positions[permutation])
+    np.testing.assert_array_equal(reordered.values, expected_values[permutation])
+    np.testing.assert_array_equal(reordered.gradients, expected_gradients[permutation])
+    np.testing.assert_array_equal(positions, before)
+
+
+def test_empty_rod_gradient_queries_return_typed_immutable_zeros():
+    field = RodScalarField(np.empty((0, 3)), np.empty(0), np.empty(0), np.empty(0))
+    for positions in (np.empty((0, 3)), np.array([[0.1, -0.2, 0.3]])):
+        result = field.sample_with_gradient(positions)
+        np.testing.assert_array_equal(result.values, np.zeros(len(positions)))
+        np.testing.assert_array_equal(result.gradients, np.zeros((len(positions), 3)))
+        assert result.values.dtype == np.float64
+        assert result.gradients.dtype == np.float64
+        assert not result.values.flags.writeable
+        assert not result.gradients.flags.writeable

@@ -11,28 +11,33 @@ from src.worldgen.field.boundary_motion import (
 from src.worldgen.field.differential import ScalarSample
 from src.worldgen.field.interaction import BoundaryInteractionField
 from src.worldgen.field.motion import RegionRotationField
-from src.worldgen.field.noise import noise_multiplier, noise_multiplier_with_gradient
 from src.worldgen.field.region_influence import RegionInfluenceField
 from src.worldgen.field.region_overlap import RegionOverlapField
 from src.worldgen.field.regions import WarpedVoronoiField
-from src.worldgen.geology.config import CrustDensityConfig
+from src.worldgen.geology.density import CrustDensityField
 from src.worldgen.geology.crust_field import CrustField
 from src.worldgen.geology.crust_influence import CrustInfluenceField
 from src.worldgen.geology.model import (
     GeologyGradientSample,
     GeologyResult,
     GeologySample,
+    SourceReliefGradientInputs,
+    SourceReliefInputs,
 )
 from src.worldgen.geology.subduction_preference import SubductionPreferenceField
 from src.worldgen.geology.tectonic_context import (
     TectonicContextField,
     TectonicContextSample,
 )
+from src.worldgen.geometry.differential import (
+    pushforward_vector_jacobians,
+    pushforward_vectors,
+)
 
 
 @dataclass(frozen=True, slots=True)
 class GeologyField:
-    """Shared continuous geological inputs and source-space query operations."""
+    """Source-parameterized geology with world-oriented motion and polarity."""
 
     regions: WarpedVoronoiField
     plate_influence: RegionInfluenceField
@@ -45,11 +50,20 @@ class GeologyField:
     motion: BoundaryMotionField
     interaction: BoundaryInteractionField
     context: TectonicContextField
-    density_config: CrustDensityConfig
-    density_noise_seed: int
+    density: CrustDensityField
+
+    def sample_relief_inputs(self, positions: np.ndarray) -> SourceReliefInputs:
+        """Sample source-coordinate geology and expose only relief dependencies."""
+        return self.sample_source(positions).to_relief_inputs()
+
+    def sample_relief_inputs_with_gradient(
+        self, positions: np.ndarray
+    ) -> SourceReliefGradientInputs:
+        """Expose relief dependencies and their source XYZ gradients."""
+        return self.sample_source_with_gradient(positions).to_relief_inputs()
 
     def sample_source(self, positions: np.ndarray) -> GeologySample:
-        """Evaluate shared source-space ownership, motion, and interactions once."""
+        """Resolve transported interactions while sharing one source-coordinate query."""
         query_points = np.asarray(positions, dtype=np.float64)
         query_count = len(query_points)
         if query_count == 0:
@@ -57,11 +71,18 @@ class GeologyField:
 
         plate_regions = self.plate_influence.sample(query_points)
         overlap_sample = self.overlap.sample_from_regions(plate_regions)
-        motion_sample = self.motion.sample_from_overlap(query_points, overlap_sample)
+        transformation = self.regions.warp.inverse_with_jacobian(query_points)
+        vector_sample = self.motion.vectors.sample_from_overlap(
+            query_points, overlap_sample, transformation=transformation
+        )
+        motion_sample = self.motion.sample_from_vectors(vector_sample)
         crust_regions = self.crust_influence.sample(query_points)
         material_sample = self.material.sample_from_regions(crust_regions)
         preference_vectors = self.preference.sample_from_regions(
             query_points, crust_regions
+        )
+        preference_vectors = pushforward_vectors(
+            preference_vectors, transformation.jacobians
         )
         context_sample = self.context.sample_pairs(
             query_points,
@@ -134,8 +155,16 @@ class GeologyField:
             self.plate_influence.sample_with_gradient(points)
         )
         overlap = self.overlap.sample_from_regions(plate_regions)
+        transformation = self.regions.warp.inverse_with_hessian(points)
+        vector_sample = self.motion.vectors.sample_from_overlap_with_jacobian(
+            points, overlap, transformation=transformation
+        )
         motion_gradient = self.motion.sample_from_regions_with_gradient(
-            points, plate_regions, plate_membership_gradients, overlap_sample=overlap
+            points,
+            plate_regions,
+            plate_membership_gradients,
+            overlap_sample=overlap,
+            vector_sample=vector_sample,
         )
         motion_sample = motion_gradient.sample
         crust_regions, crust_membership_gradients = (
@@ -146,8 +175,17 @@ class GeologyField:
                 crust_regions, crust_membership_gradients
             )
         )
-        preference_vectors, preference_jacobians = self.preference.sample_with_jacobian(
+        source_preference = self.preference.sample_with_jacobian(
             points, crust_regions, crust_membership_gradients
+        )
+        preference_vectors = pushforward_vectors(
+            source_preference.values, transformation.jacobians
+        )
+        preference_jacobians = pushforward_vector_jacobians(
+            source_preference.values,
+            source_preference.jacobians,
+            transformation.jacobians,
+            transformation.hessians,
         )
         context_gradient = self.context.sample_pairs_with_gradient(
             points,
@@ -198,37 +236,6 @@ class GeologyField:
         return GeologyGradientSample(
             sample, motion_gradient, context_gradient, material_gradients
         )
-
-    def sample_density_anomaly_with_gradient(
-        self, positions: np.ndarray
-    ) -> ScalarSample:
-        sample = noise_multiplier_with_gradient(
-            np.asarray(positions, dtype=np.float64),
-            seed=self.density_noise_seed,
-            frequency=self.density_config.noise_frequency,
-            strength=self.density_config.variation_strength,
-        )
-        values = sample.values - 1.0
-        values.setflags(write=False)
-        return ScalarSample(values, sample.gradients)
-
-    def sample_density_anomaly(self, positions: np.ndarray) -> np.ndarray:
-        """Sample the independent relative crust-density anomaly."""
-        query_points = np.asarray(positions, dtype=np.float64)
-        if len(query_points) == 0:
-            values = np.empty(0, dtype=np.float64)
-        else:
-            values = (
-                noise_multiplier(
-                    query_points,
-                    seed=self.density_noise_seed,
-                    frequency=self.density_config.noise_frequency,
-                    strength=self.density_config.variation_strength,
-                )
-                - 1.0
-            )
-        values.setflags(write=False)
-        return values
 
 
 def _empty_geology_sample() -> GeologySample:

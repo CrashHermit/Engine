@@ -19,6 +19,32 @@ def main() -> None:
     parser.add_argument("--frequency", type=int, default=config.subdivision_frequency)
     parser.add_argument("--field-frequency", type=int, default=80)
     parser.add_argument("--radius-m", type=float, default=config.planet.radius_m)
+    parser.add_argument(
+        "--rotation-axis",
+        nargs=3,
+        type=float,
+        default=config.planet.rotation_axis,
+        metavar=("X", "Y", "Z"),
+        help="Planetary north axis; any nonzero Cartesian direction",
+    )
+    parser.add_argument(
+        "--wind-speed-m-s",
+        type=float,
+        default=config.climate.circulation.base_speed_m_s,
+        help="Reference prevailing wind speed, independent of plate motion",
+    )
+    parser.add_argument(
+        "--equator-temperature-c",
+        type=float,
+        default=config.climate.temperature.equator_temperature_c,
+        help="Latitude temperature baseline at the unit-sphere equator (Celsius)",
+    )
+    parser.add_argument(
+        "--pole-temperature-c",
+        type=float,
+        default=config.climate.temperature.pole_temperature_c,
+        help="Latitude temperature baseline at the unit-sphere poles (Celsius)",
+    )
     parser.add_argument("--layer", choices=LAYERS, default="elevation")
     parser.add_argument("--terrain-relief", action="store_true")
     parser.add_argument("--vertical-exaggeration", type=float, default=1.0)
@@ -83,61 +109,67 @@ def main() -> None:
     parser.add_argument(
         "--subduction-trench-depth-multiplier",
         type=float,
-        default=config.elevation.tectonic.subduction_trench_depth_multiplier,
+        default=config.relief.tectonic.subduction_trench_depth_multiplier,
         help="Scale trench depth independently of subduction arcs and convergence",
+    )
+    parser.add_argument(
+        "--tectonic-motion-response-scale",
+        type=float,
+        default=config.relief.tectonic.motion_response_scale,
+        help="Motion scale for smooth relief saturation; larger values weaken response",
     )
     parser.add_argument(
         "--terrain-variation-percent",
         type=float,
-        default=config.elevation.variation.amplitude_percent,
+        default=config.relief.variation.amplitude_percent,
     )
+    volcanic_defaults = config.relief.volcanism
     parser.add_argument(
         "--volcanic-height-percent",
         type=float,
-        default=config.elevation.volcanism.relief_height_percent,
-        help="Localized volcanic relief amplitude as a percentage of planet radius",
+        default=volcanic_defaults.relief_height_percent,
+        help="Maximum volcanic relief as a percentage of planet radius",
     )
-    volcanic_defaults = config.elevation.volcanism
+    parser.add_argument(
+        "--volcanic-candidate-count",
+        type=int,
+        default=volcanic_defaults.candidate_count,
+        help="Number of world-space suitability candidates for volcanic placement",
+    )
     parser.add_argument(
         "--hotspot-count",
         type=int,
         default=volcanic_defaults.hotspot_count,
-        help="Number of independently seeded volcanic rods",
+        help="Number of intraplate volcanic rods",
     )
     parser.add_argument(
-        "--hotspot-width-min-percent",
-        type=float,
-        default=volcanic_defaults.hotspot_width_min_percent,
-        help="Minimum rod radius as a percentage of planet radius in source space",
+        "--tectonic-volcano-count",
+        type=int,
+        default=volcanic_defaults.tectonic_count,
+        help="Number of tectonic volcanic rods",
     )
     parser.add_argument(
-        "--hotspot-width-max-percent",
+        "--hotspot-placement-bias",
         type=float,
-        default=volcanic_defaults.hotspot_width_max_percent,
-        help="Maximum rod radius as a percentage of planet radius in source space",
+        default=volcanic_defaults.hotspot_bias,
+        help="Concentration of intraplate rods toward suitable candidates",
     )
     parser.add_argument(
-        "--hotspot-length-percent",
+        "--tectonic-placement-bias",
         type=float,
-        default=volcanic_defaults.hotspot_length_percent,
-        help="Rod length as a percentage of planet radius in source space",
+        default=volcanic_defaults.tectonic_bias,
+        help="Concentration of tectonic rods toward suitable candidates",
     )
     parser.add_argument(
-        "--hotspot-noise-strength",
+        "--coastal-shelf-influence-span",
         type=float,
-        default=volcanic_defaults.hotspot_height_noise_strength,
-        help="Hotspot height-noise attenuation strength; does not change width noise",
-    )
-    parser.add_argument(
-        "--coastal-shelf-span",
-        type=float,
-        default=config.elevation.coastal.shelf.span,
+        default=config.relief.coastal.shelf.influence_span,
         help="Shelf span in continental-influence units, not geographic distance",
     )
     parser.add_argument(
         "--ridge-detail-blend",
         type=float,
-        default=config.elevation.ridge_detail.blend,
+        default=config.relief.ridge_detail.blend,
         help="Collision crest blend: 0 boundary-centered, 1 distributed ridge detail",
     )
     parser.add_argument(
@@ -156,7 +188,22 @@ def main() -> None:
         config,
         seed=args.seed,
         subdivision_frequency=args.frequency,
-        planet=replace(config.planet, radius_m=args.radius_m),
+        planet=replace(
+            config.planet,
+            radius_m=args.radius_m,
+            rotation_axis=tuple(args.rotation_axis),
+        ),
+        climate=replace(
+            config.climate,
+            circulation=replace(
+                config.climate.circulation, base_speed_m_s=args.wind_speed_m_s
+            ),
+            temperature=replace(
+                config.climate.temperature,
+                equator_temperature_c=args.equator_temperature_c,
+                pole_temperature_c=args.pole_temperature_c,
+            ),
+        ),
         geology=replace(
             config.geology,
             boundary_motion=replace(
@@ -185,33 +232,35 @@ def main() -> None:
                 transition_width=args.collision_transition_width,
             ),
         ),
-        elevation=replace(
-            config.elevation,
+        relief=replace(
+            config.relief,
             tectonic=replace(
-                config.elevation.tectonic,
+                config.relief.tectonic,
                 subduction_trench_depth_multiplier=args.subduction_trench_depth_multiplier,
-            ),
-            volcanism=replace(
-                config.elevation.volcanism,
-                relief_height_percent=args.volcanic_height_percent,
-                hotspot_count=args.hotspot_count,
-                hotspot_width_min_percent=args.hotspot_width_min_percent,
-                hotspot_width_max_percent=args.hotspot_width_max_percent,
-                hotspot_length_percent=args.hotspot_length_percent,
-                hotspot_height_noise_strength=args.hotspot_noise_strength,
+                motion_response_scale=args.tectonic_motion_response_scale,
             ),
             coastal=replace(
-                config.elevation.coastal,
+                config.relief.coastal,
                 shelf=replace(
-                    config.elevation.coastal.shelf, span=args.coastal_shelf_span
+                    config.relief.coastal.shelf,
+                    influence_span=args.coastal_shelf_influence_span,
                 ),
             ),
             ridge_detail=replace(
-                config.elevation.ridge_detail, blend=args.ridge_detail_blend
+                config.relief.ridge_detail, blend=args.ridge_detail_blend
             ),
             variation=replace(
-                config.elevation.variation,
+                config.relief.variation,
                 amplitude_percent=args.terrain_variation_percent,
+            ),
+            volcanism=replace(
+                config.relief.volcanism,
+                candidate_count=args.volcanic_candidate_count,
+                hotspot_count=args.hotspot_count,
+                tectonic_count=args.tectonic_volcano_count,
+                hotspot_bias=args.hotspot_placement_bias,
+                tectonic_bias=args.tectonic_placement_bias,
+                relief_height_percent=args.volcanic_height_percent,
             ),
         ),
     )
@@ -265,6 +314,7 @@ def main() -> None:
         rotation_frames=args.rotation_frames,
         rotation_fps=args.rotation_fps,
         elevation_range=elevation_range,
+        rebuild_config=config,
     )
 
 

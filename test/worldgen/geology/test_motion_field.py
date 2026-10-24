@@ -7,8 +7,11 @@ from src.worldgen.field.regions import build_warped_voronoi_field
 from src.worldgen.field.voronoi import VoronoiField3D
 from src.worldgen.field.warp import ShearWarpConfig
 from src.worldgen.geometry.icosphere import generate_icosphere
-from src.worldgen.geology.config import PlateMotionConfig
-from src.worldgen.geology.motion import build_plate_motion_field, generate_plate_motion
+from src.worldgen.geology.motion import (
+    PlateMotionConfig,
+    build_plate_motion_field,
+    generate_plate_motion,
+)
 
 
 def _assert_global_rng_unchanged(before: tuple, after: tuple) -> None:

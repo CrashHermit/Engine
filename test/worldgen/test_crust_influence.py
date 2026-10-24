@@ -5,10 +5,10 @@ from src.worldgen.field.region_influence import (
     RegionInfluenceField,
 )
 from src.worldgen.field.voronoi import VoronoiField3D
-from src.worldgen.geology.config import MaterialBlendConfig
 from src.worldgen.geology.crust_field import CrustField
 from src.worldgen.geology.crust_influence import (
     CrustInfluenceField,
+    MaterialBlendConfig,
     continental_response_weight,
 )
 

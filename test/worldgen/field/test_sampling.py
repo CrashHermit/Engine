@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.worldgen.geometry import generate_icosphere
+from src.worldgen.geometry.icosphere import generate_icosphere
 from src.worldgen.utilities.sampling import poisson_disk_sample
 
 

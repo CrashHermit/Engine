@@ -6,11 +6,14 @@ from dataclasses import dataclass
 import numpy as np
 
 
-from src.worldgen.field.differential import VectorSample
+from src.worldgen.field.differential import VectorHessianSample, VectorSample
 
 
 type ShearGradientSampler = Callable[
     [np.ndarray, int, int, float], tuple[np.ndarray, np.ndarray]
+]
+type ShearHessianSampler = Callable[
+    [np.ndarray, int, int, float], tuple[np.ndarray, np.ndarray, np.ndarray]
 ]
 type ShearSampler = Callable[[np.ndarray, int, int, float], np.ndarray]
 
@@ -35,6 +38,7 @@ class ShearWarpField:
     config: ShearWarpConfig
     shear: ShearSampler
     shear_with_gradient: ShearGradientSampler | None = None
+    shear_with_hessian: ShearHessianSampler | None = None
 
     def sample(self, positions: np.ndarray) -> np.ndarray:
         """Map Cartesian coordinates into the sheared coordinate space."""
@@ -51,6 +55,61 @@ class ShearWarpField:
     def inverse_with_jacobian(self, positions: np.ndarray) -> VectorSample:
         """Invert coordinates and return the exact inverse-map Jacobian."""
         return self._transform_with_jacobian(positions, inverse=True)
+
+    def sample_with_hessian(self, positions: np.ndarray) -> VectorHessianSample:
+        """Map coordinates and return exact first and second derivatives."""
+        return self._transform_with_hessian(positions, inverse=False)
+
+    def inverse_with_hessian(self, positions: np.ndarray) -> VectorHessianSample:
+        """Invert coordinates and return exact first and second derivatives."""
+        return self._transform_with_hessian(positions, inverse=True)
+
+    def _transform_with_hessian(
+        self, positions: np.ndarray, *, inverse: bool
+    ) -> VectorHessianSample:
+        transformed = np.array(positions, dtype=np.float64, copy=True)
+        jacobians = np.broadcast_to(np.eye(3), (len(transformed), 3, 3)).copy()
+        hessians = np.zeros((len(transformed), 3, 3, 3), dtype=np.float64)
+        if (
+            len(transformed) == 0
+            or self.config.iterations == 0
+            or self.config.amplitude == 0.0
+        ):
+            return VectorHessianSample(transformed, jacobians, hessians)
+        direction = -1.0 if inverse else 1.0
+        iterations = (
+            range(self.config.iterations - 1, -1, -1)
+            if inverse
+            else range(self.config.iterations)
+        )
+        axes = range(2, -1, -1) if inverse else range(3)
+        for iteration in iterations:
+            scale = direction * self.config.amplitude * self.config.gain**iteration
+            frequency_multiplier = self.config.lacunarity**iteration
+            for axis in axes:
+                plane_positions = np.delete(transformed, axis, axis=1)
+                offsets, plane_gradients, plane_hessians = self.shear_with_hessian(
+                    plane_positions, iteration, axis, frequency_multiplier
+                )
+                other_axes = [index for index in range(3) if index != axis]
+                local = np.broadcast_to(np.eye(3), (len(transformed), 3, 3)).copy()
+                local[:, axis, other_axes] += scale * plane_gradients
+                local_hessians = np.zeros_like(hessians)
+                for plane_i, input_i in enumerate(other_axes):
+                    for plane_j, input_j in enumerate(other_axes):
+                        local_hessians[:, axis, input_i, input_j] = (
+                            scale * plane_hessians[:, plane_i, plane_j]
+                        )
+                hessians = np.einsum("nab,nbij->naij", local, hessians)
+                hessians += np.einsum(
+                    "nabc,nbi,ncj->naij",
+                    local_hessians,
+                    jacobians,
+                    jacobians,
+                )
+                transformed[:, axis] += scale * offsets
+                jacobians = np.einsum("nab,nbj->naj", local, jacobians)
+        return VectorHessianSample(transformed, jacobians, hessians)
 
     def _transform_with_jacobian(
         self, positions: np.ndarray, *, inverse: bool

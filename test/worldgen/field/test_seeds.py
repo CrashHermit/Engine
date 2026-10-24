@@ -1,6 +1,10 @@
 import numpy as np
 
-from src.worldgen.field.seeds import generate_direction_seeds, generate_seed_cloud
+from src.worldgen.field.seeds import (
+    generate_direction_seeds,
+    generate_seed_cloud,
+    select_weighted_seeds,
+)
 
 
 def test_seed_cloud_reproducibility_without_touching_global_rng():
@@ -52,3 +56,33 @@ def test_empty_direction_seeds_preserve_shape_and_immutability():
     assert seeds.shape == (0, 3)
     assert seeds.dtype == np.float64
     assert not seeds.flags.writeable
+
+
+def test_weighted_selection_excludes_zero_weights_without_replacement():
+    candidates = np.arange(18, dtype=np.float64).reshape(6, 3)
+    weights = np.array([0.0, 1.0, 0.0, 4.0, 0.0, 2.0])
+    selected = select_weighted_seeds(
+        candidates, weights, 3, rng=np.random.default_rng(19)
+    )
+    np.testing.assert_array_equal(np.sort(selected[:, 0]), candidates[[1, 3, 5], 0])
+    assert not selected.flags.writeable
+    np.testing.assert_array_equal(weights, [0, 1, 0, 4, 0, 2])
+    empty = select_weighted_seeds(
+        candidates, np.zeros(6), 0, rng=np.random.default_rng(19)
+    )
+    assert empty.shape == (0, 3)
+
+
+def test_weighted_selection_obeys_relative_weights_and_is_reproducible():
+    candidates = np.eye(3)
+    weights = np.array([1.0, 3.0, 6.0])
+    rng = np.random.default_rng(73)
+    chosen = np.array(
+        [select_weighted_seeds(candidates, weights, 1, rng=rng)[0] for _ in range(4000)]
+    )
+    np.testing.assert_allclose(chosen.mean(axis=0), [0.1, 0.3, 0.6], atol=0.025)
+    a = select_weighted_seeds(candidates, weights, 2, rng=np.random.default_rng(91))
+    b = select_weighted_seeds(
+        candidates, 10 * weights, 2, rng=np.random.default_rng(91)
+    )
+    np.testing.assert_array_equal(a, b)

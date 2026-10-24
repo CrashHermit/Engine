@@ -9,8 +9,9 @@ from functools import partial
 import numpy as np
 
 from src.worldgen.config import WorldgenConfig
-from src.worldgen.elevation.generate import generate_elevation_field
+from src.worldgen.relief.generate import generate_source_relief_field
 from src.worldgen.field.boundary_motion import BoundaryMotionField
+from src.worldgen.field.boundary_transport import TransportedBoundaryVectorField
 from src.worldgen.field.boundary_vector import BoundaryVectorField
 from src.worldgen.field.interaction import BoundaryInteractionField
 from src.worldgen.field.differential import VectorSample
@@ -75,8 +76,12 @@ def _comparison_world(
             )
 
     motion = BoundaryMotionField(
-        BoundaryVectorField(
-            geology.overlap, sample_region_vectors, sample_region_jacobians
+        TransportedBoundaryVectorField(
+            BoundaryVectorField(
+                geology.overlap, sample_region_vectors, sample_region_jacobians
+            ),
+            source_to_world_with_jacobian=baseline.warp.inverse_with_jacobian,
+            source_to_world_with_hessian=baseline.warp.inverse_with_hessian,
         )
     )
     comparison_geology = replace(
@@ -84,16 +89,18 @@ def _comparison_world(
         motion=motion,
         interaction=BoundaryInteractionField(motion),
     )
-    source_elevation = generate_elevation_field(
-        config.elevation,
+    source_relief = generate_source_relief_field(
+        config.relief,
         geology=comparison_geology,
-        noise_seeds=baseline.source_elevation.coastal.span_noise_seeds,
+        noise_seeds=baseline.source_relief.coastal.influence_span_noise_seeds,
     )
     return WorldField(
         geology=comparison_geology,
-        source_elevation=source_elevation,
-        variation=baseline.variation,
+        source_relief=source_relief,
         warp=baseline.warp,
+        impact_relief=baseline.impact_relief,
+        volcanism=baseline.volcanism,
+        climate=baseline.climate,
     )
 
 
@@ -292,7 +299,7 @@ def main() -> None:
     from src.worldgen.render.viewer import render_world
 
     config = WorldgenConfig(seed=args.seed, subdivision_frequency=args.frequency)
-    tectonic = config.elevation.tectonic
+    tectonic = config.relief.tectonic
     collision_width = (
         tectonic.collision.width_percent * args.flank_width
         if args.collision_width_percent is None
@@ -305,12 +312,12 @@ def main() -> None:
     )
     config = replace(
         config,
-        elevation=replace(
-            config.elevation,
+        relief=replace(
+            config.relief,
             tectonic=replace(
-                config.elevation.tectonic,
+                config.relief.tectonic,
                 collision=replace(
-                    config.elevation.tectonic.collision,
+                    config.relief.tectonic.collision,
                     width_percent=collision_width,
                     height_percent=(
                         tectonic.collision.height_percent
@@ -319,7 +326,7 @@ def main() -> None:
                     ),
                 ),
                 ridge=replace(
-                    config.elevation.tectonic.ridge,
+                    config.relief.tectonic.ridge,
                     width_percent=ridge_width,
                     height_percent=(
                         tectonic.ridge.height_percent
@@ -328,12 +335,12 @@ def main() -> None:
                     ),
                 ),
                 collision_crest_width_fraction=(
-                    config.elevation.tectonic.collision_crest_width_fraction
+                    config.relief.tectonic.collision_crest_width_fraction
                     * tectonic.collision.width_percent
                     / collision_width
                 ),
                 ridge_axial_width_fraction=(
-                    config.elevation.tectonic.ridge_axial_width_fraction
+                    config.relief.tectonic.ridge_axial_width_fraction
                     * tectonic.ridge.width_percent
                     / ridge_width
                 ),

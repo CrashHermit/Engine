@@ -6,7 +6,16 @@ import numpy as np
 
 from src.worldgen.field.seeds import generate_seed_cloud
 from src.worldgen.field.voronoi import VoronoiField3D
-from src.worldgen.geology.config import CrustPartitionConfig
+
+
+@dataclass(frozen=True, slots=True)
+class CrustPartitionConfig:
+    """Independent continuous crust partition seed counts and transition width."""
+
+    continental_seeds: int = 6
+    oceanic_seeds: int = 18
+    # Material blend spans remain dimensionless; this is a spatial overlap width.
+    transition_half_width_percent: float = 12.0
 
 
 @dataclass(frozen=True, slots=True)

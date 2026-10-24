@@ -5,9 +5,9 @@ from src.worldgen.field.region_influence import (
     RegionInfluenceField,
 )
 from src.worldgen.field.voronoi import VoronoiField3D
-from src.worldgen.geology.config import PolarityConfig
 from src.worldgen.geology.crust_field import CrustField
 from src.worldgen.geology.subduction_preference import (
+    PolarityConfig,
     SubductionPreferenceField,
     overriding_weights,
 )
@@ -53,6 +53,18 @@ def test_preference_field_is_query_set_independent_and_has_typed_empty_output():
     assert empty.shape == (0, 3)
     assert empty.dtype == np.float64
     assert not empty.flags.writeable
+
+
+def test_preference_jacobian_uses_vector_sample_contract():
+    field, regions = _preference([[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0]], [True, False])
+    points = np.array([[0.1, 0.2, 0.3], [-0.2, 0.1, 0.0]])
+    memberships, gradients = regions.sample_with_gradient(points)
+    differential = field.sample_with_jacobian(points, memberships, gradients)
+
+    np.testing.assert_array_equal(differential.values, field.sample(points))
+    assert differential.jacobians.shape == (2, 3, 3)
+    assert not differential.values.flags.writeable
+    assert not differential.jacobians.flags.writeable
 
 
 def test_polarity_weights_separate_seeded_bias_from_preference():

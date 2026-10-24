@@ -7,8 +7,8 @@ from pathlib import Path
 
 import numpy as np
 
-from src.worldgen.config import WorldgenConfig
-from src.worldgen.elevation.config import REFERENCE_RADIUS_M, TerrainVariationConfig
+from src.worldgen.config import PlanetConfig, WorldgenConfig
+from src.worldgen.relief.variation import TerrainVariationConfig
 from src.worldgen.generate import generate_world
 from src.worldgen.geometry.icosphere import generate_icosphere
 from src.worldgen.render.viewer import WorldgenViewer
@@ -94,7 +94,7 @@ def render(
     frequency: int,
     field_frequency: int,
     *,
-    radius_m: float = REFERENCE_RADIUS_M,
+    radius_m: float = PlanetConfig().radius_m,
     vertical_exaggeration: float = 100.0,
     variation_percent: float = TerrainVariationConfig().amplitude_percent,
 ) -> None:
@@ -103,15 +103,15 @@ def render(
     configured_config = replace(
         base,
         planet=replace(base.planet, radius_m=radius_m),
-        elevation=replace(
-            base.elevation,
+        relief=replace(
+            base.relief,
             variation=TerrainVariationConfig(amplitude_percent=variation_percent),
         ),
     )
     zero_config = replace(
         configured_config,
-        elevation=replace(
-            configured_config.elevation,
+        relief=replace(
+            configured_config.relief,
             variation=TerrainVariationConfig(amplitude_percent=0.0),
         ),
     )
@@ -193,7 +193,7 @@ def render(
         )
         print(f"Rendered crust field examples for seed {seed}", flush=True)
 
-    coastal = configured_config.elevation.coastal
+    coastal = configured_config.relief.coastal
     manifest = {
         "title": "Crust material and continuous elevation",
         "frequency": frequency,
@@ -204,9 +204,9 @@ def render(
         "seeds": list(SEEDS),
         "coastal_profile": {
             "coastline_weight": coastal.coastline_weight,
-            "inland_span": coastal.inland.span,
-            "shelf_span": coastal.shelf.span,
-            "slope_span": coastal.slope.span,
+            "inland_span": coastal.inland.influence_span,
+            "shelf_span": coastal.shelf.influence_span,
+            "slope_span": coastal.slope.influence_span,
             "interior_height_percent": coastal.interior_height_percent,
             "shelf_depth_percent": coastal.shelf_depth_percent,
             "basin_depth_percent": coastal.basin_depth_percent,
@@ -261,7 +261,7 @@ def main() -> None:
     )
     parser.add_argument("--frequency", type=int, default=20)
     parser.add_argument("--field-frequency", type=int, default=80)
-    parser.add_argument("--radius-m", type=float, default=REFERENCE_RADIUS_M)
+    parser.add_argument("--radius-m", type=float, default=PlanetConfig().radius_m)
     parser.add_argument("--vertical-exaggeration", type=float, default=100.0)
     parser.add_argument(
         "--variation-percent",

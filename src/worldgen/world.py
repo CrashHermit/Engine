@@ -4,27 +4,31 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from src.worldgen.elevation.field import SourceElevationField
-from src.worldgen.elevation.model import ElevationResult
-from src.worldgen.elevation.variation import TerrainVariationField
+from src.worldgen.climate.field import ClimateField
+from src.worldgen.climate.model import ClimateSample
+from src.worldgen.relief.composition import ElevationField
+from src.worldgen.relief.field import SourceReliefField
+from src.worldgen.relief.impact import ImpactField
+from src.worldgen.relief.model import ElevationResult
+from src.worldgen.relief.variation import TerrainVariationField
+from src.worldgen.relief.volcanism import VolcanicField
 from src.worldgen.field.compose import (
-    SumScalarField,
     WarpedScalarField,
-    WarpedVectorField,
+    ReparameterizedVectorField,
 )
 from src.worldgen.field.differential import ScalarSample
 from src.worldgen.field.warp import ShearWarpField
 from src.worldgen.geology.field import GeologyField
 from src.worldgen.geology.model import GeologyResult
-from src.worldgen.geometry.differential import pullback_normals, pullback_vectors
 
 
 @dataclass(frozen=True, slots=True)
 class WorldSample:
-    """Dense geological and elevation values for one arbitrary query batch."""
+    """Geological, elevation, and climate values at arbitrary query positions."""
 
     geology: GeologyResult
     elevation: ElevationResult
+    climate: ClimateSample
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,13 +49,16 @@ class WorldBoundaryVectorSample:
 
 @dataclass(frozen=True, slots=True)
 class WorldField:
-    """Evaluate coherent geology and elevation at arbitrary Cartesian positions."""
+    """Evaluate coherent geology, elevation, and climate at Cartesian positions."""
 
     geology: GeologyField
-    source_elevation: SourceElevationField
+    source_relief: SourceReliefField
     variation: TerrainVariationField
     warp: ShearWarpField
-    elevation: SumScalarField = field(init=False, repr=False)
+    impact_relief: ImpactField
+    volcanism: VolcanicField
+    climate: ClimateField
+    elevation: ElevationField = field(init=False, repr=False)
     convergence: WarpedScalarField = field(init=False, repr=False)
     divergence: WarpedScalarField = field(init=False, repr=False)
     shear: WarpedScalarField = field(init=False, repr=False)
@@ -60,35 +67,31 @@ class WorldField:
     convergent_relief: WarpedScalarField = field(init=False, repr=False)
     divergent_relief: WarpedScalarField = field(init=False, repr=False)
     transform_relief: WarpedScalarField = field(init=False, repr=False)
-    volcanic_relief: WarpedScalarField = field(init=False, repr=False)
     shear_relief: WarpedScalarField = field(init=False, repr=False)
-    region_velocity: WarpedVectorField = field(init=False, repr=False)
+    region_velocity: ReparameterizedVectorField = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         warp_sample = self.warp.sample
         warp_jacobian = self.warp.sample_with_jacobian
-        source_elevation = WarpedScalarField(
-            warp_sample,
-            self.source_elevation.sample_total_source,
-            warp_jacobian,
-            self.source_elevation.sample_total_source_with_gradient,
-        )
         object.__setattr__(
             self,
             "elevation",
-            SumScalarField(
-                (source_elevation.sample, self.variation.sample_fraction),
-                (
-                    source_elevation.sample_with_gradient,
-                    self.variation.sample_fraction_with_gradient,
-                ),
+            ElevationField(
+                source_relief=self.source_relief,
+                warp=self.warp,
+                volcanism=self.volcanism,
+                impact_relief=self.impact_relief,
+                variation=self.variation,
             ),
         )
         object.__setattr__(
             self,
             "region_velocity",
-            WarpedVectorField(
-                warp_jacobian, self.geology.motion.vectors.sample_owner_vectors
+            ReparameterizedVectorField(
+                warp_sample,
+                self.geology.motion.vectors.sample_owner_vectors,
+                warp_jacobian,
+                self.geology.motion.vectors.sample_owner_vectors_with_jacobian,
             ),
         )
         for name, sampler, gradient_sampler in (
@@ -109,44 +112,33 @@ class WorldField:
             ),
             (
                 "coastal_relief",
-                self.source_elevation.coastal.sample_elevation,
-                self.source_elevation.coastal.sample_with_gradient,
+                self.source_relief.coastal.sample_elevation,
+                self.source_relief.coastal.sample_with_gradient,
             ),
             (
                 "tectonic_relief",
-                self.source_elevation.tectonic.sample,
-                self.source_elevation.tectonic.sample_with_gradient,
+                self.source_relief.tectonic.sample,
+                self.source_relief.tectonic.sample_with_gradient,
             ),
             (
                 "convergent_relief",
-                self.source_elevation.convergent.sample,
-                self.source_elevation.convergent.sample_with_gradient,
+                self.source_relief.convergent.sample,
+                self.source_relief.convergent.sample_with_gradient,
             ),
             (
                 "divergent_relief",
-                self.source_elevation.divergent.sample,
-                self.source_elevation.divergent.sample_with_gradient,
+                self.source_relief.divergent.sample,
+                self.source_relief.divergent.sample_with_gradient,
             ),
             (
                 "transform_relief",
-                self.source_elevation.transform.sample,
-                self.source_elevation.transform.sample_with_gradient,
+                self.source_relief.transform.sample,
+                self.source_relief.transform.sample_with_gradient,
             ),
             (
                 "shear_relief",
-                self.source_elevation.shear.sample,
-                self.source_elevation.shear.sample_with_gradient,
-            ),
-            (
-                "volcanic_relief",
-                lambda positions: (
-                    self.source_elevation.volcanism.sample(positions).relief
-                ),
-                lambda positions: (
-                    self.source_elevation.volcanism.sample_with_gradient(
-                        positions
-                    ).relief
-                ),
+                self.source_relief.shear.sample,
+                self.source_relief.shear.sample_with_gradient,
             ),
         ):
             object.__setattr__(
@@ -173,30 +165,33 @@ class WorldField:
             divergence=np.empty(query_count, dtype=np.float64),
             shear=np.empty(query_count, dtype=np.float64),
         )
-        elevation_result = ElevationResult(
-            coastal_elevation=np.empty(query_count, dtype=np.float64),
-            volcanic_potential=np.empty(query_count, dtype=np.float64),
-            volcanic_strength=np.empty(query_count, dtype=np.float64),
-            convergent_relief=np.empty(query_count, dtype=np.float64),
-            divergent_relief=np.empty(query_count, dtype=np.float64),
-            transform_relief=np.empty(query_count, dtype=np.float64),
-            shear_relief=np.empty(query_count, dtype=np.float64),
-            tectonic_relief=np.empty(query_count, dtype=np.float64),
-            terrain_variation=np.empty(query_count, dtype=np.float64),
-            volcanic_relief=np.empty(query_count, dtype=np.float64),
-            elevation=np.empty(query_count, dtype=np.float64),
-        )
+        elevation_arrays = {
+            name: np.empty(query_count, dtype=np.float64)
+            for name in (
+                "coastal_elevation",
+                "volcanic_strength",
+                "convergent_relief",
+                "divergent_relief",
+                "transform_relief",
+                "shear_relief",
+                "tectonic_relief",
+                "terrain_variation",
+                "volcanic_relief",
+                "impact_relief",
+                "elevation",
+            )
+        }
 
         for start in range(0, query_count, 1024):
             stop = min(start + 1024, query_count)
             world_block = world_positions[start:stop]
             source_block = self.warp.sample(world_block)
             geology_sample = self.geology.sample_source(source_block)
-            source_sample = self.source_elevation.sample_source(
-                source_block, geology_sample=geology_sample
+            elevation_block = self.elevation.sample_components(
+                world_block,
+                source_positions=source_block,
+                relief_inputs=geology_sample.to_relief_inputs(),
             )
-            terrain_variation = self.variation.sample_fraction(world_block)
-            base_elevation = source_sample.total
             values = geology_sample.result
             geology_result.plate_ids[start:stop] = values.plate_ids
             geology_result.crust_region_ids[start:stop] = values.crust_region_ids
@@ -210,29 +205,8 @@ class WorldField:
             geology_result.convergence[start:stop] = values.convergence
             geology_result.divergence[start:stop] = values.divergence
             geology_result.shear[start:stop] = values.shear
-            elevation_result.coastal_elevation[start:stop] = (
-                source_sample.coastal_elevation
-            )
-            elevation_result.convergent_relief[start:stop] = (
-                source_sample.convergent_relief
-            )
-            elevation_result.divergent_relief[start:stop] = (
-                source_sample.divergent_relief
-            )
-            elevation_result.transform_relief[start:stop] = (
-                source_sample.transform_relief
-            )
-            elevation_result.shear_relief[start:stop] = source_sample.shear_relief
-            elevation_result.tectonic_relief[start:stop] = source_sample.tectonic_relief
-            elevation_result.volcanic_potential[start:stop] = (
-                source_sample.volcanic_potential
-            )
-            elevation_result.volcanic_strength[start:stop] = (
-                source_sample.volcanic_strength
-            )
-            elevation_result.volcanic_relief[start:stop] = source_sample.volcanic_relief
-            elevation_result.terrain_variation[start:stop] = terrain_variation
-            elevation_result.elevation[start:stop] = base_elevation + terrain_variation
+            for name in elevation_arrays:
+                elevation_arrays[name][start:stop] = getattr(elevation_block, name)
 
         for values in (
             geology_result.plate_ids,
@@ -245,20 +219,13 @@ class WorldField:
             geology_result.convergence,
             geology_result.divergence,
             geology_result.shear,
-            elevation_result.coastal_elevation,
-            elevation_result.convergent_relief,
-            elevation_result.divergent_relief,
-            elevation_result.transform_relief,
-            elevation_result.shear_relief,
-            elevation_result.tectonic_relief,
-            elevation_result.volcanic_potential,
-            elevation_result.volcanic_strength,
-            elevation_result.volcanic_relief,
-            elevation_result.terrain_variation,
-            elevation_result.elevation,
+            *elevation_arrays.values(),
         ):
             values.setflags(write=False)
-        return WorldSample(geology_result, elevation_result)
+        elevation_result = ElevationResult(**elevation_arrays)
+        return WorldSample(
+            geology_result, elevation_result, self.climate.sample(world_positions)
+        )
 
     def sample_elevation_meters(
         self, positions: np.ndarray, *, radius_m: float
@@ -278,21 +245,14 @@ class WorldField:
     def sample_boundary_vectors(
         self, positions: np.ndarray
     ) -> WorldBoundaryVectorSample:
-        """Query all locally overlapping pairs without requiring caller region IDs.
-
-        This exposes transported vectors for other consumers. Construction C
-        still computes geological interactions entirely in source coordinates.
-        """
-        transformed = self.warp.sample_with_jacobian(
-            np.asarray(positions, dtype=np.float64)
-        )
-        source = self.geology.motion.vectors.sample(transformed.values)
-        jacobians = transformed.jacobians[source.query_indices]
+        """Return the same transported pair vectors and normals used by geology."""
+        source_positions = self.warp.sample(np.asarray(positions, dtype=np.float64))
+        transported = self.geology.motion.vectors.sample(source_positions)
         return WorldBoundaryVectorSample(
-            query_indices=source.query_indices,
-            region_pairs=source.region_pairs,
-            influence=source.influence,
-            source_plane_distance=source.plane_distance,
-            normals=pullback_normals(source.normals, jacobians),
-            vectors=pullback_vectors(source.vectors, jacobians[:, None, :, :]),
+            query_indices=transported.query_indices,
+            region_pairs=transported.region_pairs,
+            influence=transported.influence,
+            source_plane_distance=transported.plane_distance,
+            normals=transported.normals,
+            vectors=transported.vectors,
         )

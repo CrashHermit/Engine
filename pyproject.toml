@@ -16,13 +16,15 @@ dependencies = [
     "textual-canvas>=1.1.0",
     "langgraph-checkpoint-sqlite>=3.1.0",
     "miniaudio>=1.71",
-    "pyfastnoiselite @ git+https://github.com/CrashHermit/PyFastNoiseLite.git@efc5d451034912a2642c8801cffd177eb59f6e85",
+    "pyfastnoiselite @ git+https://github.com/CrashHermit/PyFastNoiseLite.git@de35cb717f52d5955519ea27a046876e7fbe5a31",
     "scipy>=1.14.0",
     "numpy>=2.4.6",
     "scipy-stubs",
     "numba>=0.61.0",
     "pyvista>=0.48.4",
     "imageio>=2.28.1",
+    "pyvistaqt>=0.13.1",
+    "pyside6>=6.12.0",
 ]
 
 [dependency-groups]

@@ -1,4 +1,4 @@
-"""First-order Cartesian sampling contracts shared by continuous fields."""
+"""Cartesian differential sampling contracts shared by continuous fields."""
 
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -30,8 +30,38 @@ class VectorSample:
         self.jacobians.setflags(write=False)
 
 
+@dataclass(frozen=True, slots=True)
+class ScalarHessianSample:
+    """Scalar values, gradients, and Hessians (query, input_axis, input_axis)."""
+
+    values: np.ndarray
+    gradients: np.ndarray
+    hessians: np.ndarray
+
+    def __post_init__(self) -> None:
+        self.values.setflags(write=False)
+        self.gradients.setflags(write=False)
+        self.hessians.setflags(write=False)
+
+
+@dataclass(frozen=True, slots=True)
+class VectorHessianSample:
+    """Map values, Jacobians, and Hessians (query, output_axis, input, input)."""
+
+    values: np.ndarray
+    jacobians: np.ndarray
+    hessians: np.ndarray
+
+    def __post_init__(self) -> None:
+        self.values.setflags(write=False)
+        self.jacobians.setflags(write=False)
+        self.hessians.setflags(write=False)
+
+
 type ScalarGradientSampler = Callable[[np.ndarray], ScalarSample]
 type VectorJacobianSampler = Callable[[np.ndarray], VectorSample]
+type ScalarHessianSampler = Callable[[np.ndarray], ScalarHessianSample]
+type VectorHessianSampler = Callable[[np.ndarray], VectorHessianSample]
 
 
 def sum_indexed_scalar_samples(

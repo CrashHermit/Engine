@@ -1,6 +1,6 @@
 import numpy as np
 
-from src.worldgen.field.motion import RegionRotationField
+from src.worldgen.field.motion import RegionRotationField, RotationField
 from src.worldgen.field.voronoi import VoronoiField3D
 from src.worldgen.field.warp import ShearWarpConfig, ShearWarpField
 
@@ -85,3 +85,64 @@ def test_selected_region_rotations_preserve_repeated_ids_and_empty_shape() -> No
     assert not velocities.flags.writeable
     assert empty.shape == (0, 3)
     assert not empty.flags.writeable
+
+
+def test_global_rotation_field_values_jacobian_and_empty_strided_batches():
+    source_angular_velocity = np.array([0.0, 0.0, 2.0])
+    rotation = RotationField(source_angular_velocity)
+    source_angular_velocity[:] = 99.0
+    points = np.array(
+        [
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
+            [1.0, 1.0, 1.0],
+            [0.0, 0.0, 0.0],
+            [3.0, 2.0, -1.0],
+            [2.0, -1.0, 0.5],
+            [0.2, 0.4, 0.6],
+        ]
+    )[::2]
+
+    sample = rotation.sample_with_jacobian(points)
+    empty = rotation.sample_with_jacobian(np.empty((0, 3)))
+    expected_jacobian = np.array([[0.0, -2.0, 0.0], [2.0, 0.0, 0.0], [0.0, 0.0, 0.0]])
+
+    np.testing.assert_array_equal(sample.values, np.cross([0.0, 0.0, 2.0], points))
+    np.testing.assert_array_equal(
+        sample.jacobians, np.broadcast_to(expected_jacobian, (4, 3, 3))
+    )
+    np.testing.assert_array_equal(sample.values[1:3], [[0.0, 0.0, 0.0]] * 2)
+    assert rotation.angular_velocity.tolist() == [0.0, 0.0, 2.0]
+    assert not rotation.angular_velocity.flags.writeable
+    assert not sample.values.flags.writeable
+    assert not sample.jacobians.flags.writeable
+    assert empty.values.shape == (0, 3)
+    assert empty.jacobians.shape == (0, 3, 3)
+    assert not empty.values.flags.writeable
+    assert not empty.jacobians.flags.writeable
+
+
+def test_regional_rotation_jacobians_use_shared_cartesian_derivative():
+    motion = RegionRotationField(
+        VoronoiField3D(np.array([[-1.0, 0.0, 0.0], [1.0, 0.0, 0.0]])),
+        np.array([[1.0, 2.0, 3.0], [-2.0, 1.0, 0.5]]),
+    )
+    points = np.array([[0.3, -0.2, 0.7], [-0.1, 0.8, 0.4]])
+
+    sample = motion.sample_regions_with_jacobian(points, np.array([0, 1]))
+    step = 1e-6
+    numerical = np.stack(
+        [
+            (
+                motion.sample_regions(points + np.eye(3)[axis] * step, [0, 1])
+                - motion.sample_regions(points - np.eye(3)[axis] * step, [0, 1])
+            )
+            / (2.0 * step)
+            for axis in range(3)
+        ],
+        axis=-1,
+    )
+
+    np.testing.assert_allclose(sample.jacobians, numerical, rtol=1e-9, atol=1e-9)
+    assert not sample.jacobians.flags.writeable

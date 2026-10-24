@@ -5,9 +5,9 @@ from src.worldgen.field.region_influence import (
     RegionInfluenceField,
 )
 from src.worldgen.field.voronoi import VoronoiField3D
-from src.worldgen.geology.config import CrustPartitionConfig
 from src.worldgen.geology.crust_field import (
     CrustField,
+    CrustPartitionConfig,
     build_crust_field,
 )
 from src.worldgen.geology.crust_influence import CrustInfluenceField

@@ -12,11 +12,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.worldgen.elevation.profiles import (
-    collision_profile,
-    divergent_profile,
-    shear_profile,
-)
+from src.worldgen.relief.collision import collision_profile
+from src.worldgen.relief.divergence import divergent_profile
+from src.worldgen.relief.fault import fault_profile
 from src.worldgen.field.noise import NoiseConfig
 from src.worldgen.field.region_influence import (
     RegionInfluenceConfig,
@@ -25,8 +23,7 @@ from src.worldgen.field.region_influence import (
 from src.worldgen.field.region_overlap import RegionOverlapField
 from src.worldgen.field.regions import WarpedVoronoiField, build_warped_voronoi_field
 from src.worldgen.field.warp import ShearWarpConfig
-from src.worldgen.geology.config import PlateMotionConfig
-from src.worldgen.geology.motion import generate_plate_motion
+from src.worldgen.geology.motion import PlateMotionConfig, generate_plate_motion
 from src.worldgen.geometry.icosphere import generate_icosphere
 from src.worldgen.geometry.rotation import rotational_velocity
 
@@ -116,14 +113,14 @@ def evaluate_relief(
         dtype=np.float64,
         count=len(distance),
     )
-    shear_profile_values = np.fromiter(
-        (shear_profile(float(value), width) for value in distance),
+    fault_profile_values = np.fromiter(
+        (fault_profile(float(value), width) for value in distance),
         dtype=np.float64,
         count=len(distance),
     )
     collision = np.maximum(-opening, 0.0) * (0.65 * broad + 0.35 * crest)
     rift = np.maximum(opening, 0.0) * divergent
-    return collision + rift + 0.15 * sliding * shear_profile_values
+    return collision + rift + 0.15 * sliding * fault_profile_values
 
 
 def _sample_source(world: ComparisonWorld, positions: np.ndarray) -> FieldSample:

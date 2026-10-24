@@ -5,12 +5,14 @@ import numpy as np
 from src.worldgen.config import WorldgenConfig
 from src.worldgen.generate import generate_world
 from src.worldgen.render.layers import elevation_colormap, layer_style
-from src.worldgen.surface import SurfaceResult
+from src.worldgen.surface.model import SurfaceResult
 from src.worldgen.world import WorldSample
 
 
 def _sample(world):
-    return WorldSample(geology=world.geology, elevation=world.elevation)
+    return WorldSample(
+        geology=world.geology, elevation=world.elevation, climate=world.climate
+    )
 
 
 def test_public_layers_and_meter_elevation_styles():
@@ -72,9 +74,9 @@ def test_variation_and_tectonic_styles_are_signed_meter_channels():
     config = WorldgenConfig(seed=17, subdivision_frequency=2)
     config = replace(
         config,
-        elevation=replace(
-            config.elevation,
-            variation=replace(config.elevation.variation, amplitude_percent=0.01),
+        relief=replace(
+            config.relief,
+            variation=replace(config.relief.variation, amplitude_percent=0.01),
         ),
     )
     world = generate_world(config)

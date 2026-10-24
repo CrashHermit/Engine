@@ -9,13 +9,14 @@ from src.worldgen.field.region_influence import (
 )
 from src.worldgen.field.region_overlap import RegionOverlapField
 from src.worldgen.field.voronoi import VoronoiField3D
-from src.worldgen.geology.config import MaterialBlendConfig, PolarityConfig
 from src.worldgen.geology.crust_field import CrustField
 from src.worldgen.geology.crust_influence import (
     CrustInfluenceField,
+    MaterialBlendConfig,
     continental_response_weight,
 )
 from src.worldgen.geology.subduction_preference import (
+    PolarityConfig,
     SubductionPreferenceField,
     overriding_weights,
 )
@@ -197,8 +198,9 @@ def test_context_material_and_polarity_gradients_match_finite_differences():
         [[0, 1]], convergence=[0.2], divergence=[0.1], influence=[0.8]
     )
     zeros = np.zeros((1, 3), dtype=np.float64)
+    normal_jacobians = np.zeros((1, 3, 3), dtype=np.float64)
     motion_gradient = BoundaryMotionGradientSample(
-        motion, zeros, zeros, zeros, zeros, zeros, zeros
+        motion, zeros, zeros, zeros, zeros, zeros, zeros, normal_jacobians
     )
     analytic = context.sample_pairs_with_gradient(position, motion_gradient)
     step = 1e-6

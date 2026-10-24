@@ -93,37 +93,30 @@ def test_sea_surface_facets_stay_within_shallow_water_depth_at_true_scale():
         viewer.plotter.close()
 
 
-def test_water_button_toggles_surface_and_enables_terrain_relief():
+def test_sea_level_scene_setter_controls_surface_and_terrain_dependency():
     world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
     viewer = WorldgenViewer(world, field_frequency=5, off_screen=True)
     try:
         viewer.select_layer("elevation")
-        viewer.add_layer_controls()
-        water_widget = viewer.widgets["water"]
-        water_widget.GetRepresentation().SetState(1)
-        water_widget.InvokeEvent("StateChangedEvent")
+        viewer.set_sea_level(True)
 
         assert viewer.sea_level
         assert viewer.terrain_relief
-        assert viewer.widgets["terrain-relief"].GetRepresentation().GetState() == 1
         assert len(viewer.actors) == 2
         water_surface = viewer.actors[0].mapper.dataset
         np.testing.assert_allclose(
             np.linalg.norm(water_surface.points, axis=1), 1.0, atol=1e-7
         )
 
-        water_widget.GetRepresentation().SetState(0)
-        water_widget.InvokeEvent("StateChangedEvent")
+        viewer.set_sea_level(False)
         assert not viewer.sea_level
         assert viewer.terrain_relief
         assert len(viewer.actors) == 1
+
         viewer.set_sea_level(True)
-        assert water_widget.GetRepresentation().GetState() == 1
         viewer.set_terrain_relief(False)
         assert not viewer.terrain_relief
         assert not viewer.sea_level
-        assert water_widget.GetRepresentation().GetState() == 0
-        assert viewer.widgets["terrain-relief"].GetRepresentation().GetState() == 0
         assert len(viewer.actors) == 1
     finally:
         viewer.plotter.close()
@@ -175,7 +168,11 @@ def test_elevation_viewer_renders_one_sided_color_limits(elevation_range):
         viewer.select_layer("elevation")
         viewer.plotter.render()
         lookup_table = viewer.actors[-1].mapper.lookup_table
-        sample = WorldSample(geology=world.geology, elevation=world.elevation)
+        sample = WorldSample(
+            geology=world.geology,
+            elevation=world.elevation,
+            climate=world.climate,
+        )
         style = layer_style(
             sample,
             "elevation",
@@ -266,7 +263,7 @@ def test_hex_outlines_toggle_and_remain_hidden_across_layer_changes():
         viewer.plotter.close()
 
 
-def test_surface_layer_checkbox_updates_scalars_and_retains_camera() -> None:
+def test_surface_layer_selection_updates_scalars_and_retains_camera() -> None:
     world = generate_world(WorldgenConfig(seed=17, subdivision_frequency=2))
     viewer = WorldgenViewer(world, field_frequency=5, off_screen=True, hex_edges=False)
     viewer.plotter.window_size = (800, 600)
@@ -274,19 +271,10 @@ def test_surface_layer_checkbox_updates_scalars_and_retains_camera() -> None:
     try:
         viewer.plotter.reset_camera()
         viewer.select_layer("slope")
-        viewer.add_layer_controls()
         camera = viewer.plotter.camera_position
-        slope_widget = viewer.widgets["slope"]
-        roughness_widget = viewer.widgets["roughness"]
-        assert slope_widget.GetRepresentation().GetState() == 1
-        assert roughness_widget.GetRepresentation().GetState() == 0
-
-        roughness_widget.GetRepresentation().SetState(1)
-        roughness_widget.InvokeEvent("StateChangedEvent")
+        viewer.select_layer("roughness")
 
         assert viewer.layer == "roughness"
-        assert slope_widget.GetRepresentation().GetState() == 0
-        assert roughness_widget.GetRepresentation().GetState() == 1
         assert viewer.plotter.camera_position == camera
         np.testing.assert_array_equal(
             viewer.actors[0].mapper.dataset.cell_data["roughness"],

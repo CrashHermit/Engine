@@ -8,9 +8,16 @@ from src.worldgen.field.region_influence import (
     RegionInfluenceField,
     RegionInfluenceSample,
 )
-from src.worldgen.geology.config import MaterialBlendConfig
 from src.worldgen.geology.crust_field import CrustField
-from src.worldgen.utilities.curves import smoothstep
+from src.worldgen.utilities.curves import smoothstep, smoothstep_derivative
+
+
+@dataclass(frozen=True, slots=True)
+class MaterialBlendConfig:
+    """Continental influence interval that blends geological profile families."""
+
+    midpoint: float = 0.5
+    transition_width: float = 0.2
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,3 +85,16 @@ def continental_response_weight(
     )
     weight.setflags(write=False)
     return weight
+
+
+def continental_response_derivative(
+    continental_weight: np.ndarray,
+    config: MaterialBlendConfig = MaterialBlendConfig(),
+) -> np.ndarray:
+    """Return the derivative of continental response by input weight."""
+    parameter = (
+        np.asarray(continental_weight, dtype=np.float64) - config.midpoint
+    ) / config.transition_width + 0.5
+    result = smoothstep_derivative(parameter) / config.transition_width
+    result.setflags(write=False)
+    return result
